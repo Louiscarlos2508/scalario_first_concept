@@ -1,0 +1,3 @@
+-- Add initial seed data here
+-- example:
+-- insert into tenants (name) values ('Scalario Demo Store');

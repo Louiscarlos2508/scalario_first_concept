@@ -1,0 +1,40 @@
+# Node / NPM
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+.env
+dist/
+coverage/
+
+# Flutter
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+ios/.generated/
+
+# Android
+android/.gradle
+android/local.properties
+android/captures/
+android/gradlew
+android/gradlew.bat
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Supabase
+supabase/.temp/
+
+# Misc
+.gemini/
