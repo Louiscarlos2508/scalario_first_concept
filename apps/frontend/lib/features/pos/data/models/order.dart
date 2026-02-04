@@ -2,31 +2,24 @@ import 'package:isar/isar.dart';
 
 part 'order.g.dart';
 
-enum OrderStatus {
-  pendingSync,
-  synced,
-}
-
 @collection
 class Order {
   Id id = Isar.autoIncrement;
 
-  late String uuid; // Global unique ID for sync
-
-  late DateTime createdAt;
-
-  @Enumerated(EnumType.ordinal)
-  late OrderStatus status;
+  @Index(unique: true, replace: true)
+  String uuid = ''; // App-generated UUID
 
   late double totalAmount;
-
-  late List<OrderItem> items;
+  late DateTime createdAt;
+  
+  @Enumerated(EnumType.name)
+  SyncStatus syncStatus = SyncStatus.pending;
+  
+  String? tenantId;
+  
+  // To simulate items, we could use embedded objects or just a JSON string for MVP
+  // For simplicity MVP:
+  List<String>? itemNames; 
 }
 
-@embedded
-class OrderItem {
-  late String productSku;
-  late String productName;
-  late double quantity;
-  late double price;
-}
+enum SyncStatus { pending, synced, error }

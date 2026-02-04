@@ -5,6 +5,8 @@ import 'core/auth/auth_state.dart';
 import 'features/auth/login_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 
+import 'features/pos/presentation/providers/pos_providers.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -28,6 +30,11 @@ class ScalarioApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    
+    // Initialize Sync Service
+    // In a real app, this might be tied to auth state (only sync when logged in)
+    // For MVP Offline-First, we start it early.
+    ref.watch(syncServiceProvider).startSync();
 
     return MaterialApp(
       title: 'Scalario',

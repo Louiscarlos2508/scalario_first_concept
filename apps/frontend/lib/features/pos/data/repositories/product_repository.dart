@@ -1,21 +1,28 @@
 import 'package:isar/isar.dart';
-import '../../../../core/services/isar_service.dart';
-import '../models/product.dart';
+import 'package:frontend/core/services/isar_service.dart';
+import 'package:frontend/features/pos/data/models/product.dart';
 
 class ProductRepository {
-  final IsarService isarService;
+  final IsarService _isarService;
 
-  ProductRepository(this.isarService);
+  ProductRepository(this._isarService);
 
-  Future<void> addProduct(Product product) async {
-    final db = await isarService.db;
-    await db.writeTxn(() async {
-      await db.products.put(product);
+  Future<List<Product>> getProducts() async {
+    final isar = await _isarService.db;
+    return await isar.products.where().findAll();
+  }
+
+  Future<void> saveProducts(List<Product> products) async {
+    final isar = await _isarService.db;
+    await isar.writeTxn(() async {
+      await isar.products.putAll(products);
     });
   }
 
-  Future<List<Product>> getAllProducts() async {
-    final db = await isarService.db;
-    return await db.products.where().findAll();
+  Future<void> clearProducts() async {
+    final isar = await _isarService.db;
+    await isar.writeTxn(() async {
+      await isar.products.clear();
+    });
   }
 }

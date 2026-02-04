@@ -1,40 +1,48 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/services/isar_service.dart';
-import '../../data/repositories/product_repository.dart';
-import '../../data/repositories/order_repository.dart';
-import '../../data/models/order.dart';
+import 'package:frontend/core/services/isar_service.dart';
+import 'package:frontend/core/services/sync_service.dart';
+import 'package:frontend/features/pos/data/models/product.dart';
+import 'package:frontend/features/pos/data/repositories/order_repository.dart';
+import 'package:frontend/features/pos/data/repositories/product_repository.dart';
+import 'package:frontend/features/pos/presentation/state/cart_notifier.dart';
+import 'package:frontend/features/pos/presentation/state/cart_state.dart';
+import 'package:frontend/features/pos/presentation/state/checkout_controller.dart';
 
-// Services
+// Services & Repositories
 final isarServiceProvider = Provider<IsarService>((ref) {
   return IsarService();
 });
 
-// Repositories
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
-  final isar = ref.watch(isarServiceProvider);
-  return ProductRepository(isar);
+  final isarService = ref.watch(isarServiceProvider);
+  return ProductRepository(isarService);
 });
 
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {
-  final isar = ref.watch(isarServiceProvider);
-  return OrderRepository(isar);
+  final isarService = ref.watch(isarServiceProvider);
+  return OrderRepository(isarService);
 });
 
-// State Notifier for Cart
-class CartNotifier extends StateNotifier<List<OrderItem>> {
-  CartNotifier() : super([]);
+final syncServiceProvider = Provider<SyncService>((ref) {
+  final orderRepo = ref.watch(orderRepositoryProvider);
+  final productRepo = ref.watch(productRepositoryProvider);
+  return SyncService(orderRepo, productRepo);
+});
 
-  void addItem(OrderItem item) {
-    state = [...state, item];
-  }
-
-  void clear() {
-    state = [];
-  }
-
-  double get total => state.fold(0, (sum, item) => sum + (item.price * item.quantity));
-}
-
-final cartProvider = StateNotifierProvider<CartNotifier, List<OrderItem>>((ref) {
+// UI State
+final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   return CartNotifier();
+});
+
+final checkoutControllerProvider = StateNotifierProvider<CheckoutController, AsyncValue<void>>((ref) {
+  final orderRepo = ref.watch(orderRepositoryProvider);
+  final cartNotifier = ref.watch(cartProvider.notifier);
+  return CheckoutController(orderRepo, cartNotifier);
+});
+
+final productListProvider = FutureProvider<List<Product>>((ref) async {
+  final repo = ref.watch(productRepositoryProvider);
+  // In a real app, we might watch a stream or use a StreamProvider
+  // For now, we fetch once.
+  return repo.getProducts();
 });

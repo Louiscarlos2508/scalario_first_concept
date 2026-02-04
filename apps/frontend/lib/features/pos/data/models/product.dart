@@ -4,17 +4,14 @@ part 'product.g.dart';
 
 @collection
 class Product {
-  Id id = Isar.autoIncrement;
+  Id id = Isar.autoIncrement; // local ID
 
   @Index(unique: true, replace: true)
-  late String sku;
+  String? remoteId; // UUID from Supabase
 
   late String name;
-
   late double price;
-
-  late int stock;
-
-  // Sync metadata
-  DateTime? lastSyncedAt;
+  String? category;
+  double stockQuantity = 0;
+  String? tenantId;
 }
