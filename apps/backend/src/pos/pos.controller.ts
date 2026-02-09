@@ -1,32 +1,20 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { PosService } from './pos.service';
+// import { AuthGuard } from '../core/guards/auth/auth.guard';
 
 @Controller('pos')
 export class PosController {
+    constructor(private readonly posService: PosService) { }
 
     @Get('products')
-    getProducts() {
-        // Mock products for sync test
-        return [
-            {
-                remoteId: 'uuid-1',
-                name: 'Coca Cola (Synced)',
-                price: 500,
-                category: 'Drinks',
-                stockQuantity: 100,
-            },
-            {
-                remoteId: 'uuid-2',
-                name: 'Sandwich (Synced)',
-                price: 1500,
-                category: 'Food',
-                stockQuantity: 50,
-            },
-        ];
+    async getProducts() {
+        return this.posService.getProducts();
     }
 
     @Post('orders')
-    syncOrder(@Body() orderData: any) {
+    // @UseGuards(AuthGuard) // Disabled for initial integration testing
+    async syncOrder(@Body() orderData: any) {
         console.log('Received Order Sync:', orderData);
-        return { status: 'synced', id: orderData.uuid };
+        return this.posService.syncOrder(orderData);
     }
 }

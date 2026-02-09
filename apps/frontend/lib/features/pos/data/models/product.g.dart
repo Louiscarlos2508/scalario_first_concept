@@ -53,21 +53,7 @@ const ProductSchema = CollectionSchema(
   deserialize: _productDeserialize,
   deserializeProp: _productDeserializeProp,
   idName: r'id',
-  indexes: {
-    r'remoteId': IndexSchema(
-      id: 6301175856541681032,
-      name: r'remoteId',
-      unique: true,
-      replace: true,
-      properties: [
-        IndexPropertySchema(
-          name: r'remoteId',
-          type: IndexType.hash,
-          caseSensitive: true,
-        )
-      ],
-    )
-  },
+  indexes: {},
   links: {},
   embeddedSchemas: {},
   getId: _productGetId,
@@ -171,61 +157,6 @@ void _productAttach(IsarCollection<dynamic> col, Id id, Product object) {
   object.id = id;
 }
 
-extension ProductByIndex on IsarCollection<Product> {
-  Future<Product?> getByRemoteId(String? remoteId) {
-    return getByIndex(r'remoteId', [remoteId]);
-  }
-
-  Product? getByRemoteIdSync(String? remoteId) {
-    return getByIndexSync(r'remoteId', [remoteId]);
-  }
-
-  Future<bool> deleteByRemoteId(String? remoteId) {
-    return deleteByIndex(r'remoteId', [remoteId]);
-  }
-
-  bool deleteByRemoteIdSync(String? remoteId) {
-    return deleteByIndexSync(r'remoteId', [remoteId]);
-  }
-
-  Future<List<Product?>> getAllByRemoteId(List<String?> remoteIdValues) {
-    final values = remoteIdValues.map((e) => [e]).toList();
-    return getAllByIndex(r'remoteId', values);
-  }
-
-  List<Product?> getAllByRemoteIdSync(List<String?> remoteIdValues) {
-    final values = remoteIdValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'remoteId', values);
-  }
-
-  Future<int> deleteAllByRemoteId(List<String?> remoteIdValues) {
-    final values = remoteIdValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'remoteId', values);
-  }
-
-  int deleteAllByRemoteIdSync(List<String?> remoteIdValues) {
-    final values = remoteIdValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'remoteId', values);
-  }
-
-  Future<Id> putByRemoteId(Product object) {
-    return putByIndex(r'remoteId', object);
-  }
-
-  Id putByRemoteIdSync(Product object, {bool saveLinks = true}) {
-    return putByIndexSync(r'remoteId', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByRemoteId(List<Product> objects) {
-    return putAllByIndex(r'remoteId', objects);
-  }
-
-  List<Id> putAllByRemoteIdSync(List<Product> objects,
-      {bool saveLinks = true}) {
-    return putAllByIndexSync(r'remoteId', objects, saveLinks: saveLinks);
-  }
-}
-
 extension ProductQueryWhereSort on QueryBuilder<Product, Product, QWhere> {
   QueryBuilder<Product, Product, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
@@ -297,71 +228,6 @@ extension ProductQueryWhere on QueryBuilder<Product, Product, QWhereClause> {
         upper: upperId,
         includeUpper: includeUpper,
       ));
-    });
-  }
-
-  QueryBuilder<Product, Product, QAfterWhereClause> remoteIdIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'remoteId',
-        value: [null],
-      ));
-    });
-  }
-
-  QueryBuilder<Product, Product, QAfterWhereClause> remoteIdIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'remoteId',
-        lower: [null],
-        includeLower: false,
-        upper: [],
-      ));
-    });
-  }
-
-  QueryBuilder<Product, Product, QAfterWhereClause> remoteIdEqualTo(
-      String? remoteId) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'remoteId',
-        value: [remoteId],
-      ));
-    });
-  }
-
-  QueryBuilder<Product, Product, QAfterWhereClause> remoteIdNotEqualTo(
-      String? remoteId) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'remoteId',
-              lower: [],
-              upper: [remoteId],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'remoteId',
-              lower: [remoteId],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'remoteId',
-              lower: [remoteId],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'remoteId',
-              lower: [],
-              upper: [remoteId],
-              includeUpper: false,
-            ));
-      }
     });
   }
 }

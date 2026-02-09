@@ -1,0 +1,47 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  products Product[]
+  orders   Order[]
+
+  @@map("tenants")
+}
+
+model Product {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  price         Decimal  @db.Decimal(10, 2)
+  category      String?
+  stockQuantity Decimal  @default(0) @map("stock_quantity") @db.Decimal(10, 2)
+  tenantId      String   @map("tenant_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  // Relations
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("products")
+}
+
+model Order {
+  id          String   @id @default(uuid()) @db.Uuid
+  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
+  itemsJson   Json     @map("items_json") 
+  tenantId    String   @map("tenant_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("orders")
+}

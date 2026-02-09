@@ -11,10 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Supabase
-  // TODO: Replace with env variables or actual config
   await Supabase.initialize(
-    url: 'https://placeholder-url.supabase.co',
-    anonKey: 'placeholder-anon-key',
+    url: 'http://127.0.0.1:54321',
+    anonKey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
   );
 
   runApp(

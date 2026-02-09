@@ -6,7 +6,8 @@ part 'order.g.dart';
 class Order {
   Id id = Isar.autoIncrement;
 
-  @Index(unique: true, replace: true)
+  // Removed Index for Web compatibility 
+  // @Index(unique: true, replace: true)
   String uuid = ''; // App-generated UUID
 
   late double totalAmount;
@@ -17,9 +18,16 @@ class Order {
   
   String? tenantId;
   
-  // To simulate items, we could use embedded objects or just a JSON string for MVP
-  // For simplicity MVP:
   List<String>? itemNames; 
+
+  Map<String, dynamic> toJson() {
+    return {
+      'uuid': uuid,
+      'totalAmount': totalAmount,
+      'itemNames': itemNames ?? [],
+      'tenantId': tenantId,
+    };
+  }
 }
 
 enum SyncStatus { pending, synced, error }

@@ -54,21 +54,7 @@ const OrderSchema = CollectionSchema(
   deserialize: _orderDeserialize,
   deserializeProp: _orderDeserializeProp,
   idName: r'id',
-  indexes: {
-    r'uuid': IndexSchema(
-      id: 2134397340427724972,
-      name: r'uuid',
-      unique: true,
-      replace: true,
-      properties: [
-        IndexPropertySchema(
-          name: r'uuid',
-          type: IndexType.hash,
-          caseSensitive: true,
-        )
-      ],
-    )
-  },
+  indexes: {},
   links: {},
   embeddedSchemas: {},
   getId: _orderGetId,
@@ -187,60 +173,6 @@ void _orderAttach(IsarCollection<dynamic> col, Id id, Order object) {
   object.id = id;
 }
 
-extension OrderByIndex on IsarCollection<Order> {
-  Future<Order?> getByUuid(String uuid) {
-    return getByIndex(r'uuid', [uuid]);
-  }
-
-  Order? getByUuidSync(String uuid) {
-    return getByIndexSync(r'uuid', [uuid]);
-  }
-
-  Future<bool> deleteByUuid(String uuid) {
-    return deleteByIndex(r'uuid', [uuid]);
-  }
-
-  bool deleteByUuidSync(String uuid) {
-    return deleteByIndexSync(r'uuid', [uuid]);
-  }
-
-  Future<List<Order?>> getAllByUuid(List<String> uuidValues) {
-    final values = uuidValues.map((e) => [e]).toList();
-    return getAllByIndex(r'uuid', values);
-  }
-
-  List<Order?> getAllByUuidSync(List<String> uuidValues) {
-    final values = uuidValues.map((e) => [e]).toList();
-    return getAllByIndexSync(r'uuid', values);
-  }
-
-  Future<int> deleteAllByUuid(List<String> uuidValues) {
-    final values = uuidValues.map((e) => [e]).toList();
-    return deleteAllByIndex(r'uuid', values);
-  }
-
-  int deleteAllByUuidSync(List<String> uuidValues) {
-    final values = uuidValues.map((e) => [e]).toList();
-    return deleteAllByIndexSync(r'uuid', values);
-  }
-
-  Future<Id> putByUuid(Order object) {
-    return putByIndex(r'uuid', object);
-  }
-
-  Id putByUuidSync(Order object, {bool saveLinks = true}) {
-    return putByIndexSync(r'uuid', object, saveLinks: saveLinks);
-  }
-
-  Future<List<Id>> putAllByUuid(List<Order> objects) {
-    return putAllByIndex(r'uuid', objects);
-  }
-
-  List<Id> putAllByUuidSync(List<Order> objects, {bool saveLinks = true}) {
-    return putAllByIndexSync(r'uuid', objects, saveLinks: saveLinks);
-  }
-}
-
 extension OrderQueryWhereSort on QueryBuilder<Order, Order, QWhere> {
   QueryBuilder<Order, Order, QAfterWhere> anyId() {
     return QueryBuilder.apply(this, (query) {
@@ -312,49 +244,6 @@ extension OrderQueryWhere on QueryBuilder<Order, Order, QWhereClause> {
         upper: upperId,
         includeUpper: includeUpper,
       ));
-    });
-  }
-
-  QueryBuilder<Order, Order, QAfterWhereClause> uuidEqualTo(String uuid) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'uuid',
-        value: [uuid],
-      ));
-    });
-  }
-
-  QueryBuilder<Order, Order, QAfterWhereClause> uuidNotEqualTo(String uuid) {
-    return QueryBuilder.apply(this, (query) {
-      if (query.whereSort == Sort.asc) {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [],
-              upper: [uuid],
-              includeUpper: false,
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [uuid],
-              includeLower: false,
-              upper: [],
-            ));
-      } else {
-        return query
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [uuid],
-              includeLower: false,
-              upper: [],
-            ))
-            .addWhereClause(IndexWhereClause.between(
-              indexName: r'uuid',
-              lower: [],
-              upper: [uuid],
-              includeUpper: false,
-            ));
-      }
     });
   }
 }
