@@ -1,12 +1,29 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
+import 'package:frontend/core/services/realtime_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:frontend/features/pos/data/models/product.dart';
 import 'package:frontend/features/pos/data/repositories/order_repository.dart';
 import 'package:frontend/features/pos/data/repositories/product_repository.dart';
+import 'package:frontend/core/auth/auth_state.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:frontend/features/dashboard/data/models/sales_stat.dart';
+import 'package:frontend/features/pos/data/repositories/session_repository.dart';
+import 'package:frontend/features/pos/data/repositories/customer_repository.dart';
+import 'package:frontend/features/pos/data/models/pos_session.dart';
+import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/features/pos/presentation/state/session_notifier.dart';
 import 'package:frontend/features/pos/presentation/state/cart_notifier.dart';
 import 'package:frontend/features/pos/presentation/state/cart_state.dart';
 import 'package:frontend/features/pos/presentation/state/checkout_controller.dart';
+import 'package:frontend/features/pos/presentation/state/parked_carts_notifier.dart';
+import 'package:frontend/features/dashboard/data/models/sales_stat.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // Services & Repositories
 final isarServiceProvider = Provider<IsarService>((ref) {
@@ -23,10 +40,33 @@ final orderRepositoryProvider = Provider<OrderRepository>((ref) {
   return OrderRepository(isarService);
 });
 
+final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  final isarService = ref.watch(isarServiceProvider);
+  return SessionRepository(isarService);
+});
+
+final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
+  final isarService = ref.watch(isarServiceProvider);
+  return CustomerRepository(isarService);
+});
+
+final sessionProvider = StateNotifierProvider<SessionNotifier, AsyncValue<PosSession?>>((ref) {
+  final repo = ref.watch(sessionRepositoryProvider);
+  final orderRepo = ref.watch(orderRepositoryProvider);
+  return SessionNotifier(repo, orderRepo);
+});
+
 final syncServiceProvider = Provider<SyncService>((ref) {
   final orderRepo = ref.watch(orderRepositoryProvider);
   final productRepo = ref.watch(productRepositoryProvider);
-  return SyncService(orderRepo, productRepo);
+  final sessionRepo = ref.watch(sessionRepositoryProvider);
+  return SyncService(orderRepo, productRepo, sessionRepo);
+});
+
+final realtimeServiceProvider = Provider<RealtimeService>((ref) {
+  final supabase = Supabase.instance.client;
+  final syncService = ref.watch(syncServiceProvider);
+  return RealtimeService(supabase, syncService);
 });
 
 // UI State
@@ -34,15 +74,141 @@ final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   return CartNotifier();
 });
 
+final selectedCustomerProvider = StateProvider<Customer?>((ref) => null);
+
+final parkedCartsProvider = StateNotifierProvider<ParkedCartsNotifier, List<CartState>>((ref) {
+  final isarService = ref.watch(isarServiceProvider);
+  return ParkedCartsNotifier(isarService);
+});
+
 final checkoutControllerProvider = StateNotifierProvider<CheckoutController, AsyncValue<void>>((ref) {
   final orderRepo = ref.watch(orderRepositoryProvider);
+  final productRepo = ref.watch(productRepositoryProvider);
   final cartNotifier = ref.watch(cartProvider.notifier);
-  return CheckoutController(orderRepo, cartNotifier);
+  return CheckoutController(orderRepo, productRepo, cartNotifier, ref);
 });
+
+final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
 
 final productListProvider = FutureProvider<List<Product>>((ref) async {
   final repo = ref.watch(productRepositoryProvider);
-  // In a real app, we might watch a stream or use a StreamProvider
-  // For now, we fetch once.
-  return repo.getProducts();
+  final categoryId = ref.watch(selectedCategoryIdProvider);
+  return repo.getProducts(categoryId: categoryId);
+});
+
+final inventorySearchProvider = StateProvider<String>((ref) => '');
+final inventoryPageProvider = StateProvider<int>((ref) => 1);
+final inventoryLimitProvider = StateProvider<int>((ref) => 20);
+
+final paginatedProductListProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final repo = ref.watch(productRepositoryProvider);
+  final query = ref.watch(inventorySearchProvider);
+  final page = ref.watch(inventoryPageProvider);
+  final limit = ref.watch(inventoryLimitProvider);
+  final tenantId = ref.watch(activeTenantProvider);
+  
+  return repo.getProductsRemote(
+    query: query,
+    page: page,
+    limit: limit,
+    tenantId: tenantId,
+  );
+});
+
+final salesStatsDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
+
+final salesStatsProvider = FutureProvider<List<SalesStat>>((ref) async {
+  const baseUrl = 'http://127.0.0.1:3000';
+  final range = ref.watch(salesStatsDateRangeProvider);
+  final tenantId = ref.watch(activeTenantProvider);
+  
+  String url = '$baseUrl/pos/stats';
+  final queryParams = <String, String>{};
+  
+  if (range != null) {
+    queryParams['start'] = DateFormat('yyyy-MM-dd').format(range.start);
+    queryParams['end'] = DateFormat('yyyy-MM-dd').format(range.end);
+  }
+  
+  if (tenantId != null) {
+    queryParams['tenantId'] = tenantId;
+  }
+
+  final uri = Uri.parse(url).replace(queryParameters: queryParams);
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => SalesStat.fromJson(json)).toList();
+  } else {
+    throw Exception('Failed to fetch sales stats: ${response.statusCode}');
+  }
+});
+
+final stockHistoryDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
+
+final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
+  const baseUrl = 'http://127.0.0.1:3000';
+  final range = ref.watch(stockHistoryDateRangeProvider);
+  final tenantId = ref.watch(activeTenantProvider);
+  
+  String url = '$baseUrl/pos/stock-movements';
+  final queryParams = <String, String>{};
+  
+  if (range != null) {
+    queryParams['start'] = DateFormat('yyyy-MM-dd').format(range.start);
+    queryParams['end'] = DateFormat('yyyy-MM-dd').format(range.end);
+  }
+  
+  if (tenantId != null) {
+    queryParams['tenantId'] = tenantId;
+  }
+
+  final uri = Uri.parse(url).replace(queryParameters: queryParams);
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to fetch stock history: ${response.statusCode}');
+  }
+});
+
+final salesReportDateRangeProvider = StateProvider<DateTimeRange?>((ref) => null);
+
+final salesReportProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  const baseUrl = 'http://127.0.0.1:3000';
+  final range = ref.watch(salesReportDateRangeProvider);
+  final tenantId = ref.watch(activeTenantProvider);
+  
+  String url = '$baseUrl/pos/reports/sales';
+  final queryParams = <String, String>{};
+  
+  if (range != null) {
+    queryParams['start'] = DateFormat('yyyy-MM-dd').format(range.start);
+    queryParams['end'] = DateFormat('yyyy-MM-dd').format(range.end);
+  }
+  
+  if (tenantId != null) {
+    queryParams['tenantId'] = tenantId;
+  }
+
+  final uri = Uri.parse(url).replace(queryParameters: queryParams);
+  final response = await http.get(uri);
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to fetch sales report: ${response.statusCode}');
+  }
+});
+final terminalStatusProvider = FutureProvider<List<dynamic>>((ref) async {
+  const baseUrl = 'http://127.0.0.1:3000';
+  final response = await http.get(Uri.parse('$baseUrl/pos/terminals'));
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception('Failed to fetch terminals: ${response.statusCode}');
+  }
 });

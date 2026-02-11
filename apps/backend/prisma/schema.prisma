@@ -1,47 +1,165 @@
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema", "driverAdapters"]
 }
 
 model Tenant {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  products Product[]
-  orders   Order[]
+  products        Product[]
+  orders          Order[]
+  members         OrganizationMember[]
+  posSessions     PosSession[]
+  stockMovements  StockMovement[]
+  customers       Customer[]
+  terminalStatuses TerminalStatus[]
+  categories      Category[]
 
   @@map("tenants")
+  @@schema("public")
+}
+
+model OrganizationMember {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  role           String
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant         Tenant   @relation(fields: [organizationId], references: [id])
+
+  @@map("organization_members")
+  @@unique([organizationId, userId])
+  @@schema("public")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  tenantId  String   @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  products  Product[]
+
+  @@map("categories")
+  @@schema("public")
 }
 
 model Product {
   id            String   @id @default(uuid()) @db.Uuid
   name          String
   price         Decimal  @db.Decimal(10, 2)
-  category      String?
+  categoryId    String?  @map("category_id") @db.Uuid
+  barcode       String?
   stockQuantity Decimal  @default(0) @map("stock_quantity") @db.Decimal(10, 2)
   tenantId      String   @map("tenant_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   
   // Relations
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  stockMovements StockMovement[]
 
   @@map("products")
+  @@schema("public")
 }
 
 model Order {
-  id          String   @id @default(uuid()) @db.Uuid
-  totalAmount Decimal  @map("total_amount") @db.Decimal(10, 2)
-  itemsJson   Json     @map("items_json") 
-  tenantId    String   @map("tenant_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String   @id @default(uuid()) @db.Uuid
+  totalAmount   Decimal  @map("total_amount") @db.Decimal(10, 2)
+  itemsJson     Json     @map("items_json")
+  paymentMethod String?  @map("payment_method")
+  paymentSplits Json?     @map("payment_splits")
+  tenantId      String   @map("tenant_id") @db.Uuid
+  sessionId     String?  @map("session_id") @db.Uuid
+  customerId    String?  @map("customer_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // Relations
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  tenant   Tenant      @relation(fields: [tenantId], references: [id])
+  session  PosSession? @relation(fields: [sessionId], references: [id])
+  customer Customer?   @relation(fields: [customerId], references: [id])
 
   @@map("orders")
+  @@schema("public")
+}
+
+model PosSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  openingBalance Decimal   @map("opening_balance") @db.Decimal(10, 2)
+  closingBalance     Decimal?   @map("closing_balance") @db.Decimal(10, 2)
+  theoreticalBalance Decimal?   @map("theoretical_balance") @db.Decimal(10, 2)
+  variance           Decimal?   @db.Decimal(10, 2)
+  status             String     @default("OPEN") // OPEN, CLOSED, SYNCED
+  userId             String     @map("user_id") @db.Uuid
+  tenantId           String     @map("tenant_id") @db.Uuid
+  openedAt           DateTime   @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt           DateTime?  @map("closed_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  orders Order[]
+
+  @@map("pos_sessions")
+  @@schema("public")
+}
+
+model StockMovement {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  quantity  Decimal  @db.Decimal(10, 2)
+  type      String   // IN, OUT, ADJUSTMENT
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  product   Product  @relation(fields: [productId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("stock_movements")
+  @@schema("public")
+}
+
+model Customer {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  balance   Decimal  @default(0) @db.Decimal(10, 2)
+  tenantId  String   @map("tenant_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  orders  Order[]
+
+  @@map("customers")
+  @@schema("public")
+}
+
+model TerminalStatus {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String   @unique @map("device_id")
+  status    String   // ONLINE, OFFLINE
+  lastSeen  DateTime @default(now()) @map("last_seen") @db.Timestamptz(6)
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("terminal_statuses")
+  @@schema("public")
 }

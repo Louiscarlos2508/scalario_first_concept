@@ -14,9 +14,14 @@ class Product {
 
   late String name;
   late double price;
-  String? category;
+  String? category; // Name (legacy/convenience)
+  String? categoryId; // UUID
+  String? barcode;
   double stockQuantity = 0;
   String? tenantId;
+  
+  DateTime? lastUpdated;
+  bool isDeleted = false;
 
   Map<String, dynamic> toJson() {
     return {
@@ -24,18 +29,34 @@ class Product {
       'name': name,
       'price': price,
       'category': category,
+      'categoryId': categoryId,
+      'barcode': barcode,
       'stockQuantity': stockQuantity,
       'tenantId': tenantId,
     };
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    return Product()
-      ..remoteId = json['id'] as String?
-      ..name = json['name'] as String
-      ..price = (json['price'] is num) ? (json['price'] as num).toDouble() : double.parse(json['price'].toString())
-      ..category = json['category'] as String?
-      ..stockQuantity = (json['stock_quantity'] is num) ? (json['stock_quantity'] as num).toDouble() : double.parse(json['stock_quantity']?.toString() ?? '0')
-      ..tenantId = json['tenant_id'] as String?;
+    try {
+      return Product()
+        ..remoteId = json['id']?.toString()
+        ..name = json['name']?.toString() ?? 'Unknown'
+        ..price = _toDouble(json['price'])
+        ..category = json['category'] != null ? (json['category'] is Map ? json['category']['name'] : json['category'].toString()) : null
+        ..categoryId = json['categoryId']?.toString() ?? json['category_id']?.toString()
+        ..barcode = json['barcode']?.toString()
+        ..stockQuantity = _toDouble(json['stockQuantity'] ?? json['stock_quantity'])
+        ..tenantId = (json['tenantId'] ?? json['tenant_id'])?.toString()
+        ..lastUpdated = json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null;
+    } catch (e) {
+      print('Mapping error in Product.fromJson: $e for JSON: $json');
+      rethrow;
+    }
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
   }
 }

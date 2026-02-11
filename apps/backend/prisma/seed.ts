@@ -24,41 +24,40 @@ async function main() {
 
     // Create some products
     const products = [
-        {
-            name: 'Coca Cola',
-            price: 500,
-            category: 'Drinks',
-            stockQuantity: 100,
-            tenantId: tenant.id,
-        },
-        {
-            name: 'Sandwich',
-            price: 1500,
-            category: 'Food',
-            stockQuantity: 50,
-            tenantId: tenant.id,
-        },
-        {
-            name: 'Perrier',
-            price: 800,
-            category: 'Drinks',
-            stockQuantity: 30,
-            tenantId: tenant.id,
-        },
+        { name: 'Coca Cola', price: 500, categoryName: 'Drinks', stockQuantity: 100 },
+        { name: 'Sandwich', price: 1500, categoryName: 'Food', stockQuantity: 50 },
+        { name: 'Perrier', price: 800, categoryName: 'Drinks', stockQuantity: 30 },
     ];
 
-    for (const p of products) {
+    for (const pData of products) {
+        // Find or create category
+        let category = await prisma.category.findFirst({
+            where: { name: pData.categoryName, tenantId: tenant.id }
+        });
+
+        if (!category) {
+            category = await prisma.category.create({
+                data: { name: pData.categoryName, tenantId: tenant.id }
+            });
+        }
+
         const existing = await prisma.product.findFirst({
-            where: { name: p.name, tenantId: p.tenantId }
+            where: { name: pData.name, tenantId: tenant.id }
         });
 
         if (!existing) {
             const product = await prisma.product.create({
-                data: p,
+                data: {
+                    name: pData.name,
+                    price: pData.price,
+                    stockQuantity: pData.stockQuantity,
+                    tenantId: tenant.id,
+                    categoryId: category.id,
+                },
             });
             console.log('Created product:', product.name);
         } else {
-            console.log('Product already exists:', p.name);
+            console.log('Product already exists:', pData.name);
         }
     }
 }

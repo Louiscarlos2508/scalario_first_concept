@@ -38,7 +38,32 @@ class CartNotifier extends StateNotifier<CartState> {
      state = state.copyWith(items: newItems);
   }
 
+  void updateItemDiscount(String productId, double discount, String type) {
+    final index = state.items.indexWhere((item) => item.product.remoteId == productId);
+    if (index == -1) return;
+
+    final newItems = List<CartItem>.from(state.items);
+    newItems[index] = newItems[index].copyWith(
+      discountAmount: discount,
+      discountType: type,
+    );
+
+    state = state.copyWith(items: newItems);
+  }
+
+  void replaceCart(CartState newState) {
+    state = newState;
+  }
+
+  void updatePaymentMethod(String method) {
+    state = state.copyWith(paymentMethod: method);
+  }
+
+  void updatePaymentSplits(Map<String, double> splits) {
+    state = state.copyWith(paymentSplits: splits);
+  }
+
   void clearCart() {
-    state = CartState(items: []);
+    state = state.copyWith(items: [], name: null, createdAt: null);
   }
 }

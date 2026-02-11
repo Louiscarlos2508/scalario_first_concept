@@ -22,29 +22,50 @@ const OrderSchema = CollectionSchema(
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
-    r'itemNames': PropertySchema(
+    r'customerId': PropertySchema(
       id: 1,
-      name: r'itemNames',
-      type: IsarType.stringList,
+      name: r'customerId',
+      type: IsarType.string,
+    ),
+    r'items': PropertySchema(
+      id: 2,
+      name: r'items',
+      type: IsarType.objectList,
+      target: r'PosCartItem',
+    ),
+    r'paymentMethod': PropertySchema(
+      id: 3,
+      name: r'paymentMethod',
+      type: IsarType.string,
+    ),
+    r'paymentSplits': PropertySchema(
+      id: 4,
+      name: r'paymentSplits',
+      type: IsarType.string,
+    ),
+    r'sessionId': PropertySchema(
+      id: 5,
+      name: r'sessionId',
+      type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 2,
+      id: 6,
       name: r'syncStatus',
       type: IsarType.string,
       enumMap: _OrdersyncStatusEnumValueMap,
     ),
     r'tenantId': PropertySchema(
-      id: 3,
+      id: 7,
       name: r'tenantId',
       type: IsarType.string,
     ),
     r'totalAmount': PropertySchema(
-      id: 4,
+      id: 8,
       name: r'totalAmount',
       type: IsarType.double,
     ),
     r'uuid': PropertySchema(
-      id: 5,
+      id: 9,
       name: r'uuid',
       type: IsarType.string,
     )
@@ -56,7 +77,7 @@ const OrderSchema = CollectionSchema(
   idName: r'id',
   indexes: {},
   links: {},
-  embeddedSchemas: {},
+  embeddedSchemas: {r'PosCartItem': PosCartItemSchema},
   getId: _orderGetId,
   getLinks: _orderGetLinks,
   attach: _orderAttach,
@@ -70,15 +91,35 @@ int _orderEstimateSize(
 ) {
   var bytesCount = offsets.last;
   {
-    final list = object.itemNames;
-    if (list != null) {
-      bytesCount += 3 + list.length * 3;
-      {
-        for (var i = 0; i < list.length; i++) {
-          final value = list[i];
-          bytesCount += value.length * 3;
-        }
-      }
+    final value = object.customerId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.items.length * 3;
+  {
+    final offsets = allOffsets[PosCartItem]!;
+    for (var i = 0; i < object.items.length; i++) {
+      final value = object.items[i];
+      bytesCount += PosCartItemSchema.estimateSize(value, offsets, allOffsets);
+    }
+  }
+  {
+    final value = object.paymentMethod;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.paymentSplits;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.sessionId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
     }
   }
   bytesCount += 3 + object.syncStatus.name.length * 3;
@@ -99,11 +140,20 @@ void _orderSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeDateTime(offsets[0], object.createdAt);
-  writer.writeStringList(offsets[1], object.itemNames);
-  writer.writeString(offsets[2], object.syncStatus.name);
-  writer.writeString(offsets[3], object.tenantId);
-  writer.writeDouble(offsets[4], object.totalAmount);
-  writer.writeString(offsets[5], object.uuid);
+  writer.writeString(offsets[1], object.customerId);
+  writer.writeObjectList<PosCartItem>(
+    offsets[2],
+    allOffsets,
+    PosCartItemSchema.serialize,
+    object.items,
+  );
+  writer.writeString(offsets[3], object.paymentMethod);
+  writer.writeString(offsets[4], object.paymentSplits);
+  writer.writeString(offsets[5], object.sessionId);
+  writer.writeString(offsets[6], object.syncStatus.name);
+  writer.writeString(offsets[7], object.tenantId);
+  writer.writeDouble(offsets[8], object.totalAmount);
+  writer.writeString(offsets[9], object.uuid);
 }
 
 Order _orderDeserialize(
@@ -114,14 +164,24 @@ Order _orderDeserialize(
 ) {
   final object = Order();
   object.createdAt = reader.readDateTime(offsets[0]);
+  object.customerId = reader.readStringOrNull(offsets[1]);
   object.id = id;
-  object.itemNames = reader.readStringList(offsets[1]);
+  object.items = reader.readObjectList<PosCartItem>(
+        offsets[2],
+        PosCartItemSchema.deserialize,
+        allOffsets,
+        PosCartItem(),
+      ) ??
+      [];
+  object.paymentMethod = reader.readStringOrNull(offsets[3]);
+  object.paymentSplits = reader.readStringOrNull(offsets[4]);
+  object.sessionId = reader.readStringOrNull(offsets[5]);
   object.syncStatus =
-      _OrdersyncStatusValueEnumMap[reader.readStringOrNull(offsets[2])] ??
+      _OrdersyncStatusValueEnumMap[reader.readStringOrNull(offsets[6])] ??
           SyncStatus.pending;
-  object.tenantId = reader.readStringOrNull(offsets[3]);
-  object.totalAmount = reader.readDouble(offsets[4]);
-  object.uuid = reader.readString(offsets[5]);
+  object.tenantId = reader.readStringOrNull(offsets[7]);
+  object.totalAmount = reader.readDouble(offsets[8]);
+  object.uuid = reader.readString(offsets[9]);
   return object;
 }
 
@@ -135,15 +195,29 @@ P _orderDeserializeProp<P>(
     case 0:
       return (reader.readDateTime(offset)) as P;
     case 1:
-      return (reader.readStringList(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (_OrdersyncStatusValueEnumMap[reader.readStringOrNull(offset)] ??
-          SyncStatus.pending) as P;
+      return (reader.readObjectList<PosCartItem>(
+            offset,
+            PosCartItemSchema.deserialize,
+            allOffsets,
+            PosCartItem(),
+          ) ??
+          []) as P;
     case 3:
       return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 5:
+      return (reader.readStringOrNull(offset)) as P;
+    case 6:
+      return (_OrdersyncStatusValueEnumMap[reader.readStringOrNull(offset)] ??
+          SyncStatus.pending) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readDouble(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -302,6 +376,152 @@ extension OrderQueryFilter on QueryBuilder<Order, Order, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'customerId',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'customerId',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'customerId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'customerId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'customerId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> customerIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'customerId',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Order, Order, QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -354,75 +574,159 @@ extension OrderQueryFilter on QueryBuilder<Order, Order, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesIsNull() {
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'items',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'itemNames',
+        property: r'paymentMethod',
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesIsNotNull() {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'itemNames',
+        property: r'paymentMethod',
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementEqualTo(
-    String value, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodEqualTo(
+    String? value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementGreaterThan(
-    String value, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodGreaterThan(
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementLessThan(
-    String value, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodLessThan(
+    String? value, {
     bool include = false,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementBetween(
-    String lower,
-    String upper, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodBetween(
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'itemNames',
+        property: r'paymentMethod',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -432,156 +736,363 @@ extension OrderQueryFilter on QueryBuilder<Order, Order, QFilterCondition> {
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementStartsWith(
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementEndsWith(
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementContains(
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodContains(
       String value,
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: value,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementMatches(
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodMatches(
       String pattern,
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
-        property: r'itemNames',
+        property: r'paymentMethod',
         wildcard: pattern,
         caseSensitive: caseSensitive,
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesElementIsEmpty() {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: '',
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition>
-      itemNamesElementIsNotEmpty() {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentMethodIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'itemNames',
+        property: r'paymentMethod',
         value: '',
       ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesLengthEqualTo(
-      int length) {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        length,
-        true,
-        length,
-        true,
-      );
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'paymentSplits',
+      ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesIsEmpty() {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        0,
-        true,
-        0,
-        true,
-      );
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'paymentSplits',
+      ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        0,
-        false,
-        999999,
-        true,
-      );
-    });
-  }
-
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesLengthLessThan(
-    int length, {
-    bool include = false,
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsEqualTo(
+    String? value, {
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        0,
-        true,
-        length,
-        include,
-      );
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesLengthGreaterThan(
-    int length, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsGreaterThan(
+    String? value, {
     bool include = false,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        length,
-        include,
-        999999,
-        true,
-      );
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
     });
   }
 
-  QueryBuilder<Order, Order, QAfterFilterCondition> itemNamesLengthBetween(
-    int lower,
-    int upper, {
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsBetween(
+    String? lower,
+    String? upper, {
     bool includeLower = true,
     bool includeUpper = true,
+    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
-      return query.listLength(
-        r'itemNames',
-        lower,
-        includeLower,
-        upper,
-        includeUpper,
-      );
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'paymentSplits',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'paymentSplits',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'paymentSplits',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'paymentSplits',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> paymentSplitsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'paymentSplits',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'sessionId',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'sessionId',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'sessionId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'sessionId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'sessionId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sessionId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'sessionId',
+        value: '',
+      ));
     });
   }
 
@@ -1052,7 +1563,14 @@ extension OrderQueryFilter on QueryBuilder<Order, Order, QFilterCondition> {
   }
 }
 
-extension OrderQueryObject on QueryBuilder<Order, Order, QFilterCondition> {}
+extension OrderQueryObject on QueryBuilder<Order, Order, QFilterCondition> {
+  QueryBuilder<Order, Order, QAfterFilterCondition> itemsElement(
+      FilterQuery<PosCartItem> q) {
+    return QueryBuilder.apply(this, (query) {
+      return query.object(q, r'items');
+    });
+  }
+}
 
 extension OrderQueryLinks on QueryBuilder<Order, Order, QFilterCondition> {}
 
@@ -1066,6 +1584,54 @@ extension OrderQuerySortBy on QueryBuilder<Order, Order, QSortBy> {
   QueryBuilder<Order, Order, QAfterSortBy> sortByCreatedAtDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByCustomerId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByCustomerIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByPaymentMethod() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentMethod', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByPaymentMethodDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentMethod', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByPaymentSplits() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentSplits', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByPaymentSplitsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentSplits', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortBySessionId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sessionId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortBySessionIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sessionId', Sort.desc);
     });
   }
 
@@ -1131,6 +1697,18 @@ extension OrderQuerySortThenBy on QueryBuilder<Order, Order, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Order, Order, QAfterSortBy> thenByCustomerId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByCustomerIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Order, Order, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1140,6 +1718,42 @@ extension OrderQuerySortThenBy on QueryBuilder<Order, Order, QSortThenBy> {
   QueryBuilder<Order, Order, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByPaymentMethod() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentMethod', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByPaymentMethodDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentMethod', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByPaymentSplits() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentSplits', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByPaymentSplitsDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'paymentSplits', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenBySessionId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sessionId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenBySessionIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sessionId', Sort.desc);
     });
   }
 
@@ -1199,9 +1813,33 @@ extension OrderQueryWhereDistinct on QueryBuilder<Order, Order, QDistinct> {
     });
   }
 
-  QueryBuilder<Order, Order, QDistinct> distinctByItemNames() {
+  QueryBuilder<Order, Order, QDistinct> distinctByCustomerId(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'itemNames');
+      return query.addDistinctBy(r'customerId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Order, Order, QDistinct> distinctByPaymentMethod(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'paymentMethod',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Order, Order, QDistinct> distinctByPaymentSplits(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'paymentSplits',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Order, Order, QDistinct> distinctBySessionId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sessionId', caseSensitive: caseSensitive);
     });
   }
 
@@ -1246,9 +1884,33 @@ extension OrderQueryProperty on QueryBuilder<Order, Order, QQueryProperty> {
     });
   }
 
-  QueryBuilder<Order, List<String>?, QQueryOperations> itemNamesProperty() {
+  QueryBuilder<Order, String?, QQueryOperations> customerIdProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'itemNames');
+      return query.addPropertyName(r'customerId');
+    });
+  }
+
+  QueryBuilder<Order, List<PosCartItem>, QQueryOperations> itemsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'items');
+    });
+  }
+
+  QueryBuilder<Order, String?, QQueryOperations> paymentMethodProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'paymentMethod');
+    });
+  }
+
+  QueryBuilder<Order, String?, QQueryOperations> paymentSplitsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'paymentSplits');
+    });
+  }
+
+  QueryBuilder<Order, String?, QQueryOperations> sessionIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sessionId');
     });
   }
 

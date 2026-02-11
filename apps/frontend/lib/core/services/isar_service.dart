@@ -1,24 +1,111 @@
 import 'package:isar/isar.dart';
+import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:frontend/features/pos/data/models/product.dart';
 import 'package:frontend/features/pos/data/models/order.dart';
+import 'package:frontend/features/pos/data/models/pos_session.dart';
+import 'package:frontend/features/pos/data/models/parked_cart.dart';
+import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/core/models/sync_status.dart';
 
 class IsarService {
   late Future<Isar> db;
 
   IsarService() {
-    db = _initDb();
+    db = initDb();
   }
 
-  Future<Isar> _initDb() async {
+  @visibleForTesting
+  @protected
+  Future<Isar> initDb() async {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [ProductSchema, OrderSchema],
+        [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema],
         directory: dir.path,
         inspector: true,
       );
     }
     return Future.value(Isar.getInstance());
+  }
+
+  // --- Product Methods ---
+
+  Future<List<Product>> getAllProducts() async {
+    final isar = await db;
+    return await isar.products.where().findAll();
+  }
+
+  Future<void> saveProducts(List<Product> products) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.products.putAll(products);
+    });
+  }
+
+  Future<void> cleanProducts() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.products.clear();
+    });
+  }
+
+  // --- Order Methods ---
+
+  Future<void> saveOrder(Order order) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.orders.put(order);
+    });
+  }
+
+  Future<List<Order>> getPendingOrders() async {
+    final isar = await db;
+    return await isar.orders
+        .filter()
+        .syncStatusEqualTo(SyncStatus.pending)
+        .findAll();
+  }
+
+  // --- Parked Cart Methods ---
+
+  Future<List<ParkedCart>> getAllParkedCarts() async {
+    final isar = await db;
+    return await isar.parkedCarts.where().findAll();
+  }
+
+  Future<void> saveParkedCart(ParkedCart cart) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.parkedCarts.put(cart);
+    });
+  }
+
+  Future<void> deleteParkedCart(int id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.parkedCarts.delete(id);
+    });
+  }
+
+  // --- Customer Methods ---
+
+  Future<List<Customer>> getAllCustomers() async {
+    final isar = await db;
+    return await isar.customers.where().findAll();
+  }
+
+  Future<void> saveCustomers(List<Customer> customers) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.customers.putAll(customers);
+    });
+  }
+
+  Future<void> saveCustomer(Customer customer) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.customers.put(customer);
+    });
   }
 }

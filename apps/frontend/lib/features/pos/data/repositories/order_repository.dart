@@ -2,6 +2,7 @@ import 'package:isar/isar.dart';
 import 'package:uuid/uuid.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/order.dart';
+import 'package:frontend/core/models/sync_status.dart';
 
 class OrderRepository {
   final IsarService _isarService;
@@ -21,18 +22,22 @@ class OrderRepository {
   }
 
   Future<List<Order>> getPendingOrders() async {
-    final isar = await _isarService.db;
-    return await isar.orders.filter().syncStatusEqualTo(SyncStatus.pending).findAll();
+    return _isarService.getPendingOrders();
   }
 
-  Future<void> markAsSynced(int id) async {
+  Future<void> markAsSynced(String uuid) async {
     final isar = await _isarService.db;
     await isar.writeTxn(() async {
-      final order = await isar.orders.get(id);
+      final order = await isar.orders.filter().uuidEqualTo(uuid).findFirst();
       if (order != null) {
         order.syncStatus = SyncStatus.synced;
         await isar.orders.put(order);
       }
     });
+  }
+
+  Future<List<Order>> getOrdersBySession(String sessionId) async {
+    final isar = await _isarService.db;
+    return await isar.orders.filter().sessionIdEqualTo(sessionId).findAll();
   }
 }

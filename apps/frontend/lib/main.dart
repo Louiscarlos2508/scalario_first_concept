@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/auth/auth_state.dart';
+import 'core/auth/user_profile.dart';
 import 'features/auth/login_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
+import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 
+import 'features/pos/presentation/screens/pos_screen.dart';
 import 'features/pos/presentation/providers/pos_providers.dart';
 
 Future<void> main() async {
@@ -30,10 +32,13 @@ class ScalarioApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
     
-    // Initialize Sync Service
-    // In a real app, this might be tied to auth state (only sync when logged in)
-    // For MVP Offline-First, we start it early.
-    ref.watch(syncServiceProvider).startSync();
+    // Initialize Sync & Realtime Services
+    try {
+      ref.watch(syncServiceProvider).startSync();
+      ref.watch(realtimeServiceProvider).init();
+    } catch (e) {
+      print('[Main] Error initializing services: $e');
+    }
 
     return MaterialApp(
       title: 'Scalario',
@@ -45,7 +50,19 @@ class ScalarioApp extends ConsumerWidget {
       home: authState.when(
         data: (state) {
           if (state.session != null) {
-            return const DashboardScreen();
+            final userProfileAsync = ref.watch(userProfileProvider);
+            
+            return userProfileAsync.when(
+              data: (profile) {
+                if (profile?.role == 'cashier') {
+                  return const PosScreen();
+                }
+                // Default to Dashboard for other roles (admin, owner, etc.)
+                return const DashboardScreen();
+              },
+              loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+              error: (e, s) => Scaffold(body: Center(child: Text('Error loading profile: $e'))),
+            );
           }
           return const LoginScreen();
         },
