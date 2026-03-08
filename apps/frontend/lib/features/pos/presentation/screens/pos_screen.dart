@@ -7,6 +7,7 @@ import '../widgets/session_report_dialog.dart';
 import '../widgets/camera_scanner_dialog.dart';
 import '../providers/pos_providers.dart';
 import '../../../../core/widgets/barcode_listener.dart';
+import '../widgets/sync_status_indicator.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -23,21 +24,7 @@ class PosScreen extends ConsumerWidget {
             onPressed: () => _openCameraScanner(context, ref),
             tooltip: 'Camera Scanner',
           ),
-          IconButton(
-             icon: const Icon(Icons.sync), 
-             onPressed: () async {
-               final syncService = ref.read(syncServiceProvider);
-               await syncService.forceSync();
-               ref.refresh(productListProvider);
-               
-               if (context.mounted) {
-                 ScaffoldMessenger.of(context).showSnackBar(
-                   const SnackBar(content: Text('Sync completed')),
-                 );
-               }
-             },
-             tooltip: 'Sync Now',
-          ),
+          const SyncStatusIndicator(),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             onPressed: () {

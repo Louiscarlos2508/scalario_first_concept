@@ -6,7 +6,10 @@ import 'package:frontend/features/pos/data/models/order.dart';
 import 'package:frontend/features/pos/data/models/pos_session.dart';
 import 'package:frontend/features/pos/data/models/parked_cart.dart';
 import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/models/sync_status.dart';
+
+import 'package:frontend/features/pos/data/models/category.dart';
 
 class IsarService {
   late Future<Isar> db;
@@ -21,7 +24,7 @@ class IsarService {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema],
+        [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema, SyncMetadataSchema, CategorySchema],
         directory: dir.path,
         inspector: true,
       );
@@ -106,6 +109,38 @@ class IsarService {
     final isar = await db;
     await isar.writeTxn(() async {
       await isar.customers.put(customer);
+    });
+  }
+
+  Future<void> incrementCustomerBalance(String remoteId, double amount) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final customer = await isar.customers.filter().remoteIdEqualTo(remoteId).findFirst();
+      if (customer != null) {
+        customer.balance += amount;
+        await isar.customers.put(customer);
+      }
+    });
+  }
+
+  // --- Sync Metadata Methods ---
+
+  Future<DateTime?> getLastSync(String key) async {
+    final isar = await db;
+    final meta = await isar.syncMetadatas.filter().keyEqualTo(key).findFirst();
+    return meta?.lastSync;
+  }
+
+  Future<void> updateLastSync(String key, DateTime timestamp) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final existing = await isar.syncMetadatas.filter().keyEqualTo(key).findFirst();
+      if (existing != null) {
+        existing.lastSync = timestamp;
+        await isar.syncMetadatas.put(existing);
+      } else {
+        await isar.syncMetadatas.put(SyncMetadata(key: key, lastSync: timestamp));
+      }
     });
   }
 }

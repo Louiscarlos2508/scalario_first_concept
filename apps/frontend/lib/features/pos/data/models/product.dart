@@ -47,6 +47,7 @@ class Product {
         ..barcode = json['barcode']?.toString()
         ..stockQuantity = _toDouble(json['stockQuantity'] ?? json['stock_quantity'])
         ..tenantId = (json['tenantId'] ?? json['tenant_id'])?.toString()
+        ..isDeleted = json['isDeleted'] ?? json['is_deleted'] ?? false
         ..lastUpdated = json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null;
     } catch (e) {
       print('Mapping error in Product.fromJson: $e for JSON: $json');

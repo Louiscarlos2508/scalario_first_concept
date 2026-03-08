@@ -6,12 +6,22 @@ import { Prisma } from '@prisma/client';
 export class PosService {
     constructor(private prisma: PrismaService) { }
 
-    async getProducts(params: { query?: string, page?: number, limit?: number, tenantId?: string } = {}) {
-        const { query, page = 1, limit = 50, tenantId } = params;
+    async getProducts(params: { query?: string, page?: number, limit?: number, tenantId?: string, since?: string } = {}) {
+        const { query, page = 1, limit = 50, tenantId, since } = params;
         const skip = (page - 1) * limit;
 
         const where: any = {};
         if (tenantId) where.tenantId = tenantId;
+
+        if (since) {
+            // When querying since a specific time, include soft-deleted items
+            // so the frontend can recognize and remove them (tombstoning).
+            where.updatedAt = { gte: new Date(since) };
+        } else {
+            // Normal query: exclude deleted items
+            where.isDeleted = false;
+        }
+
         if (query) {
             where.OR = [
                 { name: { contains: query, mode: 'insensitive' } },
@@ -39,14 +49,22 @@ export class PosService {
     }
 
     async deleteProduct(id: string) {
-        return this.prisma.product.delete({
+        return this.prisma.product.update({
             where: { id },
+            data: { isDeleted: true },
         });
     }
 
     async syncOrder(orderData: any) {
         try {
             let tenantId = orderData.tenantId;
+
+            // Verify provided tenantId
+            if (tenantId) {
+                const tenantExists = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+                if (!tenantExists) tenantId = null;
+            }
+
             if (!tenantId) {
                 const tenant = await this.prisma.tenant.findFirst();
                 if (!tenant) {
@@ -64,6 +82,22 @@ export class PosService {
                 where: { id: orderData.uuid },
             });
 
+            // Check if session exists before trying to connect
+            let sessionExists = false;
+            if (orderData.sessionId) {
+                const session = await this.prisma.posSession.findUnique({
+                    where: { id: orderData.sessionId }
+                });
+                sessionExists = !!session;
+            }
+
+            // Check customer existence
+            let validCustomerId: string | undefined = undefined;
+            if (orderData.customer_id) {
+                const customer = await this.prisma.customer.findUnique({ where: { id: orderData.customer_id } });
+                if (customer) validCustomerId = customer.id;
+            }
+
             const order = await this.prisma.order.upsert({
                 where: { id: orderData.uuid },
                 update: {
@@ -71,8 +105,7 @@ export class PosService {
                     itemsJson: orderData.items || [],
                     paymentMethod: orderData.paymentMethod,
                     paymentSplits: orderData.payment_splits,
-                    session: orderData.sessionId ? { connect: { id: orderData.sessionId } } : undefined,
-                    customer: orderData.customer_id ? { connect: { id: orderData.customer_id } } : { disconnect: true },
+                    session: sessionExists ? { connect: { id: orderData.sessionId } } : undefined,
                 },
                 create: {
                     id: orderData.uuid,
@@ -80,15 +113,14 @@ export class PosService {
                     itemsJson: orderData.items || [],
                     paymentMethod: orderData.paymentMethod,
                     paymentSplits: orderData.payment_splits,
-                    session: orderData.sessionId ? { connect: { id: orderData.sessionId } } : undefined,
-                    customer: orderData.customer_id ? { connect: { id: orderData.customer_id } } : undefined,
+                    session: sessionExists ? { connect: { id: orderData.sessionId } } : undefined,
+                    customer: validCustomerId ? { connect: { id: validCustomerId } } : undefined,
                     tenant: { connect: { id: tenantId } },
                 },
             });
-
             // Handle Credit Payment: Update customer balance ONLY if it's a new order or balance changed (simplified to new order for MVP)
             if (!existingOrder) {
-                if (orderData.paymentMethod === 'CREDIT' && orderData.customer_id) {
+                if (orderData.paymentMethod === 'CREDIT' && orderData.customer_id && validCustomerId) {
                     await this.prisma.customer.update({
                         where: { id: orderData.customer_id },
                         data: {
@@ -97,7 +129,7 @@ export class PosService {
                             },
                         },
                     });
-                } else if (orderData.paymentMethod === 'SPLIT' && orderData.payment_splits && orderData.customer_id) {
+                } else if (orderData.paymentMethod === 'SPLIT' && orderData.payment_splits && orderData.customer_id && validCustomerId) {
                     // If it's a split and one of the splits is CREDIT
                     const splits = typeof orderData.payment_splits === 'string'
                         ? JSON.parse(orderData.payment_splits)
@@ -396,6 +428,48 @@ export class PosService {
     async deleteCategory(id: string) {
         return this.prisma.category.delete({
             where: { id },
+        });
+    }
+
+    // --- Customer Management ---
+
+    async getCustomers(tenantId?: string, query?: string) {
+        const where: any = {};
+        if (tenantId) where.tenantId = tenantId;
+        if (query) {
+            where.OR = [
+                { name: { contains: query, mode: 'insensitive' } },
+                { phone: { contains: query, mode: 'insensitive' } },
+                { email: { contains: query, mode: 'insensitive' } },
+            ];
+        }
+
+        return this.prisma.customer.findMany({
+            where,
+            orderBy: { name: 'asc' },
+        });
+    }
+
+    async createCustomer(data: any) {
+        return this.prisma.customer.create({
+            data: {
+                name: data.name,
+                phone: data.phone,
+                email: data.email,
+                address: data.address,
+                tenantId: data.tenantId,
+            },
+        });
+    }
+
+    async settleDebt(customerId: string, amount: number) {
+        return this.prisma.customer.update({
+            where: { id: customerId },
+            data: {
+                balance: {
+                    decrement: amount,
+                },
+            },
         });
     }
 }

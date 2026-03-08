@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/dashboard/presentation/providers/dashboard_providers.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -52,7 +52,8 @@ class ReportsScreen extends ConsumerWidget {
 
   Widget _buildReportBody(BuildContext context, Map<String, dynamic> data) {
     final productSales = (data['productSales'] as List<dynamic>?) ?? [];
-    final paymentMethodStats = (data['paymentMethodStats'] as List<dynamic>?) ?? [];
+    final paymentMethodStats =
+        (data['paymentMethodStats'] as List<dynamic>?) ?? [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -74,16 +75,22 @@ class ReportsScreen extends ConsumerWidget {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(
+        context,
+      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 
   Widget _buildProductSalesTable(List<dynamic> productSales) {
-    if (productSales.isEmpty) return const Text('No product sales data for this period.');
+    if (productSales.isEmpty) {
+      return const Text('No product sales data for this period.');
+    }
 
     // Sort by revenue descending
     final sortedSales = List.from(productSales);
-    sortedSales.sort((a, b) => (b['revenue'] as num).compareTo(a['revenue'] as num));
+    sortedSales.sort(
+      (a, b) => (b['revenue'] as num).compareTo(a['revenue'] as num),
+    );
 
     return Card(
       elevation: 0,
@@ -98,11 +105,13 @@ class ReportsScreen extends ConsumerWidget {
           DataColumn(label: Text('Revenue'), numeric: true),
         ],
         rows: sortedSales.map((item) {
-          return DataRow(cells: [
-            DataCell(Text(item['name'])),
-            DataCell(Text(item['quantity'].toString())),
-            DataCell(Text('\$ ${item['revenue'].toStringAsFixed(2)}')),
-          ]);
+          return DataRow(
+            cells: [
+              DataCell(Text(item['name'])),
+              DataCell(Text(item['quantity'].toString())),
+              DataCell(Text('\$ ${item['revenue'].toStringAsFixed(2)}')),
+            ],
+          );
         }).toList(),
       ),
     );
@@ -146,9 +155,18 @@ class ReportsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
                   children: [
-                    Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text('${val['name']}: \$ ${val['value'].toStringAsFixed(2)}'),
+                    Text(
+                      '${val['name']}: \$ ${val['value'].toStringAsFixed(2)}',
+                    ),
                   ],
                 ),
               );

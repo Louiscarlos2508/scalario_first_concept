@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/auth_state.dart';
 import '../../../pos/presentation/screens/pos_screen.dart';
+import '../../../pos/presentation/widgets/sync_status_indicator.dart';
 
 class DashboardShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -48,6 +49,11 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                 icon: Icon(Icons.category_outlined),
                 selectedIcon: Icon(Icons.category),
                 label: Text('Categories'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.people_outline),
+                selectedIcon: Icon(Icons.people),
+                label: Text('Customers'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.history_outlined),
@@ -146,7 +152,9 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                       ref.read(authRepositoryProvider).signOut();
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  const SyncStatusIndicator(),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),

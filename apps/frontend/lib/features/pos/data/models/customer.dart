@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:uuid/uuid.dart';
 
 part 'customer.g.dart';
 
@@ -7,6 +8,9 @@ class Customer {
   Customer();
 
   Id id = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  late String uuid;
 
   @Index(unique: true, replace: true)
   String? remoteId; // UUID from Supabase
@@ -23,6 +27,7 @@ class Customer {
 
   Map<String, dynamic> toJson() {
     return {
+      'uuid': uuid,
       'id': remoteId,
       'name': name,
       'phone': phone,
@@ -35,6 +40,7 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer()
+      ..uuid = json['uuid']?.toString() ?? const Uuid().v4()
       ..remoteId = json['id']?.toString()
       ..name = json['name']?.toString() ?? 'Unknown'
       ..phone = json['phone']?.toString()

@@ -49,8 +49,8 @@ class PosSession {
   factory PosSession.fromJson(Map<String, dynamic> json) {
     return PosSession()
       ..uuid = json['id']?.toString() ?? json['uuid']?.toString() ?? ''
-      ..userId = json['user_id']?.toString() ?? ''
-      ..tenantId = json['tenant_id']?.toString() ?? ''
+      ..userId = json['user_id']?.toString() ?? json['userId']?.toString() ?? ''
+      ..tenantId = json['tenant_id']?.toString() ?? json['tenantId']?.toString() ?? ''
       ..openingBalance = (json['opening_balance'] is num) ? (json['opening_balance'] as num).toDouble() : double.parse(json['opening_balance']?.toString() ?? '0')
       ..closingBalance = json['closing_balance'] != null ? ((json['closing_balance'] is num) ? (json['closing_balance'] as num).toDouble() : double.parse(json['closing_balance']?.toString() ?? '0')) : null
       ..theoreticalBalance = json['theoretical_balance'] != null ? ((json['theoretical_balance'] is num) ? (json['theoretical_balance'] as num).toDouble() : double.parse(json['theoretical_balance']?.toString() ?? '0')) : null

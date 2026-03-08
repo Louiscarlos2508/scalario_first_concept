@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:isar/isar.dart';
 
 class CustomerRepository {
   final IsarService _isarService;
@@ -90,5 +91,44 @@ class CustomerRepository {
       print('Error settling debt: $e');
       rethrow;
     }
+  }
+
+  Future<void> incrementLocalBalance(String remoteId, double amount) async {
+    await _isarService.incrementCustomerBalance(remoteId, amount);
+  }
+
+  Future<List<Customer>> getPendingCustomers() async {
+    final isar = await _isarService.db;
+    return await isar.customers.filter().uuidIsNotEmpty().remoteIdIsNull().findAll();
+  }
+
+  Future<void> markAsSynced(String uuid, String remoteId) async {
+    final isar = await _isarService.db;
+    await isar.writeTxn(() async {
+      final customer = await isar.customers.filter().uuidEqualTo(uuid).findFirst();
+      if (customer != null) {
+        customer.remoteId = remoteId;
+        customer.isSynced = true;
+        customer.lastUpdated = DateTime.now();
+        await isar.customers.put(customer);
+      }
+    });
+  }
+
+  Future<void> upsertCustomers(List<Customer> customers) async {
+    final isar = await _isarService.db;
+    await isar.writeTxn(() async {
+      for (final customer in customers) {
+        final existing = await isar.customers.filter()
+            .remoteIdEqualTo(customer.remoteId)
+            .findFirst();
+        
+        if (existing != null) {
+          customer.id = existing.id;
+          // Preserve local pending changes if any (conflict resolution strategy: server wins for now)
+        }
+        await isar.customers.put(customer);
+      }
+    });
   }
 }

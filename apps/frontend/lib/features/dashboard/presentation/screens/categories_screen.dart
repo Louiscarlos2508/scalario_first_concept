@@ -15,6 +15,10 @@ class CategoriesScreen extends ConsumerWidget {
         title: const Text('Category Management'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.refresh(categoriesProvider),
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddCategoryDialog(context, ref),
           ),

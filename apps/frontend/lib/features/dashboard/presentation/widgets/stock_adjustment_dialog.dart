@@ -26,11 +26,17 @@ class _StockAdjustmentDialogState extends State<StockAdjustmentDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: _adjustmentType,
+              initialValue: _adjustmentType,
               items: const [
-                DropdownMenuItem(value: 'ADJUSTMENT', child: Text('Manual Adjustment (+/-)')),
+                DropdownMenuItem(
+                  value: 'ADJUSTMENT',
+                  child: Text('Manual Adjustment (+/-)'),
+                ),
                 DropdownMenuItem(value: 'IN', child: Text('Restock (IN)')),
-                DropdownMenuItem(value: 'OUT', child: Text('Damage/Loss (OUT)')),
+                DropdownMenuItem(
+                  value: 'OUT',
+                  child: Text('Damage/Loss (OUT)'),
+                ),
               ],
               onChanged: (val) => setState(() => _adjustmentType = val!),
               decoration: const InputDecoration(labelText: 'Adjustment Type'),
@@ -40,9 +46,13 @@ class _StockAdjustmentDialogState extends State<StockAdjustmentDialog> {
               controller: _quantityController,
               decoration: const InputDecoration(
                 labelText: 'Quantity',
-                helperText: 'Use negative numbers to decrease stock in Adjustment mode',
+                helperText:
+                    'Use negative numbers to decrease stock in Adjustment mode',
               ),
-              keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: true,
+                decimal: true,
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Required';
                 if (double.tryParse(value) == null) return 'Invalid number';
@@ -52,8 +62,11 @@ class _StockAdjustmentDialogState extends State<StockAdjustmentDialog> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _reasonController,
-              decoration: const InputDecoration(labelText: 'Reason for Adjustment'),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              decoration: const InputDecoration(
+                labelText: 'Reason for Adjustment',
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
             ),
           ],
         ),
@@ -63,10 +76,7 @@ class _StockAdjustmentDialogState extends State<StockAdjustmentDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text('Update Stock'),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text('Update Stock')),
       ],
     );
   }
@@ -74,7 +84,7 @@ class _StockAdjustmentDialogState extends State<StockAdjustmentDialog> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       double qty = double.parse(_quantityController.text);
-      
+
       // Enforce positive/negative based on type if not pure adjustment
       if (_adjustmentType == 'IN') qty = qty.abs();
       if (_adjustmentType == 'OUT') qty = -qty.abs();

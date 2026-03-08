@@ -1,7 +1,7 @@
 import 'package:isar/isar.dart';
+import 'package:frontend/core/models/sync_status.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/pos_session.dart';
-import 'package:frontend/core/models/sync_status.dart';
 import 'package:uuid/uuid.dart';
 
 class SessionRepository {
@@ -11,10 +11,7 @@ class SessionRepository {
 
   Future<PosSession?> getActiveSession() async {
     final isar = await _isarService.db;
-    return await isar.posSessions
-        .filter()
-        .statusEqualTo('OPEN')
-        .findFirst();
+    return await isar.posSessions.filter().statusEqualTo('OPEN').findFirst();
   }
 
   final Uuid _uuid = const Uuid();
@@ -55,4 +52,9 @@ class SessionRepository {
       }
     });
   }
+
+  // --- Sync Metadata Helpers ---
+  Future<DateTime?> getLastSync(String key) => _isarService.getLastSync(key);
+  Future<void> updateLastSync(String key, DateTime timestamp) =>
+      _isarService.updateLastSync(key, timestamp);
 }

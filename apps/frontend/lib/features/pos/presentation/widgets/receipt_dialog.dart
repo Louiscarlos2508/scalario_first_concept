@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/pos/data/models/order.dart';
+import 'package:frontend/core/services/receipt_service.dart';
 
 class ReceiptDialog extends StatelessWidget {
   final Order order;
@@ -59,11 +60,16 @@ class ReceiptDialog extends StatelessWidget {
           child: const Text('OK'),
         ),
         ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Implement PDF generation/printing
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Printing PDF... (Demo)')),
-            );
+          onPressed: () async {
+            try {
+              await ReceiptService.printOrder(order, tenantName);
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error printing receipt: $e')),
+                );
+              }
+            }
           },
           icon: const Icon(Icons.print),
           label: const Text('Print Receipt'),

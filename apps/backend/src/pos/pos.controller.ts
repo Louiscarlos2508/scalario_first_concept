@@ -11,13 +11,15 @@ export class PosController {
         @Query('q') query?: string,
         @Query('page') page: string = '1',
         @Query('limit') limit: string = '50',
-        @Query('tenantId') tenantId?: string
+        @Query('tenantId') tenantId?: string,
+        @Query('since') since?: string
     ) {
         return this.posService.getProducts({
             query,
             page: parseInt(page),
             limit: parseInt(limit),
-            tenantId
+            tenantId,
+            since
         });
     }
 
@@ -101,5 +103,27 @@ export class PosController {
     @Delete('categories/:id')
     async deleteCategory(@Param('id') id: string) {
         return this.posService.deleteCategory(id);
+    }
+
+    // --- Customer Management ---
+
+    @Get('customers')
+    async getCustomers(@Query('tenantId') tenantId: string) {
+        return this.posService.getCustomers(tenantId);
+    }
+
+    @Get('customers/search')
+    async searchCustomers(@Query('tenantId') tenantId: string, @Query('q') query: string) {
+        return this.posService.getCustomers(tenantId, query);
+    }
+
+    @Post('customers')
+    async createCustomer(@Body() data: any) {
+        return this.posService.createCustomer(data);
+    }
+
+    @Post('customers/:id/settle')
+    async settleDebt(@Param('id') id: string, @Body('amount') amount: number) {
+        return this.posService.settleDebt(id, amount);
     }
 }

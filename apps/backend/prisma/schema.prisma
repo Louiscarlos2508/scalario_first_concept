@@ -1,30 +1,38 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "multiSchema"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public"]
+  schemas  = ["kernel", "public"]
 }
 
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema", "driverAdapters"]
-}
+// ═══════════════════════════════════════════
+// KERNEL SCHEMA
+// ═══════════════════════════════════════════
 
 model Tenant {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  products        Product[]
-  orders          Order[]
-  members         OrganizationMember[]
-  posSessions     PosSession[]
-  stockMovements  StockMovement[]
-  customers       Customer[]
-  terminalStatuses TerminalStatus[]
-  categories      Category[]
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                  String
+  currency              String               @default("XOF")
+  timezone              String               @default("Africa/Abidjan")
+  fiscalJurisdiction    String?              @map("fiscal_jurisdiction")
+  status                String               @default("active") // active, suspended, archived
+  sessionTimeoutMinutes Int                  @default(480) @map("session_timeout_minutes")
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  categories            Category[]
+  customers             Customer[]
+  orders                Order[]
+  members               OrganizationMember[]
+  posSessions           PosSession[]
+  products              Product[]
+  stockMovements        StockMovement[]
+  terminalStatuses      TerminalStatus[]
 
   @@map("tenants")
-  @@schema("public")
+  @@schema("kernel")
 }
 
 model OrganizationMember {
@@ -33,22 +41,18 @@ model OrganizationMember {
   userId         String   @map("user_id") @db.Uuid
   role           String
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
   tenant         Tenant   @relation(fields: [organizationId], references: [id])
 
-  @@map("organization_members")
   @@unique([organizationId, userId])
-  @@schema("public")
+  @@map("organization_members")
+  @@schema("kernel")
 }
 
 model Category {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String    @id @default(uuid()) @db.Uuid
   name      String
-  tenantId  String   @map("tenant_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
+  tenantId  String    @map("tenant_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant    Tenant    @relation(fields: [tenantId], references: [id])
   products  Product[]
 
@@ -57,19 +61,18 @@ model Category {
 }
 
 model Product {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String
-  price         Decimal  @db.Decimal(10, 2)
-  categoryId    String?  @map("category_id") @db.Uuid
-  barcode       String?
-  stockQuantity Decimal  @default(0) @map("stock_quantity") @db.Decimal(10, 2)
-  tenantId      String   @map("tenant_id") @db.Uuid
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
-  // Relations
-  tenant        Tenant          @relation(fields: [tenantId], references: [id])
-  category      Category?       @relation(fields: [categoryId], references: [id])
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String
+  price          Decimal         @db.Decimal(10, 2)
+  stockQuantity  Decimal         @default(0) @map("stock_quantity") @db.Decimal(10, 2)
+  tenantId       String          @map("tenant_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  barcode        String?
+  categoryId     String?         @map("category_id") @db.Uuid
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  isDeleted      Boolean         @default(false) @map("is_deleted")
   stockMovements StockMovement[]
 
   @@map("products")
@@ -77,40 +80,36 @@ model Product {
 }
 
 model Order {
-  id            String   @id @default(uuid()) @db.Uuid
-  totalAmount   Decimal  @map("total_amount") @db.Decimal(10, 2)
-  itemsJson     Json     @map("items_json")
-  paymentMethod String?  @map("payment_method")
-  paymentSplits Json?     @map("payment_splits")
-  tenantId      String   @map("tenant_id") @db.Uuid
-  sessionId     String?  @map("session_id") @db.Uuid
-  customerId    String?  @map("customer_id") @db.Uuid
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Relations
-  tenant   Tenant      @relation(fields: [tenantId], references: [id])
-  session  PosSession? @relation(fields: [sessionId], references: [id])
-  customer Customer?   @relation(fields: [customerId], references: [id])
+  id            String      @id @default(uuid()) @db.Uuid
+  totalAmount   Decimal     @map("total_amount") @db.Decimal(10, 2)
+  itemsJson     Json        @map("items_json")
+  paymentMethod String?     @map("payment_method")
+  tenantId      String      @map("tenant_id") @db.Uuid
+  sessionId     String?     @map("session_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  customerId    String?     @map("customer_id") @db.Uuid
+  paymentSplits Json?       @map("payment_splits")
+  customer      Customer?   @relation(fields: [customerId], references: [id])
+  session       PosSession? @relation(fields: [sessionId], references: [id])
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
 
   @@map("orders")
   @@schema("public")
 }
 
 model PosSession {
-  id             String    @id @default(uuid()) @db.Uuid
-  openingBalance Decimal   @map("opening_balance") @db.Decimal(10, 2)
-  closingBalance     Decimal?   @map("closing_balance") @db.Decimal(10, 2)
-  theoreticalBalance Decimal?   @map("theoretical_balance") @db.Decimal(10, 2)
-  variance           Decimal?   @db.Decimal(10, 2)
-  status             String     @default("OPEN") // OPEN, CLOSED, SYNCED
-  userId             String     @map("user_id") @db.Uuid
-  tenantId           String     @map("tenant_id") @db.Uuid
-  openedAt           DateTime   @default(now()) @map("opened_at") @db.Timestamptz(6)
-  closedAt           DateTime?  @map("closed_at") @db.Timestamptz(6)
-
-  // Relations
-  tenant Tenant  @relation(fields: [tenantId], references: [id])
-  orders Order[]
+  id                 String    @id @default(uuid()) @db.Uuid
+  openingBalance     Decimal   @map("opening_balance") @db.Decimal(10, 2)
+  closingBalance     Decimal?  @map("closing_balance") @db.Decimal(10, 2)
+  status             String    @default("OPEN")
+  userId             String    @map("user_id") @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  openedAt           DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt           DateTime? @map("closed_at") @db.Timestamptz(6)
+  theoreticalBalance Decimal?  @map("theoretical_balance") @db.Decimal(10, 2)
+  variance           Decimal?  @db.Decimal(10, 2)
+  orders             Order[]
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
 
   @@map("pos_sessions")
   @@schema("public")
@@ -120,11 +119,10 @@ model StockMovement {
   id        String   @id @default(uuid()) @db.Uuid
   productId String   @map("product_id") @db.Uuid
   quantity  Decimal  @db.Decimal(10, 2)
-  type      String   // IN, OUT, ADJUSTMENT
+  type      String
   reason    String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenantId  String   @map("tenant_id") @db.Uuid
-
   product   Product  @relation(fields: [productId], references: [id])
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
@@ -142,23 +140,20 @@ model Customer {
   tenantId  String   @map("tenant_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  // Relations
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
-  orders  Order[]
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  orders    Order[]
 
   @@map("customers")
   @@schema("public")
 }
 
 model TerminalStatus {
-  id        String   @id @default(uuid()) @db.Uuid
-  deviceId  String   @unique @map("device_id")
-  status    String   // ONLINE, OFFLINE
-  lastSeen  DateTime @default(now()) @map("last_seen") @db.Timestamptz(6)
-  tenantId  String   @map("tenant_id") @db.Uuid
-
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  id       String   @id @default(uuid()) @db.Uuid
+  deviceId String   @unique @map("device_id")
+  status   String
+  lastSeen DateTime @default(now()) @map("last_seen") @db.Timestamptz(6)
+  tenantId String   @map("tenant_id") @db.Uuid
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("terminal_statuses")
   @@schema("public")

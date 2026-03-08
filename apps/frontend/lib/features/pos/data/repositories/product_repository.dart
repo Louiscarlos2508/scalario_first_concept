@@ -10,12 +10,25 @@ class ProductRepository {
 
   ProductRepository(this._isarService);
 
-  Future<List<Product>> getProducts({String? categoryId}) async {
-    final products = await _isarService.getAllProducts();
-    if (categoryId != null) {
-      return products.where((p) => p.categoryId == categoryId).toList();
+  Future<List<Product>> getProducts({
+    String? categoryId,
+    String? tenantId,
+  }) async {
+    final isar = await _isarService.db;
+    final query = isar.products.where();
+
+    if (tenantId != null) {
+      return await query
+          .filter()
+          .tenantIdEqualTo(tenantId)
+          .optional(categoryId != null, (q) => q.categoryIdEqualTo(categoryId))
+          .findAll();
     }
-    return products;
+
+    if (categoryId != null) {
+      return await query.filter().categoryIdEqualTo(categoryId).findAll();
+    }
+    return await query.findAll();
   }
 
   Future<void> saveProducts(List<Product> products) async {
@@ -30,19 +43,29 @@ class ProductRepository {
     final isar = await _isarService.db;
     await isar.writeTxn(() async {
       for (final product in products) {
-        final existing = await isar.products.filter()
+        final existing = await isar.products
+            .filter()
             .remoteIdEqualTo(product.remoteId)
             .findFirst();
-        
+
         if (existing != null) {
+          // tombstoning: if marked as deleted in cloud, delete locally
+          if (product.isDeleted) {
+            await isar.products.delete(existing.id);
+            continue;
+          }
+
           // Conflict Resolution: Last-Write-Wins from Cloud
-          if (product.lastUpdated != null && 
-              existing.lastUpdated != null && 
+          if (product.lastUpdated != null &&
+              existing.lastUpdated != null &&
               product.lastUpdated!.isBefore(existing.lastUpdated!)) {
             print('[ProductRepo] Skipping stale update for ${product.name}');
             continue;
           }
           product.id = existing.id;
+        } else if (product.isDeleted) {
+          // If deleted in cloud but not local, just skip
+          continue;
         }
         await isar.products.put(product);
       }
@@ -52,7 +75,8 @@ class ProductRepository {
   Future<void> decrementStock(String productId, double quantity) async {
     final isar = await _isarService.db;
     await isar.writeTxn(() async {
-      final product = await isar.products.filter()
+      final product = await isar.products
+          .filter()
           .remoteIdEqualTo(productId)
           .findFirst();
       if (product != null) {
@@ -78,15 +102,16 @@ class ProductRepository {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final syncedProduct = Product.fromJson(data);
-        
+
         // Update local Isar
         final isar = await _isarService.db;
         await isar.writeTxn(() async {
           // Find by remoteId to replace if exists
-          final existing = await isar.products.filter()
+          final existing = await isar.products
+              .filter()
               .remoteIdEqualTo(syncedProduct.remoteId)
               .findFirst();
-          
+
           if (existing != null) {
             syncedProduct.id = existing.id;
           }
@@ -108,14 +133,15 @@ class ProductRepository {
     // and assume the user wants it gone.
     final isar = await _isarService.db;
     await isar.writeTxn(() async {
-      final product = await isar.products.filter()
+      final product = await isar.products
+          .filter()
           .remoteIdEqualTo(remoteId)
           .findFirst();
       if (product != null) {
         await isar.products.delete(product.id);
       }
     });
-    
+
     // TODO: Add backend DELETE call if needed
   }
 
@@ -140,11 +166,12 @@ class ProductRepository {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final updatedProduct = Product.fromJson(data);
-        
+
         // Update local stock immediately
         final isar = await _isarService.db;
         await isar.writeTxn(() async {
-          final existing = await isar.products.filter()
+          final existing = await isar.products
+              .filter()
               .remoteIdEqualTo(updatedProduct.remoteId)
               .findFirst();
           if (existing != null) {
@@ -173,7 +200,7 @@ class ProductRepository {
           if (query != null && query.isNotEmpty) 'q': query,
           'page': page.toString(),
           'limit': limit.toString(),
-          if (tenantId != null) 'tenantId': tenantId,
+          'tenantId': ?tenantId,
         },
       );
 
@@ -183,14 +210,16 @@ class ProductRepository {
         final data = jsonDecode(response.body);
         final List<dynamic> itemsData = data['items'];
         final items = itemsData.map((json) => Product.fromJson(json)).toList();
-        
+
         return {
           'items': items,
           'total': data['total'],
           'totalPages': data['totalPages'],
         };
       } else {
-        throw Exception('Failed to fetch remote products: ${response.statusCode}');
+        throw Exception(
+          'Failed to fetch remote products: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error fetching remote products: $e');
@@ -205,9 +234,11 @@ class ProductRepository {
       );
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception('Failed to delete product remotely: ${response.statusCode}');
+        throw Exception(
+          'Failed to delete product remotely: ${response.statusCode}',
+        );
       }
-      
+
       // Also delete locally
       await deleteProduct(remoteId);
     } catch (e) {
@@ -215,20 +246,23 @@ class ProductRepository {
       rethrow;
     }
   }
-  Future<List<dynamic>> getStockAcrossBranches(String barcode, String userId) async {
+
+  Future<List<dynamic>> getStockAcrossBranches(
+    String barcode,
+    String userId,
+  ) async {
     try {
-      final uri = Uri.parse('$_baseUrl/pos/stock-across-branches').replace(
-        queryParameters: {
-          'barcode': barcode,
-          'userId': userId,
-        },
-      );
+      final uri = Uri.parse(
+        '$_baseUrl/pos/stock-across-branches',
+      ).replace(queryParameters: {'barcode': barcode, 'userId': userId});
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        throw Exception('Failed to lookup branch stock: ${response.statusCode}');
+        throw Exception(
+          'Failed to lookup branch stock: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error looking up branch stock: $e');

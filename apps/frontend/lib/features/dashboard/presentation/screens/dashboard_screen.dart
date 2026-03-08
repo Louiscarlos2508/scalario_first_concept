@@ -7,8 +7,10 @@ import 'package:frontend/features/dashboard/presentation/screens/inventory_scree
 import 'package:frontend/features/dashboard/presentation/screens/categories_screen.dart';
 import 'package:frontend/features/dashboard/presentation/screens/stock_history_screen.dart';
 import 'package:frontend/features/dashboard/presentation/screens/reports_screen.dart';
-import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/dashboard/presentation/screens/customers_screen.dart';
+import 'package:frontend/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:frontend/features/dashboard/data/models/sales_stat.dart';
+import 'dart:async';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +26,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     const OverviewScreen(),
     const InventoryScreen(),
     const CategoriesScreen(),
+    const CustomersScreen(),
     const StockHistoryScreen(),
     const ReportsScreen(),
     const SettingsPlaceholder(),
@@ -43,11 +46,39 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-class OverviewScreen extends ConsumerWidget {
+class OverviewScreen extends ConsumerStatefulWidget {
   const OverviewScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OverviewScreen> createState() => _OverviewScreenState();
+}
+
+class _OverviewScreenState extends ConsumerState<OverviewScreen> {
+  // Timer for auto-refresh
+  // ignore: unused_field
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-refresh every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      // Only refresh if the widget is mounted
+      if (mounted) {
+        ref.refresh(salesStatsProvider);
+        ref.refresh(terminalStatusProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final statsAsync = ref.watch(salesStatsProvider);
     final dateRange = ref.watch(salesStatsDateRangeProvider);
 
@@ -74,6 +105,13 @@ class OverviewScreen extends ConsumerWidget {
                   : '${DateFormat('MM/dd').format(dateRange.start)} - ${DateFormat('MM/dd').format(dateRange.end)}',
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.refresh(salesStatsProvider);
+              ref.refresh(terminalStatusProvider);
+            },
+          ),
           const SizedBox(width: 16),
         ],
       ),
@@ -86,8 +124,14 @@ class OverviewScreen extends ConsumerWidget {
   }
 
   Widget _buildDashboard(BuildContext context, List<SalesStat> stats) {
-    final totalRevenue = stats.fold<double>(0.0, (sum, item) => sum + item.revenue);
-    final totalOrders = stats.fold<int>(0, (sum, item) => sum + item.orderCount);
+    final totalRevenue = stats.fold<double>(
+      0.0,
+      (sum, item) => sum + item.revenue,
+    );
+    final totalOrders = stats.fold<int>(
+      0,
+      (sum, item) => sum + item.orderCount,
+    );
     final avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
 
     return SingleChildScrollView(
@@ -102,11 +146,29 @@ class OverviewScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Row(
             children: [
-              _buildStatCard(context, 'Total Revenue', '\$ ${totalRevenue.toStringAsFixed(2)}', Icons.attach_money, Colors.green),
+              _buildStatCard(
+                context,
+                'Total Revenue',
+                '\$ ${totalRevenue.toStringAsFixed(2)}',
+                Icons.attach_money,
+                Colors.green,
+              ),
               const SizedBox(width: 16),
-              _buildStatCard(context, 'Order Count', totalOrders.toString(), Icons.shopping_basket, Colors.blue),
+              _buildStatCard(
+                context,
+                'Order Count',
+                totalOrders.toString(),
+                Icons.shopping_basket,
+                Colors.blue,
+              ),
               const SizedBox(width: 16),
-              _buildStatCard(context, 'Avg. Ticket', '\$ ${avgTicket.toStringAsFixed(2)}', Icons.confirmation_number_outlined, Colors.purple),
+              _buildStatCard(
+                context,
+                'Avg. Ticket',
+                '\$ ${avgTicket.toStringAsFixed(2)}',
+                Icons.confirmation_number_outlined,
+                Colors.purple,
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -148,7 +210,9 @@ class OverviewScreen extends ConsumerWidget {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
-                  if (index < 0 || index >= stats.length) return const SizedBox();
+                  if (index < 0 || index >= stats.length) {
+                    return const SizedBox();
+                  }
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
@@ -160,9 +224,15 @@ class OverviewScreen extends ConsumerWidget {
                 interval: 1,
               ),
             ),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
@@ -185,7 +255,13 @@ class OverviewScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Expanded(
       child: Card(
         elevation: 0,
@@ -200,9 +276,18 @@ class OverviewScreen extends ConsumerWidget {
             children: [
               Icon(icon, color: color, size: 32),
               const SizedBox(height: 16),
-              Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              Text(
+                title,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+              ),
               const SizedBox(height: 4),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                ),
+              ),
             ],
           ),
         ),
@@ -214,14 +299,21 @@ class OverviewScreen extends ConsumerWidget {
 class ReportsPlaceholder extends StatelessWidget {
   const ReportsPlaceholder({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Reports')), body: const Center(child: Text('Sales Reports Coming Soon')));
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Reports')),
+    body: const Center(child: Text('Sales Reports Coming Soon')),
+  );
 }
 
 class SettingsPlaceholder extends StatelessWidget {
   const SettingsPlaceholder({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Settings')), body: const Center(child: Text('System Settings Coming Soon')));
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Settings')),
+    body: const Center(child: Text('System Settings Coming Soon')),
+  );
 }
+
 class TerminalsStatusWidget extends ConsumerWidget {
   const TerminalsStatusWidget({super.key});
 
@@ -232,10 +324,7 @@ class TerminalsStatusWidget extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Active Terminals',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('Active Terminals', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         terminalsAsync.when(
           data: (terminals) {
@@ -254,22 +343,35 @@ class TerminalsStatusWidget extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final t = terminals[index];
                 final lastSeen = DateTime.parse(t['lastSeen']);
-                final isOnline = t['status'] == 'ONLINE' && 
-                                 DateTime.now().difference(lastSeen).inMinutes < 5;
+                final isOnline =
+                    t['status'] == 'ONLINE' &&
+                    DateTime.now().difference(lastSeen).inMinutes < 5;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: isOnline ? Colors.green.shade100 : Colors.grey.shade200,
-                      child: Icon(Icons.computer, color: isOnline ? Colors.green : Colors.grey),
+                      backgroundColor: isOnline
+                          ? Colors.green.shade100
+                          : Colors.grey.shade200,
+                      child: Icon(
+                        Icons.computer,
+                        color: isOnline ? Colors.green : Colors.grey,
+                      ),
                     ),
                     title: Text(t['deviceId']),
-                    subtitle: Text('Last seen: ${DateFormat('HH:mm:ss').format(lastSeen)}'),
+                    subtitle: Text(
+                      'Last seen: ${DateFormat('HH:mm:ss').format(lastSeen)}',
+                    ),
                     trailing: Chip(
                       label: Text(isOnline ? 'ONLINE' : 'OFFLINE'),
-                      backgroundColor: isOnline ? Colors.green.shade50 : Colors.grey.shade50,
-                      labelStyle: TextStyle(color: isOnline ? Colors.green : Colors.grey, fontSize: 12),
+                      backgroundColor: isOnline
+                          ? Colors.green.shade50
+                          : Colors.grey.shade50,
+                      labelStyle: TextStyle(
+                        color: isOnline ? Colors.green : Colors.grey,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 );

@@ -42,6 +42,24 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
       // Save order locally
       await _orderRepository.saveOrder(order);
       
+      // Handle Credit Payment local update
+      if (selectedCustomer?.remoteId != null) {
+        if (cart.paymentMethod == 'CREDIT') {
+          await _ref.read(customerRepositoryProvider).incrementLocalBalance(
+            selectedCustomer!.remoteId!, 
+            cart.totalAmount,
+          );
+        } else if (cart.paymentMethod == 'SPLIT' && cart.paymentSplits.containsKey('CREDIT')) {
+          final creditAmount = cart.paymentSplits['CREDIT'] ?? 0.0;
+          if (creditAmount > 0) {
+            await _ref.read(customerRepositoryProvider).incrementLocalBalance(
+              selectedCustomer!.remoteId!, 
+              creditAmount,
+            );
+          }
+        }
+      }
+      
       // Decrement stock locally (Real-time deduction as per PRD)
       for (final item in cart.items) {
         if (item.product.remoteId != null) {

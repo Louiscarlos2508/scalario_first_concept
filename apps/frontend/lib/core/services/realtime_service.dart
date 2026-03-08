@@ -1,19 +1,22 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/services/sync_service.dart';
+import 'package:frontend/features/dashboard/presentation/providers/dashboard_providers.dart';
 
 class RealtimeService {
   final SupabaseClient _supabase;
   final SyncService _syncService;
+  final Ref _ref;
   bool _isInitialized = false;
 
-  RealtimeService(this._supabase, this._syncService);
+  RealtimeService(this._supabase, this._syncService, this._ref);
 
   void init() {
     if (_isInitialized) return;
     
     print('[RealtimeService] Initializing subscriptions...');
 
-    // Use the official .on method with correct parameters to resolve both compile-time and runtime issues.
+    // Synchronize local products and stock when database changes
     _supabase
         .channel('public:products')
         .on(
@@ -42,6 +45,25 @@ class RealtimeService {
           (payload, [ref]) {
             print('[Realtime] Stock movement detected');
             _syncService.forceSync();
+          },
+        )
+        .subscribe();
+
+    // Trigger Dashboard refreshes when new orders are created
+    _supabase
+        .channel('public:orders')
+        .on(
+          RealtimeListenTypes.postgresChanges,
+          ChannelFilter(
+            event: 'INSERT',
+            schema: 'public',
+            table: 'orders',
+          ),
+          (payload, [ref]) {
+            print('[Realtime] New order detected, refreshing dashboard...');
+            // Invalidate/Refresh relevant providers
+            _ref.invalidate(salesStatsProvider);
+            _ref.invalidate(salesReportProvider);
           },
         )
         .subscribe();

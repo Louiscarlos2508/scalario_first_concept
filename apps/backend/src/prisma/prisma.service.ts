@@ -18,4 +18,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     async onModuleDestroy() {
         await this.$disconnect();
     }
+
+    async setTenantContext(tenantId: string) {
+        await this.$executeRaw`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`;
+    }
 }

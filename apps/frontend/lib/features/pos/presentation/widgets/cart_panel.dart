@@ -5,7 +5,8 @@ import 'package:frontend/features/pos/presentation/state/cart_state.dart';
 import 'package:frontend/core/services/receipt_service.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/pos/presentation/widgets/customer_selection_dialog.dart';
-import 'package:frontend/features/pos/presentation/widgets/receipt_dialog.dart';
+import 'package:frontend/features/pos/presentation/widgets/parked_carts_dialog.dart';
+import 'package:frontend/features/pos/presentation/widgets/discount_dialog.dart';
 
 class CartPanel extends ConsumerWidget {
   const CartPanel({super.key});
@@ -44,7 +45,10 @@ class CartPanel extends ConsumerWidget {
                 onPressed: () {
                   final parked = ref.watch(parkedCartsProvider);
                   if (parked.isEmpty) return;
-                  _showParkedCarts(context, ref, parked);
+                  showModalBottomSheet(
+                    context: context,
+                    builder: (context) => const ParkedCartsDialog(),
+                  );
                 },
                 icon: const Icon(Icons.inventory_2_outlined, color: Colors.blue),
                 tooltip: 'Parked Sales',
@@ -83,7 +87,10 @@ class CartPanel extends ConsumerWidget {
                       IconButton(
                         icon: const Icon(Icons.edit_note),
                         onPressed: isManager 
-                          ? () => _showDiscountDialog(context, ref, item)
+                          ? () => showDialog(
+                              context: context,
+                              builder: (context) => DiscountDialog(item: item),
+                            )
                           : () => _showPermissionDenied(context),
                         tooltip: 'Apply Discount',
                       ),
@@ -263,39 +270,6 @@ class CartPanel extends ConsumerWidget {
     );
   }
 
-  void _showParkedCarts(BuildContext context, WidgetRef ref, List<CartState> parked) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const Text('Parked Sales', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Divider(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: parked.length,
-                itemBuilder: (context, index) {
-                  final cart = parked[index];
-                  return ListTile(
-                    title: Text(cart.name ?? 'Unnamed'),
-                    subtitle: Text('${cart.items.length} items - \$${cart.totalAmount.toStringAsFixed(2)}'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      ref.read(cartProvider.notifier).replaceCart(cart);
-                      ref.read(parkedCartsProvider.notifier).removeParkedCart(cart);
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showPermissionDenied(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -391,10 +365,15 @@ class CartPanel extends ConsumerWidget {
           ),
           ElevatedButton.icon(
             onPressed: () async {
+              final userProfile = ref.read(userProfileProvider).value;
+              final activeTenantId = ref.read(activeTenantProvider);
+              
               final tenantName = userProfile?.memberships
-                      .firstWhere((m) => m.tenantId == ref.read(activeTenantProvider))
-                      .tenantName ?? 
+                      .where((m) => m.tenantId == activeTenantId)
+                      .firstOrNull
+                      ?.tenantName ?? 
                   'Scalario POS';
+
               await ReceiptService.generateAndPrintReceipt(cart, tenantName);
               if (context.mounted) Navigator.pop(context);
             },
@@ -402,50 +381,6 @@ class CartPanel extends ConsumerWidget {
             label: const Text('PRINT RECEIPT'),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showDiscountDialog(BuildContext context, WidgetRef ref, dynamic item) {
-    final controller = TextEditingController(text: item.discountAmount.toString());
-    var type = item.discountType;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Discount: ${item.product.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount'),
-              ),
-              Row(
-                children: [
-                  const Text('Type:'),
-                  Radio<String>(value: 'FIXED', groupValue: type, onChanged: (v) => setState(() => type = v!)),
-                  const Text('\$'),
-                  Radio<String>(value: 'PERCENTAGE', groupValue: type, onChanged: (v) => setState(() => type = v!)),
-                  const Text('%'),
-                ],
-              )
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final amount = double.tryParse(controller.text) ?? 0.0;
-                ref.read(cartProvider.notifier).updateItemDiscount(item.product.remoteId!, amount, type);
-                Navigator.pop(context);
-              },
-              child: const Text('Apply'),
-            ),
-          ],
-        ),
       ),
     );
   }

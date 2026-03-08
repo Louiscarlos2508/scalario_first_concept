@@ -24,10 +24,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product?.name ?? '');
-    _priceController = TextEditingController(text: widget.product?.price.toString() ?? '');
+    _priceController = TextEditingController(
+      text: widget.product?.price.toString() ?? '',
+    );
     _selectedCategoryId = widget.product?.categoryId;
-    _barcodeController = TextEditingController(text: widget.product?.barcode ?? '');
-    _stockController = TextEditingController(text: widget.product?.stockQuantity.toString() ?? '0');
+    _barcodeController = TextEditingController(
+      text: widget.product?.barcode ?? '',
+    );
+    _stockController = TextEditingController(
+      text: widget.product?.stockQuantity.toString() ?? '0',
+    );
   }
 
   @override
@@ -54,7 +60,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Product Name*'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               Row(
@@ -62,11 +69,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _priceController,
-                      decoration: const InputDecoration(labelText: 'Price*', prefixText: '\$ '),
-                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Price*',
+                        prefixText: '\$ ',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Required';
-                        if (double.tryParse(value) == null) return 'Invalid number';
+                        if (double.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
                         return null;
                       },
                     ),
@@ -75,10 +89,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   Expanded(
                     child: TextFormField(
                       controller: _stockController,
-                      decoration: const InputDecoration(labelText: 'Initial Stock'),
-                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Initial Stock',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
-                        if (value != null && value.isNotEmpty && double.tryParse(value) == null) return 'Invalid number';
+                        if (value != null &&
+                            value.isNotEmpty &&
+                            double.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
                         return null;
                       },
                     ),
@@ -91,17 +113,19 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   final categoriesAsync = ref.watch(categoriesProvider);
                   return categoriesAsync.when(
                     data: (categories) => DropdownButtonFormField<String>(
-                      value: _selectedCategoryId,
+                      initialValue: _selectedCategoryId,
                       decoration: const InputDecoration(labelText: 'Category'),
                       items: [
                         const DropdownMenuItem<String>(
                           value: null,
                           child: Text('None'),
                         ),
-                        ...categories.map((c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name),
-                            )),
+                        ...categories.map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        ),
                       ],
                       onChanged: (val) {
                         setState(() {
@@ -142,9 +166,15 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       product.name = _nameController.text;
       product.price = double.parse(_priceController.text);
       product.categoryId = _selectedCategoryId;
-      product.barcode = _barcodeController.text.isEmpty ? null : _barcodeController.text;
-      product.stockQuantity = double.tryParse(_stockController.text) ?? 0;
-      
+      product.barcode = _barcodeController.text.isEmpty
+          ? null
+          : _barcodeController.text;
+      // Only update stock if creating new, or explicitly handled (usually stock is handled via adjustments)
+      // For MVP ease, we allow updating stock here if needed, but best practice is adjustment dialog
+      if (widget.product == null) {
+        product.stockQuantity = double.tryParse(_stockController.text) ?? 0;
+      }
+
       Navigator.of(context).pop(product);
     }
   }

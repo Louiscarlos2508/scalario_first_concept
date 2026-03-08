@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pos_providers.dart';
 import '../../data/models/pos_session.dart';
 import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/core/auth/user_profile.dart';
 
 class SessionGuard extends ConsumerWidget {
   final Widget child;
@@ -18,9 +17,13 @@ class SessionGuard extends ConsumerWidget {
     return profileAsync.when(
       data: (profile) {
         if (profile == null) {
-          return const Scaffold(body: Center(child: Text('User profile not found. Please log in again.')));
+          return const Scaffold(
+            body: Center(
+              child: Text('User profile not found. Please log in again.'),
+            ),
+          );
         }
-        
+
         return sessionAsync.when(
           data: (session) {
             if (session == null) {
@@ -28,12 +31,17 @@ class SessionGuard extends ConsumerWidget {
             }
             return child;
           },
-          loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-          error: (err, stack) => Scaffold(body: Center(child: Text('Error loading session: $err'))),
+          loading: () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+          error: (err, stack) => Scaffold(
+            body: Center(child: Text('Error loading session: $err')),
+          ),
         );
       },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error loading profile: $err'))),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, stack) =>
+          Scaffold(body: Center(child: Text('Error loading profile: $err'))),
     );
   }
 }
@@ -87,7 +95,9 @@ class _OpenSessionScreenState extends ConsumerState<OpenSessionScreen> {
               const SizedBox(height: 32),
               TextField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Opening Balance',
                   prefixIcon: Icon(Icons.attach_money),
@@ -107,7 +117,7 @@ class _OpenSessionScreenState extends ConsumerState<OpenSessionScreen> {
                       ..status = 'OPEN'
                       ..openingBalance = amount
                       ..openedAt = DateTime.now();
-                    
+
                     ref.read(sessionProvider.notifier).openSession(session);
                   },
                   style: ElevatedButton.styleFrom(

@@ -32,7 +32,8 @@ class InventoryScreen extends ConsumerWidget {
               ),
               onChanged: (value) {
                 ref.read(inventorySearchProvider.notifier).state = value;
-                ref.read(inventoryPageProvider.notifier).state = 1; // Reset to page 1
+                ref.read(inventoryPageProvider.notifier).state =
+                    1; // Reset to page 1
               },
             ),
           ),
@@ -60,7 +61,11 @@ class InventoryScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showProductDialog(BuildContext context, WidgetRef ref, [Product? product]) async {
+  Future<void> _showProductDialog(
+    BuildContext context,
+    WidgetRef ref, [
+    Product? product,
+  ]) async {
     final result = await showDialog<Product>(
       context: context,
       builder: (context) => ProductFormDialog(product: product),
@@ -72,7 +77,11 @@ class InventoryScreen extends ConsumerWidget {
         ref.refresh(paginatedProductListProvider);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(product == null ? 'Product created' : 'Product updated')),
+            SnackBar(
+              content: Text(
+                product == null ? 'Product created' : 'Product updated',
+              ),
+            ),
           );
         }
       } catch (e) {
@@ -85,7 +94,11 @@ class InventoryScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showAdjustmentDialog(BuildContext context, WidgetRef ref, Product product) async {
+  Future<void> _showAdjustmentDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+  ) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => StockAdjustmentDialog(product: product),
@@ -93,12 +106,14 @@ class InventoryScreen extends ConsumerWidget {
 
     if (result != null && product.remoteId != null) {
       try {
-        await ref.read(productRepositoryProvider).adjustStock(
-          productId: product.remoteId!,
-          quantity: result['quantity'],
-          type: result['type'],
-          reason: result['reason'],
-        );
+        await ref
+            .read(productRepositoryProvider)
+            .adjustStock(
+              productId: product.remoteId!,
+              quantity: result['quantity'],
+              type: result['type'],
+              reason: result['reason'],
+            );
         ref.refresh(paginatedProductListProvider);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -115,7 +130,11 @@ class InventoryScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildProductTable(BuildContext context, WidgetRef ref, Map<String, dynamic> data) {
+  Widget _buildProductTable(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> data,
+  ) {
     final List<Product> products = data['items'];
     final int total = data['total'];
     final int totalPages = data['totalPages'];
@@ -137,7 +156,7 @@ class InventoryScreen extends ConsumerWidget {
                 width: double.infinity,
                 child: DataTable(
                   showCheckboxColumn: false,
-                  headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                   columns: const [
                     DataColumn(label: Text('Name')),
                     DataColumn(label: Text('Barcode')),
@@ -147,22 +166,32 @@ class InventoryScreen extends ConsumerWidget {
                   ],
                   rows: products.map((product) {
                     return DataRow(
-                      onSelectChanged: (_) => _showProductDialog(context, ref, product),
+                      onSelectChanged: (_) =>
+                          _showProductDialog(context, ref, product),
                       cells: [
                         DataCell(Text(product.name)),
                         DataCell(Text(product.barcode ?? '-')),
-                        DataCell(Text('\$ ${product.price.toStringAsFixed(2)}')),
+                        DataCell(
+                          Text('\$ ${product.price.toStringAsFixed(2)}'),
+                        ),
                         DataCell(
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: product.stockQuantity <= 5 ? Colors.red.shade50 : Colors.green.shade50,
+                              color: product.stockQuantity <= 5
+                                  ? Colors.red.shade50
+                                  : Colors.green.shade50,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               product.stockQuantity.toString(),
                               style: TextStyle(
-                                color: product.stockQuantity <= 5 ? Colors.red.shade700 : Colors.green.shade700,
+                                color: product.stockQuantity <= 5
+                                    ? Colors.red.shade700
+                                    : Colors.green.shade700,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -175,29 +204,54 @@ class InventoryScreen extends ConsumerWidget {
                               IconButton(
                                 icon: const Icon(Icons.history, size: 20),
                                 tooltip: 'Adjust Stock',
-                                onPressed: () => _showAdjustmentDialog(context, ref, product),
+                                onPressed: () => _showAdjustmentDialog(
+                                  context,
+                                  ref,
+                                  product,
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined, size: 20),
-                                onPressed: () => _showProductDialog(context, ref, product),
+                                onPressed: () =>
+                                    _showProductDialog(context, ref, product),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (context) => AlertDialog(
                                       title: const Text('Delete Product?'),
-                                      content: Text('Are you sure you want to delete ${product.name}?'),
+                                      content: Text(
+                                        'Are you sure you want to delete ${product.name}?',
+                                      ),
                                       actions: [
-                                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          child: const Text(
+                                            'Delete',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );
 
-                                  if (confirm == true && product.remoteId != null) {
-                                    await ref.read(productRepositoryProvider).deleteProductRemote(product.remoteId!);
+                                  if (confirm == true &&
+                                      product.remoteId != null) {
+                                    await ref
+                                        .read(productRepositoryProvider)
+                                        .deleteProductRemote(product.remoteId!);
                                     ref.refresh(paginatedProductListProvider);
                                   }
                                 },
@@ -222,14 +276,16 @@ class InventoryScreen extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: currentPage > 1
-                    ? () => ref.read(inventoryPageProvider.notifier).state = currentPage - 1
+                    ? () => ref.read(inventoryPageProvider.notifier).state =
+                          currentPage - 1
                     : null,
               ),
               Text('Page $currentPage of $totalPages'),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: currentPage < totalPages
-                    ? () => ref.read(inventoryPageProvider.notifier).state = currentPage + 1
+                    ? () => ref.read(inventoryPageProvider.notifier).state =
+                          currentPage + 1
                     : null,
               ),
             ],

@@ -1,14 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/pos/data/models/pos_session.dart';
 import 'package:frontend/features/pos/data/repositories/session_repository.dart';
-import 'package:frontend/features/pos/data/models/order.dart';
 import 'package:frontend/features/pos/data/repositories/order_repository.dart';
 
 class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
   final SessionRepository _repository;
   final OrderRepository _orderRepository;
 
-  SessionNotifier(this._repository, this._orderRepository) : super(const AsyncValue.loading()) {
+  SessionNotifier(this._repository, this._orderRepository)
+    : super(const AsyncValue.loading()) {
     checkActiveSession();
   }
 
@@ -43,13 +43,14 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     // But sessionId in Order model is usually remote UUID or app UUID
     final sessionId = currentSession.remoteId ?? '';
     final orders = await _orderRepository.getOrdersBySession(sessionId);
-    
+
     final Map<String, double> totalsByMethod = {};
     double totalSales = 0;
 
     for (var order in orders) {
       final method = order.paymentMethod ?? 'UNKNOWN';
-      totalsByMethod[method] = (totalsByMethod[method] ?? 0) + order.totalAmount;
+      totalsByMethod[method] =
+          (totalsByMethod[method] ?? 0) + order.totalAmount;
       totalSales += order.totalAmount;
     }
 
@@ -57,7 +58,8 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
       'openingBalance': currentSession.openingBalance,
       'totalsByMethod': totalsByMethod,
       'totalSales': totalSales,
-      'theoreticalCash': (currentSession.openingBalance) + (totalsByMethod['CASH'] ?? 0),
+      'theoreticalCash':
+          (currentSession.openingBalance) + (totalsByMethod['CASH'] ?? 0),
     };
   }
 
@@ -69,13 +71,13 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     try {
       final summary = await calculateSessionSummary();
       final theoreticalBalance = summary['theoreticalCash'] as double;
-      
+
       currentSession.closingBalance = closingBalance;
       currentSession.theoreticalBalance = theoreticalBalance;
       currentSession.variance = closingBalance - theoreticalBalance;
       currentSession.status = 'CLOSED';
       currentSession.closedAt = DateTime.now();
-      
+
       await _repository.saveSession(currentSession);
       state = const AsyncValue.data(null);
     } catch (e, stack) {
