@@ -7,66 +7,143 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+// PRD v5 RBAC Retail permission matrix
+const PERMISSIONS = [
+  { code: 'reports.view_all',          module: 'reporting',     description: 'Full dashboard & reports access' },
+  { code: 'reports.view_location',     module: 'reporting',     description: 'Location-scoped reports access' },
+  { code: 'catalog.edit',              module: 'catalog',       description: 'Add and modify catalog items' },
+  { code: 'catalog.price_modify',      module: 'catalog',       description: 'Modify item prices (anti-fraud control)' },
+  { code: 'supplier_orders.create',    module: 'catalog',       description: 'Create supplier purchase orders' },
+  { code: 'users.manage',              module: 'kernel',        description: 'Create and assign user accounts' },
+  { code: 'stock.receive_delivery',    module: 'inventory',     description: 'Receive supplier deliveries' },
+  { code: 'stock.transfer_create',     module: 'inventory',     description: 'Create stock transfers between locations' },
+  { code: 'losses.declare',            module: 'inventory',     description: 'Declare stock losses with reason' },
+  { code: 'stock.transfer_confirm',    module: 'inventory',     description: 'Confirm reception of a stock transfer' },
+  { code: 'session.open',              module: 'pos',           description: 'Open a POS cash session' },
+  { code: 'session.close',             module: 'pos',           description: 'Close a POS cash session' },
+  { code: 'sales.process',             module: 'pos',           description: 'Process sales transactions' },
+];
+
+// Role → permission codes mapping (PRD v5 Retail matrix)
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  owner: [
+    'reports.view_all',
+    'reports.view_location',
+    'catalog.edit',
+    'catalog.price_modify',
+    'supplier_orders.create',
+    'users.manage',
+    'losses.declare',
+  ],
+  manager: [
+    'reports.view_location',
+    'stock.receive_delivery',
+    'stock.transfer_create',
+    'losses.declare',
+  ],
+  commercial: [
+    'stock.transfer_confirm',
+    'session.open',
+    'session.close',
+    'sales.process',
+    'losses.declare',
+  ],
+  // Phase 3 reserved roles — zero permissions seeded intentionally
+  department_admin: [],
+  employee: [],
+};
+
+async function seedRbac() {
+  console.log('Seeding RBAC permissions...');
+  for (const perm of PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { code: perm.code },
+      update: {},
+      create: perm,
+    });
+  }
+  console.log(`  ✓ ${PERMISSIONS.length} permissions seeded`);
+
+  console.log('Seeding RBAC roles and role-permission links...');
+  for (const [roleName, permCodes] of Object.entries(ROLE_PERMISSIONS)) {
+    const role = await prisma.role.upsert({
+      where: { name_vertical: { name: roleName, vertical: 'retail' } },
+      update: {},
+      create: { name: roleName, vertical: 'retail' },
+    });
+
+    for (const code of permCodes) {
+      const permission = await prisma.permission.findUnique({ where: { code } });
+      if (!permission) {
+        console.warn(`  ⚠ Permission "${code}" not found — skipping`);
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id },
+      });
+    }
+    console.log(`  ✓ Role "${roleName}" seeded with ${permCodes.length} permissions`);
+  }
+}
+
 async function main() {
-    // Create a tenant first
-    let tenant = await prisma.tenant.findFirst();
+  // Seed RBAC first (roles needed before member creation)
+  await seedRbac();
 
-    if (!tenant) {
-        tenant = await prisma.tenant.create({
-            data: {
-                name: 'Test Store',
-            },
-        });
-        console.log('Created tenant:', tenant.id);
+  // Create a tenant for development
+  let tenant = await prisma.tenant.findFirst();
+  if (!tenant) {
+    tenant = await prisma.tenant.create({
+      data: { name: 'Test Store' },
+    });
+    console.log('Created tenant:', tenant.id);
+  } else {
+    console.log('Using existing tenant:', tenant.id);
+  }
+
+  // Create some products
+  const products = [
+    { name: 'Coca Cola', price: 500, categoryName: 'Drinks', stockQuantity: 100 },
+    { name: 'Sandwich', price: 1500, categoryName: 'Food', stockQuantity: 50 },
+    { name: 'Perrier', price: 800, categoryName: 'Drinks', stockQuantity: 30 },
+  ];
+
+  for (const pData of products) {
+    let category = await prisma.category.findFirst({
+      where: { name: pData.categoryName, tenantId: tenant.id }
+    });
+    if (!category) {
+      category = await prisma.category.create({
+        data: { name: pData.categoryName, tenantId: tenant.id }
+      });
+    }
+    const existing = await prisma.product.findFirst({
+      where: { name: pData.name, tenantId: tenant.id }
+    });
+    if (!existing) {
+      await prisma.product.create({
+        data: {
+          name: pData.name,
+          price: pData.price,
+          stockQuantity: pData.stockQuantity,
+          tenantId: tenant.id,
+          categoryId: category.id,
+        },
+      });
+      console.log('Created product:', pData.name);
     } else {
-        console.log('Using existing tenant:', tenant.id);
+      console.log('Product already exists:', pData.name);
     }
-
-    // Create some products
-    const products = [
-        { name: 'Coca Cola', price: 500, categoryName: 'Drinks', stockQuantity: 100 },
-        { name: 'Sandwich', price: 1500, categoryName: 'Food', stockQuantity: 50 },
-        { name: 'Perrier', price: 800, categoryName: 'Drinks', stockQuantity: 30 },
-    ];
-
-    for (const pData of products) {
-        // Find or create category
-        let category = await prisma.category.findFirst({
-            where: { name: pData.categoryName, tenantId: tenant.id }
-        });
-
-        if (!category) {
-            category = await prisma.category.create({
-                data: { name: pData.categoryName, tenantId: tenant.id }
-            });
-        }
-
-        const existing = await prisma.product.findFirst({
-            where: { name: pData.name, tenantId: tenant.id }
-        });
-
-        if (!existing) {
-            const product = await prisma.product.create({
-                data: {
-                    name: pData.name,
-                    price: pData.price,
-                    stockQuantity: pData.stockQuantity,
-                    tenantId: tenant.id,
-                    categoryId: category.id,
-                },
-            });
-            console.log('Created product:', product.name);
-        } else {
-            console.log('Product already exists:', pData.name);
-        }
-    }
+  }
 }
 
 main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

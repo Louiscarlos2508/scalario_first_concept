@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+// BadRequestException is kept for invalid UUID format test
 import { Reflector } from '@nestjs/core';
 import { TenantGuard } from './tenant.guard';
 import { TenancyService } from './tenancy.service';
@@ -67,14 +68,14 @@ describe('TenantGuard', () => {
     expect(request.tenantId).toBe(validTenantId);
   });
 
-  it('should throw BadRequestException when x-tenant-id is missing', async () => {
+  it('should allow request when x-tenant-id is missing (bootstrap endpoints)', async () => {
     mockReflector.getAllAndOverride.mockReturnValue(false);
     const ctx = createMockContext({});
 
-    await expect(guard.canActivate(ctx)).rejects.toThrow(BadRequestException);
-    await expect(guard.canActivate(ctx)).rejects.toThrow(
-      'Missing x-tenant-id header',
-    );
+    const result = await guard.canActivate(ctx);
+    expect(result).toBe(true);
+    const request = ctx.switchToHttp().getRequest();
+    expect(request.tenantId).toBeNull(); // no tenant context set
   });
 
   it('should throw BadRequestException when x-tenant-id is invalid UUID', async () => {

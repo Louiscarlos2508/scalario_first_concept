@@ -135,10 +135,10 @@ From Architecture:
 | FR7 | Epic 1 | Activate/deactivate modules |
 | FR8 | Epic 1 | Module dependency validation |
 | FR9 | Epic 1 | Module isolation per tenant |
-| FR10 | Epic 1 | One vertical per tenant (MVP) |
+| FR10 | Epic 1 | One vertical per tenant — Retail (standalone). Multi-vertical allowed in Enterprise mode (FR10 v5) |
 | FR11 | Epic 2 | CRUD catalog items |
 | FR12 | Epic 2 | itemType discriminator |
-| FR13 | Epic 6 | Vertical extension fields (RetailProduct) |
+| FR13 | Epic 6 + Epic 10 | Vertical extension fields: RetailProduct (Epic 6 static) + UI-Driven Engine dynamic layer (Epic 10) |
 | FR14 | Epic 2 | Category management |
 | FR15 | Epic 2 | Offline catalog availability |
 | FR16 | Epic 4 | Create sales transactions |
@@ -177,9 +177,21 @@ From Architecture:
 | FR49 | Epic 7 | Owner dashboard |
 | FR50 | Epic 1 | Immutable audit trail |
 | FR51 | Epic 1 | Audit retention policy |
-| FR52 | Epic 9 | Zero-loss data migration |
-| FR53 | Epic 9 | Multi-schema Prisma |
-| FR54 | Epic 8 | Module-agnostic sync adapters |
+| FR52 (DB) | Story 1.6 | tenants: referred_by + network_visible (Connect/Ambassadeurs — DB only) |
+| FR53 (DB) | Story 1.6 | contacts: linked_tenant_id (Connect — DB only) |
+| FR54 (DB) | Story 1.6 | catalog_items: supplier_reference (Connect — DB only) |
+| FR55 (DB) | Story 1.6 | transaction type: transfer_inter_tenant enum value (Connect — DB only) |
+| FR56 | Epic 9 | Zero-loss data migration (renumbered from FR52 v1) |
+| FR57 | Epic 9 | Multi-schema Prisma (renumbered from FR53 v1) |
+| FR58 | Epic 8 | Module-agnostic sync adapters (renumbered from FR54 v1) |
+| FR59 (DB) | Story 1.6 | tenants: org_mode + parent_tenant_id (Enterprise — DB only) |
+| FR60 (DB) | Story 1.6 | organization_members: department_ids (Enterprise — DB only) |
+| FR61 (DB) | Story 1.6 | tenant_modules: department_id (Enterprise — DB only) |
+| FR62 | Epic 13 | Inter-department events via event bus (Enterprise Phase 3) |
+| FR63–FR68 | Epic 13 | RH & Paie Enterprise: employés, salaires CNSS/CARFO, bulletins (Phase 3) |
+| FR69–FR72 | Epic 13 | Comptabilité OHADA: plan comptable, clôture, bilan, FEC (Phase 3) |
+| FR73–FR74 | Epic 13 | Import Enterprise CSV + migration Retail → Enterprise (Phase 3) |
+| FR75 | Epic 8 | Gestion des Échecs de Sync: cycle de vie outbox complet (Phase 1) |
 
 ## Epic List
 
@@ -212,12 +224,36 @@ Managers can generate daily consolidation reports. Owners can view dashboards wi
 **FRs covered:** FR48, FR49
 
 ### Epic 8: Frontend Sync & Offline Resilience
-Frontend repositories updated to new API endpoints, Isar models aligned with new response shapes, full offline-first experience preserved: delta sync, crash recovery (WAL), conflict resolution, outbox queue, connectivity indicator, configurable data retention. Module-agnostic sync adapters.
-**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR54
+Frontend repositories updated to new API endpoints, Isar models aligned with new response shapes, full offline-first experience preserved: delta sync, crash recovery (WAL), conflict resolution, outbox queue, connectivity indicator, configurable data retention. Module-agnostic sync adapters. Full sync failure lifecycle: outbox → retry (3x exponential backoff) → FAILED state → admin notification → manual resolution interface.
+**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR58, FR75
 
 ### Epic 9: Data Migration & Client Cutover
 All 3 existing clients migrated from monolithic public schema to kernel/shared/retail multi-schema architecture with zero data loss. Old endpoint proxies removed, cleanup completed, full regression validated.
-**FRs covered:** FR52, FR53
+**FRs covered:** FR56, FR57
+
+### Epic 10: Server-Driven UI Infrastructure
+The Flutter app gains a JSON-driven layout engine. A single Flutter binary renders any vertical or department UI by reading layout definitions from the server DB. All Retail screens (Epics 2–6) are refactored to use the layout engine — adding a new business type requires only a new JSON layout config, zero Flutter code change. Infrastructure is in place for future verticals (Pharmacy, Restaurant) and Enterprise departments.
+**Phase:** 1 (after Epic 6, before Epic 7)
+**FRs covered:** FR13 (dynamic UI-Driven Engine layer)
+**Prerequisite:** Epics 1–6 complete (all shared modules + Retail vertical operational)
+
+### Epic 11: Programme Ambassadeurs
+Existing tenants generate referral codes and refer new businesses to Scalario. The system tracks referrals via referred_by (seeded in Story 1.6), calculates monthly commissions (20% of referred tenant subscription), and triggers Mobile Money payouts automatically. Ambassadeur dashboard shows referred tenants, commission history, and next payout date.
+**Phase:** 2b
+**FRs covered:** FR52 business logic (DB fields already seeded in Story 1.6), PRD Section 8 — Programme Ambassadeurs
+**Prerequisite:** Epics 1–9 complete
+
+### Epic 12: Scalario Connect
+Any Scalario tenant can act as Buyer, Seller, or both in a B2B graph. Tenants discover network-visible suppliers (network_visible flag), link supplier contacts (linked_tenant_id), reference supplier catalog items (supplier_reference), and execute inter-tenant transfers (transfer_inter_tenant type). B2B documents (orders, delivery notes, invoices) flow between tenants digitally — replacing WhatsApp/phone/paper coordination.
+**Phase:** 3
+**FRs covered:** FR52–FR55 Phase 3 business logic (DB structure already seeded in Story 1.6)
+**Prerequisite:** Epic 11 (Ambassadeurs network established)
+
+### Epic 13: Scalario Enterprise
+A Retail tenant (org_mode: standalone) upgrades to Enterprise (org_mode: integrated or federated) with zero downtime. Enterprise adds: multi-department org structure (FR59–FR61, DB seeded in Story 1.6), HR & Payroll with CNSS/CARFO/SMIG compliance (FR63–FR68), OHADA accounting with month-end close and FEC export (FR69–FR72), CSV import for employees and chart of accounts (FR73–FR74), and inter-department event flows connecting payroll validation to automatic accounting entries (FR62). User journeys: Awa (DRH), Ibrahim (Comptable), Serge (DG).
+**Phase:** 3
+**FRs covered:** FR59–FR74 Phase 3 business logic (DB structure for FR59–FR61 already seeded in Story 1.6)
+**Prerequisite:** Epic 1 (Kernel + Story 1.6 DB fields in place)
 
 ---
 
@@ -275,7 +311,11 @@ So that each team member can only access features appropriate to their role (Own
 
 **Given** the system initializes
 **When** the seed script runs
-**Then** MVP roles are created for retail vertical: Owner (full access), Manager (stock/reports), Commercial (POS/sales), each with predefined permissions matching the PRD RBAC matrix
+**Then** MVP Retail roles are seeded: Owner (full access), Manager (stock/reports), Commercial (POS/sales), each with predefined permissions matching the PRD v5 RBAC Retail matrix
+**And** two Phase-3-reserved roles are seeded with zero active permissions:
+  - DepartmentAdmin (Enterprise: department-level management)
+  - Employee (Enterprise: basic access within department)
+  Each marked with a `phase` metadata field ('phase3') — non-activatable in Phase 1 but require no schema migration to enable in Phase 3
 
 **Given** an Owner user is authenticated
 **When** they call `POST /api/v1/organizations/:id/members` with a role assignment
@@ -308,6 +348,10 @@ So that each tenant only pays for and accesses the modules they need, with depen
 **Given** the system initializes
 **When** the seed script runs
 **Then** shared modules (catalog, transactions, inventory, payments, contacts, reporting) and the retail vertical are registered with correct dependency declarations
+**And** two Phase-3 modules are pre-registered with status='available_phase3' and activatable=false:
+  - connect: type='vertical', depends_on=[]
+  - enterprise: type='vertical', depends_on=[catalog, contacts, transactions, reporting]
+So that Phase 3 launch requires only a status flag update, never a new seed migration on a live multi-tenant system
 
 **Given** an admin activates a vertical module for a tenant
 **When** the vertical declares dependencies on shared modules
@@ -325,9 +369,14 @@ So that each tenant only pays for and accesses the modules they need, with depen
 **When** admin deactivates a module for that tenant
 **Then** the deactivation has zero impact on other tenants' module activations
 
-**Given** a tenant already has one active vertical
+**Given** a tenant with org_mode='standalone' already has one active vertical
 **When** admin attempts to activate a second vertical
-**Then** the system rejects the activation (MVP: one vertical per tenant)
+**Then** the system rejects the activation (Retail mode: one vertical per tenant)
+
+**Given** a tenant with org_mode='integrated' (Enterprise Phase 3)
+**When** admin activates a vertical scoped to a specific department
+**Then** the system allows it — multi-vertical is valid in Enterprise mode
+**Note:** ModuleGuard must check org_mode before enforcing the constraint — write the guard to be mode-aware from day one
 
 ### Story 1.4: Event Bus & Audit Trail
 
@@ -388,6 +437,54 @@ So that the 3 existing clients experience zero disruption during the kernel depl
 **Given** a new tenant needs to be created
 **When** admin calls the tenant creation endpoint
 **Then** the tenant is created with default configuration (XOF currency, Africa/Abidjan timezone), MVP roles are seeded, and shared + retail modules are activated — requiring zero code changes
+
+### Story 1.6: Phase 3 DB Anticipation Fields
+
+As a system architect,
+I want to add all Phase 2b/3 anticipation fields in a single dedicated Prisma migration,
+So that Scalario Connect, Enterprise, and Programme Ambassadeurs can be activated in future phases without a breaking migration on a live multi-tenant system.
+
+**Note:** This story contains zero business logic. It is a schema-only migration. All new fields are nullable or have safe defaults. No endpoint, service, or guard is modified.
+
+**Acceptance Criteria:**
+
+**Given** all Epic 1 stories (1.1–1.5) are complete
+**When** the Phase 3 anticipation migration runs
+**Then** the following fields are added with zero data loss and zero downtime for existing tenants:
+
+kernel.tenants:
+- referred_by UUID nullable FK → tenants.id (FR52 — Programme Ambassadeurs Phase 2b)
+- network_visible Boolean default false (FR52 — Scalario Connect Phase 3)
+- org_mode Enum(standalone|integrated|federated) default standalone (FR59 — Enterprise Phase 3)
+- parent_tenant_id UUID nullable FK → tenants.id (FR59 — Enterprise Fédéré Phase 3)
+
+kernel.organization_members:
+- department_ids UUID[] default [] (FR60 — Enterprise Phase 3)
+
+kernel.tenant_modules:
+- department_id UUID nullable (FR61 — Enterprise Phase 3)
+
+shared.contacts:
+- linked_tenant_id UUID nullable (FR53 — Scalario Connect Phase 3)
+
+shared.catalog_items:
+- supplier_reference UUID nullable (FR54 — Scalario Connect Phase 3)
+
+shared.transactions (transaction_type enum):
+- Add 'transfer_inter_tenant' to transaction_type enum (FR55 — Scalario Connect Phase 3)
+
+**Given** each new column is created
+**When** existing rows are read
+**Then** all nullable fields return null, boolean fields return false, enum fields return 'standalone' — zero breaking change for the 3 existing clients
+
+**Given** RLS is active on kernel.tenants
+**When** the new fields are queried
+**Then** existing RLS policies cover them automatically — same tenant_id filter applies, no new policy needed
+
+**Given** the migration completes
+**Then** each field has a Prisma schema comment explaining its phase and purpose, e.g.:
+  /// Phase 2b — Programme Ambassadeurs. Populated when tenant is created via referral. FK to tenants.id.
+  referred_by String? @db.Uuid
 
 ---
 

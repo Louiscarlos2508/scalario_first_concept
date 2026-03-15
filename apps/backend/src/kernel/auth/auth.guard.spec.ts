@@ -122,4 +122,51 @@ describe('AuthGuard', () => {
     await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
     await expect(guard.canActivate(ctx)).rejects.toThrow('Missing Bearer Token');
   });
+
+  it('should throw UnauthorizedException when session has expired', async () => {
+    mockReflector.getAllAndOverride.mockReturnValue(false);
+
+    // iat = 10 hours ago, timeout = 8 hours (480 min)
+    const iatTenHoursAgo = Math.floor(Date.now() / 1000) - 10 * 3600;
+    // Build a minimal fake JWT: header.payload.sig (base64url encoded)
+    const payload = Buffer.from(JSON.stringify({ iat: iatTenHoursAgo, sub: 'user-123' })).toString('base64url');
+    const fakeToken = `header.${payload}.sig`;
+
+    const mockUser = { id: 'user-123' };
+    mockSupabaseService.getClient.mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    });
+
+    const ctx = createMockContext({ authorization: `Bearer ${fakeToken}` });
+    await expect(guard.canActivate(ctx)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(ctx)).rejects.toThrow('Session expired. Please re-authenticate.');
+  });
+
+  it('should allow request with token within session timeout', async () => {
+    mockReflector.getAllAndOverride.mockReturnValue(false);
+
+    // iat = 1 hour ago, timeout = 8 hours
+    const iatOneHourAgo = Math.floor(Date.now() / 1000) - 3600;
+    const payload = Buffer.from(JSON.stringify({ iat: iatOneHourAgo, sub: 'user-123' })).toString('base64url');
+    const fakeToken = `header.${payload}.sig`;
+
+    const mockUser = { id: 'user-123' };
+    mockSupabaseService.getClient.mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: mockUser },
+          error: null,
+        }),
+      },
+    });
+
+    const ctx = createMockContext({ authorization: `Bearer ${fakeToken}` });
+    const result = await guard.canActivate(ctx);
+    expect(result).toBe(true);
+  });
 });

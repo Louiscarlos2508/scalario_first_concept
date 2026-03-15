@@ -39,8 +39,9 @@ These NFRs have the highest impact on architectural decisions. They are ordered 
 | **#3** | **Low-Bandwidth Sync** | NFR3, NFR24, NFR25, NFR26 | Delta-only sync, compressed payloads, exponential backoff, 2G/3G compatible design |
 | **#4** | **Financial Data Integrity** | NFR13, NFR18 | Atomic local writes, WAL, immutable audit trail, no partial transaction states |
 | **#5** | **Low-End Device Performance** | NFR1, NFR2, NFR4, NFR6, NFR7 | <150MB RAM, <500MB storage, <500ms grid render, <200ms transaction write |
-| **#6** | **Modular Architecture** | FR7-FR10, FR52-FR54 | Three-tier kernel/shared/vertical, Prisma multi-schema, module registry |
+| **#6** | **Modular Architecture** | FR7-FR10, FR56-FR58 | Three-tier kernel/shared/vertical, Prisma multi-schema, module registry |
 | **#7** | **RBAC & Anti-Fraud** | NFR12, FR3, FR50 | Fixed roles MVP, permission table architecture, chain-of-custody audit trail |
+| **#8** | **Multi-Phase Product Expansion** | FR52-FR55, FR59-FR75 | DB anticipation fields for Connect (Phase 3) and Enterprise (Phase 3) seeded in Phase 1 (Story 1.6) — org_mode, department_ids, linked_tenant_id, supplier_reference. Zero breaking migration at Phase 3 launch. |
 
 ---
 
@@ -118,6 +119,12 @@ These NFRs have the highest impact on architectural decisions. They are ordered 
 │  └──────────┘  └──────────┘  └──────────┘  └─────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+> **PRD v5 — Future Architecture Layers (not in current diagram):**
+> - **Server-Driven UI (Epic 10):** Flutter layout engine reads JSON layout config from server. Planned after Epic 6. Adds a `LayoutRegistry` service in KERNEL and a `LayoutEngine` module in the client. No backend structural change.
+> - **Scalario Connect (Epic 12, Phase 3):** Inter-tenant B2B mesh. DB anticipation fields seeded in Phase 1 (Story 1.6). Adds a Connect vertical module + inter-tenant API layer.
+> - **Scalario Enterprise (Epic 13, Phase 3):** Multi-department overlay on the kernel. DB anticipation fields seeded in Phase 1 (Story 1.6). Adds Enterprise vertical module, department-scoped RBAC, and intra-tenant event flows (FR62).
+> - **Programme Ambassadeurs (Epic 11, Phase 2b):** Referral tracking via `referred_by` on Tenant (seeded in Story 1.6). Adds referral service + Mobile Money payout automation.
 
 ### Data Flow Patterns
 
@@ -683,6 +690,15 @@ model Tenant {
   tenantModules    TenantModule[]
   // Relations to shared/vertical via tenantId on each entity
 
+  /// Phase 2b — Programme Ambassadeurs. FK to tenants.id. Set at creation if referred by existing tenant.
+  referredBy       String?             @map("referred_by") @db.Uuid
+  /// Phase 3 — Scalario Connect. Visible in B2B supplier discovery network.
+  networkVisible   Boolean             @default(false) @map("network_visible")
+  /// Phase 3 — Scalario Enterprise. standalone = Retail. integrated = Enterprise single-tenant. federated = Groupe/Holding.
+  orgMode          String              @default("standalone") @map("org_mode")
+  /// Phase 3 — Scalario Enterprise (federated mode). FK to tenants.id of the parent Groupe tenant.
+  parentTenantId   String?             @map("parent_tenant_id") @db.Uuid
+
   @@map("tenants")
   @@schema("kernel")
 }
@@ -695,6 +711,8 @@ model OrganizationMember {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant         Tenant   @relation(fields: [organizationId], references: [id])
   role           Role     @relation(fields: [roleId], references: [id])
+  /// Phase 3 — Scalario Enterprise. Department memberships. Empty array in Retail mode.
+  departmentIds  String[] @default([]) @map("department_ids") @db.Uuid
 
   @@unique([organizationId, userId])
   @@map("organization_members")
@@ -756,6 +774,8 @@ model TenantModule {
   activatedAt DateTime @default(now()) @map("activated_at") @db.Timestamptz(6)
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   module      Module   @relation(fields: [moduleId], references: [id])
+  /// Phase 3 — Scalario Enterprise. Null = tenant-wide activation (Retail). Set = department-scoped activation.
+  departmentId String? @map("department_id") @db.Uuid
 
   @@unique([tenantId, moduleId])
   @@map("tenant_modules")
@@ -797,6 +817,8 @@ model CatalogItem {
   category       Category?       @relation(fields: [categoryId], references: [id])
   stockMovements StockMovement[]
   retailProduct  RetailProduct?
+  /// Phase 3 — Scalario Connect. Supplier's reference ID for this item on the Connect B2B network.
+  supplierReference String?      @map("supplier_reference") @db.Uuid
 
   @@index([tenantId, updatedAt])
   @@index([tenantId, categoryId])
@@ -865,6 +887,8 @@ model Contact {
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   transactions Transaction[]
+  /// Phase 3 — Scalario Connect. Links this supplier Contact to their Scalario tenant on the network.
+  linkedTenantId String?     @map("linked_tenant_id") @db.Uuid
 
   @@index([tenantId])
   @@index([tenantId, phone])
@@ -1705,11 +1729,23 @@ Push to main → GitHub Actions:
 | FR49 | Owner dashboard | Reporting | shared |
 | FR50 | Immutable audit trail | AuditLog + EventBus | kernel |
 | FR51 | Audit retention policy | AuditLog (server: forever, client: configurable) | kernel + client |
-| FR52 | Data migration zero-loss | Migration scripts | infra |
-| FR53 | Multi-schema Prisma | schema.prisma (kernel/shared/retail) | all |
-| FR54 | Module-agnostic sync | SyncService with adapters | client |
+| FR52 (DB) | Connect: tenants.referred_by + network_visible | Story 1.6 migration | kernel |
+| FR53 (DB) | Connect: contacts.linked_tenant_id | Story 1.6 migration | shared |
+| FR54 (DB) | Connect: catalog_items.supplier_reference | Story 1.6 migration | shared |
+| FR55 (DB) | Connect: transaction_type += transfer_inter_tenant | Story 1.6 migration | shared |
+| FR56 | Data migration zero-loss | Migration scripts | infra |
+| FR57 | Multi-schema Prisma | schema.prisma (kernel/shared/retail) | all |
+| FR58 | Module-agnostic sync | SyncService with adapters | client |
+| FR59 (DB) | Enterprise: tenants.org_mode + parent_tenant_id | Story 1.6 migration | kernel |
+| FR60 (DB) | Enterprise: organization_members.department_ids | Story 1.6 migration | kernel |
+| FR61 (DB) | Enterprise: tenant_modules.department_id | Story 1.6 migration | kernel |
+| FR62 | Inter-department events via EventBus extension | Epic 13 | kernel |
+| FR63–FR68 | RH & Paie Enterprise (CNSS, CARFO, bulletins) | Epic 13 | enterprise |
+| FR69–FR72 | Comptabilité OHADA (plan comptable, clôture, FEC) | Epic 13 | enterprise |
+| FR73–FR74 | Import Enterprise CSV + Retail → Enterprise migration | Epic 13 | enterprise |
+| FR75 | Sync failure lifecycle: outbox → retry → FAILED → resolution | Epic 8 | client + API |
 
-**Coverage:** 54/54 FRs mapped to components.
+**Coverage:** 75/75 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13.)
 
 ---
 
@@ -1736,7 +1772,8 @@ Push to main → GitHub Actions:
 | NFR17 | 99% uptime | Docker restart + backups | Uptime monitoring |
 | NFR18 | Zero transaction loss | WAL + idempotent sync + backup | End-to-end sync verification |
 | NFR19 | 30+ tenants | Indexed queries, tenant_id scoping | Load test with 30 tenants |
-| NFR20 | 10 users/tenant | Connection pooling | Concurrent user test |
+| NFR20 (Retail) | 10 users concurrent (Standard) / 20 (Premium multi-sites) | Connection pooling | Concurrent user load test — Retail tenant |
+| NFR20 (Enterprise) | 50 users concurrent (Pro) across 4 departments, non-simultaneous peaks | Connection pooling + department-scoped queries | Concurrent load test — Enterprise tenant, 4-dept simulation |
 | NFR21 | 500 txn/day/tenant | PostgreSQL capacity | Volume test |
 | NFR22 | 5K catalog items/tenant | Indexed queries | Query benchmark |
 | NFR23 | Zero-code new tenant | Configuration only | Create tenant via API |
@@ -1748,7 +1785,7 @@ Push to main → GitHub Actions:
 | NFR29 | Actionable error messages | French error messages, no jargon | UX review |
 | NFR30 | Seamless offline | No "offline mode" indicator | User testing |
 
-**Coverage:** 30/30 NFRs mapped to solutions.
+**Coverage:** 30/30 NFRs mapped to solutions. NFR20, NFR21, and NFR22 have dual targets (Retail vs Enterprise) per PRD v5.
 
 ---
 
@@ -1802,6 +1839,16 @@ Push to main → GitHub Actions:
 - ✓ **Gain:** Clean separation between shared and vertical data, no nullable column bloat
 - ✗ **Lose:** JOIN required to get full entity (CatalogItem + RetailProduct)
 - **Rationale:** Extension tables allow different verticals to add fields without modifying shared schema. JOIN cost is minimal for indexed 1:1 relations. STI would pollute shared tables with vertical-specific nullable columns.
+
+### Decision 8: Server-Driven UI (Layout-as-Data) over Native Screens per Vertical
+
+**Context:** PRD v5 introduces multiple business types (Retail, Pharmacy, Restaurant, Enterprise departments). Building a separate Flutter screen set per vertical means an N × M maintenance matrix unsustainable for a solo developer.
+
+**Trade-off:**
+- ✓ **Gain:** Single Flutter binary. Adding a new vertical = new JSON layout config + backend module, zero Flutter code change. Enables UI config updates without an app store release. Validated by PRD v5 Annex A Test 5 ("Activer le type Pharmacie affiche les champs DCI sans mise à jour de l'app").
+- ✗ **Lose:** Layout engine complexity upfront. JSON schema must be strictly validated server-side. Complex animations or device-specific interactions are harder to express in data.
+- **Rationale:** Scalario targets N verticals and N Enterprise departments. The refactoring cost of N native screen sets grows linearly; the layout engine cost is paid once. A server-validated JSON schema with a hardcoded fallback layout mitigates malformed-config risk.
+- **Implementation timing:** Epic 10, after Epic 6. All Retail screens (Epics 2–6) built conventionally first to validate business logic, then refactored to use the layout engine in Epic 10. The refactoring cost is accepted in exchange for unblocking the full backend restructuring.
 
 ---
 

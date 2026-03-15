@@ -1,13 +1,31 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Body, Controller, Param, Post } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { CurrentUser } from '../kernel/auth/auth.decorator';
+import { CurrentTenant } from '../kernel/tenancy/tenant.decorator';
+import { Roles } from '../kernel/rbac/roles.decorator';
 
 @Controller('organizations')
 export class OrganizationController {
-    constructor(private readonly organizationService: OrganizationService) { }
+  constructor(private readonly organizationService: OrganizationService) {}
 
-    @Post()
-    async create(@Body('name') name: string, @CurrentUser() user: any) {
-        return this.organizationService.createOrganization(name, user.id);
-    }
+  @Post()
+  async create(@Body('name') name: string, @CurrentUser() user: any) {
+    return this.organizationService.createOrganization(name, user.id);
+  }
+
+  /**
+   * Add a member to an organization with a specified role.
+   * Only owners can manage team membership.
+   */
+  @Post(':id/members')
+  @Roles('owner')
+  async addMember(
+    @Param('id') _tenantId: string,
+    @Body('userId') userId: string,
+    @Body('role') role: 'owner' | 'manager' | 'commercial',
+    @CurrentTenant() tenantId: string,
+  ) {
+    // Use authenticated tenant context (from TenantGuard), not URL param
+    return this.organizationService.addMember(tenantId, userId, role);
+  }
 }

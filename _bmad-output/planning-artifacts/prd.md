@@ -14,6 +14,8 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
+version: '5.0'
+date: '2026-03-11'
 classification:
   projectType: saas_b2b
   domain: erp_multi_vertical_commerce
@@ -32,698 +34,1089 @@ classification:
       - Contacts, Payments, Inventory, Reporting hold perfectly across all verticals
 ---
 
-# Product Requirements Document - Scalario
+# SCALARIO — Product Requirements Document
 
-**Author:** Carlos-simpore
-**Date:** 2026-03-08
+**Version 5.0** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+
+Confidentiel — Carlos-simpore
+
+---
+
+## Historique des Versions
+
+| Version | Date | Auteur | Modifications principales |
+|:---|:---|:---|:---|
+| 1.0 | 2026-03-08 | Carlos-simpore | Document initial. Architecture kernel/shared/vertical, Retail POS, offline-first, sync engine, user journeys Retail, exigences fonctionnelles et non-fonctionnelles. |
+| 2.0 | 2026-03-08 | Carlos-simpore | Ajout UI-Driven Architecture (Server-Driven UI). Ajout Scalario Connect inter-entreprises (Phase 3). Ajout Programme Ambassadeurs (Phase 2b). Mise à jour projections et tarification. |
+| 3.0 | 2026-03-08 | Carlos-simpore | Ajout Scalario Enterprise multi-départements (RH, Comptabilité OHADA, Secrétariat, Logistique). Modèle Intégré / Fédéré. Flux inter-départements. Mise à jour cohérence Executive Summary, Classification, Succès, NFR, Tarification, Risques. |
+| 4.0 | 2026-03-11 | Carlos-simpore | Ajout journeys Enterprise (DRH/Awa, Comptable/Ibrahim, DG/Serge). RBAC Enterprise complet (5 rôles). Onboarding & Support avec SLAs par offre. Protection des Données & Conformité (loi BF, RGPD, OHADA). Import & Migration Enterprise. Politique Notifications & Alertes. Gestion échecs de sync. Stratégie QA & Tests (DoD, environnements). Positionnement Concurrentiel complet (Retail + Enterprise, matrice comparative). |
+| 5.0 | 2026-03-11 | Carlos-simpore | Corrections post-audit : saut de page FR manquant corrigé, FR3/FR10 mis à jour, réglementations étendues à la zone UEMOA/CEMAC (multi-pays), CNSS sans API corrigé (export fichier uniquement), NFR20 restructuré, FR63–FR75 Enterprise ajoutés, Annexes A et B complétées, OHADA Phase 2b clarifié, Table des matières ajoutée. |
+
+---
+
+## Table des Matières
+
+| # | Section | Contenu |
+|:---|:---|:---|
+| 1 | Executive Summary | Vision, principes fondateurs, ce qui rend Scalario unique |
+| 2 | Classification du projet | Type, domaine, complexité, stack, état actuel |
+| 3 | Critères de Succès | Métriques utilisateur, business et technique |
+| 4 | Périmètre du Produit & Phases | Phase 1 (MVP), 2a, 2b (Croissance), 3 (Expansion) |
+| 5 | UI-Driven Architecture | Server-Driven UI, modules par métier, roadmap verticaux |
+| 6 | Scalario Connect | Interconnexion inter-entreprises, flux B2B, structure DB |
+| 7 | Scalario Enterprise | Multi-départements, modes Intégré / Fédéré, flux inter-dép. |
+| 8 | Programme Ambassadeurs | Modèle économique, profils, fonctionnalités, kit |
+| 9 | Exigences Domain-Spécifiques | Conformité FEC/DGI, devise FCFA, anti-fraude, résilience |
+| 10 | User Journeys (1–8) | Retail (Fatou, Blandine, Moussa, Carlos) + Enterprise (Awa, Ibrahim, Serge) + Offline |
+| 11 | Exigences SaaS B2B | Multi-tenancy, RBAC Retail & Enterprise, modules, intégrations |
+| 12 | Onboarding & Support Client | Processus par offre, SLAs, kit Ambassadeur |
+| 13 | Protection des Données & Conformité | Cadre légal BF/OHADA/RGPD, données sensibles, droits utilisateurs |
+| 14 | Import & Migration Enterprise | Formats CSV, règles migration Retail → Enterprise, gestion erreurs |
+| 15 | Politique Notifications & Alertes | Matrice événements/canaux/destinataires, règles anti-spam |
+| 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
+| 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
+| 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
+| 19 | Exigences Fonctionnelles (FR1–FR75) | Toutes les exigences numérotées par module |
+| 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
+| 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
+| 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
+| A | Annexe A — Tests de Validation | 9 tests clés avec critères de réussite |
+| B | Annexe B — Résumé des Innovations | 9 innovations différenciantes |
+| C | Annexe C — Glossaire | 24 termes définis |
+
+---
 
 ## Executive Summary
 
-Scalario is a modular, multi-tenant ERP platform purpose-built for businesses in Africa and emerging markets. Unlike Western-designed ERPs (SAP, Odoo Enterprise) that force businesses into rigid, configuration-heavy workflows, Scalario adopts a "business-first" approach: the system adapts to the trade, not the other way around.
+Scalario est une plateforme ERP modulaire et multi-tenant conçue pour les entreprises d'Afrique et des marchés émergents. Contrairement aux ERP occidentaux (SAP, Odoo Enterprise) qui imposent des workflows rigides et supposent une connectivité permanente, Scalario adopte une approche « business-first » : le système s'adapte au métier et à la réalité terrain, pas l'inverse.
 
-The platform operates on a three-tier architecture — Kernel (identity, tenancy, sync engine), Shared Modules (catalog, contacts, transactions, payments, inventory, reporting), and Vertical Modules (industry-specific logic). This structure allows any new business vertical (retail, restaurant, pharmacy, services) to plug into existing shared infrastructure without touching the kernel or duplicating core logic.
+La plateforme repose sur une architecture trois niveaux — Kernel (identité, multi-tenancy, moteur de sync), Shared Modules (catalog, contacts, transactions, paiements, inventaire, reporting), et Vertical Modules (logique métier par secteur). Cette structure permet à tout nouveau vertical (retail, restaurant, pharmacie, services) de s'intégrer à l'infrastructure partagée existante sans toucher au kernel. Le même Kernel sert une boutique de quartier et une PME avec plusieurs départements.
 
-Scalario's foundational principle is offline-first: the client always writes locally and syncs when connectivity returns. This is not a degraded fallback mode — it is the primary operating mode, designed for environments where internet is the exception and power cuts are routine. The first commercial vertical is Retail POS, currently serving 3 clients across grocery, cosmetics, and beverage shops, with prospects emerging in pharmacy and services.
+Le principe fondateur est l'offline-first : le client écrit toujours localement et synchronise dès que la connectivité revient. Ce n'est pas un mode dégradé — c'est le mode d'opération primaire, conçu pour les environnements où internet est l'exception et les coupures de courant sont fréquentes.
 
-The platform handles African market realities that global ERPs ignore: FCFA currency with 5-franc rounding, bulk sales by weight (grams), spoilage rates on perishable goods, bottle deposit tracking, and WhatsApp-based business reporting for owners who manage remotely. Target users are non-technical — the system must be learnable in under one hour.
+Le premier vertical commercial est le Retail POS, actuellement en production chez 3 clients (épiceries, cosmétiques, boissons). La feuille de route étend Scalario vers la pharmacie, les services, la restauration, la logistique, et les PME multi-départements (RH, comptabilité OHADA, secrétariat, achats). À terme, Scalario Connect permet à toute entreprise sur la plateforme d'échanger des bons de commande et factures avec ses partenaires commerciaux directement depuis l'interface métier.
 
-This PRD defines the restructuring of the current monolithic POS codebase into the modular kernel/shared/vertical architecture, preserving all existing functionality while enabling multi-vertical expansion.
+### Ce qui rend Scalario unique
 
-### What Makes This Special
+- **Transparence réseau :** quand la connexion tombe, le commerçant ou l'employé ne le remarque pas. Les opérations continuent, la sync se fait silencieusement à la reconnexion.
+- **Contrôle passif du business :** résumés WhatsApp automatiques chaque soir pour les propriétaires absents. Tableaux de bord temps réel pour les dirigeants de PME.
+- **Business-first, pas configuration-first :** la logique métier (arrondi FCFA, poids, péremptions, paie CNSS, plan comptable OHADA) est une fonctionnalité native, pas un paramétrage caché.
+- **Couche partagée polymorphe :** base-entity + extension verticale, 60–80 % de réutilisation entre chaque nouveau métier ou département.
+- **UI-Driven Architecture :** une seule app Flutter, N métiers et départements. L'interface s'adapte dynamiquement au type de métier ou de département sans mise à jour Play Store.
+- **Scalario Connect (Phase 3) :** tout tenant peut passer des bons de commande à un autre tenant. Boutique → grossiste, pharmacie → distributeur, entreprise → fournisseur. Un seul réseau.
+- **Scalario Enterprise (Phase 3) :** un seul Kernel pour gérer une boutique et une PME avec RH, comptabilité, secrétariat et logistique. Mode Intégré (un tenant, N départements) ou Mode Fédéré (N entités liées) selon la taille.
+- **Programme Ambassadeurs (Phase 2b) :** les clients satisfaits deviennent une force de vente terrain rémunérée via Mobile Money, sans coût fixe pour Scalario.
 
-1. **Network transparency** — When connectivity drops, the merchant doesn't notice. Sales, payments, and stock updates continue uninterrupted. Sync happens silently on reconnection. Competitors stop working; Scalario keeps selling.
+---
 
-2. **Passive business control** — Owners receive automated evening summaries via WhatsApp: daily revenue, losses, critical stock alerts. No manual checking, no next-day ledger review. The shift from "enduring your business" to "controlling it from home" is the retention inflection point.
+## Classification du projet
 
-3. **Business-first, not configuration-first** — The modular architecture allows each vertical to embed domain-specific trade logic (bulk pricing by weight, spoilage tracking, deposit systems) as first-class features, not afterthought configurations buried in settings menus.
-
-4. **Polymorphic shared layer** — Shared modules (Catalog, Transactions, Inventory) use a base-entity + vertical-extension pattern with type discriminators (`physical | bookable | service`), enabling new verticals to reuse 60-80% of existing infrastructure.
-
-## Project Classification
-
-| Dimension | Value |
+| Dimension | Valeur |
 |:---|:---|
-| **Project Type** | SaaS B2B — Multi-tenant modular ERP platform |
-| **Domain** | ERP / Multi-vertical commerce |
-| **Complexity** | High — Three-tier modular architecture, polymorphic shared entities, offline-first sync with per-module adapters, emerging market constraints |
-| **Project Context** | Brownfield — Restructuring existing monolithic POS into modular architecture |
-| **Stack** | Flutter (mobile/desktop/web) + NestJS (backend) + Supabase (auth/DB/realtime) + Prisma (ORM) + Isar (local DB) |
-| **Current State** | 3 active retail clients, working POS with offline-first, sync, sessions, customers, orders, stock movements |
+| Type de projet | SaaS B2B — Plateforme ERP multi-tenant modulaire |
+| Domaine | ERP / Commerce multi-vertical + PME multi-départements / Marchés émergents Afrique de l'Ouest |
+| Complexité | Haute — Architecture trois niveaux, entités partagées polymorphes, sync offline-first, UI-Driven Engine, modèle départemental, contraintes marchés émergents |
+| Contexte | Brownfield — Restructuration du POS monolithique en architecture modulaire extensible |
+| Stack | Flutter + NestJS + Supabase + Prisma + Isar |
+| État actuel | 3 clients retail actifs (Phase 1). Roadmap : Pharmacie, Services, Logistique, PME Enterprise multi-départements, Scalario Connect inter-entreprises |
+| Slogan | À définir (axe stratégique validé : Scalario s'adapte à votre métier) |
 
-## Success Criteria
+---
 
-### User Success
+## Critères de Succès
 
-| Persona | Success Metric | Target |
+### Succès Utilisateur
+
+| Persona | Métrique de succès | Cible |
 |:---|:---|:---|
-| **Cashier** | Autonomous after training | < 1 hour: open session, search product, sell, cash payment, close session |
-| **Shop Owner** | Autonomous on configuration & reports | < 3 hours: products, categories, pricing, read reports |
-| **Store Manager** | Autonomous on stock operations | < 2 hours: reception, transfers, adjustments |
-| **Cashier (offline)** | Full-shift operation without connectivity | 8+ hours, zero data loss, zero workflow interruption |
-| **Owner (remote)** | Evening WhatsApp summary received automatically | Daily: revenue, sale count, losses, cash variance, critical stock, top 3 products. Readable in < 10 seconds |
-| **All users** | Sync after reconnection | < 30 seconds for a full day of transactions |
+| Caissier | Autonome après formation | < 1h : ouvrir session, chercher produit, vendre, encaisser, fermer session |
+| Propriétaire boutique | Autonome sur config et rapports | < 3h : produits, catégories, prix, lecture des rapports |
+| Gestionnaire stock | Autonome sur opérations stock | < 2h : réception, transferts, ajustements |
+| Caissier (offline) | Travail en shift complet sans connectivité | 8h+, zéro perte de données, zéro interruption |
+| Propriétaire (distant) | Résumé WhatsApp reçu automatiquement | Quotidien : CA, pertes, écarts, stock critique, top 3. Lisible en < 10s |
+| DRH / Responsable RH | Autonome sur gestion employés et paie | < 3h : fiche employé, calcul paie, bulletin, déclaration CNSS |
+| Comptable / DAF | Autonome sur comptabilité OHADA | < 4h : saisie écriture, grand livre, bilan, export expert-comptable |
+| DG / Directeur | Dashboard consolidé multi-départements | Vision en temps réel : CA boutique + masse salariale + engagements achats sur un écran |
+| Tous | Sync après reconnexion | < 30s pour une journée entière de transactions |
 
-### Business Success
+### Succès Business
 
-| Timeframe | Target | Priority |
+| Horizon | Cible | Priorité |
 |:---|:---|:---|
-| **6 months** | 3 existing clients migrated + 5-10 new retail clients on new architecture | Quality & reliability over quantity |
-| **12 months** | 20-30 active retail clients + 1 new vertical launched (pharmacy or services) | First stable recurring revenue |
-| **Success signal** | 5 satisfied clients who actively recommend > 20 clients who struggle | Referral-driven growth |
-| **Revenue model** | Hybrid: monthly subscription per tenant, tiered by users/modules | Free/low entry for small shops, value scales with module activation. Pricing finalized post-product stabilization |
+| 6 mois | 3 clients migrés + 5–10 nouveaux clients retail | Qualité et fiabilité avant quantité |
+| 12 mois | 20–30 clients retail actifs + 1 nouveau vertical lancé (Pharmacie ou Services) | Premier revenu récurrent stable |
+| Phase 3 (18–24 mois) | Scalario Connect + Scalario Enterprise lancés. Premiers clients PME multi-départements | Panier moyen clients Enterprise : 25–50k FCFA/mois |
+| Signal de succès | 5 clients satisfaits qui recommandent activement | Croissance par parrainage Ambassadeurs |
+| Modèle de revenu | Abonnement mensuel par tenant (Retail 15k, Enterprise 25–50k) + commissions Ambassadeurs (Phase 2b) + Scalario Connect (Phase 3) | Tarification finalisée post-stabilisation produit |
 
-### Technical Success
+### Succès Technique
 
-| Metric | Target | Validation |
+| Métrique | Cible | Validation |
 |:---|:---|:---|
-| **Migration safety** | Zero data loss for 3 existing clients | 1-2 day maintenance window acceptable with advance notice |
-| **New vertical velocity** | 2-4 weeks for 1 developer to ship a basic vertical | Uses shared modules (catalog, transactions, inventory, payments) without touching kernel or duplicating shared code |
-| **Architecture integrity** | Adding a vertical never requires kernel changes | If pharmacy vertical touches kernel = restructuring failure |
-| **Offline reliability** | 8-hour shift, zero data loss, automatic silent sync | Sync delay < 30s for full day of transactions |
-| **Shared module reuse** | 60-80% of a new vertical's data layer comes from shared modules | Measured by LOC or entity reuse ratio |
+| Sécurité migration | Zéro perte de données pour 3 clients existants | Fenêtre de maintenance 1–2 jours acceptable |
+| Vélocité nouveau vertical | 2–4 semaines pour 1 développeur | Utilise modules partagés sans toucher le kernel |
+| Intégrité architecture | Ajouter un vertical ou un département Enterprise ne nécessite jamais de changement kernel | Si Pharmacie ou module RH touche le kernel = échec |
+| Fiabilité offline | Shift 8h, zéro perte de données, sync silencieuse | Délai sync < 30s pour journée complète |
+| Réutilisation modules partagés | 60–80 % de la couche data d'un vertical ou département | Mesuré par ratio réutilisation entités |
+| UI-Driven Engine | Ajout d'un nouveau métier ou département via config JSON sans deploy Flutter | Le layout RH diffère du layout Retail sans branching applicatif |
+| Scalario Enterprise | Un tenant PME avec 4 départements actifs sans dégradation de performance | Isolation des vues de données par département validée par les RLS |
 
-### Measurable Outcomes
+---
 
-1. **The Offline Test** — A cashier works a full 8-hour shift without internet. At end of day, connectivity returns, and all transactions sync within 30 seconds. Zero data loss. Zero manual intervention.
-2. **The Vertical Test** — A single developer creates a basic "pharmacy" vertical (catalog + sales + stock) in under 4 weeks, reusing shared modules, with zero changes to kernel code.
-3. **The Migration Test** — All 3 existing clients are migrated to the new architecture with zero data loss and identical functionality within the 1-2 day maintenance window.
-4. **The Onboarding Test** — A new cashier with no prior ERP experience processes their first sale unassisted within 15 minutes of starting training.
+## Périmètre du Produit & Phases
 
-## Product Scope
+### Phase 1 — MVP : Restructuration incrémentale
 
-> Detailed phased development plan, MVP boundaries, and risk mitigation strategies are defined in the **Project Scoping & Phased Development** section below.
+Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel/shared/vertical. Zéro nouvelle fonctionnalité sauf l'arrondi FCFA à 5 francs dans le module Payments. 3 clients migrés sans perte de données.
 
-**MVP (Phase 1): Incremental Platform Restructuring**
-Same functionality, new architecture. Decompose monolith into kernel/shared/vertical. Zero new features except FCFA 5-franc rounding in Payments module. 3 clients migrated with zero data loss.
+### Phase 2a — Post-restructuration immédiate
 
-**Phase 2a: Immediate Post-Restructuring**
-1. Weight-based sales (validates Catalog extension pattern)
-2. Restock request workflow (validates cross-module events)
-3. FEC/DGI fiscal integration (validates dedicated sync queue)
-4. WhatsApp evening summary (primary retention hook)
+- Ventes au poids (valide le pattern d'extension Catalog)
+- Workflow demande de réapprovisionnement (valide événements cross-module)
+- Intégration fiscale FEC/DGI (valide file de sync dédiée)
+- Résumé WhatsApp soir (premier hook de rétention)
 
-**Phase 2b: Growth**
-Spoilage tracking, bottle deposits, remote dashboard, CSV import, mobile money API, OHADA export, multi-branch
+### Phase 2b — Croissance
 
-**Phase 3: Expansion**
-Second vertical (pharmacy/services), subscription billing, advanced reporting, AI predictions, open API, multi-currency, international expansion
+- Suivi des pertes (taux de frotte), dépôts de bouteilles (consignes)
+- Dashboard distant propriétaire (mobile)
+- Import CSV catalogue
+- API Mobile Money (Orange Money / Moov Money)
+- Export OHADA Retail (Phase 2b) : export des écritures de ventes au format OHADA pour remise à un expert-comptable externe. Distinct de la comptabilité intégrée Enterprise (Phase 3).
+- Programme Ambassadeurs (voir section dédiée ci-dessous)
+
+### Phase 3 — Expansion
+
+- Deuxième vertical (Pharmacie ou Services)
+- Scalario Connect — Interconnexion inter-entreprises (voir section dédiée)
+- Scalario Enterprise — Modèle multi-départements PME : RH & Paie, Comptabilité OHADA, Secrétariat, Logistique (voir section dédiée)
+- Facturation et abonnement intégrés
+- Reporting avancé, prédictions IA
+- Open API, multi-devises, expansion internationale
+
+---
+
+## UI-Driven Architecture (Dynamic Vertical UI)
+
+Scalario ne gère pas ses verticaux avec des branches de code distinctes. L'application Flutter embarque un moteur d'interface piloté par le serveur (Server-Driven UI) : le backend envoie une définition JSON du layout, et Flutter le rend dynamiquement selon le `business_type` du tenant.
+
+### Principe fondamental
+
+- Un seul binaire Flutter livré — zéro branching applicatif par métier
+- Le Kernel envoie les composants UI actifs via la configuration de module
+- Modifier l'interface d'un métier ne nécessite pas de mise à jour Play Store
+- Chaque widget est contextuel : Date de péremption (Pharma), Unité poids/mètres (Quincaillerie), Table (Resto)
+
+### Modules UI Contextuels par Métier
+
+| business_type | Widgets activés | Champs spécifiques |
+|:---|:---|:---|
+| retail | Scanner code-barres, Remise rapide, Grille produits | weightUnit, stockQuantity, sessionId |
+| pharmacy | Alerte péremption, Filtre DCI, Contrôle ordonnance | expiryDate, dci, ordonnanceRequired, lotNumber |
+| services | Facturation horaire, Gestion devis | hourlyRate, quoteId, serviceDate |
+| wholesale | Picking list, Gestion lots, Tarifs volume | batchId, volumeDiscount, pickingStatus |
+| restaurant | Gestion tables, Bons de commande cuisine | tableNumber, courseOrder, kitchenStatus |
+| enterprise_hr | Fiches employés, Bulletin de paie, CNSS | employeeId, contractType, salaryBase, cnssRef |
+| enterprise_accounting | Grand livre, Balance, États OHADA | accountCode, journalType, fiscalPeriod |
+| enterprise_secretariat | Courrier, Agenda, Archivage | documentType, dueDate, recipientDeptId |
+| enterprise_logistics | Bons commande, Parc matériel, Fournisseurs | assetId, purchaseOrderRef, deliveryStatus |
+
+### Roadmap des Verticaux (Publique)
+
+> *La roadmap des métiers est communicable publiquement. Elle permet aux prospects de se projeter et crée un effet de réservation (un pharmacien qui voit « Module Pharma Q3 2026 » n'ira pas chercher un autre logiciel).*
+
+| Phase | Métier | Statut |
+|:---|:---|:---|
+| Phase 1 (actuel) | Retail / Boutiques / Commerce de détail | En production |
+| Phase 2a | Retail Pro (poids, consignes, pertes) | À venir |
+| Phase 2b | Pharmacies & Santé | Roadmap publique Q3 2026 |
+| Phase 3 | Services (garages, agences, nettoyage) | Roadmap publique Q4 2026 |
+| Phase 3 | Logistique / Grossistes | Vision |
+| Phase 3 | Restauration | Vision |
+| Phase 3 | Enterprise PME — Multi-départements (RH, Compta, Secrétariat, Achats) | Vision |
+
+---
+
+## Scalario Connect — Interconnexion Inter-Entreprises (Phase 3)
+
+Scalario Connect est le module permettant à deux entités distinctes sur la plateforme d'échanger des documents transactionnels (bons de commande, factures, confirmations de livraison) directement dans leur interface métier respective.
+
+> *Ce module est placé en Phase 3. Cependant, la structure de données doit anticiper ces relations dès la Phase 1 (champs référentiels, pas de logique applicative).*
+
+### Concept Node-to-Node (Acheteur / Vendeur)
+
+La relation n'est pas linéaire (Grossiste → Détaillant). C'est un graphe universel :
+- Tout tenant Scalario peut être Acheteur, Vendeur, ou les deux simultanément
+- Une pharmacie commande à un distributeur médical
+- Une boutique commande à un grossiste alimentaire
+- Une entreprise commande des fournitures à une papeterie
+- Un restaurant commande à ses fournisseurs de produits frais
+
+### Flux transactionnel inter-tenant
+
+| Étape | Acheteur (Tenant A) | Vendeur (Tenant B) |
+|:---|:---|:---|
+| 1. Alerte stock | Reçoit notification « Stock bas » | — |
+| 2. Bon de commande | Crée un Shared_Order depuis son catalogue fournisseurs | — |
+| 3. Réception commande | — | Reçoit le bon de commande en temps réel |
+| 4. Validation | — | Valide / modifie / rejette la commande |
+| 5. Expédition | — | Marque « Expédié » — stock déduit chez B |
+| 6. Réception | Confirme la réception physique | Stock crédité chez A automatiquement |
+| 7. Rapprochement | Facture auto-générée et rapprochée | Facture marquée payée |
+
+### Structure de données à anticiper (Phase 1)
+
+| Table | Champ à ajouter | Utilité |
+|:---|:---|:---|
+| shops / tenants | network_visible (bool) | Le tenant accepte d'être découvert par d'autres tenants |
+| catalog_items | supplier_reference (uuid nullable) | Lien vers l'article du fournisseur sur Scalario |
+| contacts | linked_tenant_id (uuid nullable) | Un fournisseur = aussi un tenant Scalario |
+| transactions | type: transfer_inter_tenant | Distinguer les transactions internes des inter-tenants |
+
+### Confidentialité et isolation
+
+- L'Acheteur ne voit jamais les marges ni le stock total du Vendeur
+- Le Vendeur ne voit jamais le prix de revente de l'Acheteur
+- Les RLS Supabase garantissent l'isolation au niveau base de données
+- Seuls les documents partagés (Shared_Order) sont mutuellement visibles
+
+### Effet de réseau (Network Effect)
+
+> *Chaque grossiste qui adopte Scalario Connect incite ses détaillants à adopter la plateforme pour simplifier les commandes. La migration d'un client vers un concurrent exige de convaincre simultanément tous ses partenaires commerciaux. C'est le verrou stratégique long terme de Scalario.*
+
+---
+
+## Scalario Enterprise — Modèle Multi-Départements (Phase 3)
+
+Scalario Enterprise étend la plateforme aux entreprises structurées qui ont plusieurs départements internes (RH, Comptabilité, Secrétariat, Logistique/Achats). C'est le passage du marché « Boutique » au marché « PME », avec un panier moyen significativement plus élevé et une fidélité structurellement plus forte.
+
+### Modèle de structure selon la taille
+
+Deux modes coexistent selon la maturité de l'organisation :
+
+| Mode | Pour qui | Fonctionnement | Exemple |
+|:---|:---|:---|:---|
+| Mode Intégré (Un tenant, N départements) | PME de taille moyenne (5–50 employés) | Un seul tenant Scalario. Les départements sont des sous-unités (department_id) partageant le même tenant. Chaque département a ses propres rôles, modules actifs et vues de données. | Une entreprise de transport : la direction voit tout, le RH voit uniquement la paie, le comptable voit uniquement les finances. |
+| Mode Fédéré (N tenants liés) | Groupes / Holdings (50+ employés, multi-sites) | Chaque entité (filiale, agence) est un tenant indépendant. Un tenant « Groupe » consolide les rapports via Scalario Connect. Isolation totale des données entre filiales. | Un groupe avec une pharmacie, une clinique et une boutique d'optique : trois tenants, un dashboard de consolidation pour le DG. |
+
+> *La décision Mode Intégré vs Mode Fédéré est configurée par l'admin à la création du tenant. Elle peut évoluer — une PME qui grandit peut migrer d'Intégré vers Fédéré sans perte de données.*
+
+### Départements ciblés (Phase 3)
+
+| Département | Modules Scalario activés | Fonctionnalités clés | Persona principal |
+|:---|:---|:---|:---|
+| RH & Paie | Contacts (employés), Reporting, Payments | Fiches employés, contrats, congés, calcul de paie (SMIG Burkina), bulletins de salaire, historique disciplinaire, déclarations CNSS/CARFO | Responsable RH |
+| Comptabilité & Finance | Transactions, Payments, Reporting | Plan comptable OHADA, grand livre, balance, journaux, rapprochement bancaire, états financiers (bilan, compte de résultat), export pour expert-comptable | Comptable / DAF |
+| Secrétariat & Gestion documentaire | Contacts, module Documents (nouveau) | Gestion du courrier entrant/sortant, agenda partagé, archivage numérique des documents (contrats, attestations, factures), alertes échéances | Secrétaire / Assistant de direction |
+| Logistique & Achats | Inventory, Catalog, Contacts (fournisseurs) | Bons de commande internes, gestion des fournisseurs, suivi des livraisons, état du parc matériel, gestion des immobilisations | Responsable Achats / Logisticien |
+
+### Architecture : Départements comme sous-unités (Mode Intégré)
+
+- Nouvelle table `departments(id, tenantId, name, type, parentDepartmentId)` pour la hiérarchie
+- Chaque utilisateur est assigné à un ou plusieurs départements via `DepartmentUser(userId, departmentId, roleId)`
+- Les modules activés sont configurés par département, pas uniquement par tenant
+- Les permissions RBAC s'appliquent à l'intersection (tenant, département, rôle)
+- La Direction voit les données de tous les départements en lecture. Chaque département ne voit que les siennes en écriture
+- L'UI-Driven Engine charge le layout spécifique au département actif de l'utilisateur connecté
+
+### Flux inter-départements
+
+Les départements communiquent entre eux via des événements internes au tenant, sans exposer leurs données brutes :
+
+| Émetteur | Destinataire | Événement | Résultat |
+|:---|:---|:---|:---|
+| Logistique | Comptabilité | Bon de commande validé | Engagement budgétaire créé automatiquement |
+| RH | Comptabilité | Bulletins de paie validés | Écriture comptable de paie générée |
+| Secrétariat | Tous | Contrat signé uploadé | Notification aux départements concernés |
+| Comptabilité | Direction | Clôture mensuelle effectuée | Rapport consolidé disponible sur dashboard DG |
+| Retail/Caisse | Comptabilité | Session de caisse clôturée | Écriture comptable ventes générée |
+
+### Tarification Enterprise
+
+| Offre | Prix estimé (Phase 3) | Inclus |
+|:---|:---|:---|
+| PME Essentiel | 25 000 FCFA / mois | Mode Intégré, 2 départements, 10 utilisateurs, modules RH + Compta de base |
+| PME Pro | 50 000 FCFA / mois | Mode Intégré, 4 départements, 25 utilisateurs, tous les modules départementaux |
+| Groupe / Holding | Sur devis | Mode Fédéré, N tenants liés, dashboard consolidation, Scalario Connect inclus |
+
+> *La tarification Enterprise est significativement plus élevée que le Retail (15 000 FCFA) car la valeur livrée est proportionnellement plus grande : une PME qui évite un comptable externe (économie de 100 000–300 000 FCFA/mois) justifie aisément 50 000 FCFA d'abonnement.*
+
+### Structure DB à anticiper (Phase 1)
+
+| Table | Champ à ajouter | Utilité |
+|:---|:---|:---|
+| tenants | org_mode (enum: standalone \| integrated \| federated) | Définit si le tenant supporte les départements |
+| tenants | parent_tenant_id (uuid nullable) | Pour le Mode Fédéré : lien vers le tenant Groupe |
+| users | department_ids (array uuid) | Un utilisateur peut appartenir à plusieurs départements |
+| TenantModule | department_id (uuid nullable) | Activation d'un module pour un département spécifique |
+
+### Validation : Le Test Enterprise
+
+- Un DRH configure son département RH, importe 15 employés, génère les bulletins du mois et exporte la déclaration CNSS en moins de 2 heures, sans formation préalable.
+- Un comptable clôture le mois, génère le bilan OHADA et l'exporte vers son expert-comptable sans ressaisie manuelle.
+- Le DG voit sur un seul écran le CA de la boutique, la masse salariale du RH et les engagements d'achats de la logistique, en temps réel.
+
+---
+
+## Programme Ambassadeurs (Phase 2b)
+
+Le Programme Ambassadeurs est le système de parrainage natif de Scalario. Il transforme les clients satisfaits en force de vente terrain sans coût fixe.
+
+### Modèle économique
+
+| Acteur | Bénéfice | Condition |
+|:---|:---|:---|
+| Ambassadeur (Parrain) | 20 % de l'abonnement mensuel tant que le client est actif (3 000 FCFA/mois pour 15k) | Paiement via Mobile Money, seuil min. 10 000 FCFA |
+| Nouveau client (Filleul) | 50 % de remise sur le premier mois | Via code de parrainage unique |
+| Scalario | Acquisition sans coût pub + ambassadeur aligné sur la rétention | Commission versée uniquement si paiement confirmé |
+
+### Profils d'Ambassadeurs cibles
+
+- Clients Scalario existants (boutiquiers satisfaits)
+- Comptables indépendants gérant plusieurs commerces
+- Vendeurs de matériel (smartphones, tablettes, imprimantes thermiques)
+- Agents commerciaux terrain recrutables ultérieurement
+
+### Fonctionnalités techniques
+
+- Génération d'un code de parrainage unique par boutique
+- Champ `referred_by` (UUID) sur chaque tenant dès la Phase 1 (structure DB uniquement)
+- Calcul automatique des commissions à chaque transaction de paiement réussie
+- Mini-tableau de bord Ambassadeur : clients actifs, commissions cumulées, statut de paiement
+- Paiement automatisé mensuel via Orange Money / Moov Money API
+
+> *Phase 1 : ajouter `referred_by` sur la table tenants. Phase 2b : activer le calcul, le tableau de bord et le paiement automatisé.*
+
+### Protection de l'image de marque
+
+- Les Ambassadeurs reçoivent un « Kit de Communication » (3 vidéos de démonstration + FAQ)
+- Ils ne peuvent pas modifier le discours commercial ou promettre des fonctionnalités inexistantes
+- Commissions suspendues en cas de pratique abusive signalée
+
+---
+
+## Exigences Domain-Spécifiques
+
+### Conformité Fiscale & Réglementaire
+
+Scalario est conçu pour être déployé dans plusieurs pays de la zone UEMOA et CEMAC. La conformité fiscale n'est pas codée en dur — elle est pilotée par un moteur configurable par pays/juridiction. Chaque tenant est associé à une juridiction dès sa création, et les règles s'appliquent automatiquement.
+
+#### Architecture fiscale multi-pays
+
+- Moteur fiscal configurable par juridiction (plugins pays) : taux TVA, règles d'arrondi, formats de reçus, obligations de transmission
+- MVP : Burkina Faso (XOF, FEC/DGI, TVA 18 %/10 %). Architecture prête pour Côte d'Ivoire, Sénégal, Mali, Cameroun, Togo, Bénin sans modification du Kernel
+- Chaque plugin pays déclare : devise, arrondi, taux TVA, format reçu, obligation de transmission fiscale, identifiants légaux requis
+- Un tenant peut être migré de juridiction (exemple : agence BF → agence CI) sans perte de données historiques
+
+#### Facturation électronique certifiée (FEC) — Burkina Faso (MVP, obligatoire 2026)
+
+- Logiciel de caisse certifié avec transmission des données de facturation vers le système DGI
+- Reçus électroniques avec numérotation séquentielle, inaltérable et garantie d'unicité
+- Mode offline : génération locale avec plages de numéros pré-allouées, transmission à la synchronisation
+- TVA multi-taux : 18 % (normal), 10 % (réduit), exonérations. Configurable par produit/catégorie
+
+#### Paie & Sécurité Sociale — Architecture multi-pays
+
+- Les règles de paie (SMIG, cotisations sociales, retenues) sont définies dans le plugin pays, pas dans le code métier
+- MVP Burkina Faso : SMIG en vigueur, cotisations CNSS (employé + employeur), CARFO pour fonctionnaires, retenue ITS progressive
+- Extension future : IPRES Sénégal, CNPS Côte d'Ivoire, CNPS Cameroun — ajout d'un plugin sans modifier le moteur de paie
+- Les taux et barèmes sont mis à jour par l'admin sans déploiement (configuration JSON par pays)
+- La déclaration sociale génère un fichier export (CSV ou PDF) au format attendu par l'organisme local. Aucune API directe n'est prévue — la déclaration est envoyée manuellement ou via le portail de l'organisme.
+
+> *Règle d'architecture : toute contrainte réglementaire spécifique à un pays (taux, format, obligation) est un paramètre de configuration du plugin pays, jamais une ligne de code dans le Kernel ou un Shared Module.*
+
+### Moteur de Devise & Prix
+
+| Contrainte | Implémentation |
+|:---|:---|
+| Multi-devises | Chaque tenant configure sa devise. MVP : XOF. Architecture prête pour XAF, EUR, USD |
+| Règles d'arrondi par devise | XOF : arrondi à 5 FCFA. EUR : arrondi à 0.01. Configurable par devise |
+| Autorité prix | Seul le propriétaire peut modifier les prix — contrainte anti-fraude |
+| Prix au poids | Prix/kg avec calcul au gramme, arrondi final selon devise |
+
+### Résilience Infrastructure
+
+- WAL (Write-Ahead Logging) sur la base locale : zéro corruption en cas d'arrêt brutal
+- Transaction en cours sauvegardée incrémentalement — redémarrage reprend ou abandonne proprement
+- Compression des payloads de sync, delta-only, retry avec exponential backoff
+- Spécification minimum supportée : tablette 1–2 Go RAM, stockage limité
+
+### Confiance & Anti-Fraude
+
+- Double validation à chaque transfert de stock : émetteur déclare la sortie, récepteur confirme la réception, écart automatiquement attribué
+- Séparation stricte des rôles : qui vend ne reçoit pas, qui reçoit ne vend pas
+- Arrêt de caisse quotidien obligatoire avec confrontation théorique/réel
+- Audit trail immuable : acteur, action, timestamp, données avant/après
+
+---
 
 ## User Journeys
 
-### Journey 1: Fatou, Commercial — Une journée complète
+### Journey 1 : Fatou, Commerciale — Journée complète
 
-**Persona:** Fatou, 24 ans, commerciale au rayon fruits & legumes. Pas de formation informatique, a appris le systeme en 45 minutes. Utilise une tablette Android posee sur le comptoir.
+Fatou, 24 ans, commerciale fruits & légumes, tablette Android. Apprend le système en 45 minutes. Travaille une journée complète avec ventes au poids, pertes, transferts et coupure wifi totale — sans s'en apercevoir.
 
-**Opening Scene:** 7h30, Fatou arrive et ouvre sa session de caisse. Elle saisit son code, declare le fond de caisse (15 000 FCFA en especes). Le systeme affiche son rayon et les produits disponibles.
+**Fonctionnalités révélées :** moteur transactions offline-first, ventes au poids + arrondi FCFA, gestion de session de caisse, transferts de stock avec variance, déclaration de pertes, sync automatique en arrière-plan.
 
-**Rising Action:**
-- Moussa le gestionnaire a prepare 3 caisses de tomates (8 kg) et 2 caisses de mangues pour son rayon. Fatou ouvre la notification de transfert sur sa tablette, verifie physiquement : les tomates sont bien la mais elle ne compte que 7 kg. Elle confirme la reception en saisissant 7 kg au lieu de 8. L'ecart de 1 kg est automatiquement trace — le systeme sait que le produit a ete sorti par Moussa (8 kg) mais recu par Fatou (7 kg). Blandine verra cet ecart ce soir.
-- 9h, les premiers clients arrivent. Fatou vend des tomates au poids — 500g a 1200 FCFA/kg = 600 FCFA, arrondi a 600 FCFA. Le client paie avec un billet de 1000 FCFA, rendu : 400 FCFA. Tout s'enregistre localement — le wifi est tombe a 8h45 et personne ne s'en est rendu compte.
-- 11h, pic de clients. Un client veut des mangues mais le rayon est presque vide. Fatou lance une demande de reapprovisionnement a Moussa depuis sa tablette tout en encaissant le client suivant.
-- 14h, les tomates restantes ont tourne. Fatou declare 1.2 kg en perte (taux de frotte) dans le systeme avec motif "produit trop mur". Le stock est ajuste immediatement. Si elle ne le fait pas, l'ecart apparaitra comme un vol potentiel a l'arret de caisse.
+### Journey 2 : Blandine, Propriétaire à distance
 
-**Climax:** 18h, fin de journee. Fatou lance l'arret de caisse. Elle compte ses especes : 127 500 FCFA. Le systeme affiche un chiffre d'affaires theorique de 128 000 FCFA. Ecart : -500 FCFA. Fatou saisit l'explication : "rendu monnaie approximatif sur plusieurs ventes en petite monnaie." Le rapport est cloture et transmis automatiquement a Moussa pour consolidation.
+Blandine, 41 ans, gère son épicerie fine depuis l'étranger via smartphone. Reçoit résumé WhatsApp chaque soir. Détecte un pattern de pertes en 30 jours grâce à la traçabilité chaînon par chaînon.
 
-**Resolution:** Le wifi est revenu a 16h. En arriere-plan, les 127 transactions de la journee se sont synchronisees en 18 secondes. Fatou n'a rien eu a faire. Le rapport de caisse, les pertes declarees, l'ecart de reception — tout est remonte au cloud. Blandine pourra tout voir ce soir depuis son telephone.
+**Fonctionnalités révélées :** gestion commandes fournisseurs à distance, suivi des réceptions avec variance, moteur résumé WhatsApp, dashboard mobile temps réel, traçabilité des transferts de stock.
 
-**Requirements revealed:** Offline-first transaction engine, weight-based sales with FCFA rounding, stock transfer reception with quantity variance tracking, loss declaration with motif, cash session open/close with variance reporting, automatic background sync, restock request workflow.
+### Journey 3 : Moussa, Gestionnaire de magasin
 
-### Journey 2: Blandine, Proprietaire a distance — Controler sans etre la
+Moussa, 35 ans, pivot opérationnel. Gère les réceptions fournisseurs, les transferts vers les rayons, les inventaires partiels et la consolidation des rapports journaliers.
 
-**Persona:** Blandine, 41 ans, entrepreneuse. Vit dans un autre pays, gere son epicerie fine a distance. N'a jamais mis les pieds dans un ERP avant Scalario. Utilise son smartphone Android pour tout suivre.
+**Fonctionnalités révélées :** réception livraison avec appariement commande, création de transferts stock avec poids, inventaire partiel avec variance, rapport consolidé journalier, RBAC strict.
 
-**Opening Scene:** Lundi matin, Blandine est chez elle. Elle sait que le stock de tomates sera bas d'ici mercredi d'apres les ventes de la semaine derniere. Elle ouvre Scalario sur son telephone et saisit une commande fournisseur : 20 cartons de tomates (160 kg), 10 cartons de mangues, 5 sacs d'oignons. Le fournisseur sera prevenu, et Moussa saura qu'une livraison est attendue.
+### Journey 4 : Carlos, Admin système — Onboarding Pharmacie
 
-**Rising Action:**
-- Mardi, le fournisseur livre. Moussa receptionne au magasin. Blandine recoit une notification : "Reception partielle — 18 cartons de tomates recus sur 20 commandes. Observation de Moussa : 2 cartons non livres par le fournisseur." Blandine note l'info pour relancer le fournisseur.
-- Mercredi soir, Blandine recoit son resume WhatsApp. Elle scanne les chiffres en 10 secondes : CA du jour 340 000 FCFA, 89 ventes, pertes declarees 4 200 FCFA (tomates et mangues), ecart de caisse Fatou -500 FCFA, ecart de caisse Amadou +200 FCFA. Stock critique : oignons (reste 2 jours). Top 3 : tomates, mangues, piments.
-- Jeudi, elle voit dans le tableau de bord un ecart de stock suspect sur les mangues — Moussa a sorti 15 kg vers le rayon de Fatou, mais Fatou n'a confirme que 13 kg. 2 kg de mangues ont disparu entre le magasin et le rayon. Elle appelle Moussa pour comprendre.
+Carlos crée un nouveau tenant Pharmacie, active les modules partagés, active le vertical Pharmacy qui ajoute ses extensions spécifiques via l'UI-Driven Engine. Le pharmacien est opérationnel en 2 heures. Zéro modification du kernel.
 
-**Climax:** La tracabilite maillon par maillon lui montre exactement ou l'ecart s'est produit. Elle n'a pas besoin de prendre un avion pour verifier. Le systeme a fait le travail de surveillance a sa place.
+**Fonctionnalités révélées :** provisioning multi-tenant, configuration RBAC par vertical, système d'activation de module, import CSV catalogue, extensions CatalogItem vertical-spécifiques, isolation du kernel.
 
-**Resolution:** En un mois, Blandine a identifie un pattern : les ecarts se produisent systematiquement le matin entre 7h et 8h, avant l'arrivee de Fatou. Elle ajuste le process : Moussa ne sort plus les produits avant que le commercial ne soit present pour confirmer immediatement. Les pertes inexpliquees chutent de 40%.
+### Journey 5 : Fatou — Crise offline (journée sans internet)
 
-**Requirements revealed:** Remote supplier order management, reception tracking with variance, WhatsApp summary engine, real-time dashboard accessible on mobile, stock transfer traceability chain (who sent, who received, quantity delta), historical pattern analysis for loss detection.
+L'antenne est en panne depuis 5h. Fatou ne le remarque pas. 127 transactions en local. Sync complète en 22 secondes à la reconnexion. Blandine voit le rapport du jour sans savoir qu'il y a eu 12h de coupure.
 
-### Journey 3: Moussa, Gestionnaire de magasin — Le pivot operationnel
+**Fonctionnalités révélées :** opération offline totale (CRUD local), file outbox + push automatique, profils clients locaux, suivi crédits offline, indicateur de connectivité discret, résolution de conflits.
 
-**Persona:** Moussa, 35 ans, gestionnaire du magasin central de Blandine. Responsable du stock, des receptions fournisseur, et de l'approvisionnement des rayons. Utilise une tablette au magasin.
+### Journey 6 : Awa, DRH — Clôture de paie du mois
 
-**Opening Scene:** 6h, Moussa arrive au magasin avant les commerciaux. Il verifie les commandes en attente : une livraison de tomates et mangues est prevue ce matin. Il prepare l'espace de reception.
+**Persona :** Awa, 38 ans, Directrice des Ressources Humaines d'une PME de distribution (22 employés). Utilise Scalario Enterprise en Mode Intégré. Smartphone et PC de bureau.
 
-**Rising Action:**
-- 7h, le fournisseur arrive. Moussa ouvre la commande correspondante dans le systeme (saisie par Blandine) et coche chaque ligne recue. 18 cartons de tomates sur 20 — il note l'ecart et ajoute une observation. Les mangues sont completes mais il note "qualite moyenne, certaines trop mures". Il valide la reception — le stock magasin est mis a jour.
-- 7h30, il prepare les sorties vers les rayons. Il selectionne les produits, pese les quantites a envoyer a chaque commercial, et cree les transferts dans le systeme. 8 kg de tomates pour Fatou, 6 kg pour Amadou. Le statut passe en "sorti du magasin, en attente de confirmation rayon".
-- 11h, Fatou lance une demande de reapprovisionnement en mangues. Moussa recoit l'alerte, verifie le stock magasin, prepare 5 kg et cree un nouveau transfert.
-- 15h, Moussa fait un inventaire partiel — il scanne les produits restants au magasin et compare avec le stock theorique. Le systeme signale un ecart de 3 kg d'oignons. Il le declare et documente : "sac perce, perte au sol".
+**Scène d'ouverture :** le 28 du mois, Awa ouvre le module RH depuis son PC. Elle voit la liste des 22 employés avec leur statut de pointage du mois. 2 employés ont des jours d'absence non justifiée signalés en rouge.
 
-**Climax:** 18h30, les commerciaux ont cloture leurs caisses. Moussa consolide les rapports du jour : ventes par rayon, pertes declarees, ecarts de reception, ecarts de transfert. Le rapport consolide est automatiquement disponible pour Blandine.
+**Déroulement :** elle règle les absences (1 maladie justifiée, 1 absence non payée), lance le calcul de paie. Le système applique le SMIG en vigueur au Burkina, calcule les cotisations CNSS/CARFO, les retenues, et génère les 22 bulletins en 40 secondes. Awa les vérifie, valide. Le système émet automatiquement un événement vers le module Comptabilité : une écriture de charge salariale est créée sans saisie manuelle. Elle génère le fichier de déclaration CNSS (CSV) en un clic — prêt pour dépôt manuel ou via le portail CNSS. Elle reçoit une alerte : le contrat CDD de Mamadou expire dans 12 jours.
 
-**Resolution:** Moussa n'a jamais touche la caisse. Les commerciaux n'ont jamais accede au magasin. Chaque maillon de la chaine est responsable de son perimetre. Blandine voit tout sans etre la.
+**Fonctionnalités révélées :** gestion employés avec pointage, calcul paie SMIG/cotisations sociales automatisé, génération bulletins, export fichier déclaration sociale (format local), événement inter-départements RH → Comptabilité, alertes échéance contrat.
 
-**Requirements revealed:** Supplier delivery reception with order matching, stock transfer creation with weight tracking, multi-location inventory (warehouse vs shelf), restock request workflow, partial inventory count with variance declaration, daily consolidation report generation, role-based access (manager cannot sell, commercial cannot receive at warehouse).
+### Journey 7 : Ibrahim, Comptable — Clôture mensuelle OHADA
 
-### Journey 4: Carlos, Admin systeme — Onboarding d'un nouveau client
+**Persona :** Ibrahim, 32 ans, comptable de la même PME. Utilise le module Comptabilité de Scalario Enterprise. Il gère le journal, le grand livre et envoie les états à l'expert-comptable externe chaque trimestre.
 
-**Persona:** Carlos, developpeur et admin de la plateforme Scalario. Doit onboarder un nouveau client (pharmacie) sur le systeme.
+**Scène d'ouverture :** le 1er du mois suivant, Ibrahim ouvre le tableau de bord Comptabilité. Il voit les écritures du mois écoulé déjà pré-remplies : les ventes Retail (issues de la clôture des sessions de caisse), les charges salariales (issues de la validation paie Awa), et les achats logistique (issus des bons de commande validés).
 
-**Opening Scene:** Un pharmacien a Bobo-Dioulasso veut utiliser Scalario. Carlos cree un nouveau tenant dans le systeme admin.
+**Déroulement :** Ibrahim saisit manuellement les écritures restantes (loyer, électricité, téléphone). Il effectue le rapprochement bancaire en important le relevé PDF de la banque. Le système suggère les appariements automatiquement. Ibrahim valide, corrige 2 écarts, clôture le mois. Il génère le bilan et le compte de résultat au format OHADA. Il les exporte en PDF et Excel pour l'expert-comptable — sans ressaisie, sans recopie de chiffres.
 
-**Rising Action:**
-- Carlos cree le tenant, configure les roles (pharmacien-proprietaire, preparateur, caissier), et active les modules partages : Catalog, Contacts, Transactions, Payments, Inventory.
-- Il active le vertical "Pharmacy" (post-restructuring). Le vertical ajoute automatiquement les extensions specifiques : champs `ordonnanceRequise`, `DCI`, `datePeremption` sur le CatalogItem de base, et les regles metier (controle de peremption a la vente, alertes stock sur medicaments essentiels).
-- Le pharmacien se connecte, importe son catalogue de medicaments via CSV, configure ses categories (antibiotiques, antidouleurs, hygiene...). Il est operationnel en 2 heures.
+**Fonctionnalités révélées :** écritures pré-remplies depuis événements inter-départements, rapprochement bancaire semi-automatique, plan comptable OHADA natif, clôture mensuelle, génération états financiers (bilan + compte de résultat), export PDF/Excel.
 
-**Climax:** Le vertical Pharmacy a ete cree en 3 semaines par Carlos, en branchant sur les modules partages existants. Zero modification du kernel. Le CatalogItem de base (nom, prix, categorie) fonctionne identiquement au retail — seules les extensions pharmacie ont ete ajoutees.
+### Journey 8 : Serge, DG — Vision consolidée en 2 minutes
 
-**Resolution:** Scalario sert maintenant retail + pharmacie avec le meme kernel, les memes modules partages, et deux verticaux independants. Le pharmacien utilise le meme sync engine, le meme offline-first, la meme gestion des paiements que Blandine — sans que ni l'un ni l'autre ne soit impacte.
+**Persona :** Serge, 47 ans, Directeur Général de la PME. Il ne touche pas aux détails opérationnels. Il veut la vision d'ensemble, quand il veut, où il veut, sur son smartphone.
 
-**Requirements revealed:** Multi-tenant provisioning, role configuration per vertical, vertical module activation system, CSV import for catalog, vertical-specific CatalogItem extensions without base model changes, kernel isolation validation.
+**Scène :** Serge est en réunion externe. Entre deux rendez-vous, il ouvre Scalario sur son téléphone. Son dashboard DG affiche en temps réel : CA journalier de la boutique (340 000 FCFA, +12 % vs hier), masse salariale du mois (écritures RH validées : 2 850 000 FCFA), engagements achats en cours (4 bons de commande ouverts, valeur totale 780 000 FCFA), trésorerie estimée (solde bancaire - engagements = 1 240 000 FCFA). Une alerte rouge : le stock d'oignons tombe à 2 jours de couverture. Il forward l'alerte à Moussa via la notification intégrée.
 
-### Journey 5: Fatou, Offline Crisis — Journee sans internet
+**Fonctionnalités révélées :** dashboard DG consolidé multi-départements, indicateurs temps réel (CA, masse salariale, engagements, trésorerie estimée), alertes critiques cross-départements, notification vers employé depuis le dashboard.
 
-**Persona:** Fatou (same as Journey 1), day where internet goes down completely.
+---
 
-**Opening Scene:** 7h30, Fatou ouvre sa session normalement. Elle ne sait pas que l'antenne du quartier est en panne — le wifi de la boutique est mort depuis 5h du matin.
+## Exigences SaaS B2B
 
-**Rising Action:**
-- Toutes les donnees sont deja en local (catalogue, prix, stock, clients reguliers). Fatou ne voit aucune difference — la grille de produits s'affiche, les prix sont la, le stock est a jour (derniere sync la veille a 19h).
-- Elle vend normalement toute la journee. 127 transactions. Chaque vente est ecrite dans la base locale (Isar) et ajoutee a la file d'attente de synchronisation (outbox). Un petit indicateur discret dans un coin de l'ecran montre "hors ligne" — Fatou l'a remarque mais ne s'en preoccupe pas.
-- Un client regulier, Mamadou, achete a credit. Fatou selectionne son profil client (disponible en local), enregistre la vente avec "paiement : credit client". Le solde debiteur de Mamadou est mis a jour localement.
-- 14h, Fatou declare des pertes sur les tomates — tout fonctionne, c'est local.
-- 16h, Moussa envoie un transfert de stock depuis sa tablette. Le transfert est aussi en local chez lui. Fatou ne recoit PAS la notification car ils ne sont pas synchronises. Elle le recevra a la reconnexion.
+### Multi-Tenancy
 
-**Climax:** 17h30, l'antenne est reparee. Le wifi revient. En arriere-plan, le sync engine detecte la connectivite et commence a pousser la file d'attente : 127 transactions, 3 declarations de perte, 1 vente a credit, l'arret de caisse. Tout part en 22 secondes. En retour, le transfert de Moussa arrive et le stock local est mis a jour.
-
-**Resolution:** Fatou cloture sa session. Le rapport est identique — qu'il y ait eu du wifi ou non. Blandine, depuis son telephone, voit le rapport du jour sans savoir qu'il y a eu une coupure internet de 12 heures. La journee de vente n'a pas ete impactee d'une seconde.
-
-**Requirements revealed:** Full offline operation (all CRUD local), outbox queue with automatic push on reconnect, local customer profiles with offline credit tracking, graceful notification delivery post-sync, sync status indicator (subtle, non-blocking), conflict resolution for concurrent offline edits (Moussa's transfer vs Fatou's stock view).
-
-### Journey Requirements Summary
-
-| Capability Area | Revealed By Journeys | Priority |
-|:---|:---|:---|
-| **Offline-first engine** | J1, J5 | MVP - Core |
-| **Weight-based sales + FCFA rounding** | J1 | MVP |
-| **Cash session management** (open/close/variance) | J1, J3 | MVP |
-| **Stock transfer chain** (send/receive/variance tracking) | J1, J2, J3 | MVP |
-| **Loss declaration** with motif | J1, J3 | MVP |
-| **Role-based access** (sell vs manage vs own) | J1, J2, J3 | MVP |
-| **Multi-location inventory** (warehouse vs shelf) | J3 | MVP |
-| **Supplier order + reception matching** | J2, J3 | MVP |
-| **Restock request workflow** | J1, J3 | MVP |
-| **Vertical module activation** | J4 | MVP (architecture) |
-| **Tenant provisioning + role config** | J4 | MVP (admin) |
-| **Offline credit tracking** | J5 | MVP |
-| **Conflict resolution** (concurrent offline edits) | J5 | MVP |
-| **Sync status indicator** | J5 | MVP |
-| **WhatsApp evening summary** | J2 | Growth (Priority #1) |
-| **Remote dashboard** (owner mobile) | J2 | Growth |
-| **CSV catalog import** | J4 | Growth |
-| **Historical pattern analysis** (loss detection) | J2 | Vision |
-
-## Domain-Specific Requirements
-
-### Fiscal & Regulatory Compliance
-
-**Facturation Electronique Certifiee (FEC) — Burkina Faso (obligatoire 2026)**
-- Logiciel de caisse certifie avec connexion API vers le systeme DGI pour tracabilite temps reel des transactions
-- Recus electroniques avec numerotation sequentielle, inalterable et garantie d'unicite
-- En mode offline : generation locale des factures avec numerotation sequentielle pre-allouee, transmission au DGI a la synchronisation
-- TVA multi-taux : 18% (normal), 10% (reduit), exonerations. Taux configurable par produit/categorie
-- Architecture du moteur fiscal : configurable par pays/juridiction, pas code en dur pour un pays specifique
-- Anticipation : chaque pays UEMOA/CEMAC aura ses propres regles fiscales — le moteur doit supporter des plugins fiscaux par juridiction
-
-**Implication architecturale critique :** Le moteur fiscal doit etre un module **Shared** (pas vertical) car toute transaction dans tout vertical est soumise a la fiscalite. Il doit supporter :
-- Pre-allocation de plages de numeros de facture pour le mode offline
-- File d'attente specifique DGI dans le sync engine (separee de la sync generale)
-- Signature/hashage des factures pour garantir l'inalteration
-
-### Currency & Pricing Engine
-
-| Constraint | Implementation |
+| Aspect | Implémentation |
 |:---|:---|
-| **Multi-currency support** | Chaque tenant configure sa devise. MVP : XOF. Architecture prete pour XAF, EUR, USD |
-| **Rounding rules per currency** | XOF : arrondi a 5 FCFA. EUR : arrondi a 0.01. Configurable par devise, pas par code |
-| **Price authority** | Seul le proprietaire peut modifier les prix — contrainte anti-fraude metier |
-| **Weight-based pricing** | Prix/kg avec calcul au gramme, arrondi final selon devise |
+| Modèle d'isolation | Isolation logique via tenant_id sur toutes les entités + Supabase RLS en filet de sécurité |
+| Provisioning tenant | Manuel par admin (MVP). Self-service post-MVP |
+| Configuration tenant | Devise, timezone, juridiction fiscale, modules actifs, vertical actif, type métier (UI-Driven) |
+| Cycle de vie tenant | Créer, activer, suspendre, archiver. Pas de suppression (audit trail) |
 
-### Infrastructure Resilience
+### Matrice de Permissions RBAC — Retail
 
-**Power Failure Recovery (Crash Recovery)**
-- Write-ahead logging (WAL) sur la base locale pour garantir zero corruption en cas d'arret brutal
-- Transaction en cours sauvegardee incrementalement — redemarrage reprend la transaction ou la marque comme abandonnee
-- Critique sur PC Windows (pas de batterie tampon). Moins critique sur tablette Android (batterie)
-- Le systeme doit demarrer en etat coherent apres un kill -9 ou une coupure secteur
+| Permission | Propriétaire | Gestionnaire | Commercial |
+|:---|:---|:---|:---|
+| Dashboard & rapports | Complet | Son emplacement | Sa session |
+| Modifier les prix | Oui | Non | Non |
+| Ajouter/modifier produits | Oui | Non | Non |
+| Créer commandes fournisseurs | Oui | Non | Non |
+| Réceptionner livraisons | Non | Oui | Non |
+| Créer transferts stock | Non | Oui | Non |
+| Confirmer réception transfert | Non | Non | Oui |
+| Ouvrir/fermer caisse | Non | Non | Oui |
+| Traiter ventes | Non | Non | Oui |
+| Déclarer pertes | Non | Oui | Oui |
+| Gérer utilisateurs et rôles | Oui | Non | Non |
 
-**Low-Bandwidth Sync (2G/3G)**
-- Compression des payloads de synchronisation
-- Sync incrementale (delta only) — jamais de full sync apres initialisation
-- Retry intelligent avec exponential backoff sur connexions instables
-- Pas de sync d'images/fichiers lourds — uniquement donnees transactionnelles
-- Objectif : une journee complete de 127 transactions doit syncer en < 30s meme sur 3G
+### Matrice de Permissions RBAC — Enterprise
 
-**Device Constraints (Low-End Tablets)**
-- Specification minimum : 1-2 Go RAM, stockage limite
-- Base locale legere : catalogue, stock actuel, clients, transactions des 30 derniers jours
-- Historique complet cote serveur uniquement, accessible via dashboard en ligne
-- Politique de purge locale configurable (30-90 jours)
+En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, département, rôle). Le DG voit tous les départements en lecture. Chaque responsable de département écrit uniquement dans son périmètre.
 
-### Data Sovereignty
+| Permission | DG | DRH | Comptable | Secrétaire | Resp. Achats |
+|:---|:---|:---|:---|:---|:---|
+| Dashboard consolidé multi-dép. | Lecture | Non | Non | Non | Non |
+| Fiches employés & contrats | Lecture | Écriture | Lecture | Lecture | Non |
+| Calcul paie & bulletins | Lecture | Écriture | Lecture | Non | Non |
+| Export CNSS / CARFO | Non | Oui | Non | Non | Non |
+| Saisie écritures comptables | Non | Non | Écriture | Non | Non |
+| Rapprochement bancaire | Non | Non | Écriture | Non | Non |
+| Clôture mensuelle & bilan OHADA | Lecture | Non | Écriture | Non | Non |
+| Courrier entrant / sortant | Lecture | Non | Non | Écriture | Non |
+| Agenda partagé & échéances | Lecture | Lecture | Lecture | Écriture | Lecture |
+| Bons de commande internes | Lecture | Non | Lecture | Non | Écriture |
+| Réception livraisons internes | Non | Non | Non | Non | Écriture |
+| Parc matériel & immobilisations | Lecture | Non | Lecture | Non | Écriture |
+| Configurer départements & rôles | Oui | Non | Non | Non | Non |
 
-| Constraint | Current State | Target |
-|:---|:---|:---|
-| **Hosting** | Supabase self-hosted (local) | Maintenu pour MVP. Option region (Afrique Ouest / Europe) pour Cloud futur |
-| **Data residency** | Donnees sur le territoire | Garanti par self-hosting. Documenter pour conformite client |
-| **Local DB** | Isar sur device | Donnees operationnelles uniquement, pas d'export non autorise |
+> *Règle d'or Enterprise : un utilisateur peut appartenir à plusieurs départements (department_ids). Ses permissions sont l'union de ses rôles dans chaque département. Le DG est le seul rôle avec lecture transversale sur tous les départements.*
 
-### Trust & Anti-Fraud Patterns
+### Registre & Activation des Modules
 
-**Chain of Custody (pattern metier africain)**
-- Double validation a chaque transfert : emetteur declare la quantite sortie, recepteur confirme la quantite recue. L'ecart est automatiquement trace et attribue
-- Separation stricte des roles : qui vend ne recoit pas, qui recoit ne vend pas, qui possede ne touche pas la caisse
-- Prix verrouilles par le proprietaire — commerciaux ne peuvent pas modifier les prix
+| Aspect | Implémentation |
+|:---|:---|
+| Registre modules | Kernel maintient le registre des modules disponibles (shared + vertical) |
+| Activation par tenant | TenantModule(tenantId, moduleId, activatedAt, status) |
+| Dépendances | Les modules verticaux déclarent leurs dépendances sur les modules partagés |
+| UI-Driven config | TenantModule inclut un JSON de configuration UI spécifique au métier |
 
-**Cash Session Accountability**
-- Arret de caisse quotidien obligatoire avec confrontation (theorique vs reel)
-- Ecarts > seuil configurable declenchent une alerte au gestionnaire/proprietaire
-- Explication obligatoire pour tout ecart avant cloture
+### Architecture d'Intégration
 
-**Audit Trail**
-- Chaque action tracee : acteur, action, timestamp, donnees avant/apres
-- Conservation illimitee cote serveur (pas de suppression automatique)
-- Conservation locale : 30-90 jours (configurable) pour performance device
-- Historique complet accessible via dashboard en ligne
+| Priorité | Intégration | Objet | Phase |
+|:---|:---|:---|:---|
+| 1 | API Fiscale DGI | Conformité FEC — obligatoire | MVP |
+| 2 | WhatsApp Business API | Résumé soir propriétaires + alertes critiques | Phase 2a |
+| 3 | Orange Money / Moov Money API | Paiement Ambassadeurs automatisé + encaissement clients | Phase 2b |
+| 4 | Export OHADA Retail | Format export fiscal standard pour comptable externe (ventes Retail uniquement) | Phase 2b |
+| 5 | Export Déclaration Sociale (RH Enterprise) | Génération fichier déclaration cotisations (CSV/PDF) au format attendu par l'organisme local (CNSS BF, IPRES SN, CNPS CI…). Dépôt manuel ou via portail organisme. | Phase 3 Enterprise |
+| 6 | Comptabilité OHADA intégrée | Plan comptable natif, grand livre, bilan — distinct de l'export OHADA Retail | Phase 3 Enterprise |
+| 7 | Scalario Connect B2B API | Interconnexion inter-tenants (bons de commande, factures) | Phase 3 |
+| 8 | Open API | Intégrations tierces partenaires | Vision |
 
-### Domain Risk Mitigations
+---
 
-| Risk | Impact | Mitigation |
-|:---|:---|:---|
-| **Facture offline non transmise au DGI** | Non-conformite fiscale, amende | File DGI dediee avec retry agressif, alerte admin si factures en attente > 24h |
-| **Numerotation sequentielle cassee offline** | Facture invalide | Pre-allocation de plages de numeros par terminal, avec reserve suffisante pour une semaine offline |
-| **Corruption base locale (coupure courant)** | Perte de transactions | WAL + checksum verification au demarrage + transaction recovery |
-| **Ecarts de stock non declares** | Pertes financieres non tracees | Ecarts automatiquement calcules a chaque transfert, rapport obligatoire avant cloture |
-| **Commercial qui modifie les prix** | Fraude | Prix en lecture seule pour role commercial, modification reservee au proprietaire |
-| **Donnees sensibles sur device perdu/vole** | Fuite de donnees client | Chiffrement de la base locale, wipe a distance possible, session timeout automatique |
+## Onboarding & Support Client
 
-## Innovation & Novel Patterns
+### Processus d'Onboarding par Offre
 
-### Detected Innovation Areas
-
-**1. Offline-First ERP Architecture**
-Existing ERPs treat offline as a degraded mode. Scalario inverts this: offline is the primary operating mode, online is the bonus. This is not a feature flag — it's a fundamental architectural decision that shapes every module. The sync engine, conflict resolution, and local-first data model are core infrastructure, not bolt-on capabilities. No major ERP competitor (SAP, Odoo, Zoho) has achieved true offline-first at the architectural level.
-
-**2. Chain-of-Custody Trust Pattern**
-The double-validation stock transfer system (emitter declares quantity out, receiver confirms quantity in, delta automatically attributed) is a domain innovation born from African commercial reality. In markets where surveillance cameras and automated warehouse systems don't exist, trust is engineered through process segmentation. Each actor is accountable for their link in the chain. This pattern is transferable to any supply chain context where physical verification matters more than digital tracking.
-
-**3. Business-First Modular Architecture**
-The three-tier kernel/shared/vertical architecture with polymorphic shared entities is architecturally novel for the ERP space. The `itemType` discriminator pattern (physical | bookable | service) on shared entities allows radically different verticals to share 60-80% of infrastructure without compromise. This contrasts with Odoo's monolithic module system where modules are tightly coupled through a shared ORM.
-
-**4. Fiscal Compliance in Offline Context**
-The pre-allocated invoice number ranges for offline FEC compliance is a novel solution to a real regulatory problem. No existing solution addresses how to maintain fiscal sequential numbering across multiple terminals operating offline simultaneously. The dedicated DGI sync queue (separate from general sync) ensures regulatory compliance even in degraded network conditions.
-
-### Market Context & Competitive Landscape
-
-| Competitor | Offline Support | Multi-Vertical | African Market Focus | Trust Patterns |
+| Offre | Étape 1 | Étape 2 | Étape 3 | Durée totale |
 |:---|:---|:---|:---|:---|
-| **SAP Business One** | None | Yes (heavy config) | Minimal | None |
-| **Odoo** | Partial (POS only, limited) | Yes (monolithic modules) | Some partners | None |
-| **Zoho** | Partial (mobile only) | Yes | Minimal | None |
-| **Wave (local)** | None | Accounting only | Yes | None |
-| **Scalario** | Full (architecture-level) | Yes (polymorphic shared) | Core design principle | Chain-of-custody built-in |
+| Retail Standard | Carlos crée le tenant (15 min) | Import CSV catalogue ou saisie manuelle (1–2h) | Formation caissier via vidéo (45 min) — première vente < 15 min | 1 journée |
+| Retail Premium | Idem Standard + activation multi-sites | Migration données existantes (1–2 jours) | Formation gestionnaire + propriétaire (3h) | 2–3 jours |
+| Enterprise Essentiel | Audit préalable : liste employés + plan comptable existant (1h) | Configuration 2 départements + import CSV employés et plan comptable (demi-journée) | Formation DRH + Comptable en session dédiée (4h) | 3–5 jours |
+| Enterprise Pro | Idem Essentiel + cartographie des 4 départements | Import complet + configuration flux inter-départements + validation DG | Formation par département (2h chacun) + test de clôture à blanc | 1–2 semaines |
 
-Scalario's competitive moat is the combination of all four innovations — no competitor addresses even two of them simultaneously.
+### SLAs de Support par Offre
 
-### Validation Approach
+| Offre | Canal | Première réponse | Résolution estimée | Horaires |
+|:---|:---|:---|:---|:---|
+| Retail Standard | WhatsApp | < 4h ouvrables | < 24h pour bugs bloquants | Lun–Sam 8h–18h |
+| Retail Premium | WhatsApp prioritaire | < 2h ouvrables | < 12h pour bugs bloquants | Lun–Sam 8h–18h |
+| Enterprise Essentiel | WhatsApp + appel téléphonique | < 2h ouvrables | < 8h pour bugs bloquants | Lun–Sam 8h–19h |
+| Enterprise Pro | WhatsApp + appel + session TeamViewer | < 1h ouvrables | < 4h pour bugs bloquants | Lun–Sam 7h–20h |
+| Groupe / Holding | Account manager dédié | < 30 min | SLA contractuel sur devis | Sur devis |
 
-| Innovation | Validation Method | Timeline |
-|:---|:---|:---|
-| **Offline-first** | The Offline Test: 8-hour shift, 127 transactions, < 30s sync | MVP |
-| **Chain-of-custody** | Deploy at Blandine's: measure loss reduction over 30 days | MVP + 30 days |
-| **Polymorphic shared** | The Vertical Test: pharmacy vertical in < 4 weeks, zero kernel changes | Post-MVP |
-| **Offline fiscal compliance** | Pre-allocated number ranges, DGI sync queue, audit by regulator | MVP (Burkina compliance) |
+### Kit Ambassadeur
 
-### Risk Mitigation
+- Vidéo 1 (2 min) : démonstration première vente Retail
+- Vidéo 2 (3 min) : démonstration rapport soir + WhatsApp propriétaire
+- Vidéo 3 (2 min) : démonstration onboarding Scalario Enterprise (DRH + Comptable)
+- FAQ PDF : 10 objections courantes + réponses standardisées
+- Fiche tarifaire Ambassadeur (prix publics uniquement, sans marges)
 
-| Innovation Risk | Fallback |
-|:---|:---|
-| **Offline conflict resolution too complex** | Last-write-wins for non-critical data, manual resolution queue for financial data |
-| **Polymorphic entities create performance issues** | Denormalize hot paths (product grid) while keeping normalized shared base |
-| **FEC offline numbering creates gaps** | Pre-allocate generous ranges, document gap policy for DGI audit |
-| **Chain-of-custody too rigid for small shops** | Make double-validation optional per tenant config — small shops can skip it |
+> *Les Ambassadeurs n'ont pas accès au backoffice admin. Ils reçoivent uniquement leur tableau de bord de commissions et le kit de communication.*
 
-## SaaS B2B Specific Requirements
+---
 
-### Multi-Tenancy Model
+## Protection des Données & Conformité
 
-| Aspect | Implementation |
-|:---|:---|
-| **Isolation model** | Logical isolation via `tenant_id` on all entities + Supabase RLS as safety net |
-| **Tenant provisioning** | Manual by admin (MVP). Self-service registration post-MVP |
-| **Tenant configuration** | Currency, timezone, fiscal jurisdiction, active modules, active vertical |
-| **Data isolation guarantee** | Every query scoped by `tenant_id`. RLS policies enforce at DB level. No cross-tenant data leakage possible |
-| **Tenant lifecycle** | Create, activate, suspend, archive. No hard delete (audit trail preservation) |
+### Cadre Légal Applicable
 
-### RBAC Permission Matrix
+Scalario cible la zone UEMOA et CEMAC. La conformité légale est traitée à deux niveaux : les obligations communes à la zone (OHADA, UEMOA), et les obligations spécifiques au pays du tenant (droit du travail local, fiscalité, protection des données). Toute contrainte réglementaire est un paramètre de configuration du plugin pays — jamais une ligne de code dans le Kernel.
 
-**MVP: Fixed roles with predefined permissions per vertical**
-
-| Permission | Owner | Manager | Commercial |
+| Réglementation | Zone / Pays | Impact Scalario | Phase |
 |:---|:---|:---|:---|
-| **View dashboard & reports** | Full | Own location | Own session |
-| **Modify prices** | Yes | No | No |
-| **Add/edit products** | Yes | No | No |
-| **Create supplier orders** | Yes | No | No |
-| **Receive supplier deliveries** | No | Yes | No |
-| **Create stock transfers** | No | Yes | No |
-| **Confirm transfer reception** | No | No | Yes |
-| **Open/close cash session** | No | No | Yes |
-| **Process sales** | No | No | Yes |
-| **Declare losses** | No | Yes | Yes |
-| **Restock request** | No | No | Yes |
-| **Partial inventory count** | No | Yes | No |
-| **Consolidate daily reports** | No | Yes | No |
-| **Manage users & roles** | Yes | No | No |
-| **Configure modules** | Yes (via admin) | No | No |
+| Plan Comptable Général OHADA révisé 2017 | Zone OHADA (17 pays : BF, CI, SN, CM, ML, TG, BJ…) | États financiers (bilan, compte de résultat) conformes OHADA. Plan comptable natif pré-chargé. | Phase 3 Enterprise |
+| Directive UEMOA sur la fiscalité intérieure | Zone UEMOA (8 pays) | Moteur fiscal multi-juridictions : taux TVA, formats reçus, arrondi par devise, configurés par plugin pays. MVP : BF. Extension : CI, SN, ML, TG, BJ… | Phase 1 (architecture) |
+| Droit du travail + sécurité sociale | Par pays — plugin configurable | Moteur de paie paramétrable : SMIG, cotisations sociales (CNSS/CARFO BF • IPRES/CSS SN • CNPS CI • CNPS CM…). Export fichier déclaration au format local. Aucune intégration API directe avec les caisses — dépôt manuel ou via portail organisme. Validation expert-comptable local obligatoire avant mise en prod. | Phase 3 Enterprise |
+| Loi protection données personnelles (par pays) | BF : Loi n°010-2004 • CI : Loi n°2013-450 • SN : Loi n°2008-12 • autres pays UEMOA | Consentement collecté, finalité déclarée, droits d'accès et rectification. Conformité activée par le plugin pays. | Phase 1 (BF). Par pays à l'expansion. |
+| Loi FEC / transmission fiscale — Burkina Faso (MVP) | Burkina Faso, obligatoire 2026 | Numérotation séquentielle, immuabilité des reçus, transmission DGI. Plages pré-allouées pour le mode offline. | Phase 1 MVP |
+| Obligations fiscales équivalentes autres pays | CI, SN, CM, ML… | Activées par le plugin fiscal du pays à l'expansion. Jamais codées en dur dans le Kernel. | Phase 3+ |
+| RGPD (extra-territorial) | UE (si clients ou employés européens concernés) | DPA à signer si pertinent. Clauses de transfert de données hors UE. | Phase 3 (expansion internationale) |
 
-**Architecture: Granular RBAC ready for future delegation**
-- Permission table: `Permission(id, code, module, description)`
-- Role-permission mapping: `RolePermission(roleId, permissionId)`
-- MVP: Roles are seeded per vertical with fixed permissions, no UI for customization
-- Future: Owner can delegate specific permissions to manager via UI
+> *Principe fondateur : Scalario ne suppose jamais qu'un tenant est au Burkina Faso. La juridiction est une configuration du tenant. Les obligations légales (paie, fiscalité, protection des données) découlent du plugin pays actif, pas du code métier.*
 
-### Module Registry & Activation
+---
 
-| Aspect | Implementation |
-|:---|:---|
-| **Module registry** | Kernel maintains a registry of available modules (shared + vertical) |
-| **Per-tenant activation** | `TenantModule(tenantId, moduleId, activatedAt, status)` |
-| **Module dependencies** | Vertical modules declare dependencies on shared modules (e.g., Retail POS requires Catalog, Transactions, Inventory, Payments) |
-| **Activation flow (MVP)** | Admin activates modules manually per tenant |
-| **Activation flow (Future)** | Self-service: tenant selects modules, billing adjusts automatically |
-| **Module isolation** | Activating/deactivating a module for one tenant has zero impact on other tenants |
+## Stratégie d'Import & Migration Enterprise
 
-### Integration Architecture
+Contrairement au Retail où l'import se limite au catalogue produits, l'onboarding Enterprise implique des données structurées historiques : employés, plan comptable, soldes d'ouverture. Cette section définit les formats acceptés, les règles de validation et la stratégie de migration.
 
-**MVP: Single integration — DGI Fiscal API**
-- FEC-compliant invoice transmission to DGI
-- Dedicated sync queue separate from general data sync
-- Retry with alerting for failed transmissions
+### Imports par Module
 
-**Roadmap integrations (prioritized):**
+| Module | Données importées | Format accepté | Validation requise | Phase |
+|:---|:---|:---|:---|:---|
+| Catalog (Retail) | Produits, catégories, prix, unités | CSV standardisé Scalario | Dédoublonnage par référence. Alerte prix à 0. | Phase 1 |
+| RH (Enterprise) | Employés : nom, prénom, date naissance, poste, salaire brut, date entrée, type contrat (CDI/CDD), numéro CNSS | CSV RH Scalario (template fourni) | Numéro CNSS unique. Salaire ≥ SMIG. Date valide. | Phase 3 |
+| Comptabilité (Enterprise) | Plan comptable OHADA personnalisé, soldes d'ouverture par compte | CSV Comptabilité Scalario (template fourni) | Numéros de compte conformes OHADA. Solde d'ouverture total actif = total passif. | Phase 3 |
+| Contacts / Fournisseurs | Nom, téléphone, adresse, catégorie (client / fournisseur / les deux) | CSV Contacts Scalario | Téléphone unique par tenant. Format numéro BF validé. | Phase 2a |
+| Logistique (Enterprise) | Parc matériel existant, immobilisations | CSV Logistique Scalario (template fourni) | Valeur acquisition > 0. Date mise en service valide. | Phase 3 |
 
-| Priority | Integration | Purpose | Timeline |
+### Règles de migration Retail → Enterprise
+
+- Un tenant Retail existant peut passer en Mode Intégré Enterprise sans perte de données. Le champ `org_mode` passe de standalone à integrated.
+- Les transactions Retail existantes restent intactes. Le module Comptabilité peut les importer rétroactivement comme écritures de ventes via un script de migration dédié.
+- La migration est irréversible (standalone → integrated) mais sans fenêtre de maintenance : le tenant reste opérationnel pendant la transition.
+- Migration integrated → federated : possible uniquement via intervention admin (création du tenant Groupe + rattachement). Prévu Phase 3.
+
+### Gestion des erreurs d'import
+
+- Chaque import génère un rapport d'erreur CSV : ligne concernée, champ en erreur, raison.
+- Import partiel autorisé : les lignes valides sont importées, les lignes invalides sont rejetées et listées.
+- Un import ne peut pas être annulé après exécution. Si correction nécessaire, archiver les enregistrements erronés et réimporter.
+
+---
+
+## Politique de Notifications & Alertes
+
+Toute notification Scalario est catégorisée selon son urgence et son canal. Le propriétaire peut configurer ses préférences par catégorie depuis son profil.
+
+### Matrice Urgence / Canal
+
+| Événement déclencheur | Urgence | Canal | Destinataire | Phase |
+|:---|:---|:---|:---|:---|
+| Stock critique (< seuil configurable) | Haute | Push in-app + WhatsApp | Propriétaire / Gestionnaire | Phase 2a |
+| Sync échouée après 3 retries (voir section dédiée) | Haute | Push in-app + badge rouge | Utilisateur concerné + Admin | Phase 1 |
+| Transfert de stock en attente de confirmation (> 2h) | Moyenne | Push in-app | Récepteur du transfert | Phase 1 |
+| Résumé soir (CA, pertes, stock critique, top 3) | Info | WhatsApp automatique | Propriétaire | Phase 2a |
+| Paiement ambassadeur envoyé | Info | WhatsApp + in-app | Ambassadeur | Phase 2b |
+| Contrat employé expiré dans 30 / 15 / 7 jours | Haute | Push in-app + WhatsApp | DRH | Phase 3 Enterprise |
+| Échéance fiscale dans 7 jours (TVA, CNSS, clôture DGI) | Haute | Push in-app + WhatsApp | Comptable + DG | Phase 3 Enterprise |
+| Clôture mensuelle disponible (dernier jour du mois) | Moyenne | Push in-app | Comptable | Phase 3 Enterprise |
+| Bon de commande validé par DG (logistique) | Moyenne | Push in-app | Resp. Achats | Phase 3 Enterprise |
+| Dashboard DG : alerte stock critique cross-dép. | Haute | Push in-app | DG | Phase 3 Enterprise |
+
+### Règles générales
+
+- Aucune notification n'est envoyée entre 22h et 7h (heure locale du tenant), sauf urgence critique (sync échouée, données non sync depuis > 4h).
+- Chaque catégorie de notification est désactivable individuellement par le propriétaire (sauf alertes système critiques).
+- Les notifications WhatsApp nécessitent l'opt-in explicite du destinataire lors de l'onboarding.
+- Limite anti-spam : max 5 notifications push par heure par utilisateur, sauf alertes critiques.
+
+---
+
+## Gestion des Échecs de Synchronisation
+
+La sync offline-first de Scalario est conçue pour être transparente. Mais quand elle échoue définitivement, le comportement produit doit être défini précisément pour éviter la perte de données et maintenir la confiance des clients.
+
+### Cycle de vie d'une mutation en échec
+
+| État | Condition | Action système | Visible utilisateur |
 |:---|:---|:---|:---|
-| 1 | **DGI Fiscal API** | FEC compliance — mandatory | MVP |
-| 2 | **WhatsApp Business API** | Evening summary to owners | Growth (#1) |
-| 3 | **Orange Money / Moov Money API** | Automatic payment verification | Growth |
-| 4 | **OHADA accounting export** | Standard accounting format for West Africa | Growth |
-| 5 | **Accounting software bridge** | SAGE, QuickBooks integration | Vision |
-| 6 | **Open API** | Third-party integrations | Vision |
+| En attente | Connectivité absente | Stockage outbox local. Opérations continuent normalement. | Indicateur wifi discret en orange |
+| Retry en cours | Connectivité revenue. Tentatives 1–3 (exponential backoff : 5s, 30s, 2min) | Envoi silencieux en arrière-plan. | Indicateur sync en cours (discret) |
+| Conflit détecté | Deux mutations conflictuelles sur la même entité | Last-write-wins pour données non-financières. File de résolution manuelle pour données financières. | Alerte « Conflit à résoudre » avec diff avant/après |
+| Échec définitif | 3 retries échoués OU erreur serveur non récupérable (400, 409) | Mutation marquée FAILED dans l'outbox. Log serveur créé. Notification admin. | Alerte rouge in-app : « X opération(s) non synchronisée(s). Contactez le support. » |
+| Résolution manuelle | Intervention admin ou utilisateur | Admin peut forcer le re-push ou rejeter la mutation. | Interface dédiée dans le tableau de bord admin |
 
-**Current mobile money handling (MVP):**
-- Commercial records "mobile money" as payment method manually
-- No API verification — trust-based (client shows confirmation screen)
-- Future: API integration verifies payment automatically before recording sale
+### Règles spécifiques Données Financières
 
-### Subscription & Billing
+- Les transactions de vente (argent encaissé) ne sont JAMAIS soumises au last-write-wins. En cas de conflit, la transaction est mise en file de résolution manuelle et le propriétaire est alerté.
+- Les écritures comptables Enterprise en conflit sont gelées avec statut `PENDING_RESOLUTION`. Le comptable doit les arbitrer manuellement avant la clôture du mois.
+- Les bulletins de paie validés sont immuables : une fois validés et syncés, ils ne peuvent plus être modifiés (audit trail légal).
 
-| Aspect | MVP | Post-MVP |
-|:---|:---|:---|
-| **Tenant creation** | Manual by admin | Self-service registration |
-| **Module activation** | Manual by admin | Self-service with billing |
-| **Billing** | Manual (invoicing outside Scalario) | Integrated billing per tenant |
-| **Pricing model** | Not enforced in system | Tiered: base + per-user + per-module |
-| **Free tier** | Admin discretion | Configured in system |
+### Monitoring & Observabilité
 
-### Implementation Considerations
+- Dashboard admin : liste des tenants avec mutations en échec, nombre de conflits non résolus, taux de sync des 24 dernières heures.
+- Alerte automatique vers Carlos (admin) si un tenant accumule > 10 mutations FAILED en attente.
+- Retention des logs d'échec : 90 jours. Export CSV disponible pour investigation.
 
-**Cross-cutting concerns for SaaS B2B:**
-- All API endpoints must validate `tenant_id` scope — no endpoint should return data without tenant context
-- Supabase RLS acts as defense-in-depth — even if application logic has a bug, RLS prevents cross-tenant leakage
-- Module activation must be checked at the API level — disabled modules should return 403, not just hide UI elements
-- Audit trail must capture tenant context for every mutation
-- The sync engine must scope all sync operations to the authenticated tenant
+---
 
-## Project Scoping & Phased Development
+## Stratégie QA & Tests
 
-### MVP Strategy & Philosophy
+Scalario est développé en solo. La stratégie de tests est conçue pour maximiser la couverture des chemins critiques sans bloquer la vélocité. La règle : tester ce qui coûte cher à casser.
 
-**Approach: Incremental Platform Restructuring**
+### Niveaux de tests & priorités
 
-Single developer, 3 active clients who must never be blocked. Each extraction step must be independently deployable and backward-compatible.
+| Type | Quoi tester | Outil | Quand | Priorité |
+|:---|:---|:---|:---|:---|
+| Tests unitaires | Moteur de calcul (arrondi FCFA, paie SMIG, TVA multi-taux, règles CNSS) | Jest (NestJS) | À chaque commit sur fonctions de calcul | Critique |
+| Tests d'intégration | Flux sync outbox → serveur, résolution de conflits, écritures inter-départements, activation de modules | Jest + Supertest (API NestJS) | Avant chaque déploiement | Haute |
+| Tests de régression Retail | Les 5 journeys Retail (vente, session, offline, stock, migration) | Tests manuels + scripts Postman | Après toute modification kernel ou shared module | Critique |
+| Tests de régression Enterprise | Journeys 6, 7, 8 (DRH, Comptable, DG). Flux inter-départements. | Tests manuels sur tenant de staging | Avant tout release Enterprise | Haute |
+| Tests de performance | Grille produits < 500ms (2000 articles), sync < 30s (150 tx), cold start < 3s | Flutter DevTools + script de charge NestJS | Avant chaque release majeure | Moyenne |
+| Tests de sécurité | Isolation tenant (cross-tenant data leak), RBAC (accès non autorisé) | Tests manuels + Postman avec tokens multi-tenant | Avant tout release | Critique |
+| Tests de migration | 3 clients existants : zéro perte après migration Prisma | Script de comparaison avant/après sur clone DB | Avant toute migration de schéma | Critique |
 
-**Core principle: Same functionality, new architecture.** No new features during restructuring — if a bug appears, the cause is unambiguous (refactoring, not new logic). Single exception: FCFA 5-franc rounding is integrated into the Payments module at creation time (trivial, foundational).
+### Definition of Done (DoD)
 
-**Extraction sequence:**
-1. **Kernel** — Auth, tenancy, RBAC, event bus, sync engine
-2. **Shared modules** (one by one) — Catalog, Transactions, Inventory, Payments
-3. **Vertical wrapper** — Existing POS becomes the Retail vertical consuming shared modules
+Une fonctionnalité est considérée terminée uniquement si :
+- Les tests unitaires des fonctions de calcul associées passent à 100 %
+- Le flux complet a été testé manuellement sur un tenant de staging
+- La journey utilisateur associée (si applicable) a été exécutée de bout en bout sans erreur
+- Le comportement offline (si applicable) a été testé en mode avion
+- Le cas d'erreur principal (import invalide, conflit de sync, perm refusée) est géré et affiché proprement à l'utilisateur
+- Aucune modification du kernel non documentée
 
-Each step validates before the next begins. Clients stay operational throughout.
+### Environnements
 
-**Resource requirements:** 1 full-stack developer (Carlos), self-hosted Supabase infrastructure already in place.
+| Environnement | Usage | Données | Accès |
+|:---|:---|:---|:---|
+| Local (dev) | Développement et tests unitaires | Données synthétiques générées | Carlos uniquement |
+| Staging | Tests d'intégration, tests journeys, démos clients | Clone anonymisé de la production | Carlos + testeurs sélectionnés |
+| Production | Clients réels | Données réelles chiffrées | Carlos (admin) + tenants isolés |
 
-### MVP Feature Set (Phase 1: Restructuring)
+---
 
-**Core User Journeys Supported:**
-- Journey 1 (Fatou — daily POS operations): Fully preserved, identical UX
-- Journey 3 (Moussa — warehouse operations): Fully preserved
-- Journey 5 (Fatou — offline crisis): Fully preserved, sync engine re-architected but same behavior
+## Positionnement Concurrentiel
 
-**Must-Have Capabilities (restructuring only):**
+Scalario opère dans un espace où les concurrents sont soit trop généralistes (SAP, Odoo), soit trop limités (POS simples locaux), soit inadaptés au contexte Afrique de l'Ouest (connectivité, devise, réglementation). L'analyse ci-dessous couvre les deux segments : Retail et Enterprise.
 
-| Capability | Source | Restructuring Scope |
-|:---|:---|:---|
-| **Kernel: Auth + tenancy** | Existing | Extract from monolith, add `tenant_id` scoping + RLS |
-| **Kernel: RBAC** | Existing (partial) | Extract, formalize fixed roles (Owner/Manager/Commercial) |
-| **Kernel: Sync engine** | Existing | Extract, make module-agnostic with per-module sync adapters |
-| **Kernel: Event bus** | New (architecture) | Internal event system for cross-module communication |
-| **Kernel: Module registry** | New (architecture) | `TenantModule` activation table, dependency declarations |
-| **Shared: Catalog** | Existing Product/Category | Decompose into base CatalogItem + `itemType` discriminator, extract RetailProduct extension |
-| **Shared: Transactions** | Existing Order | Decompose into base Transaction + lifecycle states, extract RetailSale extension |
-| **Shared: Inventory** | Existing StockMovement | Extract as shared module, preserve chain-of-custody logic |
-| **Shared: Payments** | Existing (partial) | Extract payment processing, integrate FCFA 5-franc rounding |
-| **Shared: Contacts** | Existing Customer | Extract as shared base entity |
-| **Vertical: Retail POS** | Existing POS | Wrap as vertical consuming shared modules, preserve all UX |
-| **Prisma multi-schema** | Existing (public) | Decompose into `kernel`, `shared`, `retail` schemas |
-| **Data migration** | N/A | Migrate 3 clients with zero data loss, 1-2 day maintenance window |
+### Segment Retail
 
-**Explicitly NOT in restructuring MVP:**
-- Restock request workflow (new feature)
-- Weight-based sales (new feature)
-- WhatsApp evening summary
-- FEC/DGI integration (post-restructuring)
-- Supplier order management
-- Multi-branch support
-- Any new UI screens
+| Concurrent | Forces | Faiblesses face à Scalario | Menace |
+|:---|:---|:---|:---|
+| Odoo Community (POS) | Marque connue, open-source, multi-métier | Pas offline-first. Configuration complexe. Pas adapté FCFA/FEC. Technicien requis pour installer. | Moyenne |
+| Wave POS (Sénégal) | Simple, mobile money natif, croissance rapide | POS uniquement, pas d'ERP, pas offline robuste, pas de verticaux | Faible sur Retail Pro |
+| POS locaux (solutions custom) | Adaptés au marché local, prix bas | Monolithiques, pas de sync cloud, pas d'évolutivité, pas de support | Faible long terme |
+| Colibris ERP (Afrique) | Présent sur le marché, adapté OHADA | Pas offline-first. Interface complexe. Pas de vertical dédié. Peu d'innovation produit. | Moyenne |
+| Tableur Excel / Cahier | Zéro coût, familier | Zéro contrôle, zéro rapport, zéro sécurité, zéro temps réel | Faible (c'est notre marché cible) |
 
-### Post-MVP Features
+### Segment Enterprise PME
 
-**Phase 2a: Immediate post-restructuring features (new architecture validates)**
+| Concurrent | Forces | Faiblesses face à Scalario | Menace |
+|:---|:---|:---|:---|
+| SAP Business One | Référence mondiale, très complet | Prix prohibitif (> 5M FCFA/an). Complexité de mise en œuvre. Pas offline. Consultant requis. | Très faible (marché différent) |
+| Sage 50 / Sage Comptabilité | Comptabilité OHADA native, présence Afrique | Pas de module RH intégré natif. Pas offline. Pas de retail intégré. Prix élevé pour PME. | Moyenne sur segment Comptabilité |
+| Dext / PayFit (RH cloud) | Simple, SaaS moderne, RH avancé | Non disponible Burkina Faso. Pas de CNSS/CARFO local. Pas d'intégration Retail. | Faible actuellement |
+| ERP sur mesure (développeurs locaux) | Sur mesure, relation directe | Coût élevé d'évolution, pas de product roadmap, maintenance dépendante d'un individu | Faible long terme |
+| Solutions hybrides (Sage + Excel + logiciel paie) | Connu, utilisé actuellement | Données fragmentées, ressaisies, zéro flux automatisé inter-départements. C'est notre cible principale. | Faible (c'est notre marché) |
 
-| Feature | Priority | Rationale |
-|:---|:---|:---|
-| **FCFA weight-based sales** | #1 | Daily need for Blandine's grocery, validates Catalog extension pattern |
-| **Restock request workflow** | #2 | Daily operational need for commercials, validates cross-module events |
-| **FEC/DGI fiscal integration** | #3 | Regulatory compliance, validates dedicated sync queue architecture |
-| **WhatsApp evening summary** | #4 | Primary retention hook for owners, first external API integration |
+### Matrice de positionnement
 
-**Phase 2b: Growth features**
+| Critère | Scalario | Odoo | Wave POS | Sage | SAP B1 |
+|:---|:---|:---|:---|:---|:---|
+| Offline-first robuste | ✓ Natif | ✗ | ~ Partiel | ✗ | ✗ |
+| Adapté FCFA / FEC Burkina | ✓ | ~ Manuel | ✓ Partiel | ~ | ✗ |
+| Retail POS intégré | ✓ | ✓ | ✓ | ✗ | ✓ |
+| RH & Paie CNSS natif | ✓ Phase 3 | ~ Plugin | ✗ | ~ | ✓ |
+| Comptabilité OHADA native | ✓ Phase 3 | ~ Module | ✗ | ✓ | ✓ |
+| Multi-départements PME | ✓ Phase 3 | ✓ | ✗ | ~ | ✓ |
+| Interconnexion B2B (Connect) | ✓ Phase 3 | ✗ | ✗ | ✗ | ✗ |
+| Prix accessible PME BF | ✓ 25–50k FCFA | ~ Variable | ✓ | ✗ > 200k | ✗ > 500k |
+| Onboarding < 1 semaine | ✓ | ✗ | ✓ | ✗ | ✗ |
 
-| Feature | Priority | Rationale |
-|:---|:---|:---|
-| **Spoilage rate tracking** (taux de frotte) | Medium | Loss pattern analysis for perishable goods |
-| **Bottle deposit system** (consignes) | Medium | Common in beverage retail |
-| **Remote dashboard** (owner mobile) | High | Blandine's primary interface |
-| **CSV catalog import** | Medium | Onboarding acceleration |
-| **Orange Money / Moov Money API** | Medium | Payment verification automation |
-| **OHADA accounting export** | Low | Accounting compliance |
-| **Multi-branch support** | Low | Cross-branch transfers, consolidated reporting |
+> *Légende : ✓ = oui natif, ~ = partiel ou avec effort, ✗ = non ou hors portée.*
 
-**Phase 3: Expansion**
+---
 
-| Feature | Rationale |
-|:---|:---|
-| **Second vertical** (Pharmacy or Services) | Architecture validation — must ship in 2-4 weeks |
-| **Subscription & billing integration** | Self-service tenant management |
-| **Advanced reporting dashboards** | Configurable widgets, trend analysis |
-| **AI inventory predictions** | Reorder suggestions based on sales patterns |
-| **Open API** | Third-party integrations |
-| **Multi-currency beyond FCFA** | International expansion |
+## Exigences Fonctionnelles
 
-### Risk Mitigation Strategy
+### Identité & Accès (FR1–FR6)
 
-**Technical Risks:**
+- **FR1 :** L'admin peut créer et configurer un nouveau tenant (devise, timezone, juridiction fiscale, type de métier, org_mode)
+- **FR2 :** Le propriétaire peut créer des comptes utilisateurs, assigner des rôles et, en mode Enterprise, assigner des départements
+- **FR3 :** Le système applique les permissions RBAC à l'intersection (tenant, département, rôle). En mode Retail : frontières par vertical. En mode Enterprise : frontières par département.
+- **FR4 :** Authentification JWT scopée au tenant
+- **FR5 :** Isolation tenant automatique — aucun utilisateur ne peut accéder aux données d'un autre tenant
+- **FR6 :** Sessions expirées après timeout configurable
 
-| Risk | Mitigation |
-|:---|:---|
-| **Incremental extraction breaks existing functionality** | Each extraction step has full regression testing against current behavior before deployment. Clients never see broken features |
-| **Prisma multi-schema migration corrupts data** | Dry-run migration on cloned database first. Rollback script prepared for each step |
-| **Sync engine refactoring causes data loss** | Keep existing sync running in parallel during transition. Shadow-mode validation before cutover |
-| **Polymorphic entity decomposition creates performance regressions** | Benchmark product grid and transaction queries before/after. Denormalize hot paths if needed |
-| **Module boundaries wrong — discovered during pharmacy vertical** | Accept and refactor. Incremental approach means boundaries are validated step by step, not all at once |
+### Modules & Verticaux (FR7–FR10)
 
-**Market Risks:**
+- **FR7 :** L'admin peut activer ou désactiver modules partagés et verticaux par tenant
+- **FR8 :** Les modules verticaux valident leurs dépendances à l'activation
+- **FR9 :** Désactiver un module pour un tenant n'impacte aucun autre tenant
+- **FR10 :** En mode Retail (standalone), chaque tenant a un vertical actif. En mode Enterprise (integrated), un tenant peut avoir plusieurs `business_type` actifs simultanément selon les départements configurés.
 
-| Risk | Mitigation |
-|:---|:---|
-| **3 existing clients frustrated during restructuring** | Zero downtime for daily operations. 1-2 day maintenance window with advance notice only for final migration |
-| **New client acquisition paused during restructuring** | Acceptable — quality over quantity. Focus on architecture stability |
-| **Restructuring takes longer than expected** | Each step is independently valuable — even partial restructuring improves codebase. No all-or-nothing dependency |
+### Catalogue (FR11–FR15)
 
-**Resource Risks:**
+- **FR11 :** Le propriétaire peut créer, modifier et désactiver des articles (nom, prix, catégorie, code-barres)
+- **FR12 :** Les articles supportent un discriminateur de type (physical, bookable, service)
+- **FR13 :** Les modules verticaux peuvent étendre les articles avec des champs spécifiques via l'UI-Driven Engine
+- **FR14 :** Le propriétaire peut gérer les catégories de produits
+- **FR15 :** Les données catalogue sont disponibles offline sur le device
 
-| Risk | Mitigation |
-|:---|:---|
-| **Solo developer — bus factor = 1** | Clean architecture + comprehensive PRD + architecture docs = onboarding material for future developers |
-| **Scope creep during restructuring** | Strict "same functionality, new architecture" rule. New features queue in Phase 2a, never mixed with restructuring |
-| **Burnout / timeline pressure** | Incremental approach allows pauses. Each step is deployable — no pressure to finish everything before shipping |
+### Transactions (FR16–FR22)
 
-## Functional Requirements
+- **FR16 :** Le commercial peut créer une transaction de vente en sélectionnant articles et quantités
+- **FR17 :** Le commercial peut appliquer un mode de paiement (espèces, mobile money, crédit client)
+- **FR18 :** Le système calcule les totaux avec arrondi selon la devise (XOF : 5 FCFA)
+- **FR19 :** Le système enregistre la monnaie rendue pour les paiements en espèces
+- **FR20 :** Les transactions supportent des états de cycle de vie (instant, accumulating, scheduled)
+- **FR21 :** Les modules verticaux peuvent étendre les transactions (ex: sessionId, receiptNumber pour Retail)
+- **FR22 :** Toutes les transactions sont écrites localement d'abord et mises en file de sync
 
-### Identity & Access Management
+### Session de Caisse (FR23–FR28)
 
-- FR1: System administrator can create and configure a new tenant with currency, timezone, and fiscal jurisdiction
-- FR2: Tenant owner can create user accounts and assign roles (Owner, Manager, Commercial)
-- FR3: System enforces role-based permissions — each role has predefined access boundaries per vertical
-- FR4: Users can authenticate via credentials and receive a session scoped to their tenant
-- FR5: System automatically enforces tenant isolation — no user can access data outside their tenant context
-- FR6: System terminates idle sessions after a configurable timeout period
+- **FR23 :** Le commercial peut ouvrir une session en déclarant le fond de caisse initial
+- **FR24 :** Toutes les ventes durant une session active sont associées à cette session
+- **FR25 :** Le commercial peut clôturer une session en déclarant le montant compté
+- **FR26 :** Le système calcule et affiche l'écart théorique/réel
+- **FR27 :** Le commercial doit fournir une explication pour tout écart avant clôture
+- **FR28 :** Le gestionnaire peut consulter les rapports de clôture de tous les commerciaux de son emplacement
 
-### Module & Vertical Management
+### Inventaire & Stock (FR29–FR36)
 
-- FR7: System administrator can activate or deactivate shared modules and vertical modules per tenant
-- FR8: Vertical modules declare dependencies on shared modules — activation validates all dependencies are met
-- FR9: Deactivating a module for one tenant has zero impact on other tenants
-- FR10: Each tenant can have exactly one active vertical module at a time (MVP)
+- **FR29 :** Le gestionnaire peut réceptionner des livraisons fournisseurs et enregistrer les quantités reçues vs attendues
+- **FR30 :** Le système trace les variances de réception avec notes observateur
+- **FR31 :** Le gestionnaire peut créer des transferts magasin → rayon avec quantités déclarées
+- **FR32 :** Le commercial peut confirmer la réception d'un transfert et déclarer la quantité effectivement reçue
+- **FR33 :** Le système trace et attribue automatiquement les variances de transfert
+- **FR34 :** Le commercial peut déclarer des pertes de stock avec motif obligatoire
+- **FR35 :** Le gestionnaire peut réaliser des inventaires partiels avec signal des écarts
+- **FR36 :** Les données inventaire sont maintenues localement pour le mode offline
 
-### Catalog Management
+### Contacts (FR37–FR40)
 
-- FR11: Owner can create, edit, and deactivate catalog items with name, price, category, and barcode
-- FR12: Catalog items support a type discriminator (physical, bookable, service) at the shared level
-- FR13: Vertical modules can extend base catalog items with vertical-specific fields (e.g., RetailProduct adds stockQuantity, weightUnit)
-- FR14: Owner can create and manage product categories
-- FR15: Catalog data is available offline on the local device for all assigned users
+- **FR37 :** Les utilisateurs peuvent créer et gérer des profils clients (nom, téléphone, type)
+- **FR38 :** Le commercial peut associer une transaction à un profil client
+- **FR39 :** Le commercial peut enregistrer une vente à crédit contre un profil client, mettant à jour le solde
+- **FR40 :** Les profils clients et soldes sont disponibles offline
 
-### Transaction Processing
+### Synchronisation & Offline (FR41–FR47)
 
-- FR16: Commercial can create a sales transaction by selecting catalog items and quantities
-- FR17: Commercial can apply a payment method to a transaction (cash, mobile money)
-- FR18: System calculates transaction totals with currency-specific rounding rules (FCFA: 5-franc rounding)
-- FR19: System records change due for cash payments
-- FR20: Transactions support lifecycle states at the shared level (instant, accumulating, scheduled)
-- FR21: Vertical modules can extend base transactions with vertical-specific fields (e.g., RetailSale adds sessionId, receiptNumber)
-- FR22: All transactions are written locally first and queued for synchronization
+- **FR41 :** Toutes les opérations CRUD fonctionnent identiquement online ou offline
+- **FR42 :** Le système met en file (outbox) toutes les mutations locales pour sync automatique à la reconnexion
+- **FR43 :** Le moteur de sync transmet uniquement les delta (sync incrémentale)
+- **FR44 :** Le système résout les conflits (last-write-wins pour données non critiques, file de résolution manuelle pour données financières)
+- **FR45 :** Indicateur de connectivité discret et non-bloquant
+- **FR46 :** Le système reprend un état cohérent après terminaison inattendue (coupure courant, crash), zéro perte de données
+- **FR47 :** La base locale retient les données opérationnelles pour une période configurable (30–90 jours)
 
-### Cash Session Management
+### Reporting & Responsabilité (FR48–FR51)
 
-- FR23: Commercial can open a cash session by declaring the starting cash float
-- FR24: All sales during an active session are associated with that session
-- FR25: Commercial can close a cash session by declaring the counted cash amount
-- FR26: System calculates and displays the variance between theoretical and declared cash amounts
-- FR27: Commercial must provide an explanation for any cash variance before session closure
-- FR28: Manager can view session closure reports for all commercials in their location
+- **FR48 :** Le gestionnaire peut générer un rapport de consolidation journalier (ventes, pertes, variances, transferts)
+- **FR49 :** Le propriétaire peut consulter le dashboard (CA, nb ventes, pertes, écarts caisse, stock critique)
+- **FR50 :** Le système maintient un audit trail immuable de toutes les mutations
+- **FR51 :** Audit trail conservé indéfiniment côté serveur, période configurable en local
 
-### Inventory & Stock Management
+### Scalario Connect — Structure DB anticipée (FR52–FR55)
 
-- FR29: Manager can receive supplier deliveries and record received quantities against expected quantities
-- FR30: System tracks reception variances (received vs expected) with observer notes
-- FR31: Manager can create stock transfers from warehouse to shelf locations with declared quantities
-- FR32: Commercial can confirm transfer reception and declare actually received quantity
-- FR33: System automatically tracks and attributes transfer variances (sent vs received)
-- FR34: Commercial can declare stock losses with a mandatory motif (spoilage, damage, etc.)
-- FR35: Manager can perform partial inventory counts and the system signals variances against theoretical stock
-- FR36: Inventory data is maintained locally for offline operation
+- **FR52 :** La table tenants inclut un champ `referred_by` (UUID nullable) et `network_visible` (bool)
+- **FR53 :** La table contacts inclut un champ `linked_tenant_id` (UUID nullable) pour lier un fournisseur à un tenant Scalario
+- **FR54 :** La table catalog_items inclut un champ `supplier_reference` (UUID nullable)
+- **FR55 :** Les types de transactions supportent `transfer_inter_tenant` pour les futures opérations inter-tenants
 
-### Contact Management
+### Migration & Architecture (FR56–FR58)
 
-- FR37: Users can create and manage customer profiles (name, phone, type)
-- FR38: Commercial can associate a transaction with a customer profile
-- FR39: Commercial can record a credit sale against a customer profile, updating their outstanding balance
-- FR40: Customer profiles and balances are available offline
+- **FR56 :** Migration des données clients existants vers la multi-schema architecture sans perte
+- **FR57 :** Prisma opère sur les schémas kernel, shared et retail avec intégrité référentielle
+- **FR58 :** Le moteur de sync opère de façon module-agnostique avec des adaptateurs par module
 
-### Synchronization & Offline Operations
+### Scalario Enterprise — Structure DB anticipée (FR59–FR62)
 
-- FR41: All create, read, update operations function identically whether online or offline
-- FR42: System queues all local mutations in an outbox for automatic synchronization when connectivity returns
-- FR43: Sync engine transmits only delta changes (incremental sync), never full dataset after initialization
-- FR44: System resolves conflicts for concurrent offline edits (last-write-wins for non-critical data, manual resolution queue for financial data)
-- FR45: System displays a subtle, non-blocking connectivity status indicator
-- FR46: System recovers to a consistent state after unexpected termination (power failure, crash) with zero data loss
-- FR47: Local database retains operational data for a configurable retention period (30-90 days)
+- **FR59 :** La table tenants inclut un champ `org_mode` (enum: standalone | integrated | federated) et `parent_tenant_id` (UUID nullable)
+- **FR60 :** La table users inclut `department_ids` (array UUID) pour l'appartenance multi-départements
+- **FR61 :** La table TenantModule inclut `department_id` (UUID nullable) pour l'activation par département
+- **FR62 :** Le système supporte les événements inter-départements internes (ex: clôture paie → écriture comptable) via l'event bus du Kernel
 
-### Reporting & Accountability
+### RH & Paie Enterprise (FR63–FR68)
 
-- FR48: Manager can generate a daily consolidation report covering sales, losses, variances, and transfers across all sessions
-- FR49: Owner can view dashboard reports on revenue, sale count, losses, cash variances, and critical stock levels
-- FR50: System maintains an immutable audit trail of all mutations (actor, action, timestamp, before/after data)
-- FR51: Audit trail is retained indefinitely server-side and for the configured retention period locally
+- **FR63 :** Le DRH peut créer et gérer des fiches employés (nom, prénom, date naissance, poste, type contrat CDI/CDD, date entrée, numéro CNSS, salaire brut)
+- **FR64 :** Le système calcule automatiquement le salaire net à partir du salaire brut en appliquant les règles SMIG, cotisations CNSS, CARFO et retenues configurables. Les taux sont mis à jour par l'admin sans déploiement.
+- **FR65 :** Le DRH peut enregistrer les absences (justifiées, non justifiées, congés payés) et les saisies sont prises en compte dans le calcul de paie du mois
+- **FR66 :** Le système génère les bulletins de salaire de tous les employés actifs en une seule opération. Un bulletin validé est immuable (audit trail légal).
+- **FR67 :** Le système génère le fichier de déclaration sociale (cotisations employés + employeur) au format attendu par l'organisme local du pays (CNSS BF, IPRES SN, CNPS CI…), exportable en CSV ou PDF. Le dépôt se fait manuellement ou via le portail de l'organisme — aucune intégration API directe n'est prévue.
+- **FR68 :** La validation des bulletins émet un événement inter-départements vers le module Comptabilité : une écriture de charge salariale est créée automatiquement sans saisie manuelle
 
-### Data Migration & Architecture
+### Comptabilité & Finance Enterprise (FR69–FR72)
 
-- FR52: System supports migration of existing client data from monolithic schema to multi-schema architecture with zero data loss
-- FR53: Prisma schema operates across kernel, shared, and retail schemas with referential integrity
-- FR54: Sync engine operates module-agnostically with per-module sync adapters
+- **FR69 :** Le système fournit un plan comptable pré-chargé conformément au Système Comptable OHADA révisé 2017. Le comptable peut personnaliser les sous-comptes sans modifier la structure principale.
+- **FR70 :** Le comptable peut saisir des écritures manuelles au journal. Les écritures auto-générées (ventes, paie, achats) sont pré-remplies et éditables avant validation.
+- **FR71 :** Le système supporte le rapprochement bancaire : import d'un relevé (CSV ou PDF), suggestion automatique des appariements, validation manuelle des écarts
+- **FR72 :** Le comptable peut clôturer un mois. Après clôture, les écritures de la période sont gelées. Le système génère le bilan et le compte de résultat au format OHADA, exportables en PDF et Excel.
 
-## Non-Functional Requirements
+### Import Enterprise & Gestion des Erreurs (FR73–FR74)
+
+- **FR73 :** Le système accepte l'import CSV pour : employés (module RH), plan comptable et soldes d'ouverture (module Comptabilité), parc matériel (module Logistique). Chaque import génère un rapport d'erreur ligne par ligne. L'import partiel est autorisé (lignes valides importées, lignes invalides rejetées et listées).
+- **FR74 :** Un tenant Retail (org_mode: standalone) peut être migré en mode Enterprise (org_mode: integrated) sans perte de données et sans fenêtre de maintenance. Les transactions Retail existantes restent accessibles et peuvent être importées rétroactivement dans le module Comptabilité via un script de migration dédié.
+
+### Gestion des Échecs de Sync (FR75)
+
+- **FR75 :** Le système implémente le cycle de vie complet des mutations en échec : stockage outbox → retry automatique (3 tentatives, exponential backoff) → marquage FAILED si échec définitif → notification admin et utilisateur → interface de résolution manuelle dans le backoffice. Les mutations financières (transactions de vente, écritures comptables, bulletins validés) ne sont jamais soumises au last-write-wins : elles entrent en file de résolution manuelle obligatoire en cas de conflit.
+
+---
+
+## Exigences Non-Fonctionnelles
 
 ### Performance
 
-| Requirement | Target | Context |
+| Exigence | Cible | Contexte |
 |:---|:---|:---|
-| **NFR1: Product grid rendering** | < 500ms for up to 2,000 catalog items | Commercial needs instant product search during sales rush |
-| **NFR2: Transaction recording** | < 200ms local write | Must feel instantaneous even on low-end devices |
-| **NFR3: Full-day sync** | < 30 seconds for 150+ transactions | Sync must not block operations on reconnection |
-| **NFR4: App cold start** | < 3 seconds to usable state | Power failure recovery — cashier needs to resume fast |
-| **NFR5: Session closure report** | < 2 seconds generation | End-of-day report must not delay commercial departure |
-| **NFR6: Device memory footprint** | < 150MB RAM steady state | Low-end Android tablets with 1-2GB RAM |
-| **NFR7: Local database size** | < 500MB for 90 days of operational data | Limited storage on low-end devices |
+| NFR1 : Rendu grille produits | < 500ms pour 2 000 articles | Recherche produit pendant rush |
+| NFR2 : Enregistrement transaction | < 200ms écriture locale | Ressenti instantané sur appareils bas de gamme |
+| NFR3 : Sync journée complète | < 30s pour 150+ transactions | Ne bloque pas les opérations à la reconnexion |
+| NFR4 : Démarrage à froid | < 3s jusqu'à état utilisable | Reprise après coupure courant |
+| NFR5 : Rapport clôture session | < 2s de génération | Fin de journée ne doit pas retarder le commercial |
+| NFR6 : Empreinte RAM | < 150 Mo état stable | Tablettes Android bas de gamme 1–2 Go |
+| NFR7 : Taille base locale | < 500 Mo pour 90 jours | Stockage limité appareils bas de gamme |
 
-### Security
+### Sécurité
 
-| Requirement | Target | Context |
+| Exigence | Cible |
+|:---|:---|
+| NFR8 : Isolation tenant | Zéro fuite inter-tenant. tenant_id applicatif + RLS Supabase en défense en profondeur |
+| NFR9 : Authentification | JWT avec timeout de session configurable |
+| NFR10 : Chiffrement local | Base de données locale chiffrée. Protection perte/vol device |
+| NFR11 : Chiffrement transport | TLS 1.2+ pour toutes les communications serveur |
+| NFR12 : Audit modification prix | Chaque changement de prix tracé : acteur, timestamp, avant/après |
+| NFR13 : Intégrité données financières | Toutes les mutations financières sont atomiques et logées |
+
+### Fiabilité & Disponibilité
+
+| Exigence | Cible |
+|:---|:---|
+| NFR14 : Autonomie offline | 8h+ d'opération continue sans connectivité |
+| NFR15 : Reprise après crash | Zéro perte de données sur terminaison inattendue (WAL) |
+| NFR16 : Résilience sync | Retry automatique avec exponential backoff. Zéro intervention manuelle |
+| NFR17 : Uptime serveur | 99 % (Supabase self-hosted, admin solo — cible réaliste) |
+| NFR18 : Durabilité données | Zéro perte de transaction, jamais |
+
+### Scalabilité
+
+| Exigence | Cible |
+|:---|:---|
+| NFR19 : Capacité tenants | 30+ tenants concurrents (objectif 12 mois) |
+| NFR20 : Utilisateurs par tenant — Retail | 10 utilisateurs concurrents maximum (Standard). 20 maximum (Premium multi-sites). |
+| NFR20 : Utilisateurs par tenant — Enterprise | 50 utilisateurs concurrents maximum (Pro). Distribution sur 4 départements, pics non simultanés. |
+| NFR21 : Volume transactions — Retail | 500 transactions de vente / jour par tenant |
+| NFR21 : Volume événements — Enterprise | 2 000 événements / jour par tenant (ventes + écritures comptables + bulletins + documents) |
+| NFR22 : Taille catalogue — Retail | 5 000 articles par tenant |
+| NFR22 : Volume données — Enterprise | 10 000 enregistrements par tenant (employés + fournisseurs + comptes OHADA + documents) |
+| NFR23 : Croissance horizontale | Ajouter des tenants ou des départements ne nécessite aucun changement de code |
+
+### Réseau & Bande passante
+
+| Exigence | Cible |
+|:---|:---|
+| NFR24 : Compression sync | Payloads delta compressés uniquement |
+| NFR25 : Bande passante minimum | Sync fonctionnelle sur 2G (50 kbps) |
+| NFR26 : Pas de sync d'assets lourds | Images et fichiers exclus de la sync — données uniquement |
+| NFR27 : Provisioning initial | Catalogue + config complets < 5 Mo |
+
+### Utilisabilité
+
+| Exigence | Cible |
+|:---|:---|
+| NFR28 : Onboarding caissier | Autonome après < 1h de formation |
+| NFR29 : Gestion d'erreurs | Messages clairs et actionnables dans la langue de l'utilisateur. Zéro jargon technique |
+| NFR30 : Transparence offline | L'utilisateur ne perçoit pas l'état de connectivité lors des opérations normales |
+
+---
+
+## Croissance & Projections
+
+### Projections par An
+
+| Horizon | Clients | Panier moyen | CA Mensuel | Statut |
+|:---|:---|:---|:---|:---|
+| 1 an | 100 | 15 000 FCFA | 1,5 M FCFA | Solopreneur — Validation |
+| 2 ans | 600 | 20 000 FCFA | 12 M FCFA | Start-up — Croissance |
+| 5 ans | 5 000 | 30 000 FCFA | 150 M FCFA | PME Leader SaaS |
+| 10 ans | 40 000 | 25 000 FCFA | 1 Milliard FCFA | Institution Régionale |
+
+> *Note : 40 000 clients sur 10 ans représente moins de 0,5 % du marché total des MPME en Afrique de l'Ouest (estimation > 5–10 millions d'unités commerciales). Ce chiffre n'inclut pas les PME multi-départements (Scalario Enterprise) dont le panier est 2 à 3x plus élevé. Le potentiel réel est considérablement plus grand.*
+
+### Modèle de Tarification
+
+| Offre | Cible | Prix | Inclus |
+|:---|:---|:---|:---|
+| Retail Standard | Boutiques, commerces de détail | 15 000 FCFA / mois | 4 utilisateurs, sync Cloud, offline-first, rapports journaliers, 1 vertical actif |
+| Retail Premium | Boutiques multi-sites, réseaux | 30 000 FCFA / mois (Phase 2b) | Multi-agences, modules avancés (poids, consignes), Scalario Connect |
+| Enterprise Essentiel | PME 5–20 employés | 25 000 FCFA / mois (Phase 3) | Mode Intégré, 2 départements, 10 utilisateurs, RH de base + Compta OHADA |
+| Enterprise Pro | PME 20–50 employés | 50 000 FCFA / mois (Phase 3) | 4 départements, 25 utilisateurs, tous modules, Scalario Connect inclus |
+| Groupe / Holding | Multi-entités, filiales | Sur devis (Phase 3) | Mode Fédéré, N tenants liés, dashboard consolidation, SLA dédié |
+| Ambassadeur | Partenaires apporteurs d'affaires | Commission 20 % (Phase 2b) | 3 000 FCFA / client Retail actif / mois. Proportionnel pour Enterprise |
+
+### Infrastructure & Coûts
+
+- Phase 1 : Supabase Cloud (Free Tier → Pro) — zéro investissement infrastructure initial
+- Dès 10 clients payants : migration vers VPS Hostinger (~10 000 FCFA/mois) + Supabase self-hosted Docker
+- Coût infrastructure estimé par tenant Retail : ~500 FCFA/mois (sync delta-only, pas d'assets lourds)
+- Coût infrastructure estimé par tenant Enterprise : ~2 000–3 000 FCFA/mois (volume événements plus élevé, stockage documents)
+- Marge brute cible : > 90 % sur Retail Standard. > 85 % sur Enterprise Pro.
+
+---
+
+## Gestion des Risques
+
+### Risques Techniques
+
+| Risque | Mitigation |
+|:---|:---|
+| Extraction incrémentale casse la fonctionnalité existante | Tests de régression complets à chaque étape avant déploiement |
+| Migration Prisma multi-schéma corrompt les données | Dry-run sur clone DB. Script de rollback préparé par étape |
+| Refactoring moteur sync cause perte de données | Sync existante maintenue en parallèle. Validation shadow-mode avant bascule |
+| Régressions de performance sur entités polymorphes | Benchmark grille produits et requêtes transactions avant/après |
+| UI-Driven JSON mal formé perçu par le client | Schéma JSON de layout validé côté serveur avant envoi. Fallback sur layout par défaut |
+| Résolution de conflits offline trop complexe | Last-write-wins pour données non critiques. File de résolution manuelle pour données financières |
+
+### Risques Marché
+
+| Risque | Mitigation |
+|:---|:---|
+| 3 clients existants frustrés pendant la restructuration | Zéro downtime opérationnel. Fenêtre maintenance 1–2 jours avec préavis uniquement pour migration finale |
+| Acquisition nouveaux clients mise en pause | Acceptable — qualité avant quantité. Focus sur stabilité architecture |
+| Restructuration plus longue que prévu | Chaque étape est déployable indépendamment. Pas de dépendance tout-ou-rien |
+| Copie par un concurrent après communication publique | L'exécution prime sur l'idée. Avance technique + réseau clients = barrière à l'entrée |
+| Ambassadeurs qui survendent des fonctionnalités inexistantes | Kit de communication standardisé. Commissions suspendues en cas d'abus signalé |
+| Complexité Enterprise sous-estimée (OHADA, CNSS, paie) | Démarrer par 1 client PME bêta avant le lancement commercial. La réglementation locale (CNSS, CARFO) doit être validée par un expert-comptable local avant la mise en production |
+| Positionnement ambigu : boutique vs PME | Communication segmentée : TikTok/Facebook pour Retail, LinkedIn/WhatsApp professionnel pour Enterprise. Deux tunnels de vente distincts |
+
+### Risques Ressources
+
+| Risque | Mitigation |
+|:---|:---|
+| Développeur solo — bus factor = 1 | Architecture propre + PRD complet + docs architecture = matériel d'onboarding futur développeur |
+| Dérive de périmètre durant la restructuration | Règle stricte : même fonctionnalité, nouvelle architecture. Nouvelles features en Phase 2a uniquement |
+| Burnout / pression de calendrier | Approche incrémentale, pauses possibles. Chaque étape est déployable |
+
+---
+
+## Annexes
+
+### A. Tests de Validation Clés
+
+- **Test 1 — Offline complet :** Shift 8h sans internet, 127 transactions, sync < 30s à la reconnexion. Zéro perte. Zéro intervention manuelle.
+- **Test 2 — Nouveau vertical :** 1 développeur crée le vertical Pharmacie (catalog + ventes + stock) en < 4 semaines. Zéro modification kernel.
+- **Test 3 — Migration Retail :** 3 clients existants migrés vers la nouvelle architecture sans perte de données, fonctionnalité identique, fenêtre 1–2 jours.
+- **Test 4 — Onboarding caissier :** Un caissier sans expérience ERP réalise sa première vente sans assistance en < 15 minutes de formation.
+- **Test 5 — UI-Driven :** Activer le type « Pharmacie » sur un tenant affiche les champs date de péremption et DCI sans mise à jour de l'app Flutter.
+- **Test 6 — Ambassadeur :** Un code de parrainage généré déclenche automatiquement le calcul de commission et le paiement Mobile Money mensuel sans intervention manuelle.
+- **Test 7 — Enterprise RH+Compta+DG :** Awa (DRH) importe 15 employés et génère les bulletins en < 2h. Ibrahim (Comptable) clôture le mois et génère le bilan OHADA sans ressaisie. Serge (DG) voit CA + masse salariale + engagements achats sur un seul écran en temps réel.
+- **Test 8 — Sync Failure & Résolution :** Simuler une erreur serveur non récupérable (400) après 3 retries. Vérifier : mutation marquée FAILED, notification envoyée à l'utilisateur et à l'admin, enregistrement visible dans l'interface de résolution, relance manuelle fonctionnelle.
+- **Test 9 — Import Enterprise avec erreurs :** Import CSV de 20 employés dont 3 avec numéro CNSS invalide et 1 avec salaire < SMIG. Vérifier : 16 lignes importées, rapport d'erreur généré avec ligne + champ + raison pour les 4 rejets. Import répétable sans doublon.
+
+### B. Résumé des Innovations
+
+| Innovation | Problème résolu | Différenciation concurrentielle |
 |:---|:---|:---|
-| **NFR8: Tenant data isolation** | Zero cross-tenant data leakage | Application-level `tenant_id` scoping + Supabase RLS defense-in-depth |
-| **NFR9: Authentication** | JWT-based with configurable session timeout | Supabase Auth, session auto-expire on idle |
-| **NFR10: Local data encryption** | Encrypted local database | Device loss/theft protection — no readable data without authentication |
-| **NFR11: Transport encryption** | TLS 1.2+ for all server communication | Data in transit protection |
-| **NFR12: Price modification audit** | Every price change traced with actor, timestamp, before/after values | Anti-fraud: only Owner can modify, full trail |
-| **NFR13: Financial data integrity** | All financial mutations are atomic and logged | No partial transaction states, no silent failures |
+| Architecture offline-first | Internet non fiable en Afrique de l'Ouest | Aucun ERP concurrent (SAP, Odoo, Sage) n'offre l'offline comme mode primaire — c'est toujours un mode dégradé chez eux |
+| Chaîne de garde (Chain of Custody) | Vol de stock non détectable sans système formel | Double validation émetteur/récepteur native, écart attribué automatiquement |
+| Architecture modulaire polymorphe | Duplication de code à chaque nouveau métier ou département | 60–80 % de réutilisation entre verticaux ET entre départements Enterprise |
+| Conformité fiscale offline | FEC offline = numérotation séquentielle impossible | Plages pré-allouées + file DGI dédiée |
+| UI-Driven Engine | App différente par métier = maintenance exponentielle | Un seul binaire Flutter, N métiers et N départements, via config JSON serveur |
+| Scalario Connect | Commandes inter-entreprises manuelles (WhatsApp, téléphone, papier) | Graphe universel Acheteur/Vendeur. Migration concurrent = convaincre tous les partenaires simultanément. |
+| Scalario Enterprise | ERP PME inaccessibles (trop chers, trop complexes) pour le marché africain | Multi-départements intégrés ou fédérés sur le même Kernel, tarif 25–50k FCFA vs 200k+ pour Sage |
+| Gestion conflits financiers offline | Last-write-wins inapplicable sur les données financières (paie, transactions) | File de résolution manuelle dédiée pour transactions et écritures comptables. Zéro perte, zéro écrasement silencieux. |
+| Onboarding Enterprise < 1 semaine | SAP/Sage : 2–6 mois de mise en œuvre avec consultants | Import CSV + configuration guidée + formation par département. Première paie en 3–5 jours. |
 
-### Reliability & Availability
+### C. Glossaire
 
-| Requirement | Target | Context |
-|:---|:---|:---|
-| **NFR14: Offline autonomy** | 8+ hours continuous operation without connectivity | Full work shift without internet |
-| **NFR15: Crash recovery** | Zero data loss on unexpected termination | WAL on local DB, in-progress transaction saved incrementally |
-| **NFR16: Sync resilience** | Automatic retry with exponential backoff on failures | Unstable 2G/3G connections, no manual intervention |
-| **NFR17: Server uptime** | 99% (allows ~7h downtime/month) | Self-hosted Supabase, solo admin — realistic target |
-| **NFR18: Data durability** | Zero transaction loss, ever | Financial data: no acceptable loss threshold |
-
-### Scalability
-
-| Requirement | Target | Context |
-|:---|:---|:---|
-| **NFR19: Tenant capacity** | Support 30+ concurrent tenants | 12-month growth target |
-| **NFR20: Users per tenant** | Up to 10 concurrent users per tenant | Typical shop: 1 owner + 1 manager + 3-5 commercials |
-| **NFR21: Transaction volume** | Up to 500 transactions/day per tenant | High-traffic retail shops |
-| **NFR22: Catalog size** | Up to 5,000 items per tenant | Grocery/pharmacy typical range |
-| **NFR23: Horizontal growth** | Adding tenants requires zero code changes | New tenant = configuration only |
-
-### Network & Bandwidth
-
-| Requirement | Target | Context |
-|:---|:---|:---|
-| **NFR24: Sync payload compression** | Compressed delta-only payloads | 2G/3G bandwidth optimization |
-| **NFR25: Minimum bandwidth** | Functional sync on 2G (50 kbps) | Rural Africa connectivity reality |
-| **NFR26: No heavy asset sync** | Images and files excluded from sync — data only | Bandwidth preservation |
-| **NFR27: Initial provisioning** | Full catalog + config download < 5MB | First-time device setup on limited connectivity |
-
-### Usability
-
-| Requirement | Target | Context |
-|:---|:---|:---|
-| **NFR28: Cashier onboarding** | Autonomous after < 1 hour training | Non-technical users with no prior ERP experience |
-| **NFR29: Error recovery** | Clear, actionable error messages in user's language | No technical jargon, no stack traces |
-| **NFR30: Offline transparency** | User unaware of connectivity state during normal operations | Offline is the default, not the exception |
+| Terme | Définition |
+|:---|:---|
+| Kernel | Couche fondamentale : auth, multi-tenancy, RBAC, event bus, moteur sync. Ne doit jamais être modifié par un vertical ou un département. |
+| Shared Module | Module réutilisable entre tous les verticaux : Catalog, Contacts, Transactions, Payments, Inventory, Reporting |
+| Vertical Module | Logique métier spécifique à un secteur : Retail POS, Pharmacy, Services, Restaurant |
+| Offline-first | Mode d'opération primaire : écriture locale d'abord, sync quand connectivité disponible. Ce n'est pas un mode dégradé. |
+| Outbox | File de mutations locales en attente de synchronisation vers le serveur. Persistée sur disque (WAL). |
+| UI-Driven Engine | Système qui définit le layout Flutter via configuration JSON serveur selon le `business_type` du tenant ou le département actif. |
+| Scalario Connect | Système d'interconnexion inter-tenants (Phase 3). Tout tenant peut être Acheteur, Vendeur, ou les deux. Graphe universel B2B. |
+| Scalario Enterprise | Mode multi-départements pour PME. Supporte le Mode Intégré (un tenant, N départements) et le Mode Fédéré (N tenants liés sous un tenant Groupe). |
+| Département | Sous-unité organisationnelle d'un tenant Enterprise. Possède ses propres modules, rôles et vues de données. |
+| Mode Intégré | Un seul tenant Scalario, plusieurs départements internes. Pour PME de 5–50 employés. |
+| Mode Fédéré | Plusieurs tenants liés sous un tenant Groupe. Pour holdings et organisations multi-sites. |
+| Ambassadeur | Client Scalario ou partenaire qui génère de nouveaux clients via code de parrainage contre commission Mobile Money. |
+| Chain of Custody | Pattern de double validation des transferts de stock : émetteur déclare, récepteur confirme, écart attribué automatiquement. |
+| Tenant | Entreprise cliente isolée sur la plateforme Scalario. Peut être standalone, integrated (Enterprise) ou federated (Groupe). |
+| FCFA | Franc CFA (XOF). Devise principale. Arrondi natif à 5 FCFA. |
+| OHADA | Organisation pour l'Harmonisation en Afrique du Droit des Affaires. Définit le plan comptable utilisé dans 17 pays africains dont le Burkina Faso. |
+| SMIG | Salaire Minimum Interprofessionnel Garanti. Référence légale pour le calcul de la paie au Burkina Faso. Scalario le met à jour automatiquement. |
+| CNSS | Caisse Nationale de Sécurité Sociale (Burkina Faso). Cotisations calculées par le module RH et exportées en fichier déclaration (CSV/PDF) pour dépôt manuel. Pas d'API directe disponible. |
+| CARFO | Caisse Autonome de Retraite des Fonctionnaires (Burkina Faso). Applicable aux agents de la fonction publique. |
+| FEC | Fichier des Écritures Comptables. Format d'export fiscal obligatoire (DGI Burkina Faso). Généré par Scalario, compatible offline via plages pré-allouées. |
+| DoD | Definition of Done. Liste de critères qu'une fonctionnalité doit respecter pour être considérée terminée (tests, journey, offline, erreurs gérées). |
+| WAL | Write-Ahead Logging. Mécanisme de persistance locale qui garantit zéro perte de données en cas d'arrêt brutal de l'application. |
+| Last-write-wins | Politique de résolution de conflits de sync pour les données non financières : la dernière écriture l'emporte. Interdit pour les transactions et écritures comptables. |
+| SLA | Service Level Agreement. Engagement de niveau de service (temps de réponse support, disponibilité). Défini par offre dans la section Onboarding & Support. |

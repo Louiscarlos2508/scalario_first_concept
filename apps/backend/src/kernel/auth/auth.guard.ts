@@ -32,10 +32,11 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing Authorization Header');
     }
 
-    const token = authHeader.split(' ')[1];
-    if (!token) {
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || !parts[1]) {
       throw new UnauthorizedException('Missing Bearer Token');
     }
+    const token = parts[1];
 
     const {
       data: { user },
@@ -46,8 +47,32 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid Token');
     }
 
-    // Attach user to request for downstream controllers
+    // Session timeout: validate token age against configured timeout
+    const payload = this._decodeJwtPayload(token);
+    if (payload?.iat) {
+      const sessionTimeoutMinutes: number =
+        request.tenantSessionTimeoutMinutes ?? 480; // default 8 hours
+      const tokenAgeSeconds = Math.floor(Date.now() / 1000) - payload.iat;
+      const timeoutSeconds = sessionTimeoutMinutes * 60;
+      if (tokenAgeSeconds > timeoutSeconds) {
+        throw new UnauthorizedException(
+          'Session expired. Please re-authenticate.',
+        );
+      }
+    }
+
     request.user = user;
     return true;
+  }
+
+  private _decodeJwtPayload(token: string): Record<string, any> | null {
+    try {
+      const base64Payload = token.split('.')[1];
+      if (!base64Payload) return null;
+      const decoded = Buffer.from(base64Payload, 'base64').toString('utf-8');
+      return JSON.parse(decoded);
+    } catch {
+      return null;
+    }
   }
 }

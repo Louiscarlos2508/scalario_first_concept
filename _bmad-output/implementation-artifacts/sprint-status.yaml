@@ -42,11 +42,12 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   # Epic 1: Kernel — Identity, Tenancy & Access Control
   epic-1: in-progress
-  1-1-kernel-schema-tenant-management-authentication: in-progress
-  1-2-role-based-access-control: backlog
-  1-3-module-registry-activation: backlog
+  1-1-kernel-schema-tenant-management-authentication: done
+  1-2-role-based-access-control: done
+  1-3-module-registry-activation: ready-for-dev
   1-4-event-bus-audit-trail: backlog
   1-5-guard-chain-integration-backward-compatibility: backlog
+  1-6-phase3-db-anticipation-fields: backlog
   epic-1-retrospective: optional
 
   # Epic 2: Shared Catalog Module
@@ -103,3 +104,23 @@ development_status:
   9-1-migration-scripts-dry-run-validation: backlog
   9-2-production-cutover-cleanup: backlog
   epic-9-retrospective: optional
+
+  # Epic 10: Server-Driven UI (Phase 2a — after Epic 6)
+  # Stories to be defined via create-story workflow
+  epic-10: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Programme Ambassadeurs (Phase 2b — after Epic 10)
+  # Stories to be defined via create-story workflow
+  epic-11: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Scalario Connect (Phase 3 — after Epic 11)
+  # Stories to be defined via create-story workflow
+  epic-12: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Scalario Enterprise (Phase 3 — after Epic 12)
+  # Stories to be defined via create-story workflow
+  epic-13: backlog
+  epic-13-retrospective: optional
