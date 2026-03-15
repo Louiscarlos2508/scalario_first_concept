@@ -88,9 +88,39 @@ async function seedRbac() {
   }
 }
 
+const MODULES = [
+  // Shared modules — core ERP capabilities
+  { code: 'catalog',      name: 'Catalogue',          type: 'shared',   dependencies: [] },
+  { code: 'contacts',     name: 'Contacts',           type: 'shared',   dependencies: [] },
+  { code: 'inventory',    name: 'Inventaire',         type: 'shared',   dependencies: ['catalog'] },
+  { code: 'transactions', name: 'Transactions',       type: 'shared',   dependencies: ['catalog', 'contacts'] },
+  { code: 'reporting',    name: 'Rapports',           type: 'shared',   dependencies: [] },
+  { code: 'dashboard',    name: 'Tableau de bord',    type: 'shared',   dependencies: [] },
+  // Retail vertical
+  { code: 'pos',          name: 'Point de Vente',     type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions'] },
+  // Phase 3 — pre-registered so future activation requires no schema migration
+  { code: 'connect',      name: 'Scalario Connect',   type: 'vertical', dependencies: [] },
+  { code: 'enterprise',   name: 'Scalario Enterprise', type: 'vertical', dependencies: [] },
+];
+
+async function seedModules() {
+  console.log('Seeding modules...');
+  for (const mod of MODULES) {
+    await prisma.module.upsert({
+      where: { code: mod.code },
+      update: { name: mod.name, type: mod.type, dependencies: mod.dependencies },
+      create: mod,
+    });
+  }
+  console.log(`  ✓ ${MODULES.length} modules seeded`);
+}
+
 async function main() {
   // Seed RBAC first (roles needed before member creation)
   await seedRbac();
+
+  // Seed Module Registry (module catalog for feature gating)
+  await seedModules();
 
   // Create a tenant for development
   let tenant = await prisma.tenant.findFirst();

@@ -21,7 +21,12 @@ class Customer {
   String? address;
   double balance = 0.0;
   String? tenantId;
-  
+
+  // Contact schema alignment (added Story 8.2)
+  String? contactType; // default: 'customer'
+  bool isSynced = false;
+  DateTime? lastUpdated;
+
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -35,6 +40,8 @@ class Customer {
       'address': address,
       'balance': balance,
       'tenantId': tenantId,
+      'contactType': contactType ?? 'customer',
+      if (lastUpdated != null) 'lastUpdated': lastUpdated!.toIso8601String(),
     };
   }
 
@@ -48,8 +55,21 @@ class Customer {
       ..address = json['address']?.toString()
       ..balance = _toDouble(json['balance'])
       ..tenantId = (json['tenantId'] ?? json['tenant_id'])?.toString()
-      ..createdAt = json['created_at'] != null ? DateTime.parse(json['created_at']) : null
-      ..updatedAt = json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null;
+      ..contactType = json['contactType']?.toString() ??
+          json['contact_type']?.toString() ??
+          'customer'
+      ..isSynced = true // server response means it's synced
+      ..lastUpdated = json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : (json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'])
+              : null)
+      ..createdAt = json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null
+      ..updatedAt = json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null;
   }
 
   static double _toDouble(dynamic value) {

@@ -1177,3 +1177,598 @@ So that the platform is fully on the new architecture with no legacy code remain
 **When** the clients update their devices
 **Then** the frontend communicates exclusively with new endpoints
 **And** sync resumes seamlessly with zero data loss from the transition period
+
+---
+
+## Epic 14: UI Polish — Design System & Conformité UX
+
+Mise en conformité complète de l'interface Flutter avec le design system Scalario : palette 60-30-10, typographie, espacement, boutons tactiles (Fitts), responsive (breakpoints compact/medium/expanded), labels en français, et accessibilité WCAG AA. Epic bloquant pour tout démo client ou lancement commercial.
+
+### Story 14.1: Fix Compile Errors — POS Providers
+
+As a developer,
+I want the 3 pre-existing compile errors in pos_providers.dart and related files fixed,
+So that the app builds cleanly before any UI work begins.
+
+**Acceptance Criteria:**
+
+**Given** the current state of `pos_providers.dart` and dependent files
+**When** `flutter build` or `flutter analyze` is run
+**Then** zero compile errors are reported for the POS provider files
+
+**Given** the `RealtimeService`, `RetentionService`, and related imports
+**When** the provider wiring is resolved
+**Then** all providers instantiate without type mismatches or missing constructors
+
+**Given** the fix is applied
+**When** the POS screen and dashboard screens are navigated
+**Then** all screens load without runtime provider exceptions
+
+**Notes:**
+- Check `RealtimeService(supabase, syncService, ref)` constructor signature
+- Check `RetentionService(isarService)` constructor signature
+- Run `flutter analyze` to surface all errors before fixing
+
+---
+
+### Story 14.2: ThemeData Centralisé — Design System Setup
+
+As a developer,
+I want a centralized `AppTheme` with `ThemeData`, `ColorScheme`, and `TextTheme` matching the Scalario design system,
+So that all screens use a single source of truth for colors, typography, and component defaults.
+
+**Acceptance Criteria:**
+
+**Given** the design system palette (60-30-10 rule)
+**When** `AppTheme.light()` is applied at the `MaterialApp` level
+**Then** all screens inherit:
+- Primary: `#1565C0`
+- Background: `#F5F5F5`
+- Surface: `#FFFFFF`
+- Error: `#C62828`
+- OnPrimary: `#FFFFFF`
+- Text primary: `#212121`
+- Text secondary: `#757575`
+
+**Given** the typography scale from the design system
+**When** `AppTheme.textTheme` is defined
+**Then** it provides:
+- `displayMedium`: 22sp / Bold (titre principal)
+- `titleLarge`: 18sp / SemiBold (titre section)
+- `titleMedium`: 16sp / SemiBold (titre carte)
+- `bodyMedium`: 14sp / Regular
+- `bodySmall`: 12sp / Regular / `#757575`
+- `labelSmall`: 11sp / Medium / `#757575` (uppercase)
+- `headlineLarge`: 20sp / Bold / Monospace (prix)
+
+**Given** the component defaults
+**When** `ElevatedButton` is used anywhere in the app
+**Then** it uses primary blue background, white text, minimum height 48px
+
+**Given** the `FilledButton` (primary CTA — Encaisser)
+**When** defined in `AppTheme`
+**Then** it uses `#1565C0` background, minimum height 56px
+
+**Given** the app starts
+**When** `MaterialApp(theme: AppTheme.light())` is set
+**Then** no screen uses hardcoded `Colors.teal`, `Colors.blue`, `Colors.green`, `Colors.purple`, `Colors.grey` — all resolved via `Theme.of(context).colorScheme`
+
+**Files to create/modify:**
+- Create: `lib/core/theme/app_theme.dart`
+- Modify: `lib/main.dart` — apply `AppTheme.light()`
+
+---
+
+### Story 14.3: Refactor Écran POS
+
+As a cashier (Fatou),
+I want the POS screen and its widgets to look professional and feel easy to use on a tablet,
+So that I can serve customers quickly without confusion.
+
+**Acceptance Criteria:**
+
+**Given** the POS screen (`pos_screen.dart`)
+**When** it renders
+**Then** the AppBar title shows the active shop name (from `userProfile`) instead of "Scalario POS"
+**And** all action icons have French tooltips ("Scanner code-barres", "Fermer la session")
+**And** the layout uses `LayoutBuilder` with breakpoints:
+  - `< 600px` → stacked (product grid full width, cart = FAB badge + separate screen)
+  - `≥ 600px` → Row split (product grid 60% | cart panel 40%)
+
+**Given** the cart panel (`cart_panel.dart`)
+**When** it renders on tablet (≥ 600px)
+**Then** the panel width is `max(320px, 35% of screen width)` — not hardcoded 350px
+**And** the header title reads "Vente en cours" (French)
+**And** cart items show: product name (bodyMedium), quantity × price in monospace, total in monospace bold
+**And** the discount text is at least 13sp (not 12sp)
+**And** the "remove" icon is wrapped in a 48×48 touch target (Fitts)
+**And** the currency symbol uses FCFA notation (or configured currency — `CurrencyFormatter`)
+**And** all hardcoded colors replaced with `Theme.of(context).colorScheme.*`
+
+**Given** the "PAY & PRINT" button (primary CTA)
+**When** it renders
+**Then** it is labeled "ENCAISSER" (French)
+**And** its height is ≥ 56px (Fitts — largest element in the panel)
+**And** it uses `colorScheme.primary` background
+
+**Given** the "HOLD" button
+**When** it renders
+**Then** it is labeled "METTRE EN ATTENTE" or "RETENIR" (French)
+
+**Given** the payment method dropdown
+**When** rendered
+**Then** method names are translated: CASH→"Espèces", MOBILE_MONEY→"Mobile Money", CARD→"Carte", CREDIT→"Crédit", SPLIT→"Paiement mixte"
+
+**Given** the product grid (`product_grid.dart`)
+**When** it renders
+**Then** `crossAxisCount` adapts: 2 cols `< 600px`, 3 cols `600–1024px`, 5 cols `> 1024px`
+**And** loading state shows a shimmer skeleton (not `CircularProgressIndicator`)
+**And** empty state shows: icon + "Aucun produit trouvé" + button "Ajouter un produit"
+**And** product card icon uses `colorScheme.primary` (not teal)
+**And** category chips use `colorScheme.primaryContainer` when selected
+
+**Given** the close session dialog (`pos_screen.dart` `_showCloseSessionDialog`)
+**When** triggered
+**Then** all text is in French: "Fermer la session", "Comptez l'argent en caisse", "Montant physique", "Annuler", "Suivant"
+
+**Given** the session report dialog (`session_report_dialog.dart`)
+**When** rendered
+**Then** all labels are in French: "Résumé de session (Rapport Z)", "Ventes par mode", "Réconciliation caisse", "Solde d'ouverture", "Caisse théorique", "Compte physique", "Écart", "Retour", "Imprimer rapport Z", "Confirmer la fermeture"
+
+**Given** the receipt dialog (`receipt_dialog.dart`)
+**When** rendered
+**Then** labels are French: "Reçu", "Numéro:", "Date:", "TOTAL:", "Paiement:", "Merci pour votre achat !", "OK", "Imprimer"
+**And** date format is `dd/MM/yyyy HH:mm`
+
+**Given** the sync status indicator
+**When** rendered
+**Then** tooltips are French: "En ligne & synchronisé", "Synchronisation...", "Erreur de synchronisation", "Hors ligne"
+
+**Given** the customer selection dialog
+**When** rendered
+**Then** labels are French: "Sélectionner un client", "Rechercher par nom ou téléphone", "Aucun client trouvé", "NOUVEAU CLIENT"
+
+**Given** the discount dialog
+**When** rendered
+**Then** labels are French: "Remise :", "Montant", "Type :", "Annuler", "Appliquer"
+
+---
+
+### Story 14.4: Refactor Dashboard & Écrans Back-Office
+
+As a manager (Moussa) or owner (Blandine),
+I want the dashboard and back-office screens to match the design system and be usable on tablet and desktop,
+So that I can manage the business without visual clutter or confusion.
+
+**Acceptance Criteria:**
+
+**Given** the dashboard shell (`dashboard_shell.dart`)
+**When** it renders on a phone (width < 600px)
+**Then** a `BottomNavigationBar` (max 5 items) replaces the `NavigationRail`
+**And** the rail is only shown for width ≥ 600px
+
+**Given** the NavigationRail is shown (width ≥ 600px)
+**When** it renders
+**Then** it is `extended: true` when width ≥ 1024px (not 1200px — matches design system breakpoint)
+**And** destination labels are French: "Aperçu", "Inventaire", "Catégories", "Clients", "Historique stock", "Rapports", "Paramètres"
+**And** the whole shell is wrapped in `SafeArea`
+**And** branch name label is at least 12sp
+
+**Given** the "Open POS" and "Logout" icon buttons in the rail trailing
+**When** rendered
+**Then** tooltips are French: "Ouvrir la caisse", "Se déconnecter"
+
+**Given** the Overview screen (`dashboard_screen.dart`)
+**When** it renders
+**Then** the greeting is French: "Bon retour !" or "Bonjour, {prénom} !"
+**And** the date picker button label is French: "7 derniers jours" / "dd/MM – dd/MM"
+**And** KPI card titles are French: "Chiffre d'affaires", "Nb commandes", "Ticket moyen"
+**And** the chart title is French: "Évolution des ventes (7 derniers jours)"
+**And** the "Active Terminals" section is French: "Terminaux actifs"
+**And** on phone (< 600px), KPI cards stack vertically (not Row)
+**And** loading state uses skeleton shimmer (not CircularProgressIndicator)
+**And** hardcoded `Colors.green`, `Colors.blue`, `Colors.purple`, `Colors.teal` replaced with `colorScheme` tokens
+
+**Given** the Inventory screen (`inventory_screen.dart`)
+**When** it renders
+**Then** the AppBar title is "Gestion des stocks"
+**And** the search hint is "Rechercher par nom ou code-barres…"
+**And** the "Add Product" button is "Ajouter un produit"
+**And** DataTable columns are French: "Nom", "Code-barres", "Prix", "Stock", "Actions"
+**And** on width < 900px, the DataTable is replaced by a card list (responsive)
+**And** action IconButtons in table rows are wrapped in 48×48 touch targets (Fitts)
+**And** delete confirmation dialog text is French: "Supprimer ce produit ?", "Êtes-vous sûr…", "Annuler", "Supprimer"
+
+**Given** the Customers screen (`customers_screen.dart`)
+**When** it renders
+**Then** AppBar title is "Gestion des clients"
+**And** search hint is "Rechercher un client…"
+**And** "SETTLE DEBT" button is "RÉGLER LA DETTE" and uses `colorScheme.primary` (not teal)
+**And** "Balance:" label is "Solde :"
+**And** empty state shows icon + "Aucun client trouvé" + "Ajouter un client" button
+
+**Given** the Reports screen (`reports_screen.dart`)
+**When** it renders
+**Then** AppBar title is "Rapports détaillés"
+**And** section titles are French: "Ventes par produit", "Ventes par mode de paiement"
+**And** date picker shows "Toute la période"
+**And** date format is `dd/MM`
+**And** pie chart colors use design system palette (not `Colors.primaries`)
+**And** DataTable columns are French: "Produit", "Qté", "Chiffre d'affaires"
+
+**Given** the Categories screen (`categories_screen.dart`)
+**When** it renders
+**Then** AppBar title is "Gestion des catégories"
+**And** empty state shows icon + "Aucune catégorie" + "Créer une catégorie" button
+**And** add dialog title is "Ajouter une catégorie", field label "Nom de la catégorie", buttons "Annuler" / "Ajouter"
+**And** delete dialog text is "Supprimer cette catégorie ?" with "Annuler" / "Supprimer"
+
+**Given** the Stock History screen (`stock_history_screen.dart`)
+**When** it renders
+**Then** AppBar title is "Historique des stocks"
+**And** date format uses French month names (`dd MMM` with locale `fr`)
+**And** empty state shows icon + "Aucun mouvement de stock"
+**And** date label text is at least 12sp (not 10sp)
+
+**Given** the Product Form dialog (`product_form_dialog.dart`)
+**When** it renders
+**Then** title is "Modifier le produit" / "Nouveau produit"
+**And** field labels are French: "Nom du produit *", "Prix *", "Stock initial", "Catégorie", "Code-barres"
+**And** validation messages are French: "Requis", "Nombre invalide"
+**And** buttons are "Annuler" / "Mettre à jour" / "Créer"
+
+**Given** the Settle Debt dialog (`settle_debt_dialog.dart`)
+**When** it renders
+**Then** title is "Régler la dette — {nom}"
+**And** labels are French: "Solde actuel :", "Montant du règlement"
+**And** buttons are "ANNULER" / "RÉGLER"
+**And** button color uses `colorScheme.primary` (not teal)
+
+---
+
+### Story 14.5: Refactor Écran de Connexion
+
+As a new user opening the app for the first time,
+I want a clean, professional login screen with French labels and proper branding,
+So that I immediately trust the product.
+
+**Acceptance Criteria:**
+
+**Given** the login screen (`login_screen.dart`)
+**When** it renders
+**Then** the "Scalario" text is replaced (or complemented) with a proper logo widget (`ScalarioLogo`) using the design system primary color
+**And** below the logo, a subtitle reads "Gérez votre boutique, partout." in `bodyMedium` / `#757575`
+**And** the email field label is "Adresse email"
+**And** the password field label is "Mot de passe"
+**And** the password field has a visibility toggle icon (show/hide)
+**And** a "Mot de passe oublié ?" `TextButton` appears below the password field (leads to placeholder for now)
+**And** the "Sign In" button is labeled "Se connecter" with height ≥ 56px (Fitts)
+**And** the background uses `colorScheme.background` (`#F5F5F5`) — not plain white
+**And** error snackbars display French messages (pass through Supabase `e.message` — already shows in French if locale is set)
+**And** the form container max-width stays at 400px (desktop centering preserved)
+
+---
+
+### Story 14.6: Responsive Breakpoints — Layouts Adaptatifs
+
+As any user (cashier on tablet, owner on phone, manager on desktop),
+I want the app to adapt its layout based on screen size,
+So that every platform (tablet, phone, desktop) has an optimal experience.
+
+**Acceptance Criteria:**
+
+**Given** the app runs on a phone (width < 600px)
+**When** any list screen (Inventory, Customers, Stock History) is displayed
+**Then** DataTables are replaced by scrollable card lists (each row = 1 card)
+**And** form dialogs use full-screen modals (not AlertDialog)
+**And** the bottom navigation bar is visible (not the NavigationRail)
+
+**Given** the POS screen on phone (< 600px)
+**When** displayed
+**Then** the product grid occupies full width (2 columns)
+**And** a floating cart badge button ("🛒 Panier (3)") appears bottom-right showing item count
+**And** tapping the cart badge navigates to the full-screen cart view
+**And** back from cart returns to the product grid
+
+**Given** the POS screen on tablet (600–1024px)
+**When** displayed
+**Then** the split layout (product grid | cart panel) is shown as described in the design system
+**And** the cart panel is always visible (no FAB needed)
+
+**Given** the POS screen on desktop (> 1024px)
+**When** displayed
+**Then** the NavigationRail is expanded with labels
+**And** the product grid shows 5 columns
+**And** the cart panel shows customer history section as per design system
+
+**Given** a `LayoutBuilder` is used in each adaptive screen
+**When** the breakpoints are defined
+**Then** they follow the design system constants:
+- `kCompactBreakpoint = 600.0`
+- `kMediumBreakpoint = 1024.0`
+**And** a shared `AppBreakpoints` class in `lib/core/theme/` exports these constants
+
+**Given** the dashboard KPI cards on phone
+**When** width < 600px
+**Then** the 3 stat cards stack vertically (Column) instead of Row
+
+**Given** the Inventory DataTable on medium screens (600–900px)
+**When** rendered
+**Then** it switches to a card list to avoid horizontal overflow
+
+**Notes:**
+- Create `lib/core/theme/app_breakpoints.dart` with `kCompactBreakpoint`, `kMediumBreakpoint`
+- Use `LayoutBuilder` in `PosScreen`, `DashboardShell`, `OverviewScreen`, `InventoryScreen`
+- Phone cart = separate route, tablet/desktop = side panel
+
+
+---
+
+## Epic 10: SDUI Foundation & Engine
+
+A Server-Driven UI (SDUI) engine that allows layout definitions to be served from the backend as JSON, enabling dynamic rendering of screens per `business_type` without Flutter code changes. The first SDUI layout converts the existing Retail POS screen to JSON-driven rendering. Story 10.0 is a prerequisite: compile errors must be fixed before any new development.
+
+**Phase:** 1 (after Epics 1–6 done)
+**FRs covered:** FR13 (UI-Driven Engine dynamic layer)
+**Prerequisite:** Epics 1–6 complete + Epic 14 Story 14.2 (AppTheme tokens in place)
+
+### Story 10.0: Fix Compile Errors — SyncService, categoriesProvider, ReceiptDialog
+
+As a developer,
+I want the existing compile errors in `pos_providers.dart`, `product_grid.dart`, and `cart_panel.dart` fixed,
+So that the app builds cleanly and all subsequent SDUI work can proceed on a stable base.
+
+**Acceptance Criteria:**
+
+**Given** the `SyncService` constructor call in `pos_providers.dart` (`syncServiceProvider` block)
+**When** `flutter analyze` is run
+**Then** the 5-argument call `SyncService(orderRepo, productRepo, sessionRepo, customerRepo, categoryRepo)` matches the actual constructor signature in `lib/core/services/sync_service.dart`
+**And** if the constructor signature has changed (e.g. parameter added/removed after schema migration), the call is updated accordingly
+
+**Given** `categoriesProvider` referenced in `product_grid.dart` (line 13) via `ref.watch(categoriesProvider)`
+**When** the file is analyzed
+**Then** the provider is correctly exported and importable from `category_repository.dart`
+**And** the import line in `product_grid.dart` resolves without "undefined identifier" error
+
+**Given** `cart_panel.dart` calls `ReceiptDialog(order: order)` and also calls `_showPostCheckoutDialog`
+**When** the file is analyzed
+**Then** `ReceiptDialog` is imported from `package:frontend/features/pos/presentation/widgets/receipt_dialog.dart`
+**And** there is no duplicate receipt dialog trigger (both `showDialog(ReceiptDialog)` and `_showPostCheckoutDialog` firing for the same checkout)
+
+**Given** all errors are resolved
+**When** `flutter build windows` or `flutter build apk` is run
+**Then** exit code 0, zero compile errors across all three files
+
+**Notes:**
+- Run `flutter analyze` first to capture the exact error list — may surface additional issues
+- Do NOT refactor beyond fixing errors: no translation, no style changes, no logic changes
+
+---
+
+### Story 10.1: Design System Theme Tokens
+
+As a developer,
+I want a centralized `AppTheme` file encoding every design system token from `docs/design-system.md`,
+So that all screens adopt correct colors, typography, and component defaults automatically.
+
+**Acceptance Criteria:**
+
+**Given** the 60-30-10 color palette in `docs/design-system.md`
+**When** `lib/core/theme/app_theme.dart` is created
+**Then** it exports an `AppColors` class with static `const Color` values:
+- `primary = Color(0xFF1565C0)` — Bleu confiance (10% accent)
+- `success = Color(0xFF2E7D32)` — Vert
+- `error = Color(0xFFC62828)` — Rouge
+- `warning = Color(0xFFF9A825)` — Jaune
+- `surface = Color(0xFFFFFFFF)` — Surfaces
+- `background = Color(0xFFF5F5F5)` — Fond app (60%)
+- `textPrimary = Color(0xFF212121)` — Texte principal
+- `textSecondary = Color(0xFF757575)` — Texte léger
+- `border = Color(0xFFE0E0E0)` — Bordures
+
+**Given** the typography hierarchy in `docs/design-system.md`
+**When** `AppTheme.textTheme` is built
+**Then** it defines 8 text styles mapped to Flutter's `TextTheme` slots:
+- `displayMedium` → 22sp Bold `#212121` (titre principal)
+- `titleLarge` → 18sp SemiBold `#212121` (titre section)
+- `titleMedium` → 16sp SemiBold `#212121` (titre carte)
+- `bodyMedium` → 14sp Regular `#212121` (corps)
+- `bodySmall` → 12sp Regular `#757575` (corps petit)
+- `labelSmall` → 11sp Medium `#757575` (étiquette)
+- `headlineLarge` → 20sp Bold monospace `#212121` (prix)
+- `headlineMedium` → 18sp Bold monospace `#212121` (quantité)
+
+**Given** component defaults required by the design system (Fitts — min 48dp)
+**When** `AppTheme.light()` is constructed
+**Then** `ElevatedButtonThemeData` has `minimumSize: Size(64, 48)`
+**And** `FilledButtonThemeData` has `minimumSize: Size(88, 56)` (primary CTA)
+**And** `InputDecorationTheme` uses `OutlineInputBorder` with `AppColors.border`
+**And** `CardTheme` sets `elevation: 0`, `borderRadius: 12`, side `AppColors.border`
+
+**Given** the theme is registered
+**When** `lib/main.dart` is modified
+**Then** `MaterialApp(theme: AppTheme.light())` is set — single line change
+
+**Files to create:**
+- `lib/core/theme/app_theme.dart`
+- `lib/core/theme/app_breakpoints.dart` — exports `kCompact = 600.0`, `kMedium = 1024.0`
+
+**Files to modify:**
+- `lib/main.dart` — `theme: AppTheme.light()`
+
+**Scope constraint:** Zero screen/widget files are modified. Theme tokens only.
+
+---
+
+### Story 10.2: SDUI JSON Schema Definition
+
+As a developer,
+I want a documented JSON schema for describing screen layouts per `business_type`,
+So that backend and frontend have a shared contract before building either side.
+
+**Acceptance Criteria:**
+
+**Given** the need to describe adaptive screen layouts
+**When** `docs/sdui-schema.md` is committed
+**Then** it documents the following top-level schema:
+```json
+{
+  "version": "1",
+  "business_type": "retail",
+  "screen": "pos",
+  "layout": {
+    "type": "split_view",
+    "breakpoints": {
+      "compact":  { "type": "stacked_with_fab_cart" },
+      "medium":   { "type": "horizontal_split", "left_flex": 2, "right_flex": 1 },
+      "expanded": { "type": "horizontal_split", "left_flex": 3, "right_flex": 1 }
+    },
+    "panels": {
+      "product_grid": {
+        "type": "product_grid",
+        "columns": { "compact": 2, "medium": 3, "expanded": 5 },
+        "show_categories": true,
+        "show_search": true
+      },
+      "cart": {
+        "type": "cart_panel",
+        "primary_action": {
+          "type": "filled_button",
+          "label": "ENCAISSER",
+          "action": "checkout",
+          "min_height": 56
+        },
+        "payment_methods": ["CASH", "MOBILE_MONEY", "CARD", "CREDIT", "SPLIT"]
+      }
+    }
+  }
+}
+```
+
+**Given** the schema must support the dashboard screen
+**When** the schema docs describe `retail.dashboard`
+**Then** it covers: `kpi_cards` (array with icon, label, value_provider), `line_chart` (data_provider, title), `terminal_status_list`
+
+**Given** parsing unknown widget types
+**When** a JSON layout has `"type": "unknown_widget_xyz"`
+**Then** the schema documents that this renders a `SduiPlaceholder` — never crashes
+
+**Deliverable:**
+- `docs/sdui-schema.md` with field documentation
+- `apps/backend/src/sdui/layouts/retail.pos.json` (first real layout)
+- `apps/backend/src/sdui/layouts/retail.dashboard.json`
+
+---
+
+### Story 10.3: SDUI Backend Layout Service
+
+As a backend developer,
+I want a NestJS `SduiModule` that serves layout JSON based on the tenant's `business_type`,
+So that the Flutter app can fetch its screen configuration dynamically at startup.
+
+**Acceptance Criteria:**
+
+**Given** an authenticated tenant with `business_type = 'retail'` calls `GET /api/v1/sdui/layout?screen=pos`
+**When** the request hits `SduiController`
+**Then** the response is HTTP 200 with `retail.pos.json` content
+**And** the response header includes `ETag` (MD5 of layout content) for client-side cache validation
+
+**Given** tenant context is available via the guard chain
+**When** `SduiController` processes the request
+**Then** it reads `tenant.business_type` from `KernelTenantService` (already available from Epic 1)
+**And** delegates to `SduiService.getLayout(businessType, screen)`
+
+**Given** `SduiService` starts up
+**When** NestJS bootstraps
+**Then** all `.json` files in `apps/backend/src/sdui/layouts/` are loaded into an in-memory `Map<string, object>`
+**And** the map key is `{business_type}.{screen}` (e.g., `retail.pos`)
+
+**Given** an unknown combination is requested
+**When** `SduiService.getLayout` is called
+**Then** it throws `NotFoundException` with message `"Layout introuvable pour ce type de commerce"`
+
+**Files to create:**
+- `apps/backend/src/sdui/sdui.module.ts`
+- `apps/backend/src/sdui/sdui.controller.ts`
+- `apps/backend/src/sdui/sdui.service.ts`
+- `apps/backend/src/sdui/layouts/retail.pos.json`
+- `apps/backend/src/sdui/layouts/retail.dashboard.json`
+- Register `SduiModule` in `apps/backend/src/app.module.ts`
+
+---
+
+### Story 10.4: SDUI Flutter Renderer Engine
+
+As a Flutter developer,
+I want a generic widget renderer that converts a parsed `SduiLayout` into a Flutter widget tree,
+So that any screen can be driven by server-provided JSON without hardcoded widget hierarchies.
+
+**Acceptance Criteria:**
+
+**Given** a `SduiLayout` object is parsed from JSON
+**When** `SduiRenderer(layout: layout).build(context)` is called
+**Then** it produces the correct `Widget` hierarchy for the top-level layout type
+
+**Given** the `SduiWidgetRegistry` is initialized at app startup
+**When** the renderer encounters `"type": "product_grid"`
+**Then** it renders the registered `ProductGrid` widget with props from JSON
+**And** for `"type": "cart_panel"` → `CartPanel` widget
+**And** for `"type": "split_view"` → `LayoutBuilder` with `kCompact`/`kMedium` breakpoints
+**And** for `"type": "stacked_with_fab_cart"` → full-width product grid + floating cart badge
+
+**Given** `sduiLayoutProvider(screen: 'pos')` is defined
+**When** a screen watches this provider
+**Then** it first returns a cached layout from `SharedPreferences` (key: `sdui_layout_pos`, TTL: 1 hour)
+**And** refetches in background after TTL expires (stale-while-revalidate)
+**And** if fetch fails (offline), cached layout is used without throwing
+
+**Given** an unknown widget type is encountered
+**When** the renderer processes it
+**Then** it renders `SizedBox.shrink()` — fails silently, logs in debug mode
+
+**Files to create:**
+- `lib/core/sdui/sdui_layout.dart` — models: `SduiLayout`, `SduiPanel`, `SduiAction`
+- `lib/core/sdui/sdui_renderer.dart` — `SduiRenderer` StatelessWidget
+- `lib/core/sdui/sdui_widget_registry.dart` — type-string to factory function map
+- `lib/core/sdui/sdui_providers.dart` — `sduiLayoutProvider(screen)` FutureProvider
+- `lib/core/services/sdui_service.dart` — HTTP GET + SharedPreferences cache
+
+---
+
+### Story 10.5: Retail POS Layout — Premier Layout SDUI
+
+As a developer,
+I want the Retail POS screen to use the SDUI renderer for its top-level layout,
+So that the POS is the first validated proof-of-concept for the full SDUI stack (10.0 → 10.4).
+
+**Acceptance Criteria:**
+
+**Given** the SDUI engine from Story 10.4 is in place
+**When** `PosScreen` is updated
+**Then** it watches `sduiLayoutProvider(screen: 'pos')`
+**And** delegates layout assembly to `SduiRenderer(layout: layout)`
+**And** `ProductGrid` and `CartPanel` are rendered by the SDUI engine via the widget registry
+
+**Given** the `retail.pos.json` layout specifies `horizontal_split` for medium/expanded
+**When** the POS renders on a tablet (width ≥ 600px)
+**Then** it shows product grid (left, flex 2) and cart panel (right, flex 1) — matching current behavior
+
+**Given** the layout specifies `stacked_with_fab_cart` for compact
+**When** the POS renders on a phone (width < 600px)
+**Then** product grid occupies full width (2 columns)
+**And** a floating cart badge button (bottom-right, 56dp) shows item count
+**And** tapping navigates to the full-screen cart view
+
+**Given** the device is offline at POS startup
+**When** the SDUI layout cannot be fetched
+**Then** the POS falls back to the hardcoded default layout (current `Row` split)
+**And** the fallback is defined as a constant `SduiLayout.retailPosDefault()` in `sdui_layout.dart`
+
+**Given** the layout JSON changes on the backend (e.g., `left_flex: 3`)
+**When** the Flutter app restarts (or cache TTL expires)
+**Then** the new layout is applied without a new APK release
+
+**Notes:**
+- `ProductGrid` and `CartPanel` widget internals are NOT changed in this story
+- Only `PosScreen`'s layout-assembly code is replaced with SDUI rendering
+- Validate on tablet emulator AND phone emulator before marking done

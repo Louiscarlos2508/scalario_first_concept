@@ -7,6 +7,7 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/pos/presentation/widgets/customer_selection_dialog.dart';
 import 'package:frontend/features/pos/presentation/widgets/parked_carts_dialog.dart';
 import 'package:frontend/features/pos/presentation/widgets/discount_dialog.dart';
+import 'package:frontend/features/pos/presentation/widgets/receipt_dialog.dart';
 
 class CartPanel extends ConsumerWidget {
   const CartPanel({super.key});

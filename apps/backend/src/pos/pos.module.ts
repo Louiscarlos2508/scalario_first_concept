@@ -6,8 +6,13 @@ import { PosSessionService } from './pos-session.service';
 import { PosSessionController } from './pos-session.controller';
 import { CustomerService } from './customer.service';
 import { CustomerController } from './customer.controller';
+import { CatalogModule } from '../shared/catalog/catalog.module';
+import { ContactsModule } from '../shared/contacts/contacts.module';
+import { TransactionsModule } from '../shared/transactions/transactions.module';
+import { InventoryModule } from '../shared/inventory/inventory.module';
 
 @Module({
+    imports: [CatalogModule.register(), ContactsModule.register(), TransactionsModule.register(), InventoryModule.register()],
     providers: [PosService, PosSessionService, CustomerService],
     controllers: [PosController, PosSessionController, CustomerController],
 })

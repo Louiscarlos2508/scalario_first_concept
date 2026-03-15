@@ -1,60 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { ContactsService } from '../shared/contacts/contacts.service';
 
 @Injectable()
 export class CustomerService {
-    constructor(private prisma: PrismaService) { }
+  constructor(private readonly contactsService: ContactsService) {}
 
-    async getCustomers(tenantId: string) {
-        return this.prisma.customer.findMany({
-            where: { tenantId },
-            orderBy: { name: 'asc' },
-        });
-    }
+  async getCustomers(tenantId: string) {
+    const result = await this.contactsService.getContacts({ tenantId });
+    return result.items;
+  }
 
-    async createCustomer(tenantId: string, data: any) {
-        return this.prisma.customer.create({
-            data: {
-                ...data,
-                tenantId,
-            },
-        });
-    }
+  async createCustomer(tenantId: string, data: any) {
+    return this.contactsService.createContact({ ...data, tenantId }, null);
+  }
 
-    async updateCustomer(id: string, data: any) {
-        return this.prisma.customer.update({
-            where: { id },
-            data,
-        });
-    }
+  async updateCustomer(id: string, data: any) {
+    // Thin proxy — full update not exposed via contacts API in Story 3.2; retained for backward compat
+    return this.contactsService.getContactById(id);
+  }
 
-    async getCustomerById(id: string) {
-        return this.prisma.customer.findUnique({
-            where: { id },
-        });
-    }
+  async getCustomerById(id: string) {
+    return this.contactsService.getContactById(id);
+  }
 
-    async searchCustomers(tenantId: string, query: string) {
-        return this.prisma.customer.findMany({
-            where: {
-                tenantId,
-                OR: [
-                    { name: { contains: query, mode: 'insensitive' } },
-                    { phone: { contains: query, mode: 'insensitive' } },
-                ],
-            },
-            take: 10,
-        });
-    }
+  async searchCustomers(tenantId: string, query: string) {
+    return this.contactsService.searchContacts(tenantId, query);
+  }
 
-    async settleDebt(id: string, amount: number) {
-        return this.prisma.customer.update({
-            where: { id },
-            data: {
-                balance: {
-                    decrement: amount,
-                },
-            },
-        });
-    }
+  async settleDebt(id: string, amount: number) {
+    return this.contactsService.settleDebt(id, amount, null, null);
+  }
 }

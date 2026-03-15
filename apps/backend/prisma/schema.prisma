@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["kernel", "public"]
+  schemas  = ["kernel", "shared", "retail"]
 }
 
 // ═══════════════════════════════════════════
@@ -21,15 +21,22 @@ model Tenant {
   fiscalJurisdiction    String?              @map("fiscal_jurisdiction")
   status                String               @default("active") // active, suspended, archived
   sessionTimeoutMinutes Int                  @default(480) @map("session_timeout_minutes")
+  orgMode               String               @default("standalone") @map("org_mode") // standalone | integrated | federated (Phase 3)
+
+  /// Phase 2b — Programme Ambassadeurs. FK to tenants.id. Populated when tenant is created via referral.
+  referredBy            String?              @map("referred_by") @db.Uuid
+  /// Phase 3 — Scalario Connect. Tenant is discoverable on the B2B network when true.
+  networkVisible        Boolean              @default(false) @map("network_visible")
+  /// Phase 3 — Scalario Enterprise. FK to tenants.id of the parent Groupe tenant (federated mode only).
+  parentTenantId        String?              @map("parent_tenant_id") @db.Uuid
+
   createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  auditLogs             AuditLog[]
   categories            Category[]
-  customers             Customer[]
-  orders                Order[]
   members               OrganizationMember[]
   posSessions           PosSession[]
-  products              Product[]
-  stockMovements        StockMovement[]
   terminalStatuses      TerminalStatus[]
+  tenantModules         TenantModule[]
 
   @@map("tenants")
   @@schema("kernel")
@@ -43,6 +50,9 @@ model OrganizationMember {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant         Tenant   @relation(fields: [organizationId], references: [id])
   role           Role     @relation(fields: [roleId], references: [id])
+
+  /// Phase 3 — Scalario Enterprise. Department memberships. Empty array in Retail mode.
+  departmentIds  String[] @default([]) @map("department_ids") @db.Uuid
 
   @@unique([organizationId, userId])
   @@map("organization_members")
@@ -84,104 +94,186 @@ model RolePermission {
   @@schema("kernel")
 }
 
-model Category {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String
+model Module {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String         @unique
+  name         String
+  type         String         // "shared" | "vertical"
+  dependencies String[]
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenants      TenantModule[]
+
+  @@map("modules")
+  @@schema("kernel")
+}
+
+model TenantModule {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  moduleId    String    @map("module_id") @db.Uuid
+  status      String    @default("inactive") // "active" | "inactive" | "available_phase3"
+  activatedAt DateTime? @map("activated_at") @db.Timestamptz(6)
+  /// Phase 3 — Scalario Enterprise. Null = tenant-wide activation (Retail). Set = department-scoped activation.
+  departmentId String?  @map("department_id") @db.Uuid
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  module      Module    @relation(fields: [moduleId], references: [id])
+
+  @@unique([tenantId, moduleId])
+  @@map("tenant_modules")
+  @@schema("kernel")
+}
+
+model AuditLog {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId  String    @map("tenant_id") @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  action    String    // "CREATE" | "UPDATE" | "DELETE"
+  entity    String
+  entityId  String    @map("entity_id") @db.Uuid
+  before    Json?
+  after     Json?
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant    Tenant    @relation(fields: [tenantId], references: [id])
-  products  Product[]
+
+  @@index([tenantId, createdAt])
+  @@index([entityId])
+  @@map("audit_log")
+  @@schema("kernel")
+}
+
+// ═══════════════════════════════════════════
+// SHARED SCHEMA
+// ═══════════════════════════════════════════
+
+model CatalogItem {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String
+  price             Decimal   @db.Decimal(10, 2)
+  barcode           String?
+  itemType          String    @default("physical") @map("item_type")
+  // Valid values: 'physical' | 'bookable' | 'service'
+  categoryId        String?   @map("category_id") @db.Uuid
+  category          Category? @relation(fields: [categoryId], references: [id])
+  tenantId          String    @map("tenant_id") @db.Uuid
+  isDeleted         Boolean   @default(false) @map("is_deleted")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  /// Phase 3 — Scalario Connect. Supplier's reference ID for this item on the B2B network.
+  supplierReference String?       @map("supplier_reference") @db.Uuid
+
+  retailProduct     RetailProduct?
+
+  @@index([tenantId, updatedAt])
+  @@index([tenantId, categoryId])
+  @@index([barcode])
+  @@map("catalog_items")
+  @@schema("shared")
+}
+
+model Category {
+  id        String        @id @default(uuid()) @db.Uuid
+  name      String
+  tenantId  String        @map("tenant_id") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  items     CatalogItem[]
 
   @@map("categories")
-  @@schema("public")
+  @@schema("shared")
 }
 
-model Product {
-  id             String          @id @default(uuid()) @db.Uuid
+model Contact {
+  id             String   @id @default(uuid()) @db.Uuid
   name           String
-  price          Decimal         @db.Decimal(10, 2)
-  stockQuantity  Decimal         @default(0) @map("stock_quantity") @db.Decimal(10, 2)
-  tenantId       String          @map("tenant_id") @db.Uuid
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  barcode        String?
-  categoryId     String?         @map("category_id") @db.Uuid
-  category       Category?       @relation(fields: [categoryId], references: [id])
-  tenant         Tenant          @relation(fields: [tenantId], references: [id])
-  isDeleted      Boolean         @default(false) @map("is_deleted")
-  stockMovements StockMovement[]
+  phone          String?
+  email          String?
+  address        String?
+  contactType    String   @default("customer") @map("contact_type")
+  // Valid values: 'customer' | 'supplier' (Phase 3+)
+  balance        Decimal  @default(0) @db.Decimal(10, 2)
+  tenantId       String   @map("tenant_id") @db.Uuid
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("products")
-  @@schema("public")
+  /// Phase 3 — Scalario Connect. Links this contact to a supplier Tenant on the B2B network.
+  linkedTenantId String?  @map("linked_tenant_id") @db.Uuid
+
+  @@index([tenantId])
+  @@index([tenantId, phone])
+  @@index([tenantId, updatedAt])
+  @@map("contacts")
+  @@schema("shared")
 }
 
-model Order {
-  id            String      @id @default(uuid()) @db.Uuid
-  totalAmount   Decimal     @map("total_amount") @db.Decimal(10, 2)
-  itemsJson     Json        @map("items_json")
-  paymentMethod String?     @map("payment_method")
-  tenantId      String      @map("tenant_id") @db.Uuid
-  sessionId     String?     @map("session_id") @db.Uuid
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  customerId    String?     @map("customer_id") @db.Uuid
-  paymentSplits Json?       @map("payment_splits")
-  customer      Customer?   @relation(fields: [customerId], references: [id])
-  session       PosSession? @relation(fields: [sessionId], references: [id])
-  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+model Transaction {
+  id              String   @id @default(uuid()) @db.Uuid
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+  itemsJson       Json     @map("items_json")
+  paymentMethod   String?  @map("payment_method")
+  paymentSplits   Json?    @map("payment_splits")
+  lifecycleType   String   @default("instant") @map("lifecycle_type")
+  // Valid values: 'instant' | 'accumulating' | 'scheduled'
+  transactionType String   @default("sale") @map("transaction_type")
+  // Valid values: 'sale' | 'transfer_inter_tenant' (Phase 3 — Scalario Connect, FR55)
+  customerId      String?  @map("customer_id") @db.Uuid
+  sessionId       String?  @map("session_id") @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@map("orders")
-  @@schema("public")
+  retailSale      RetailSale?
+
+  @@index([tenantId, createdAt])
+  @@index([customerId])
+  @@map("transactions")
+  @@schema("shared")
 }
+
+model InventoryMovement {
+  id            String   @id @default(uuid()) @db.Uuid
+  catalogItemId String?  @map("catalog_item_id") @db.Uuid
+  // Valid values: 'SALE' | 'DELIVERY' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'LOSS' | 'ADJUSTMENT'
+  type          String
+  quantity      Decimal  @db.Decimal(10, 2)
+  reason        String?
+  tenantId      String   @map("tenant_id") @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid
+  referenceId   String?  @map("reference_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@index([catalogItemId])
+  @@index([referenceId])
+  @@map("stock_movements")
+  @@schema("shared")
+}
+
+// ═══════════════════════════════════════════
+// RETAIL SCHEMA
+// ═══════════════════════════════════════════
 
 model PosSession {
-  id                 String    @id @default(uuid()) @db.Uuid
-  openingBalance     Decimal   @map("opening_balance") @db.Decimal(10, 2)
-  closingBalance     Decimal?  @map("closing_balance") @db.Decimal(10, 2)
-  status             String    @default("OPEN")
-  userId             String    @map("user_id") @db.Uuid
-  tenantId           String    @map("tenant_id") @db.Uuid
-  openedAt           DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
-  closedAt           DateTime? @map("closed_at") @db.Timestamptz(6)
-  theoreticalBalance Decimal?  @map("theoretical_balance") @db.Decimal(10, 2)
-  variance           Decimal?  @db.Decimal(10, 2)
-  orders             Order[]
-  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+  id                  String       @id @default(uuid()) @db.Uuid
+  openingBalance      Decimal      @map("opening_balance") @db.Decimal(10, 2)
+  closingBalance      Decimal?     @map("closing_balance") @db.Decimal(10, 2)
+  status              String       @default("OPEN") // OPEN | CLOSED
+  userId              String       @map("user_id") @db.Uuid
+  tenantId            String       @map("tenant_id") @db.Uuid
+  openedAt            DateTime     @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt            DateTime?    @map("closed_at") @db.Timestamptz(6)
+  theoreticalBalance  Decimal?     @map("theoretical_balance") @db.Decimal(10, 2)
+  variance            Decimal?     @db.Decimal(10, 2)
+  varianceExplanation String?      @map("variance_explanation")
+  tenant              Tenant       @relation(fields: [tenantId], references: [id])
+  retailSales         RetailSale[]
 
+  @@index([tenantId, userId, status])
   @@map("pos_sessions")
-  @@schema("public")
+  @@schema("retail")
 }
 
-model StockMovement {
-  id        String   @id @default(uuid()) @db.Uuid
-  productId String   @map("product_id") @db.Uuid
-  quantity  Decimal  @db.Decimal(10, 2)
-  type      String
-  reason    String?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  tenantId  String   @map("tenant_id") @db.Uuid
-  product   Product  @relation(fields: [productId], references: [id])
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-
-  @@map("stock_movements")
-  @@schema("public")
-}
-
-model Customer {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  balance   Decimal  @default(0) @db.Decimal(10, 2)
-  tenantId  String   @map("tenant_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  orders    Order[]
-
-  @@map("customers")
-  @@schema("public")
-}
 
 model TerminalStatus {
   id       String   @id @default(uuid()) @db.Uuid
@@ -192,5 +284,35 @@ model TerminalStatus {
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("terminal_statuses")
-  @@schema("public")
+  @@schema("retail")
+}
+
+model RetailProduct {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @unique @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  stockQuantity Decimal     @default(0) @map("stock_quantity") @db.Decimal(10, 2)
+  weightUnit    String?     @map("weight_unit")
+  minStockLevel Decimal?    @map("min_stock_level") @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("retail_products")
+  @@schema("retail")
+}
+
+model RetailSale {
+  id            String      @id @default(uuid()) @db.Uuid
+  transactionId String      @unique @map("transaction_id") @db.Uuid
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  sessionId     String?     @map("session_id") @db.Uuid
+  session       PosSession? @relation(fields: [sessionId], references: [id])
+  receiptNumber String      @map("receipt_number")
+  cashierId     String      @map("cashier_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([sessionId])
+  @@index([cashierId])
+  @@map("retail_sales")
+  @@schema("retail")
 }

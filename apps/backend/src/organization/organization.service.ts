@@ -1,12 +1,16 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../kernel/auth/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../kernel/audit/audit-log.service';
+import { ModuleRegistryService } from '../kernel/modules/module-registry.service';
 
 @Injectable()
 export class OrganizationService {
   constructor(
     private readonly supabaseService: SupabaseService,
     private readonly prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+    private readonly moduleRegistryService: ModuleRegistryService,
   ) {}
 
   async createOrganization(name: string, userId: string) {
@@ -45,6 +49,20 @@ export class OrganizationService {
       },
     });
 
+    // 4. Audit log: record tenant creation
+    await this.auditLogService.log({
+      tenantId: tenant.id,
+      userId,
+      action: 'CREATE',
+      entity: 'Tenant',
+      entityId: tenant.id,
+      before: null,
+      after: { id: tenant.id, name: tenant.name },
+    });
+
+    // 5. Auto-activate shared + retail modules for the new tenant
+    await this.moduleRegistryService.activateDefaultModulesForTenant(tenant.id);
+
     return tenant;
   }
 
@@ -63,12 +81,25 @@ export class OrganizationService {
       );
     }
 
-    return this.prisma.organizationMember.create({
+    const member = await this.prisma.organizationMember.create({
       data: {
         organizationId: tenantId,
         userId,
         roleId: role.id,
       },
     });
+
+    // Audit log: record member addition
+    await this.auditLogService.log({
+      tenantId,
+      userId,
+      action: 'CREATE',
+      entity: 'OrganizationMember',
+      entityId: member.id,
+      before: null,
+      after: { id: member.id, userId, roleId: role.id },
+    });
+
+    return member;
   }
 }

@@ -4,7 +4,9 @@ import { PosService } from './pos.service';
 
 @Controller('pos')
 export class PosController {
-    constructor(private readonly posService: PosService) { }
+    constructor(
+        private readonly posService: PosService,
+    ) { }
 
     @Get('products')
     async getProducts(
@@ -28,11 +30,6 @@ export class PosController {
         return this.posService.deleteProduct(id);
     }
 
-    @Post('orders')
-    async syncOrder(@Body() orderData: any) {
-        return this.posService.syncOrder(orderData);
-    }
-
     @Post('products/sync')
     async syncProduct(@Body() productData: any) {
         return this.posService.syncProduct(productData);
@@ -46,33 +43,6 @@ export class PosController {
             adjustment.type,
             adjustment.reason
         );
-    }
-
-    @Get('stats')
-    async getStats(
-        @Query('start') start?: string,
-        @Query('end') end?: string,
-        @Query('tenantId') tenantId?: string
-    ) {
-        return this.posService.getSalesStats(start, end, tenantId);
-    }
-
-    @Get('stock-movements')
-    async getStockMovements(
-        @Query('start') start?: string,
-        @Query('end') end?: string,
-        @Query('tenantId') tenantId?: string
-    ) {
-        return this.posService.getStockMovements(start, end, tenantId);
-    }
-
-    @Get('reports/sales')
-    async getSalesReport(
-        @Query('start') start?: string,
-        @Query('end') end?: string,
-        @Query('tenantId') tenantId?: string
-    ) {
-        return this.posService.getSalesReport(start, end, tenantId);
     }
 
     @Post('heartbeat')
@@ -91,8 +61,8 @@ export class PosController {
     }
 
     @Get('categories')
-    async getCategories(@Query('tenantId') tenantId: string) {
-        return this.posService.getCategories(tenantId);
+    async getCategories(@Query('tenantId') tenantId: string, @Query('since') since?: string) {
+        return this.posService.getCategories(tenantId, since);
     }
 
     @Post('categories')
@@ -108,8 +78,8 @@ export class PosController {
     // --- Customer Management ---
 
     @Get('customers')
-    async getCustomers(@Query('tenantId') tenantId: string) {
-        return this.posService.getCustomers(tenantId);
+    async getCustomers(@Query('tenantId') tenantId: string, @Query('since') since?: string) {
+        return this.posService.getCustomers(tenantId, undefined, since);
     }
 
     @Get('customers/search')

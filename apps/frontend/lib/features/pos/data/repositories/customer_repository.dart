@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/core/constants/api_constants.dart';
 import 'package:isar/isar.dart';
 
 class CustomerRepository {
   final IsarService _isarService;
-  static const String _baseUrl = 'http://127.0.0.1:3000';
 
   CustomerRepository(this._isarService);
 
@@ -17,7 +17,7 @@ class CustomerRepository {
   Future<List<Customer>> searchRemoteCustomers(String tenantId, String query) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/pos/customers/search?tenantId=$tenantId&q=$query'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/customers/search?tenantId=$tenantId&q=$query'),
       );
 
       if (response.statusCode == 200) {
@@ -34,7 +34,7 @@ class CustomerRepository {
   Future<Customer> createCustomer(String tenantId, Map<String, dynamic> data) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/pos/customers'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/customers'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'tenantId': tenantId,
@@ -59,7 +59,7 @@ class CustomerRepository {
   Future<void> syncCustomers(String tenantId) async {
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/pos/customers?tenantId=$tenantId'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/customers?tenantId=$tenantId'),
       );
 
       if (response.statusCode == 200) {
@@ -75,7 +75,7 @@ class CustomerRepository {
   Future<void> settleDebt(String customerId, double amount) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/pos/customers/$customerId/settle'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/customers/$customerId/settle'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'amount': amount}),
       );

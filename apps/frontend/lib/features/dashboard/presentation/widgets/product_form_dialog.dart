@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../pos/data/models/product.dart';
-import 'package:frontend/features/pos/data/repositories/category_repository.dart';
+import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
 
 class ProductFormDialog extends ConsumerStatefulWidget {
   final Product? product;
@@ -122,7 +122,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                         ),
                         ...categories.map(
                           (c) => DropdownMenuItem(
-                            value: c.id,
+                            value: c.remoteId,
                             child: Text(c.name),
                           ),
                         ),

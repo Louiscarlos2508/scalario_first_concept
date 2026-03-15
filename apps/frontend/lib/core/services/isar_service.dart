@@ -23,6 +23,8 @@ class IsarService {
   Future<Isar> initDb() async {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
+      // WAL: Isar 3.x uses WAL by default — relaxedDurability omitted intentionally.
+      // Committed writes survive unexpected process termination (AC1, Story 8.4).
       return await Isar.open(
         [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema, SyncMetadataSchema, CategorySchema],
         directory: dir.path,

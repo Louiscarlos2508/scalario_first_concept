@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/core/auth/auth_state.dart';
 import '../widgets/settle_debt_dialog.dart';
 
 final customerSearchProvider = StateProvider<String>((ref) => '');

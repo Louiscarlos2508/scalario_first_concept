@@ -3,6 +3,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrganizationService } from './organization.service';
 import { SupabaseService } from '../kernel/auth/supabase.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditLogService } from '../kernel/audit/audit-log.service';
+import { ModuleRegistryService } from '../kernel/modules/module-registry.service';
 
 describe('OrganizationService', () => {
   let service: OrganizationService;
@@ -12,14 +14,14 @@ describe('OrganizationService', () => {
   const mockRoleId  = 'role-owner-uuid';
 
   const mockSupabaseClient = {
-    from: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
+    from: jest.fn(),
+    insert: jest.fn(),
+    select: jest.fn(),
     single: jest.fn(),
   };
 
   const mockSupabaseService = {
-    getClient: jest.fn().mockReturnValue(mockSupabaseClient),
+    getClient: jest.fn(),
   };
 
   const mockPrismaService = {
@@ -31,12 +33,30 @@ describe('OrganizationService', () => {
     },
   };
 
+  const mockAuditLogService = {
+    log: jest.fn(),
+  };
+
+  const mockModuleRegistryService = {
+    activateDefaultModulesForTenant: jest.fn(),
+  };
+
   beforeEach(async () => {
+    // Restore Supabase fluent chain before each test (resetAllMocks clears mockReturnThis)
+    mockSupabaseClient.from.mockReturnThis();
+    mockSupabaseClient.insert.mockReturnThis();
+    mockSupabaseClient.select.mockReturnThis();
+    mockSupabaseService.getClient.mockReturnValue(mockSupabaseClient);
+    mockAuditLogService.log.mockResolvedValue(undefined);
+    mockModuleRegistryService.activateDefaultModulesForTenant.mockResolvedValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationService,
         { provide: SupabaseService, useValue: mockSupabaseService },
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: AuditLogService, useValue: mockAuditLogService },
+        { provide: ModuleRegistryService, useValue: mockModuleRegistryService },
       ],
     }).compile();
 
@@ -44,7 +64,8 @@ describe('OrganizationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    // resetAllMocks flushes mockReturnValueOnce queue — prevents bleed between tests
+    jest.resetAllMocks();
   });
 
   describe('createOrganization', () => {
@@ -69,6 +90,38 @@ describe('OrganizationService', () => {
       });
     });
 
+    it('should call auditLogService.log with CREATE action after creating organization', async () => {
+      const mockTenant = { id: mockTenantId, name: 'Test Org' };
+      mockSupabaseClient.single.mockResolvedValue({ data: mockTenant, error: null });
+      mockPrismaService.role.findUnique.mockResolvedValue({ id: mockRoleId, name: 'owner', vertical: 'retail' });
+      mockPrismaService.organizationMember.create.mockResolvedValue({});
+
+      await service.createOrganization('Test Org', mockUserId);
+
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        tenantId: mockTenantId,
+        userId: mockUserId,
+        action: 'CREATE',
+        entity: 'Tenant',
+        entityId: mockTenantId,
+        before: null,
+        after: { id: mockTenantId, name: 'Test Org' },
+      });
+    });
+
+    it('should call activateDefaultModulesForTenant with the new tenant id', async () => {
+      const mockTenant = { id: mockTenantId, name: 'Test Org' };
+      mockSupabaseClient.single.mockResolvedValue({ data: mockTenant, error: null });
+      mockPrismaService.role.findUnique.mockResolvedValue({ id: mockRoleId, name: 'owner', vertical: 'retail' });
+      mockPrismaService.organizationMember.create.mockResolvedValue({});
+
+      await service.createOrganization('Test Org', mockUserId);
+
+      expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(
+        mockTenantId,
+      );
+    });
+
     it('should throw InternalServerErrorException when Supabase tenant creation fails', async () => {
       mockSupabaseClient.single.mockResolvedValue({
         data: null,
@@ -79,6 +132,8 @@ describe('OrganizationService', () => {
         InternalServerErrorException,
       );
       expect(mockPrismaService.role.findUnique).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
+      expect(mockModuleRegistryService.activateDefaultModulesForTenant).not.toHaveBeenCalled();
     });
 
     it('should throw InternalServerErrorException when owner role is not seeded', async () => {
@@ -90,6 +145,8 @@ describe('OrganizationService', () => {
         InternalServerErrorException,
       );
       expect(mockPrismaService.organizationMember.create).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
+      expect(mockModuleRegistryService.activateDefaultModulesForTenant).not.toHaveBeenCalled();
     });
   });
 
@@ -115,10 +172,29 @@ describe('OrganizationService', () => {
       });
     });
 
+    it('should call auditLogService.log with CREATE action after adding member', async () => {
+      const mockRole = { id: 'role-manager-uuid', name: 'manager', vertical: 'retail' };
+      const mockMember = { id: 'member-uuid', organizationId: mockTenantId, userId: mockUserId, roleId: mockRole.id };
+      mockPrismaService.role.findUnique.mockResolvedValue(mockRole);
+      mockPrismaService.organizationMember.create.mockResolvedValue(mockMember);
+
+      await service.addMember(mockTenantId, mockUserId, 'manager');
+
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        tenantId: mockTenantId,
+        userId: mockUserId,
+        action: 'CREATE',
+        entity: 'OrganizationMember',
+        entityId: mockMember.id,
+        before: null,
+        after: { id: mockMember.id, userId: mockUserId, roleId: mockRole.id },
+      });
+    });
+
     it('should add a commercial to a tenant', async () => {
       const mockRole = { id: 'role-commercial-uuid', name: 'commercial', vertical: 'retail' };
       mockPrismaService.role.findUnique.mockResolvedValue(mockRole);
-      mockPrismaService.organizationMember.create.mockResolvedValue({});
+      mockPrismaService.organizationMember.create.mockResolvedValue({ id: 'member-2' });
 
       await service.addMember(mockTenantId, mockUserId, 'commercial');
 
@@ -134,6 +210,7 @@ describe('OrganizationService', () => {
         InternalServerErrorException,
       );
       expect(mockPrismaService.organizationMember.create).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:isar/isar.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/category.dart';
+import 'package:frontend/core/constants/api_constants.dart';
 
 class CategoryRepository {
   final IsarService _isarService;
-  static const String _baseUrl = 'http://127.0.0.1:3000';
 
   CategoryRepository(this._isarService);
 
@@ -24,7 +24,7 @@ class CategoryRepository {
     // For now, let's implement basic CREATE via API + Save Local
     
     final response = await http.post(
-      Uri.parse('$_baseUrl/pos/categories'),
+      Uri.parse('${ApiConstants.baseUrl}/pos/categories'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'name': name,
@@ -44,7 +44,7 @@ class CategoryRepository {
   }
 
   Future<void> deleteCategory(String remoteId) async {
-    final response = await http.delete(Uri.parse('$_baseUrl/pos/categories/$remoteId'));
+    final response = await http.delete(Uri.parse('${ApiConstants.baseUrl}/pos/categories/$remoteId'));
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('Failed to delete category');
     }

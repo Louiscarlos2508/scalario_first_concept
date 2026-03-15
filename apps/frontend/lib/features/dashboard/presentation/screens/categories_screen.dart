@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:frontend/features/pos/data/repositories/category_repository.dart';
+import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/pos/data/models/category.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 
 class CategoriesScreen extends ConsumerWidget {
@@ -110,7 +111,7 @@ class CategoriesScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               try {
-                await ref.read(categoryRepositoryProvider).deleteCategory(category.id);
+                await ref.read(categoryRepositoryProvider).deleteCategory(category.remoteId);
                 ref.refresh(categoriesProvider);
                 Navigator.pop(context);
               } catch (e) {

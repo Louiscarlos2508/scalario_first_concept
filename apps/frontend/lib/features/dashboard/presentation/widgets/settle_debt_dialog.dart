@@ -37,7 +37,7 @@ class _SettleDebtDialogState extends ConsumerState<SettleDebtDialog> {
 
     try {
       final repo = ref.read(customerRepositoryProvider);
-      await repo.settleDebt(widget.customer.id, amount);
+      await repo.settleDebt(widget.customer.remoteId!, amount);
 
       if (mounted) {
         ref.refresh(dashboardCustomersProvider);

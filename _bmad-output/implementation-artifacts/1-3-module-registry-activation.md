@@ -3,7 +3,7 @@
 ## Metadata
 - **Epic:** Epic 1 — Kernel: Identity, Tenancy & Access Control
 - **Story ID:** 1-3-module-registry-activation
-- **Status:** ready-for-dev
+- **Status:** review
 - **Priority:** High
 - **Depends on:** Story 1.2 (RBAC — `OrganizationMember.roleId` FK, guard chain foundation)
 
@@ -89,31 +89,31 @@ No `tenant_modules` row is required for Phase 3 modules at seed time. Their exis
 
 ### Phase 1 — Schema & Migration
 
-- [ ] **1.1** Add `Module` and `TenantModule` models to `apps/backend/prisma/schema.prisma`. Add `orgMode` field to `Tenant`.
-- [ ] **1.2** Create migration file `apps/backend/prisma/migrations/20260315010000_module_registry/migration.sql` with:
+- [x] **1.1** Add `Module` and `TenantModule` models to `apps/backend/prisma/schema.prisma`. Add `orgMode` field to `Tenant`.
+- [x] **1.2** Create migration file `apps/backend/prisma/migrations/20260315010000_module_registry/migration.sql` with:
   - `CREATE TABLE kernel.modules (...)`
   - `CREATE TABLE kernel.tenant_modules (...)`
   - `ALTER TABLE kernel.tenants ADD COLUMN org_mode VARCHAR NOT NULL DEFAULT 'standalone'`
 
 ### Phase 2 — Seed
 
-- [ ] **2.1** Add `seedModules()` function to `apps/backend/prisma/seed.ts`. Seed 9 modules (6 shared, 1 retail, 2 phase3).
+- [x] **2.1** Add `seedModules()` function to `apps/backend/prisma/seed.ts`. Seed 9 modules (6 shared, 1 retail, 2 phase3).
 
 ### Phase 3 — NestJS Module Registry
 
-- [ ] **3.1** Create `apps/backend/src/kernel/modules/module.decorator.ts` — `REQUIRES_MODULE_KEY` constant + `@RequiresModule()` decorator.
-- [ ] **3.2** Create `apps/backend/src/kernel/modules/module-registry.service.ts` — `ModuleRegistryService` with `isModuleActive(tenantId, moduleCode)`.
-- [ ] **3.3** Create `apps/backend/src/kernel/modules/module.guard.ts` — `ModuleGuard`.
-- [ ] **3.4** Create `apps/backend/src/kernel/modules/modules.module.ts` — `ModulesModule` providing and exporting `ModuleRegistryService` and `ModuleGuard`.
+- [x] **3.1** Create `apps/backend/src/kernel/modules/module.decorator.ts` — `REQUIRES_MODULE_KEY` constant + `@RequiresModule()` decorator.
+- [x] **3.2** Create `apps/backend/src/kernel/modules/module-registry.service.ts` — `ModuleRegistryService` with `isModuleActive(tenantId, moduleCode)`.
+- [x] **3.3** Create `apps/backend/src/kernel/modules/module.guard.ts` — `ModuleGuard`.
+- [x] **3.4** Create `apps/backend/src/kernel/modules/modules.module.ts` — `ModulesModule` providing and exporting `ModuleRegistryService` and `ModuleGuard`.
 
 ### Phase 4 — Kernel Integration
 
-- [ ] **4.1** Update `apps/backend/src/kernel/kernel.module.ts` — import `ModulesModule`, insert `ModuleGuard` as `APP_GUARD` between `TenantGuard` and `RolesGuard`.
+- [x] **4.1** Update `apps/backend/src/kernel/kernel.module.ts` — import `ModulesModule`, insert `ModuleGuard` as `APP_GUARD` between `TenantGuard` and `RolesGuard`.
 
 ### Phase 5 — Tests
 
-- [ ] **5.1** Create `apps/backend/src/kernel/modules/module-registry.service.spec.ts`.
-- [ ] **5.2** Create `apps/backend/src/kernel/modules/module.guard.spec.ts`.
+- [x] **5.1** Create `apps/backend/src/kernel/modules/module-registry.service.spec.ts`.
+- [x] **5.2** Create `apps/backend/src/kernel/modules/module.guard.spec.ts`.
 
 ---
 
@@ -603,10 +603,45 @@ describe('ModuleGuard', () => {
 
 ## Definition of Done
 
-- [ ] All schema changes reflected in `schema.prisma` and migration SQL created
-- [ ] `seedModules()` called from main seed function, 9 modules seeded
-- [ ] `ModuleGuard`, `ModuleRegistryService`, `RequiresModule` decorator created
-- [ ] Guard chain in `KernelModule`: Auth → Tenant → **Module** → Roles
-- [ ] All unit tests pass (`module.guard.spec.ts`, `module-registry.service.spec.ts`)
-- [ ] No `jest.clearAllMocks()` — `jest.resetAllMocks()` used in all `afterEach`
-- [ ] `prisma migrate deploy` verified (not `migrate dev`)
+- [x] All schema changes reflected in `schema.prisma` and migration SQL created
+- [x] `seedModules()` called from main seed function, 9 modules seeded
+- [x] `ModuleGuard`, `ModuleRegistryService`, `RequiresModule` decorator created
+- [x] Guard chain in `KernelModule`: Auth → Tenant → **Module** → Roles
+- [x] All unit tests pass (`module.guard.spec.ts`, `module-registry.service.spec.ts`)
+- [x] No `jest.clearAllMocks()` — `jest.resetAllMocks()` used in all `afterEach`
+- [x] `prisma migrate deploy` verified (not `migrate dev`)
+
+---
+
+## File List
+
+| Action | Path |
+|--------|------|
+| Modified | `apps/backend/prisma/schema.prisma` |
+| Created | `apps/backend/prisma/migrations/20260315010000_module_registry/migration.sql` |
+| Modified | `apps/backend/prisma/seed.ts` |
+| Created | `apps/backend/src/kernel/modules/module.decorator.ts` |
+| Created | `apps/backend/src/kernel/modules/module-registry.service.ts` |
+| Created | `apps/backend/src/kernel/modules/module.guard.ts` |
+| Created | `apps/backend/src/kernel/modules/modules.module.ts` |
+| Modified | `apps/backend/src/kernel/kernel.module.ts` |
+| Created | `apps/backend/src/kernel/modules/module-registry.service.spec.ts` |
+| Created | `apps/backend/src/kernel/modules/module.guard.spec.ts` |
+
+---
+
+## Dev Agent Record
+
+### Implementation Notes
+
+- `Module` and `TenantModule` Prisma models added to `kernel` schema; `orgMode String @default("standalone")` added to `Tenant`.
+- Migration uses `NOT NULL DEFAULT 'standalone'` on `org_mode` — PostgreSQL backfills existing rows automatically, no separate UPDATE needed.
+- `ModuleRegistryService.isModuleActive()` uses `findFirst` with nested `module: { code }` filter (not `findUnique` on compound key) because the filter spans a relation join — this is the correct Prisma pattern for filtering across related model fields.
+- `ModulesModule` does NOT import `PrismaModule` — `PrismaModule` is `@Global()` so `PrismaService` is available everywhere.
+- Guard chain in `KernelModule`: `AuthGuard → TenantGuard → ModuleGuard → RolesGuard` (declaration order = execution order for `APP_GUARD`).
+- All tests use `jest.resetAllMocks()` in `afterEach` to prevent `mockReturnValueOnce` queue bleed.
+- 12 new tests added (5 guard + 5 service + 2 additional edge cases); 0 regressions — full suite: 68/68 pass.
+
+### Change Log
+
+- 2026-03-15: Implemented Story 1.3 — Module Registry & Activation. Added Module/TenantModule schema, migration, seed (9 modules), ModuleGuard, ModuleRegistryService, RequiresModule decorator, ModulesModule, updated KernelModule guard chain. 12 new tests, 68 total passing.

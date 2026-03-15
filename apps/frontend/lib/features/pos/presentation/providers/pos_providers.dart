@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/core/services/retention_service.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
@@ -8,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:frontend/core/services/barcode_scanner_service.dart';
 import 'package:frontend/features/pos/data/models/product.dart';
 import 'package:frontend/features/pos/data/repositories/category_repository.dart';
+import 'package:frontend/features/pos/data/models/category.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/features/pos/data/repositories/order_repository.dart';
 import 'package:frontend/features/pos/data/repositories/product_repository.dart';
@@ -27,6 +29,11 @@ import 'package:frontend/features/pos/presentation/state/parked_carts_notifier.d
 // Services & Repositories
 final isarServiceProvider = Provider<IsarService>((ref) {
   return IsarService();
+});
+
+final retentionServiceProvider = Provider<RetentionService>((ref) {
+  final isarService = ref.watch(isarServiceProvider);
+  return RetentionService(isarService);
 });
 
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
@@ -62,19 +69,7 @@ final sessionProvider =
     });
 
 final syncServiceProvider = Provider<SyncService>((ref) {
-  final orderRepo = ref.watch(orderRepositoryProvider);
-  final productRepo = ref.watch(productRepositoryProvider);
-  final sessionRepo = ref.watch(sessionRepositoryProvider);
-  final customerRepo = ref.watch(customerRepositoryProvider);
-  final categoryRepo = ref.watch(categoryRepositoryProvider);
-
-  return SyncService(
-    orderRepo,
-    productRepo,
-    sessionRepo,
-    customerRepo,
-    categoryRepo,
-  );
+  return SyncService();
 });
 
 final syncStatusProvider = StreamProvider<SyncUiStatus>((ref) {
@@ -120,6 +115,13 @@ final checkoutControllerProvider =
     });
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
+
+final categoriesProvider = FutureProvider<List<Category>>((ref) async {
+  final repo = ref.watch(categoryRepositoryProvider);
+  final tenantId = ref.watch(activeTenantProvider);
+  if (tenantId == null) return [];
+  return repo.getCategories(tenantId);
+});
 
 final productListProvider = FutureProvider<List<Product>>((ref) async {
   final repo = ref.watch(productRepositoryProvider);

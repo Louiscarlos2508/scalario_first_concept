@@ -29,9 +29,11 @@ class ScalarioApp extends ConsumerWidget {
 
     // Initialize Sync, Realtime & Barcode Services
     try {
-      ref.watch(syncServiceProvider).startSync();
+      ref.watch(syncServiceProvider).startSync(ref.read(activeTenantProvider));
       ref.watch(realtimeServiceProvider).init();
       ref.watch(barcodeScannerServiceProvider).init();
+      // Purge old synced data on app start — fire-and-forget (60-day retention).
+      ref.read(retentionServiceProvider).purgeOldData();
     } catch (e) {
       print('[Main] Error initializing services: $e');
     }

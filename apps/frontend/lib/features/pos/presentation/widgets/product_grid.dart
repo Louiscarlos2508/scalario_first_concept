@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/features/pos/data/repositories/category_repository.dart';
 
 class ProductGrid extends ConsumerWidget {
   const ProductGrid({super.key});
@@ -37,9 +36,9 @@ class ProductGrid extends ConsumerWidget {
                       padding: const EdgeInsets.only(right: 8.0),
                       child: FilterChip(
                         label: Text(c.name),
-                        selected: selectedCategoryId == c.id,
+                        selected: selectedCategoryId == c.remoteId,
                         onSelected: (selected) {
-                          ref.read(selectedCategoryIdProvider.notifier).state = selected ? c.id : null;
+                          ref.read(selectedCategoryIdProvider.notifier).state = selected ? c.remoteId : null;
                         },
                       ),
                     )),

@@ -3,10 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:isar/isar.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/pos/data/models/product.dart';
+import 'package:frontend/core/constants/api_constants.dart';
+import 'package:frontend/core/utils/conflict_resolution.dart';
 
 class ProductRepository {
   final IsarService _isarService;
-  static const String _baseUrl = 'http://127.0.0.1:3000';
 
   ProductRepository(this._isarService);
 
@@ -56,9 +57,7 @@ class ProductRepository {
           }
 
           // Conflict Resolution: Last-Write-Wins from Cloud
-          if (product.lastUpdated != null &&
-              existing.lastUpdated != null &&
-              product.lastUpdated!.isBefore(existing.lastUpdated!)) {
+          if (!shouldOverwrite(existing.lastUpdated, product.lastUpdated)) {
             print('[ProductRepo] Skipping stale update for ${product.name}');
             continue;
           }
@@ -94,7 +93,7 @@ class ProductRepository {
   Future<void> syncProduct(Product product) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/pos/products/sync'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/products/sync'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(product.toJson()),
       );
@@ -153,7 +152,7 @@ class ProductRepository {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/pos/products/adjust-stock'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/products/adjust-stock'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'productId': productId,
@@ -195,12 +194,12 @@ class ProductRepository {
     String? tenantId,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/pos/products').replace(
+      final uri = Uri.parse('${ApiConstants.baseUrl}/pos/products').replace(
         queryParameters: {
           if (query != null && query.isNotEmpty) 'q': query,
           'page': page.toString(),
           'limit': limit.toString(),
-          'tenantId': ?tenantId,
+          if (tenantId != null) 'tenantId': tenantId,
         },
       );
 
@@ -230,7 +229,7 @@ class ProductRepository {
   Future<void> deleteProductRemote(String remoteId) async {
     try {
       final response = await http.delete(
-        Uri.parse('$_baseUrl/pos/products/$remoteId'),
+        Uri.parse('${ApiConstants.baseUrl}/pos/products/$remoteId'),
       );
 
       if (response.statusCode != 200 && response.statusCode != 204) {
@@ -253,7 +252,7 @@ class ProductRepository {
   ) async {
     try {
       final uri = Uri.parse(
-        '$_baseUrl/pos/stock-across-branches',
+        '${ApiConstants.baseUrl}/pos/stock-across-branches',
       ).replace(queryParameters: {'barcode': barcode, 'userId': userId});
       final response = await http.get(uri);
 

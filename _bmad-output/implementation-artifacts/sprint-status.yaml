@@ -41,73 +41,78 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   # Epic 1: Kernel — Identity, Tenancy & Access Control
-  epic-1: in-progress
+  epic-1: done
   1-1-kernel-schema-tenant-management-authentication: done
   1-2-role-based-access-control: done
-  1-3-module-registry-activation: ready-for-dev
-  1-4-event-bus-audit-trail: backlog
-  1-5-guard-chain-integration-backward-compatibility: backlog
-  1-6-phase3-db-anticipation-fields: backlog
+  1-3-module-registry-activation: done
+  1-4-event-bus-audit-trail: done
+  1-5-guard-chain-integration-backward-compatibility: done
+  1-6-phase3-db-anticipation-fields: done
   epic-1-retrospective: optional
 
   # Epic 2: Shared Catalog Module
-  epic-2: backlog
-  2-1-shared-schema-catalogitem-entity: backlog
-  2-2-category-management-catalog-api: backlog
-  2-3-catalog-sync-adapter-delta-pull: backlog
+  epic-2: done
+  2-1-shared-schema-catalogitem-entity: done
+  2-2-category-management-catalog-api: done
+  2-3-catalog-sync-adapter-delta-pull: done
   epic-2-retrospective: optional
 
   # Epic 3: Shared Contacts Module
-  epic-3: backlog
-  3-1-contact-entity-migration: backlog
-  3-2-contacts-api-credit-management: backlog
+  epic-3: done
+  3-1-contact-entity-migration: done
+  3-2-contacts-api-credit-management: done
   epic-3-retrospective: optional
 
   # Epic 4: Shared Transactions & Payments Module
-  epic-4: backlog
-  4-1-transaction-entity-payments-service: backlog
-  4-2-transaction-api-local-first-recording: backlog
+  epic-4: done
+  4-1-transaction-entity-payments-service: done
+  4-2-transaction-api-local-first-recording: done
   epic-4-retrospective: optional
 
   # Epic 5: Shared Inventory Module
-  epic-5: backlog
-  5-1-inventory-schema-stock-movement-types: backlog
-  5-2-supplier-delivery-reception: backlog
-  5-3-stock-transfers-chain-of-custody: backlog
-  5-4-loss-declaration-partial-inventory: backlog
+  epic-5: done
+  5-1-inventory-schema-stock-movement-types: done
+  5-2-supplier-delivery-reception: done
+  5-3-stock-transfers-chain-of-custody: done
+  5-4-loss-declaration-partial-inventory: done
   epic-5-retrospective: optional
 
   # Epic 6: Retail Vertical — POS Sessions & Extensions
-  epic-6: backlog
-  6-1-retail-schema-product-extensions: backlog
-  6-2-retailsale-extensions-session-scoping: backlog
-  6-3-cash-session-management: backlog
-  6-4-retail-module-registration-pos-orchestration: backlog
+  epic-6: done
+  6-1-retail-schema-product-extensions: done
+  6-2-retailsale-extensions-session-scoping: done
+  6-3-cash-session-management: done
+  6-4-retail-module-registration-pos-orchestration: done
   epic-6-retrospective: optional
 
   # Epic 7: Reporting & Business Intelligence
-  epic-7: backlog
-  7-1-daily-consolidation-reports: backlog
-  7-2-owner-dashboard-analytics: backlog
+  epic-7: done
+  7-1-daily-consolidation-reports: done
+  7-2-owner-dashboard-analytics: done
   epic-7-retrospective: optional
 
   # Epic 8: Frontend Sync & Offline Resilience
-  epic-8: backlog
-  8-1-repository-api-url-migration: backlog
-  8-2-isar-model-alignment-sync-adapters: backlog
-  8-3-delta-sync-outbox-conflict-resolution: backlog
-  8-4-crash-recovery-retention-connectivity-indicator: backlog
+  epic-8: done
+  8-1-repository-api-url-migration: done
+  8-2-isar-model-alignment-sync-adapters: done
+  8-3-delta-sync-outbox-conflict-resolution: done
+  8-4-crash-recovery-retention-connectivity-indicator: done
   epic-8-retrospective: optional
 
   # Epic 9: Data Migration & Client Cutover
-  epic-9: backlog
-  9-1-migration-scripts-dry-run-validation: backlog
-  9-2-production-cutover-cleanup: backlog
+  epic-9: done
+  9-1-migration-scripts-dry-run-validation: done
+  9-2-production-cutover-cleanup: done
   epic-9-retrospective: optional
 
-  # Epic 10: Server-Driven UI (Phase 2a — after Epic 6)
-  # Stories to be defined via create-story workflow
-  epic-10: backlog
+  # Epic 10: SDUI Foundation & Engine (Phase 1 — après Epics 1–6)
+  epic-10: in-progress
+  10-0-fix-compile-errors: done
+  10-1-design-system-theme-tokens: ready-for-dev
+  10-2-sdui-json-schema-definition: ready-for-dev
+  10-3-sdui-backend-layout-service: ready-for-dev
+  10-4-sdui-flutter-renderer: ready-for-dev
+  10-5-sdui-retail-layout: ready-for-dev
   epic-10-retrospective: optional
 
   # Epic 11: Programme Ambassadeurs (Phase 2b — after Epic 10)
@@ -124,3 +129,4 @@ development_status:
   # Stories to be defined via create-story workflow
   epic-13: backlog
   epic-13-retrospective: optional
+

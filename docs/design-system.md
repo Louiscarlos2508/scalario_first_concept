@@ -278,6 +278,236 @@ Same button style, same icon meaning, same color coding, same placement on EVERY
 
 ---
 
+## Multi-Platform Adaptive Behavior
+
+Scalario is a single Flutter codebase targeting 4 platforms. Each platform has different
+constraints. The rule: **one codebase, adaptive layouts** — not separate UIs per platform.
+
+### Platform Matrix
+
+| Platform | Device | Primary User | Input | Offline | Priority |
+|----------|--------|-------------|-------|---------|----------|
+| Android Tablet | 10" POS | Fatou (caissière), Moussa (gestionnaire) | Touch | Obligatoire | Phase 1 — PRIMARY |
+| Android Phone | 5-6.5" | Blandine (propriétaire), Serge (DG) | Touch | Obligatoire | Phase 1 |
+| Windows Desktop | 13"+ | Moussa (inventaire), Ibrahim (comptable) | Souris + clavier | Souhaité | Phase 2 |
+| iOS (iPhone/iPad) | Variable | Serge (DG), propriétaires premium | Touch | Obligatoire | Phase 2+ |
+| Web (navigateur) | Variable | Carlos (admin), propriétaires | Souris + clavier | Non | Phase 3 |
+
+### Responsive Layout Strategy
+
+Flutter uses `LayoutBuilder` + breakpoints to adapt. The SAME screen code
+renders differently based on available width:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  compact (< 600px) — Phone                              │
+│  → Single column, bottom nav, full-screen modals        │
+│  → Cart = separate screen (not side panel)              │
+│  → Forms = full width, one field per row                │
+│  → Dashboard = vertical scroll of cards                 │
+├─────────────────────────────────────────────────────────┤
+│  medium (600-1024px) — Tablet                           │
+│  → Split view (product grid | cart side panel)          │
+│  → Navigation rail on left                              │
+│  → Forms = 2 columns for related fields                 │
+│  → Dashboard = 2x3 grid of KPI cards                   │
+├─────────────────────────────────────────────────────────┤
+│  expanded (> 1024px) — Desktop / Large tablet           │
+│  → Three-panel layout (nav | content | detail)          │
+│  → Navigation rail expanded with labels                 │
+│  → Forms = multi-column with inline validation          │
+│  → Dashboard = full grid with charts                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Implementation pattern in Flutter:**
+```dart
+Widget build(BuildContext context) {
+  return LayoutBuilder(builder: (context, constraints) {
+    if (constraints.maxWidth < 600) return CompactLayout();
+    if (constraints.maxWidth < 1024) return MediumLayout();
+    return ExpandedLayout();
+  });
+}
+```
+
+### POS Screen Adaptation (Critical)
+
+The POS is the most-used screen. It MUST work well on all sizes:
+
+**Tablet (medium — primary POS device):**
+```
+┌────────────────────────────┬─────────────────────┐
+│   GRILLE PRODUITS          │   PANIER             │
+│   (3-4 colonnes)           │   (always visible)   │
+│                            │   TOTAL + ENCAISSER  │
+└────────────────────────────┴─────────────────────┘
+```
+
+**Phone (compact — Blandine checking sales remotely):**
+```
+┌─────────────────────┐    ┌─────────────────────┐
+│   GRILLE PRODUITS    │    │   PANIER             │
+│   (2 colonnes)       │ ←→ │   (separate screen)  │
+│                      │    │   TOTAL + ENCAISSER  │
+│   [🛒 Panier (3)]   │    │   [← Retour]         │
+└─────────────────────┘    └─────────────────────┘
+         Tab 1                      Tab 2
+```
+
+**Desktop (expanded — back-office view with extra info):**
+```
+┌──────┬─────────────────────────┬─────────────────────┐
+│ NAV  │   GRILLE PRODUITS       │   PANIER             │
+│ RAIL │   (5-6 colonnes)        │   + client sélectionné│
+│      │                         │   + historique récent  │
+│      │                         │   TOTAL + ENCAISSER   │
+└──────┴─────────────────────────┴─────────────────────┘
+```
+
+### Phone-Specific Adaptations
+
+When the app detects compact width (< 600px):
+
+- **Bottom navigation** replaces left rail (5 items max)
+- **Full-screen modals** replace side sheets and dialogs
+- **Cart becomes a separate screen** with a floating badge on the product grid showing item count
+- **Forms go single-column** — one field per row, large touch targets
+- **Tables become cards** — data tables unstack into scrollable card lists
+- **Swipe gestures enabled** — swipe left to delete, swipe between tabs
+- **Pull-to-refresh** on all list screens
+- **Floating Action Button (FAB)** for primary create action (bottom-right, 56px)
+
+**Phone navigation pattern:**
+```
+┌─────────────────────┐
+│  [←] Titre page     │  ← AppBar with back button
+│                      │
+│  Content area        │
+│  (scrollable)        │
+│                      │
+│                [+]   │  ← FAB for primary action
+├─────────────────────┤
+│ 🏪  📦  💰  📊  ⋯  │  ← Bottom nav (max 5)
+└─────────────────────┘
+```
+
+### Desktop-Specific Adaptations (Windows / Web)
+
+When mouse + keyboard input is detected:
+
+- **Hover states** on all interactive elements (buttons, cards, table rows)
+- **Right-click context menus** on table rows (Modifier, Supprimer, Détails)
+- **Keyboard shortcuts** for power users (see table below)
+- **Tooltip on hover** for icon buttons (shows the label after 500ms)
+- **Mouse cursor changes** — pointer on clickable, text on editable, grab on draggable
+- **Scrollbars visible** (not hidden like on touch) — standard platform scrollbars
+- **Multi-select in tables** — Ctrl+click for individual, Shift+click for range
+- **Focus ring visible** — 2px blue outline on focused element (keyboard navigation)
+- **Tab order** follows logical flow (left-to-right, top-to-bottom)
+
+**Keyboard Shortcuts (Desktop / Web):**
+
+| Shortcut | Action | Context |
+|----------|--------|---------|
+| `Ctrl+N` | Nouvelle vente | POS screen |
+| `Ctrl+F` | Rechercher produit | POS, Catalogue, Stock |
+| `Ctrl+Enter` | Encaisser / Valider | POS cart, Forms |
+| `Ctrl+S` | Enregistrer | Any form |
+| `Escape` | Annuler / Fermer modal | Everywhere |
+| `Ctrl+P` | Imprimer reçu | POS after sale |
+| `F5` | Rafraîchir données | Dashboard, Reports |
+| `Ctrl+Z` | Annuler dernière action | Where applicable |
+| `Tab` | Champ suivant | Forms |
+| `Shift+Tab` | Champ précédent | Forms |
+| `↑ / ↓` | Naviguer dans la liste | Tables, dropdowns |
+| `Enter` | Sélectionner item | Tables, dropdowns |
+
+**Implementation in Flutter:**
+```dart
+// Global shortcuts via Shortcuts + Actions widgets
+Shortcuts(
+  shortcuts: {
+    LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
+      NewSaleIntent(),
+    LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF):
+      SearchProductIntent(),
+  },
+  child: Actions(
+    actions: { NewSaleIntent: CallbackAction(...) },
+    child: child,
+  ),
+)
+```
+
+### iOS Considerations (Phase 2+)
+
+Flutter renders Material Design by default on all platforms. For iOS:
+
+**DO use Material Design (not Cupertino):**
+- Scalario is a business tool, not a consumer app — consistency across platforms > native feel
+- Training cost: users who learn on Android tablet must recognize the same UI on iPhone
+- Maintenance cost: one widget set instead of two
+- Exception: date pickers and time pickers → use `showDatePicker()` which adapts natively
+
+**iOS-specific adjustments (within Material):**
+- **Safe area insets** — always wrap with `SafeArea` (notch, Dynamic Island, home indicator)
+- **Bottom padding** — add 34px bottom padding on iPhone X+ for home indicator area
+- **Scroll physics** — use `BouncingScrollPhysics` on iOS (default ClampingScrollPhysics on Android)
+- **Status bar** — light text on dark header backgrounds (set `SystemUiOverlayStyle`)
+- **Haptic feedback** — use `HapticFeedback.lightImpact()` on iOS (matches Taptic Engine)
+- **Text selection** — iOS handles show selection handles natively, don't override
+- **Pull-to-refresh** — `CupertinoSliverRefreshControl` feels more native on iOS than Material's
+
+**iOS App Store requirements to remember:**
+- App must work fully offline (already by design)
+- No references to "Android" or "Google Play" in the UI
+- Privacy labels must match data collected (audit logs = "Usage Data")
+
+### Platform Detection in Flutter
+
+```dart
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+enum ScalarioPlatform { androidTablet, androidPhone, ios, desktop, web }
+
+ScalarioPlatform detectPlatform(BuildContext context) {
+  if (kIsWeb) return ScalarioPlatform.web;
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+    return ScalarioPlatform.desktop;
+  if (Platform.isIOS) return ScalarioPlatform.ios;
+
+  // Android: distinguish phone vs tablet by screen width
+  final width = MediaQuery.of(context).size.shortestSide;
+  return width >= 600
+    ? ScalarioPlatform.androidTablet
+    : ScalarioPlatform.androidPhone;
+}
+```
+
+Use this to conditionally enable:
+- Haptic feedback type (Android vibration vs iOS Taptic Engine)
+- Scroll physics (Clamping vs Bouncing)
+- Keyboard shortcut registration (desktop/web only)
+- Context menus (right-click on desktop, long-press on mobile)
+
+### Input Adaptation Rules
+
+| Feature | Touch (Mobile/Tablet) | Mouse + Keyboard (Desktop/Web) |
+|---------|----------------------|-------------------------------|
+| Primary action | Large button in thumb zone | Button + keyboard shortcut |
+| Secondary actions | Bottom sheet / Action sheet | Context menu (right-click) |
+| Selection | Tap to select, long-press for multi | Click, Ctrl+click, Shift+click |
+| Search | Tap magnifier → full-screen input | Ctrl+F → inline search bar |
+| Scroll | Touch scroll, pull-to-refresh | Mouse wheel, scrollbar, PgUp/PgDn |
+| Numeric input | Custom numpad (Scalario pavé) | Native keyboard input |
+| Drag & drop | Long-press + drag | Click + drag (with grab cursor) |
+| Hover | N/A | Highlight row, show tooltip |
+| Form navigation | Tap next field | Tab / Shift+Tab |
+
+---
+
 ## Accessibility (A11y)
 
 - Contrast: WCAG AA (4.5:1 body, 3:1 large text)
@@ -307,3 +537,8 @@ Before any screen is done, verify:
 - [ ] **Offline:** Works without internet
 - [ ] **French:** All text in French
 - [ ] **Confirmation:** Destructive actions require dialog
+- [ ] **Responsive:** Layout adapts to compact / medium / expanded breakpoints
+- [ ] **Phone:** Cart on separate screen, bottom nav, single-column forms
+- [ ] **Desktop:** Hover states, keyboard shortcuts, right-click menus
+- [ ] **iOS safe area:** SafeArea wrapper, bottom padding for home indicator
+- [ ] **Input mode:** Touch targets on mobile, hover/focus on desktop
