@@ -11,7 +11,7 @@ export class PosSessionService {
   ) {}
 
   // AC2 — open session; reject if user already has OPEN session
-  async openSession(data: { userId: string; tenantId: string; openingBalance: number }) {
+  async openSession(data: { userId: string; tenantId: string; openingBalance: number; deviceId?: string }) {
     const existingSession = await this.prisma.posSession.findFirst({
       where: { userId: data.userId, tenantId: data.tenantId, status: 'OPEN' },
     });
@@ -26,6 +26,7 @@ export class PosSessionService {
         tenantId: data.tenantId,
         openingBalance: new Prisma.Decimal(data.openingBalance),
         status: 'OPEN',
+        deviceId: data.deviceId ?? null,
       },
     });
   }
@@ -133,6 +134,14 @@ export class PosSessionService {
     });
   }
 
+  // Backoffice — GET /retail/sessions/active: all OPEN sessions for tenant
+  async getActiveSessionsByTenant(tenantId: string) {
+    return this.prisma.posSession.findMany({
+      where: { tenantId, status: 'OPEN' },
+      orderBy: { openedAt: 'desc' },
+    });
+  }
+
   async syncSession(data: any) {
     const remoteId = data.remoteId || data.id;
 
@@ -144,6 +153,7 @@ export class PosSessionService {
           closingBalance: data.closingBalance != null ? new Prisma.Decimal(data.closingBalance) : undefined,
           status: data.status,
           closedAt: data.closedAt ? new Date(data.closedAt) : null,
+          deviceId: data.deviceId ?? undefined,
         },
         create: {
           id: remoteId,
@@ -154,6 +164,7 @@ export class PosSessionService {
           status: data.status || 'OPEN',
           openedAt: data.openedAt ? new Date(data.openedAt) : new Date(),
           closedAt: data.closedAt ? new Date(data.closedAt) : null,
+          deviceId: data.deviceId ?? null,
         },
       });
     }
@@ -167,6 +178,7 @@ export class PosSessionService {
         status: data.status || 'OPEN',
         openedAt: data.openedAt ? new Date(data.openedAt) : new Date(),
         closedAt: data.closedAt ? new Date(data.closedAt) : null,
+        deviceId: data.deviceId ?? null,
       },
     });
   }

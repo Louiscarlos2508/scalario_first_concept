@@ -12,7 +12,7 @@ export class RetailSessionController {
   @Post('open')
   @Roles('owner', 'manager', 'commercial')
   async openSession(
-    @Body() body: { userId?: string; tenantId: string; openingBalance: number },
+    @Body() body: { userId?: string; tenantId: string; openingBalance: number; deviceId?: string },
     @Req() req: any,
   ) {
     const userId = req.user?.sub ?? body.userId ?? null;
@@ -20,6 +20,7 @@ export class RetailSessionController {
       userId,
       tenantId: body.tenantId,
       openingBalance: body.openingBalance,
+      deviceId: body.deviceId,
     });
   }
 
@@ -45,5 +46,12 @@ export class RetailSessionController {
   @Roles('owner', 'manager')
   async getSessionReports(@Query('tenantId') tenantId: string) {
     return this.posSessionService.getSessionReports(tenantId);
+  }
+
+  // Backoffice — GET /retail/sessions/active?tenantId=
+  @Get('active')
+  @Roles('owner', 'manager')
+  async getActiveSessions(@Query('tenantId') tenantId: string) {
+    return this.posSessionService.getActiveSessionsByTenant(tenantId);
   }
 }

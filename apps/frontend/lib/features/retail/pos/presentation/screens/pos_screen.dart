@@ -95,19 +95,19 @@ class PosScreen extends ConsumerWidget {
     final physicalAmount = await showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Close Session'),
+        title: const Text('Clôturer la session'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Please count the physical cash in the drawer.'),
+            const Text('Veuillez compter le cash physique dans le tiroir.'),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
-                labelText: 'Physical Amount',
-                prefixIcon: Icon(Icons.attach_money),
+                labelText: 'Montant physique',
+                suffixText: 'FCFA',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -116,14 +116,14 @@ class PosScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
               final val = double.tryParse(controller.text) ?? 0;
               Navigator.pop(context, val);
             },
-            child: const Text('Next'),
+            child: const Text('Suivant'),
           ),
         ],
       ),

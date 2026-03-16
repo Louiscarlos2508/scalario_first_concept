@@ -9,7 +9,7 @@ import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/models/sync_status.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
-import 'package:frontend/features/retail/dashboard/data/models/inventory_movement_local.dart';
+import 'package:frontend/features/retail/inventory/data/models/inventory_movement_local.dart';
 
 class IsarService {
   late Future<Isar> db;
@@ -122,6 +122,22 @@ class IsarService {
         customer.balance += amount;
         await isar.customers.put(customer);
       }
+    });
+  }
+
+  // --- Category Methods ---
+
+  Future<void> clearCategories() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.categorys.clear();
+    });
+  }
+
+  Future<void> saveCategories(List<dynamic> categories) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.categorys.putAll(List<Category>.from(categories));
     });
   }
 

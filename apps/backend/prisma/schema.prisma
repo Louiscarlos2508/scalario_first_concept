@@ -37,6 +37,7 @@ model Tenant {
   posSessions           PosSession[]
   terminalStatuses      TerminalStatus[]
   tenantModules         TenantModule[]
+  expenses              Expense[]
 
   @@map("tenants")
   @@schema("kernel")
@@ -261,6 +262,7 @@ model PosSession {
   status              String       @default("OPEN") // OPEN | CLOSED
   userId              String       @map("user_id") @db.Uuid
   tenantId            String       @map("tenant_id") @db.Uuid
+  deviceId            String?      @map("device_id")
   openedAt            DateTime     @default(now()) @map("opened_at") @db.Timestamptz(6)
   closedAt            DateTime?    @map("closed_at") @db.Timestamptz(6)
   theoreticalBalance  Decimal?     @map("theoretical_balance") @db.Decimal(10, 2)
@@ -301,6 +303,25 @@ model RetailProduct {
   @@schema("retail")
 }
 
+model Expense {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  label      String
+  amount     Decimal  @db.Decimal(10, 2)
+  category   String   // LOYER | SALAIRE | ELECTRICITE | AUTRE
+  date       DateTime @db.Date
+  notes      String?
+  isDeleted  Boolean  @default(false) @map("is_deleted")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, date])
+  @@map("expenses")
+  @@schema("retail")
+}
+
 model RetailSale {
   id            String      @id @default(uuid()) @db.Uuid
   transactionId String      @unique @map("transaction_id") @db.Uuid
@@ -308,7 +329,7 @@ model RetailSale {
   sessionId     String?     @map("session_id") @db.Uuid
   session       PosSession? @relation(fields: [sessionId], references: [id])
   receiptNumber String      @map("receipt_number")
-  cashierId     String      @map("cashier_id") @db.Uuid
+  cashierId     String?     @map("cashier_id") @db.Uuid
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([sessionId])

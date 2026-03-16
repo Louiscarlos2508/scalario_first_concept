@@ -12,8 +12,8 @@ import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/data/models/order.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
-import 'package:frontend/features/retail/dashboard/data/repositories/inventory_repository.dart';
-import 'package:frontend/features/retail/dashboard/data/models/inventory_movement_local.dart';
+import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/retail/inventory/data/models/inventory_movement_local.dart';
 import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_adapters/catalog_sync_adapter.dart';
@@ -29,6 +29,7 @@ import 'package:frontend/features/retail/pos/data/repositories/category_reposito
 
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/constants/api_constants.dart';
+import 'package:frontend/core/services/device_identity_service.dart';
 
 class SyncService {
   Isolate? _isolate;
@@ -48,6 +49,7 @@ class SyncService {
     try {
       _receivePort?.close();
       final dir = await getApplicationDocumentsDirectory();
+      final deviceId = await DeviceIdentityService().getDeviceId();
       _receivePort = ReceivePort();
 
       _isolate = await Isolate.spawn(
@@ -58,6 +60,7 @@ class SyncService {
           baseUrl: ApiConstants.baseUrl,
           tenantId: tenantId,
           authToken: authToken,
+          deviceId: deviceId,
         ),
       );
 
@@ -137,6 +140,7 @@ class SyncService {
     int retryCount = 0;
     const baseDelay = Duration(seconds: 30);
     const maxDelay = Duration(minutes: 5);
+    bool isFirstPass = true;
 
     Timer? periodicTimer;
 
@@ -157,8 +161,11 @@ class SyncService {
           baseUrl: config.baseUrl,
           tenantId: config.tenantId,
           authToken: config.authToken,
+          deviceId: config.deviceId,
           sessionRepo: sessionRepo,
+          forceFullCatalogPull: isFirstPass,
         );
+        isFirstPass = false;
         retryCount = 0;
         notifyStatus(SyncUiStatus.connected);
         print('[SyncIsolate] Sync pass completed successfully.');
@@ -197,9 +204,11 @@ class SyncService {
     required String baseUrl,
     required String? tenantId,
     required String? authToken,
+    String? deviceId,
     required SessionRepository sessionRepo,
+    bool forceFullCatalogPull = false,
   }) async {
-    await _sendHeartbeat(baseUrl);
+    await _sendHeartbeat(baseUrl, tenantId: tenantId, deviceId: deviceId);
 
     // Push ordering: sessions first (FK sessionId resolves before transactions)
     await sessionAdapter.pushPending(baseUrl, tenantId ?? '', token: authToken);
@@ -209,8 +218,9 @@ class SyncService {
     await inventoryAdapter.pushPending(baseUrl, tenantId ?? '',
         token: authToken);
 
-    // Delta pulls
-    final lastProductSync = await sessionRepo.getLastSync('products');
+    // Delta pulls — first pass forces full replace to flush stale local-only products.
+    final lastProductSync =
+        forceFullCatalogPull ? null : await sessionRepo.getLastSync('products');
     await catalogAdapter.pullDelta(baseUrl, tenantId ?? '', lastProductSync,
         token: authToken);
 
@@ -221,15 +231,16 @@ class SyncService {
     }
   }
 
-  static Future<void> _sendHeartbeat(String baseUrl) async {
+  static Future<void> _sendHeartbeat(String baseUrl, {String? tenantId, String? deviceId}) async {
     try {
       await http
           .post(
             Uri.parse('$baseUrl/pos/heartbeat'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'deviceId': 'terminal_linux_1',
+              'deviceId': deviceId ?? 'terminal_unknown',
               'status': 'online',
+              if (tenantId != null) 'tenantId': tenantId,
               'metadata': {'platform': 'linux', 'version': '1.0.0'},
               'timestamp': DateTime.now().toIso8601String(),
             }),
@@ -247,6 +258,7 @@ class _SyncIsolateConfig {
   final String baseUrl;
   final String? tenantId;
   final String? authToken;
+  final String? deviceId;
 
   _SyncIsolateConfig({
     required this.directoryPath,
@@ -254,6 +266,7 @@ class _SyncIsolateConfig {
     required this.baseUrl,
     this.tenantId,
     this.authToken,
+    this.deviceId,
   });
 }
 

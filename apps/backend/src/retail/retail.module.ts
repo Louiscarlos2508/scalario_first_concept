@@ -6,9 +6,11 @@ import { PaymentsModule } from '../shared/payments/payments.module';
 import { ContactsModule } from '../shared/contacts/contacts.module';
 import { RetailController } from './retail.controller';
 import { RetailSessionController } from './retail-session.controller';
+import { RetailExpenseController } from './retail-expense.controller';
 import { RetailOrchestrationService } from './retail-orchestration.service';
 import { RetailSaleService } from './retail-sale.service';
 import { PosSessionService } from '../pos/pos-session.service';
+import { ExpenseService } from './expense.service';
 
 @Module({})
 export class RetailModule {
@@ -22,8 +24,8 @@ export class RetailModule {
         PaymentsModule.register(),
         ContactsModule.register(),
       ],
-      controllers: [RetailController, RetailSessionController],
-      providers: [RetailOrchestrationService, RetailSaleService, PosSessionService],
+      controllers: [RetailController, RetailSessionController, RetailExpenseController],
+      providers: [RetailOrchestrationService, RetailSaleService, PosSessionService, ExpenseService],
       exports: [RetailOrchestrationService],
     };
   }

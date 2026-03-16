@@ -149,3 +149,18 @@ development_status:
   epic-13: backlog
   epic-13-retrospective: optional
 
+  # Epic 17: Dépenses & Bénéfice
+  epic-17: done
+  17-1-expenses-backend: done
+  17-2-expenses-frontend: done
+  17-3-expenses-navigation: done
+  17-4-add-product-backoffice: done
+  epic-17-retrospective: optional
+
+  # Epic 18: Device Identity & Terminal Tracking
+  epic-18: done
+  18-1-device-identity-service: done
+  18-2-device-identity-pos-session: done
+  18-3-terminal-status-display: done
+  epic-18-retrospective: optional
+

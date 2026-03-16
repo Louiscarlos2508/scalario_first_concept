@@ -4,7 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/auth/auth_state.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
-import 'features/retail/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/retail/backoffice/presentation/screens/dashboard_screen.dart';
+import 'features/splash/splash_screen.dart';
 
 import 'app/sdui_registry_setup.dart';
 import 'features/retail/pos/presentation/screens/pos_screen.dart';
@@ -26,11 +27,18 @@ Future<void> main() async {
   runApp(const ProviderScope(child: ScalarioApp()));
 }
 
-class ScalarioApp extends ConsumerWidget {
+class ScalarioApp extends ConsumerStatefulWidget {
   const ScalarioApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ScalarioApp> createState() => _ScalarioAppState();
+}
+
+class _ScalarioAppState extends ConsumerState<ScalarioApp> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
 
     // Initialize Realtime & Barcode Services (pas de dépendance au tenantId)
@@ -40,7 +48,7 @@ class ScalarioApp extends ConsumerWidget {
       // Purge old synced data on app start — fire-and-forget (60-day retention).
       ref.read(retentionServiceProvider).purgeOldData();
     } catch (e) {
-      print('[Main] Error initializing services: $e');
+      debugPrint('[Main] Error initializing services: $e');
     }
 
     // Démarrer le sync seulement quand activeTenantProvider est résolu (non-null).
@@ -53,7 +61,7 @@ class ScalarioApp extends ConsumerWidget {
             Supabase.instance.client.auth.currentSession?.accessToken;
         ref.read(syncServiceProvider).startSync(tenantId, authToken: token);
       } catch (e) {
-        print('[Main] Error starting sync: $e');
+        debugPrint('[Main] Error starting sync: $e');
       }
     }
 
@@ -61,33 +69,35 @@ class ScalarioApp extends ConsumerWidget {
       title: 'Scalario',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: authState.when(
-        data: (state) {
-          if (state.session != null) {
-            final userProfileAsync = ref.watch(userProfileProvider);
+      home: !_splashDone
+          ? SplashScreen(onComplete: () => setState(() => _splashDone = true))
+          : authState.when(
+              data: (state) {
+                if (state.session != null) {
+                  final userProfileAsync = ref.watch(userProfileProvider);
 
-            return userProfileAsync.when(
-              data: (profile) {
-                if (profile?.role == 'cashier') {
-                  return const PosScreen();
+                  return userProfileAsync.when(
+                    data: (profile) {
+                      if (profile?.role == 'cashier') {
+                        return const PosScreen();
+                      }
+                      return const DashboardScreen();
+                    },
+                    loading: () => const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    ),
+                    error: (e, _) => Scaffold(
+                      body: Center(child: Text('Error loading profile: $e')),
+                    ),
+                  );
                 }
-                // Default to Dashboard for other roles (admin, owner, etc.)
-                return const DashboardScreen();
+                return const LoginScreen();
               },
               loading: () => const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, s) => Scaffold(
-                body: Center(child: Text('Error loading profile: $e')),
-              ),
-            );
-          }
-          return const LoginScreen();
-        },
-        loading: () =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (_, __) => const LoginScreen(),
-      ),
+              error: (_, e) => const LoginScreen(),
+            ),
     );
   }
 }

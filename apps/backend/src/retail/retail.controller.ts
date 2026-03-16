@@ -26,7 +26,7 @@ export class RetailController {
     },
     @Req() req: any,
   ) {
-    const userId = req.user?.sub ?? null;
+    const userId = req.user?.id ?? null;
     return this.orchestrationService.createSale({
       ...body,
       cashierId: userId,

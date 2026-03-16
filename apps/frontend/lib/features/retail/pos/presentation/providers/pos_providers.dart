@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/services/retention_service.dart';
-import 'package:frontend/features/retail/dashboard/data/repositories/inventory_repository.dart';
-import 'package:intl/intl.dart';
+import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/core/services/realtime_service.dart';
@@ -65,7 +64,11 @@ final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   final isarService = ref.watch(isarServiceProvider);
-  return InventoryRepository(isarService: isarService);
+  return InventoryRepository(
+    isarService: isarService,
+    tokenGetter: () =>
+        Supabase.instance.client.auth.currentSession?.accessToken,
+  );
 });
 
 /// Stream of pending inventory movement count — drives the outbox badge.

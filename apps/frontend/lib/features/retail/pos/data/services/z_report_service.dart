@@ -38,7 +38,7 @@ class ZReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(e.key),
-                  pw.Text('\$${e.value.toStringAsFixed(2)}'),
+                  pw.Text('${e.value.toStringAsFixed(0)} FCFA'),
                 ],
               )),
               pw.Divider(),
@@ -46,7 +46,7 @@ class ZReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('TOTAL SALES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  pw.Text('\$${(summary['totalSales'] as double).toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  pw.Text('${(summary['totalSales'] as double).toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               
@@ -57,21 +57,21 @@ class ZReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                    pw.Text('Opening Balance:'),
-                   pw.Text('\$${(summary['openingBalance'] as double).toStringAsFixed(2)}'),
+                   pw.Text('${(summary['openingBalance'] as double).toStringAsFixed(0)} FCFA'),
                 ],
               ),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                    pw.Text('Theoretical Cash:'),
-                   pw.Text('\$${theoreticalCash.toStringAsFixed(2)}'),
+                   pw.Text('${theoreticalCash.toStringAsFixed(0)} FCFA'),
                 ],
               ),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                    pw.Text('Physical Count:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                   pw.Text('\$${physicalCount.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                   pw.Text('${physicalCount.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.Divider(),
@@ -79,7 +79,7 @@ class ZReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                    pw.Text('Variance:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                   pw.Text('\$${variance.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                   pw.Text('${variance.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 30),

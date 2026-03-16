@@ -30,13 +30,18 @@ class CatalogSyncAdapter implements SyncAdapter {
     // No outbox for catalog items — created/modified from Dashboard only.
   }
 
-  /// Pull products and categories delta since [since]. If null, full pull.
+  /// Pull products and categories.
+  /// When [since] is null (forceFullPull from sync_service), replaces all local
+  /// data instead of upserting — clears stale/offline-created entries.
   @override
   Future<void> pullDelta(String baseUrl, String tenantId, DateTime? since,
       {String? token}) async {
+    final forceFullPull = since == null;
     await _pullProducts(baseUrl, tenantId, since, token: token);
-    final lastCategorySync = await _sessionRepo.getLastSync('categories');
-    await _pullCategories(baseUrl, tenantId, lastCategorySync, token: token);
+    final lastCategorySync =
+        forceFullPull ? null : await _sessionRepo.getLastSync('categories');
+    await _pullCategories(baseUrl, tenantId, lastCategorySync,
+        forceFullPull: forceFullPull, token: token);
   }
 
   Future<void> _pullProducts(String baseUrl, String tenantId, DateTime? since,
@@ -61,8 +66,16 @@ class CatalogSyncAdapter implements SyncAdapter {
         final products = items.map((j) => Product.fromJson(j)).toList();
 
         if (products.isNotEmpty) {
-          await _productRepo.upsertProducts(products);
-          print('[CatalogAdapter] Upserted ${products.length} products');
+          if (since == null) {
+            // Full pull: replace all local products to clear stale/offline-created entries.
+            await _productRepo.clearProducts();
+            await _productRepo.saveProducts(products);
+            print('[CatalogAdapter] Full replace: ${products.length} products');
+          } else {
+            // Delta pull: upsert only changed records.
+            await _productRepo.upsertProducts(products);
+            print('[CatalogAdapter] Delta upsert: ${products.length} products');
+          }
         }
 
         await _sessionRepo.updateLastSync('products', DateTime.now().toUtc());
@@ -74,7 +87,7 @@ class CatalogSyncAdapter implements SyncAdapter {
   }
 
   Future<void> _pullCategories(String baseUrl, String tenantId, DateTime? since,
-      {String? token}) async {
+      {bool forceFullPull = false, String? token}) async {
     final sinceStr = since?.toUtc().toIso8601String() ?? '';
     final url =
         '$baseUrl/pos/categories?tenantId=$tenantId${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
@@ -92,8 +105,14 @@ class CatalogSyncAdapter implements SyncAdapter {
         final List<dynamic> data = jsonDecode(response.body);
         final categories = data.map((j) => Category.fromJson(j)).toList();
         if (categories.isNotEmpty) {
-          await _categoryRepo.upsertCategories(categories);
-          print('[CatalogAdapter] Upserted ${categories.length} categories');
+          if (forceFullPull) {
+            await _categoryRepo.clearCategories();
+            await _categoryRepo.saveCategories(categories);
+            print('[CatalogAdapter] Full replace: ${categories.length} categories');
+          } else {
+            await _categoryRepo.upsertCategories(categories);
+            print('[CatalogAdapter] Delta upsert: ${categories.length} categories');
+          }
         }
 
         await _sessionRepo.updateLastSync('categories', DateTime.now().toUtc());

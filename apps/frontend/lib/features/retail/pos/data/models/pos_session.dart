@@ -19,6 +19,8 @@ class PosSession {
   double? theoreticalBalance;
   double? variance;
   
+  String? deviceId;
+
   // OPEN, CLOSED, SYNCED
   late String status;
   @Enumerated(EnumType.name)
@@ -39,6 +41,7 @@ class PosSession {
       'closingBalance': closingBalance,
       'theoreticalBalance': theoreticalBalance,
       'variance': variance,
+      'deviceId': deviceId,
       'status': status,
       'syncStatus': syncStatus.name,
       'openedAt': openedAt.toIso8601String(),
@@ -55,6 +58,7 @@ class PosSession {
       ..closingBalance = json['closing_balance'] != null ? ((json['closing_balance'] is num) ? (json['closing_balance'] as num).toDouble() : double.parse(json['closing_balance']?.toString() ?? '0')) : null
       ..theoreticalBalance = json['theoretical_balance'] != null ? ((json['theoretical_balance'] is num) ? (json['theoretical_balance'] as num).toDouble() : double.parse(json['theoretical_balance']?.toString() ?? '0')) : null
       ..variance = json['variance'] != null ? ((json['variance'] is num) ? (json['variance'] as num).toDouble() : double.parse(json['variance']?.toString() ?? '0')) : null
+      ..deviceId = json['device_id']?.toString() ?? json['deviceId']?.toString()
       ..status = json['status']?.toString() ?? 'OPEN'
       ..syncStatus = SyncStatus.values.firstWhere((e) => e.name == json['syncStatus'], orElse: () => SyncStatus.synced)
       ..openedAt = DateTime.parse(json['opened_at']?.toString() ?? DateTime.now().toIso8601String())

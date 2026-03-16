@@ -27,54 +27,59 @@ const PosSessionSchema = CollectionSchema(
       name: r'closingBalance',
       type: IsarType.double,
     ),
-    r'openedAt': PropertySchema(
+    r'deviceId': PropertySchema(
       id: 2,
+      name: r'deviceId',
+      type: IsarType.string,
+    ),
+    r'openedAt': PropertySchema(
+      id: 3,
       name: r'openedAt',
       type: IsarType.dateTime,
     ),
     r'openingBalance': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'openingBalance',
       type: IsarType.double,
     ),
     r'remoteId': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'remoteId',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'status',
       type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'syncStatus',
       type: IsarType.string,
       enumMap: _PosSessionsyncStatusEnumValueMap,
     ),
     r'tenantId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'tenantId',
       type: IsarType.string,
     ),
     r'theoreticalBalance': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'theoreticalBalance',
       type: IsarType.double,
     ),
     r'userId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'userId',
       type: IsarType.string,
     ),
     r'uuid': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'uuid',
       type: IsarType.string,
     ),
     r'variance': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'variance',
       type: IsarType.double,
     )
@@ -113,6 +118,12 @@ int _posSessionEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.deviceId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.remoteId.length * 3;
   bytesCount += 3 + object.status.length * 3;
   bytesCount += 3 + object.syncStatus.name.length * 3;
@@ -130,16 +141,17 @@ void _posSessionSerialize(
 ) {
   writer.writeDateTime(offsets[0], object.closedAt);
   writer.writeDouble(offsets[1], object.closingBalance);
-  writer.writeDateTime(offsets[2], object.openedAt);
-  writer.writeDouble(offsets[3], object.openingBalance);
-  writer.writeString(offsets[4], object.remoteId);
-  writer.writeString(offsets[5], object.status);
-  writer.writeString(offsets[6], object.syncStatus.name);
-  writer.writeString(offsets[7], object.tenantId);
-  writer.writeDouble(offsets[8], object.theoreticalBalance);
-  writer.writeString(offsets[9], object.userId);
-  writer.writeString(offsets[10], object.uuid);
-  writer.writeDouble(offsets[11], object.variance);
+  writer.writeString(offsets[2], object.deviceId);
+  writer.writeDateTime(offsets[3], object.openedAt);
+  writer.writeDouble(offsets[4], object.openingBalance);
+  writer.writeString(offsets[5], object.remoteId);
+  writer.writeString(offsets[6], object.status);
+  writer.writeString(offsets[7], object.syncStatus.name);
+  writer.writeString(offsets[8], object.tenantId);
+  writer.writeDouble(offsets[9], object.theoreticalBalance);
+  writer.writeString(offsets[10], object.userId);
+  writer.writeString(offsets[11], object.uuid);
+  writer.writeDouble(offsets[12], object.variance);
 }
 
 PosSession _posSessionDeserialize(
@@ -151,18 +163,19 @@ PosSession _posSessionDeserialize(
   final object = PosSession();
   object.closedAt = reader.readDateTimeOrNull(offsets[0]);
   object.closingBalance = reader.readDoubleOrNull(offsets[1]);
+  object.deviceId = reader.readStringOrNull(offsets[2]);
   object.id = id;
-  object.openedAt = reader.readDateTime(offsets[2]);
-  object.openingBalance = reader.readDouble(offsets[3]);
-  object.status = reader.readString(offsets[5]);
+  object.openedAt = reader.readDateTime(offsets[3]);
+  object.openingBalance = reader.readDouble(offsets[4]);
+  object.status = reader.readString(offsets[6]);
   object.syncStatus =
-      _PosSessionsyncStatusValueEnumMap[reader.readStringOrNull(offsets[6])] ??
+      _PosSessionsyncStatusValueEnumMap[reader.readStringOrNull(offsets[7])] ??
           SyncStatus.pending;
-  object.tenantId = reader.readString(offsets[7]);
-  object.theoreticalBalance = reader.readDoubleOrNull(offsets[8]);
-  object.userId = reader.readString(offsets[9]);
-  object.uuid = reader.readString(offsets[10]);
-  object.variance = reader.readDoubleOrNull(offsets[11]);
+  object.tenantId = reader.readString(offsets[8]);
+  object.theoreticalBalance = reader.readDoubleOrNull(offsets[9]);
+  object.userId = reader.readString(offsets[10]);
+  object.uuid = reader.readString(offsets[11]);
+  object.variance = reader.readDoubleOrNull(offsets[12]);
   return object;
 }
 
@@ -178,26 +191,28 @@ P _posSessionDeserializeProp<P>(
     case 1:
       return (reader.readDoubleOrNull(offset)) as P;
     case 2:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (_PosSessionsyncStatusValueEnumMap[
               reader.readStringOrNull(offset)] ??
           SyncStatus.pending) as P;
-    case 7:
-      return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readDoubleOrNull(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readDoubleOrNull(offset)) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
       return (reader.readDoubleOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -556,6 +571,157 @@ extension PosSessionQueryFilter
         upper: upper,
         includeUpper: includeUpper,
         epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deviceId',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      deviceIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deviceId',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      deviceIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deviceId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      deviceIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'deviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition> deviceIdMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'deviceId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      deviceIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deviceId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      deviceIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'deviceId',
+        value: '',
       ));
     });
   }
@@ -1726,6 +1892,18 @@ extension PosSessionQuerySortBy
     });
   }
 
+  QueryBuilder<PosSession, PosSession, QAfterSortBy> sortByDeviceId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deviceId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy> sortByDeviceIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deviceId', Sort.desc);
+    });
+  }
+
   QueryBuilder<PosSession, PosSession, QAfterSortBy> sortByOpenedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'openedAt', Sort.asc);
@@ -1874,6 +2052,18 @@ extension PosSessionQuerySortThenBy
       thenByClosingBalanceDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'closingBalance', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy> thenByDeviceId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deviceId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy> thenByDeviceIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deviceId', Sort.desc);
     });
   }
 
@@ -2027,6 +2217,13 @@ extension PosSessionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<PosSession, PosSession, QDistinct> distinctByDeviceId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deviceId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<PosSession, PosSession, QDistinct> distinctByOpenedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'openedAt');
@@ -2112,6 +2309,12 @@ extension PosSessionQueryProperty
   QueryBuilder<PosSession, double?, QQueryOperations> closingBalanceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'closingBalance');
+    });
+  }
+
+  QueryBuilder<PosSession, String?, QQueryOperations> deviceIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deviceId');
     });
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pos_providers.dart';
 import '../../data/models/pos_session.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/services/device_identity_service.dart';
 
 class SessionGuard extends ConsumerWidget {
   final Widget child;
@@ -109,13 +110,15 @@ class _OpenSessionScreenState extends ConsumerState<OpenSessionScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final amount = double.tryParse(_amountController.text) ?? 0;
+                    final deviceId = await DeviceIdentityService().getDeviceId();
                     final session = PosSession()
                       ..userId = widget.profile.id
                       ..tenantId = widget.profile.tenantId
                       ..status = 'OPEN'
                       ..openingBalance = amount
+                      ..deviceId = deviceId
                       ..openedAt = DateTime.now();
 
                     ref.read(sessionProvider.notifier).openSession(session);

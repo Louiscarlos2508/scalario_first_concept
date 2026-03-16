@@ -12,7 +12,7 @@ Map<String, String> _authHeaders({String? tenantId, String? token}) {
       token ?? Supabase.instance.client.auth.currentSession?.accessToken;
   return {
     'Content-Type': 'application/json',
-    'x-tenant-id': ?tenantId,
+    if (tenantId != null) 'x-tenant-id': tenantId,
     if (accessToken != null) 'Authorization': 'Bearer $accessToken',
   };
 }
@@ -211,7 +211,7 @@ class ProductRepository {
           if (query != null && query.isNotEmpty) 'q': query,
           'page': page.toString(),
           'limit': limit.toString(),
-          'tenantId': ?tenantId,
+          if (tenantId != null) 'tenantId': tenantId,
         },
       );
 

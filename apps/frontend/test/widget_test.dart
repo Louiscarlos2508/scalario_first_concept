@@ -1,25 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-// Ensure package name wraps main
+import 'package:frontend/core/auth/auth_repository.dart';
+import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/features/auth/login_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class _StubAuthRepo implements AuthRepository {
+  @override
+  Session? get currentSession => null;
+  @override
+  User? get currentUser => null;
+  @override
+  Stream<AuthState> get authStateChanges => const Stream.empty();
+  @override
+  Future<AuthResponse> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) =>
+      throw UnimplementedError();
+  @override
+  Future<void> signOut() async {}
+  @override
+  Future<UserProfile?> getUserProfile() async => null;
+}
 
 void main() {
   testWidgets('App starts with LoginScreen when unauthenticated', (
     WidgetTester tester,
   ) async {
-    // Mock Supabase/AuthState if possible, or just rely on default "loading" or "error" state falling back to Login
-    // Since we can't easily mock static Supabase.initialize in a widget test without more setup,
-    // we might just test the LoginScreen directly or ensure ScalarioApp builds.
-
-    // For now, let's just test LoginScreen widget directly
     await tester.pumpWidget(
-      const ProviderScope(child: MaterialApp(home: LoginScreen())),
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(_StubAuthRepo()),
+        ],
+        child: const MaterialApp(home: LoginScreen()),
+      ),
     );
 
-    expect(find.text('Scalario'), findsOneWidget);
-    expect(find.text('Sign In'), findsOneWidget);
-    expect(find.byType(TextField), findsNWidgets(2)); // Email and Password
+    expect(find.text('Se connecter'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2));
   });
 }

@@ -7,7 +7,7 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
-import 'package:frontend/features/retail/dashboard/presentation/widgets/dashboard_shell.dart';
+import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 
 // ── Test doubles ─────────────────────────────────────────────────────────────
@@ -72,12 +72,29 @@ void main() {
     testWidgets(
         'At 800dp: NavigationRail present, BottomNavigationBar absent',
         (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
       await tester.pumpWidget(_buildShellAt(800));
       await tester.pump(); // resolve FutureProvider
       await tester.pump(const Duration(milliseconds: 50)); // settle layout
 
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(BottomNavigationBar), findsNothing);
+    });
+
+    // Story 17-3: "Dépenses" nav destination present in rail
+    testWidgets(
+        'At 800dp: NavigationRail includes "Dépenses" destination',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(_buildShellAt(800));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('Dépenses'), findsOneWidget);
     });
   });
 }

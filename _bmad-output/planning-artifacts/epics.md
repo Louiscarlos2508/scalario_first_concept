@@ -2023,3 +2023,292 @@ So that terrain work is never lost (FR36, NFR30).
 - Générer `.g.dart` avec `flutter pub run build_runner build`
 - Ne pas modifier `SyncService` — ajouter un `InventorySyncAdapter` si l'architecture le prévoit, sinon étendre `SyncService` avec un batch inventory
 
+
+---
+
+### Epic 18: Lien Session Caisse ↔ Terminal Physique
+
+Le backoffice "État des caisses" affiche désormais **quel terminal physique** porte quelle session ouverte. Chaque appareil (Android, Windows, Linux) génère et persiste une identité stable (`deviceId`). À l'ouverture d'une session caisse, le `deviceId` est transmis au backend et stocké sur `PosSession`. L'écran "État des caisses" résout et affiche le nom du terminal pour chaque session active.
+
+**Phase:** 1 (correctif backoffice pré-Epic 17)
+**FRs covered:** FR23, FR24, FR28 (enrichissement — identification terminal physique)
+**Prerequisite:** Epics 1–16 (PosSession opérationnel, TerminalStatusList affiche sessions OPEN)
+
+#### Story 18.1: Backend — `deviceId` sur `PosSession`
+
+**As a** platform developer,
+**I want** `PosSession` to store the `deviceId` of the physical terminal that opened it,
+**So that** backoffice reports can show which device is running which session.
+
+**Acceptance Criteria:**
+
+**Given** the current `PosSession` schema has no `deviceId`
+**When** the Prisma migration runs
+**Then** `pos_sessions` gains a nullable column `device_id VARCHAR` (not UUID — device IDs are human-readable strings like `"caisse-android-1"`)
+
+**Given** `POST /retail/sessions/open` receives `{ deviceId?: string, ... }`
+**When** a session is opened with a `deviceId`
+**Then** the session is saved with that `deviceId`; if omitted, `deviceId` is null
+
+**Given** `POST /pos/sessions` (sync endpoint) receives `{ deviceId?: string, ... }`
+**When** the sync adapter pushes a session from the device
+**Then** `syncSession()` preserves `deviceId` on upsert
+
+**Given** `GET /retail/sessions/active?tenantId=`
+**When** sessions are returned
+**Then** each session includes `deviceId` in the response payload
+
+#### Story 18.2: Frontend — Service d'identité device + envoi `deviceId`
+
+**As a** cashier working on a physical POS terminal,
+**I want** my device to have a stable, readable identity,
+**So that** the backoffice always knows which physical terminal I'm working on.
+
+**Acceptance Criteria:**
+
+**Given** the app launches on a device for the first time
+**When** `DeviceIdentityService.getDeviceId()` is called
+**Then** a `deviceId` is generated in the format `caisse-{platform}-{6-char-hex}` (ex: `caisse-android-a3f9c2`) and persisted in `SharedPreferences` under key `scalario_device_id`
+
+**Given** the app launches on a device that already has a `deviceId` persisted
+**When** `DeviceIdentityService.getDeviceId()` is called
+**Then** the existing `deviceId` is returned — never regenerated
+
+**Given** a cashier taps "Ouvrir session" on the POS
+**When** the session open request is built
+**Then** the `deviceId` from `DeviceIdentityService` is included in the body sent to `POST /retail/sessions/open`
+
+**Given** the sync adapter pushes a pending session
+**When** `SessionSyncAdapter.pushPending()` executes
+**Then** the `deviceId` stored on the local `PosSession` is included in the sync payload
+
+**Given** the heartbeat fires every 30 seconds
+**When** `_sendHeartbeat()` is called
+**Then** the same `deviceId` from `DeviceIdentityService` is used (not the hardcoded `"terminal_linux_1"`)
+
+#### Story 18.3: Frontend — "État des caisses" affiche le nom du terminal
+
+**As a** store owner viewing the backoffice dashboard,
+**I want** "État des caisses" to show the name of each active terminal,
+**So that** I can instantly identify which physical device is working.
+
+**Acceptance Criteria:**
+
+**Given** one or more sessions are OPEN
+**When** `TerminalStatusList` renders
+**Then** each session card shows `deviceId` (ex: `caisse-android-a3f9c2`) if available, or `"Terminal inconnu"` if `deviceId` is null
+
+**Given** a session has `deviceId: "caisse-android-a3f9c2"`
+**When** the card renders
+**Then** the title is `caisse-android-a3f9c2`, the subtitle shows `Depuis HH:mm • Fond: XX FCFA`
+
+**Given** `activeSessionsProvider` auto-refresh fires (30 secondes)
+**When** a new session is opened on another terminal
+**Then** the new card appears within the next refresh cycle — no manual reload required
+
+**Test `test/dashboard_sdui_integration_test.dart` :**
+- Mock `activeSessionsProvider` avec une session ayant `deviceId: "caisse-test-001"` → vérifie que le texte `"caisse-test-001"` est rendu
+- Mock avec `deviceId: null` → vérifie que `"Terminal inconnu"` est rendu
+
+---
+
+## Epic 17: Dépenses & Bénéfice
+
+**Objectif :** Permettre au gérant de saisir les dépenses du magasin (loyer, électricité, charges diverses) et d'afficher le bénéfice net réel (ventes − dépenses) dans le tableau de bord backoffice.
+
+**Phase :** 1 (après Epic 16)
+**Module :** `retail`
+**FRs couverts :** FR48, FR49 (extension — bénéfice net)
+**Prérequis :** Epics 1–9 (backend retail opérationnel), Epic 10 (SDUI), Epic 16 (navigation stable)
+
+### Contexte métier
+
+Un commerçant a besoin de connaître son **bénéfice net**, pas seulement ses ventes brutes. Les dépenses (loyer, salaires, approvisionnements hors stock) ne transitent pas par le POS — elles sont saisies manuellement par le manager/owner depuis le backoffice.
+
+### Modèle de données cible
+
+```
+Expense (retail schema)
+  id            UUID PK
+  tenantId      UUID FK → tenants.id
+  userId        UUID (qui a saisi)
+  label         String (ex: "Loyer mars")
+  amount        Decimal(10,2)
+  category      String (LOYER | SALAIRE | ELECTRICITE | AUTRE)
+  date          Date
+  notes         String?
+  createdAt     Timestamptz
+  updatedAt     Timestamptz
+```
+
+### KPIs dashboard impactés
+
+| KPI | Calcul |
+|-----|--------|
+| Dépenses (période) | `SUM(expense.amount)` sur la période |
+| Bénéfice net | `totalVentes − totalDépenses` sur la période |
+
+---
+
+### Story 17.1: Backend — Modèle Expense + endpoints CRUD
+
+**ID:** `17-1-expenses-backend`
+**Dépend de :** Epics 1–9
+
+**As a** manager/owner,
+**I want** to record and retrieve expense entries via the API,
+**So that** the frontend can display them and compute net profit.
+
+**Acceptance Criteria:**
+
+**Given** `prisma/schema.prisma`
+**When** the story is implemented
+**Then** un modèle `Expense` est ajouté dans le schéma `retail` avec les champs : `id`, `tenantId`, `userId`, `label`, `amount`, `category`, `date`, `notes?`, `createdAt`, `updatedAt`
+
+**Given** `POST /retail/expenses` avec body `{ label, amount, category, date, notes?, tenantId }`
+**When** le body est valide
+**Then** une dépense est créée et retournée (201) ; `tenantId` est isolé par `TenantGuard`
+
+**Given** `GET /retail/expenses?tenantId=&from=&to=`
+**When** la requête est valide
+**Then** les dépenses du tenant sont retournées filtrées par période (from/to inclusifs)
+
+**Given** `DELETE /retail/expenses/:id`
+**When** l'expense appartient au tenant
+**Then** la dépense est supprimée (soft delete `isDeleted`) ; sinon 404
+
+**Given** `GET /retail/reporting/summary?tenantId=&from=&to=`
+**When** la requête est valide
+**Then** la réponse inclut `totalExpenses` et `netProfit` (= `totalSales − totalExpenses`) en plus des champs existants
+
+**RBAC :** `POST` / `DELETE` → `owner`, `manager` ; `GET` → `owner`, `manager`
+
+**Tests :**
+- POST valide → expense créé, status 201
+- GET avec filtre de date → seules les dépenses dans la période retournées
+- DELETE → soft-delete (isDeleted = true)
+- Summary endpoint → `netProfit` = `totalSales - totalExpenses`
+- POST sans `label` ou `amount` → 400
+
+---
+
+### Story 17.2: Frontend — Écran Dépenses + formulaire de saisie
+
+**ID:** `17-2-expenses-frontend`
+**Dépend de :** 17-1
+
+**As a** manager/owner,
+**I want** a dedicated "Dépenses" screen in the backoffice with an add form,
+**So that** I can log expenses without leaving the app.
+
+**Acceptance Criteria:**
+
+**Given** l'utilisateur navigue vers l'écran Dépenses
+**When** l'écran se charge
+**Then** la liste des dépenses de la période active est affichée (label, montant, catégorie, date) ou le message "Aucune dépense enregistrée" si vide
+
+**Given** l'utilisateur appuie sur le FAB "+"
+**When** le formulaire apparaît
+**Then** les champs suivants sont présents : Label (texte, obligatoire), Montant (numérique, obligatoire), Catégorie (dropdown : Loyer / Salaire / Électricité / Autre), Date (date picker, défaut = aujourd'hui), Notes (texte, optionnel)
+
+**Given** l'utilisateur soumet le formulaire avec des données valides
+**When** `POST /retail/expenses` répond 201
+**Then** la liste se rafraîchit, le formulaire se ferme, snackbar "Dépense enregistrée"
+
+**Given** l'utilisateur appuie sur "Supprimer" sur une dépense
+**When** `DELETE /retail/expenses/:id` répond 200
+**Then** la dépense disparaît de la liste, snackbar "Dépense supprimée"
+
+**Structure fichiers :**
+```
+lib/features/retail/expenses/
+  data/
+    models/expense.dart
+    repositories/expense_repository.dart
+  presentation/
+    providers/expense_providers.dart
+    screens/expenses_screen.dart
+    widgets/expense_form.dart
+    widgets/expense_list_tile.dart
+```
+
+**Tests :**
+- Widget test : formulaire présent, champs validés
+- Provider test : submit → repository.create() appelé avec les bons params
+- Cas erreur réseau → snackbar rouge affiché
+
+---
+
+### Story 17.3: Frontend — Navigation + KPIs Bénéfice dans le dashboard
+
+**ID:** `17-3-expenses-navigation`
+**Dépend de :** 17-2
+
+**As a** store owner viewing the backoffice dashboard,
+**I want** to see "Dépenses" and "Bénéfice net" KPI cards alongside sales,
+**So that** I have a real-time view of my shop's financial health.
+
+**Acceptance Criteria:**
+
+**Given** le `DashboardShell` (ou l'écran principal backoffice)
+**When** le menu latéral / bottom bar est visible
+**Then** un onglet ou entrée "Dépenses" est présent et navigue vers `ExpensesScreen`
+
+**Given** le `KpiCardGrid` du dashboard
+**When** les données sont chargées
+**Then** deux nouvelles cartes apparaissent : "Dépenses (période)" (montant total en FCFA) et "Bénéfice net" (ventes − dépenses, en vert si positif, rouge si négatif)
+
+**Given** le filtre de période change (ex: 7 jours → 30 jours)
+**When** `salesStatsProvider` et `expensesProvider` se rechargent
+**Then** les KPIs "Dépenses" et "Bénéfice net" se mettent à jour en cohérence avec la même période
+
+**Given** le bénéfice net est négatif
+**When** la carte KPI s'affiche
+**Then** la valeur est affichée en rouge avec un icône d'alerte `⚠`
+
+**Tests (`test/dashboard_sdui_integration_test.dart`) :**
+- Mock `expensesProvider` → vérifie que "Dépenses (période)" apparaît dans le KpiCardGrid
+- Mock avec bénéfice net négatif → vérifie la couleur rouge ou le texte d'alerte
+- Navigation : tap sur "Dépenses" dans le menu → `ExpensesScreen` chargé
+
+---
+
+### Story 17.4: Frontend — Ajout produit depuis le backoffice catalogue
+
+**ID:** `17-4-add-product-backoffice`
+**Dépend de :** Epic 10 (SDUI), Epic 14 (design system)
+
+**As a** store owner in the backoffice,
+**I want** to add a new product to the catalog directly from the backoffice,
+**So that** I don't need to use a separate admin interface.
+
+**Acceptance Criteria:**
+
+**Given** l'utilisateur est sur l'écran Catalogue du backoffice
+**When** il appuie sur le FAB "+"
+**Then** un formulaire d'ajout de produit apparaît avec : Nom (texte, obligatoire), Prix (numérique, obligatoire), Catégorie (dropdown, liste des catégories du tenant), Barcode (optionnel), Quantité initiale en stock (numérique, défaut 0)
+
+**Given** le formulaire est soumis avec des données valides
+**When** `POST /catalog/items` répond 201
+**Then** le produit est créé, la liste catalogue se rafraîchit, snackbar "Produit ajouté"
+
+**Given** le formulaire est soumis sans Nom ou sans Prix
+**When** la validation s'exécute localement
+**Then** les champs invalides sont soulignés en rouge, le submit est bloqué
+
+**Given** `POST /retail/products` (création RetailProduct avec stockQuantity initiale)
+**When** la quantité initiale > 0
+**Then** un `InventoryMovement` de type `DELIVERY` est automatiquement créé côté backend pour tracer l'entrée initiale
+
+**Structure fichiers :**
+```
+lib/features/retail/catalog/
+  presentation/
+    screens/catalog_screen.dart     ← déjà existant ou à créer
+    widgets/product_form_dialog.dart
+```
+
+**Tests :**
+- Widget test : formulaire présent, validation Nom + Prix obligatoires
+- Submit valide → `CatalogRepository.createItem()` appelé
+- Cas erreur réseau → snackbar rouge affiché

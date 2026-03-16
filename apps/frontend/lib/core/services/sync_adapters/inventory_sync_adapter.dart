@@ -1,5 +1,5 @@
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
-import 'package:frontend/features/retail/dashboard/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
 
 /// Push-only sync adapter for inventory movements.
 /// Reads all 'pending' [InventoryMovementLocal] records from Isar,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:isar/isar.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
 import 'package:frontend/core/constants/api_constants.dart';
@@ -44,15 +45,34 @@ class CategoryRepository {
   }
 
   Future<void> deleteCategory(String remoteId) async {
-    final response = await http.delete(Uri.parse('${ApiConstants.baseUrl}/pos/categories/$remoteId'));
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to delete category');
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final response = await http.delete(
+      Uri.parse('${ApiConstants.baseUrl}/pos/categories/$remoteId'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    // 404 = already gone on server; still delete locally.
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 404) {
+      throw Exception('Erreur suppression (${response.statusCode})');
     }
-    
+
     final isar = await _isarService.db;
     await isar.writeTxn(() async {
       await isar.categorys.filter().remoteIdEqualTo(remoteId).deleteAll();
     });
+  }
+
+  Future<void> clearCategories() async {
+    await _isarService.clearCategories();
+  }
+
+  Future<void> saveCategories(List<Category> categories) async {
+    await _isarService.saveCategories(categories);
   }
 
   Future<void> upsertCategories(List<Category> categories) async {

@@ -59,7 +59,7 @@ class ReceiptService {
   }) async {
     final pdf = pw.Document();
     final formatter = DateFormat('yyyy-MM-dd HH:mm');
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0);
 
     pdf.addPage(
       pw.Page(

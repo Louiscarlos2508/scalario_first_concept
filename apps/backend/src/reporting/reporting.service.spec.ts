@@ -10,6 +10,7 @@ const mockPrisma = {
   inventoryMovement: { findMany: jest.fn() },
   posSession: { findMany: jest.fn() },
   retailProduct: { findMany: jest.fn() },
+  expense: { findMany: jest.fn() },
 };
 
 describe('ReportingService', () => {
@@ -73,11 +74,13 @@ describe('ReportingService', () => {
         to: '2026-03-15',
       });
 
+      const expectedTo = new Date('2026-03-15');
+      expectedTo.setUTCHours(23, 59, 59, 999);
       expect(mockPrisma.transaction.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             tenantId: TENANT_ID,
-            createdAt: { gte: new Date('2026-03-01'), lte: new Date('2026-03-15') },
+            createdAt: { gte: new Date('2026-03-01'), lte: expectedTo },
           }),
         }),
       );
@@ -134,10 +137,12 @@ describe('ReportingService', () => {
         to: '2026-03-15',
       });
 
+      const expectedTo = new Date('2026-03-15');
+      expectedTo.setUTCHours(23, 59, 59, 999);
       expect(mockPrisma.posSession.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            closedAt: { gte: new Date('2026-03-01'), lte: new Date('2026-03-15') },
+            closedAt: { gte: new Date('2026-03-01'), lte: expectedTo },
           }),
         }),
       );
@@ -192,6 +197,7 @@ describe('ReportingService', () => {
         { variance: new Prisma.Decimal(-500) },
         { variance: new Prisma.Decimal(200) },
       ]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
 
       const result = await service.getSalesStats({ tenantId: TENANT_ID });
 
@@ -224,6 +230,7 @@ describe('ReportingService', () => {
       ]);
       mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
       mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
 
       const result = await service.getSalesStats({ tenantId: TENANT_ID });
 
@@ -239,11 +246,41 @@ describe('ReportingService', () => {
       mockPrisma.transaction.findMany.mockResolvedValue([]);
       mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
       mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
 
       const result = await service.getSalesStats({ tenantId: TENANT_ID });
 
       expect(result.avgTransactionValue).toBe(0);
       expect(result.top3Products).toHaveLength(0);
+    });
+
+    it('returns totalExpenses and netProfit in getSalesStats (AC5)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { totalAmount: new Prisma.Decimal(100000), paymentMethod: 'CASH', itemsJson: [] },
+      ]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([
+        { amount: new Prisma.Decimal(30000) },
+        { amount: new Prisma.Decimal(20000) },
+      ]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      expect(result.totalExpenses).toBe(50000);
+      expect(result.netProfit).toBe(50000); // 100000 - 50000
+    });
+
+    it('returns netProfit=0 when no sales and no expenses (AC5)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      expect(result.totalExpenses).toBe(0);
+      expect(result.netProfit).toBe(0);
     });
   });
 

@@ -120,7 +120,7 @@ export class ReportingService {
     const { tenantId, from, to } = params;
     const dateFilter = this.buildDateRange(from, to);
 
-    const [transactions, lossMovements, sessions] = await Promise.all([
+    const [transactions, lossMovements, sessions, expenses] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { tenantId, ...(dateFilter ? { createdAt: dateFilter } : {}) },
       }),
@@ -132,6 +132,13 @@ export class ReportingService {
           tenantId,
           status: 'CLOSED',
           ...(dateFilter ? { closedAt: dateFilter } : {}),
+        },
+      }),
+      this.prisma.expense.findMany({
+        where: {
+          tenantId,
+          isDeleted: false,
+          ...(dateFilter ? { date: dateFilter } : {}),
         },
       }),
     ]);
@@ -162,6 +169,8 @@ export class ReportingService {
       (sum, s) => sum + (s.variance ? Number(s.variance) : 0),
       0,
     );
+    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const netProfit = totalRevenue - totalExpenses;
 
     return {
       totalRevenue,
@@ -170,6 +179,8 @@ export class ReportingService {
       top3Products,
       totalLosses,
       totalCashVariance,
+      totalExpenses,
+      netProfit,
       from: from ?? null,
       to: to ?? null,
     };
@@ -212,7 +223,11 @@ export class ReportingService {
     if (!from && !to) return undefined;
     const filter: { gte?: Date; lte?: Date } = {};
     if (from) filter.gte = new Date(from);
-    if (to) filter.lte = new Date(to);
+    if (to) {
+      const toDate = new Date(to);
+      toDate.setUTCHours(23, 59, 59, 999);
+      filter.lte = toDate;
+    }
     return filter;
   }
 }
