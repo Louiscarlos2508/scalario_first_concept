@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../kernel/audit/audit-log.service';
 
@@ -11,7 +12,7 @@ export class CatalogService {
 
   async getCategories(tenantId: string, since?: string) {
     const where: any = since
-      ? { tenantId, updatedAt: { gt: new Date(since) } }
+      ? { tenantId, createdAt: { gt: new Date(since) } }
       : { tenantId };
     return this.prisma.category.findMany({
       where,
@@ -97,8 +98,8 @@ export class CatalogService {
       items.map((item) =>
         this.prisma.catalogItem.upsert({
           where: { id: item.id },
-          update: item,
-          create: item,
+          update: item as unknown as Prisma.CatalogItemUpdateInput,
+          create: item as unknown as Prisma.CatalogItemCreateInput,
         }),
       ),
     );

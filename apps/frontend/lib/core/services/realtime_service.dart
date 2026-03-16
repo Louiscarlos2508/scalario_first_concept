@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/services/sync_service.dart';
-import 'package:frontend/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:frontend/features/retail/dashboard/presentation/providers/dashboard_providers.dart';
 
 class RealtimeService {
   final SupabaseClient _supabase;

@@ -2,19 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/auth/auth_state.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
-import 'features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'features/retail/dashboard/presentation/screens/dashboard_screen.dart';
 
-import 'features/pos/presentation/screens/pos_screen.dart';
-import 'features/pos/presentation/providers/pos_providers.dart';
+import 'app/sdui_registry_setup.dart';
+import 'features/retail/pos/presentation/screens/pos_screen.dart';
+import 'features/retail/pos/presentation/providers/pos_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  setupSduiRegistry();
+
   // Initialize Supabase
   await Supabase.initialize(
-    url: 'http://127.0.0.1:54321',
-    anonKey: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
+    url: String.fromEnvironment('SUPABASE_URL',
+        defaultValue: 'http://127.0.0.1:54321'),
+    anonKey: String.fromEnvironment('SUPABASE_ANON_KEY',
+        defaultValue: 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH'),
   );
 
   runApp(const ProviderScope(child: ScalarioApp()));
@@ -27,9 +33,8 @@ class ScalarioApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
 
-    // Initialize Sync, Realtime & Barcode Services
+    // Initialize Realtime & Barcode Services (pas de dépendance au tenantId)
     try {
-      ref.watch(syncServiceProvider).startSync(ref.read(activeTenantProvider));
       ref.watch(realtimeServiceProvider).init();
       ref.watch(barcodeScannerServiceProvider).init();
       // Purge old synced data on app start — fire-and-forget (60-day retention).
@@ -38,13 +43,24 @@ class ScalarioApp extends ConsumerWidget {
       print('[Main] Error initializing services: $e');
     }
 
+    // Démarrer le sync seulement quand activeTenantProvider est résolu (non-null).
+    // build() est rappelé quand activeTenantProvider change → startSync n'est
+    // appelé qu'une fois grâce au guard interne (_isolate != null).
+    final tenantId = ref.watch(activeTenantProvider);
+    if (tenantId != null) {
+      try {
+        final token =
+            Supabase.instance.client.auth.currentSession?.accessToken;
+        ref.read(syncServiceProvider).startSync(tenantId, authToken: token);
+      } catch (e) {
+        print('[Main] Error starting sync: $e');
+      }
+    }
+
     return MaterialApp(
       title: 'Scalario',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
       home: authState.when(
         data: (state) {
           if (state.session != null) {

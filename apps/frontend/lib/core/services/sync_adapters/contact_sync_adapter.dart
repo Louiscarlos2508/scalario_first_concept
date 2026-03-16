@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
-import 'package:frontend/features/pos/data/models/customer.dart';
-import 'package:frontend/features/pos/data/repositories/customer_repository.dart';
-import 'package:frontend/features/pos/data/repositories/session_repository.dart';
+import 'package:frontend/features/retail/pos/data/models/customer.dart';
+import 'package:frontend/features/retail/pos/data/repositories/customer_repository.dart';
+import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
 
 /// Handles customer (contact) push/pull.
 class ContactSyncAdapter implements SyncAdapter {
@@ -18,7 +18,8 @@ class ContactSyncAdapter implements SyncAdapter {
 
   /// Push locally created customers (uuid set, remoteId null) to the server.
   @override
-  Future<void> pushPending(String baseUrl, String tenantId) async {
+  Future<void> pushPending(String baseUrl, String tenantId,
+      {String? token}) async {
     final pendingCustomers = await _customerRepo.getPendingCustomers();
     if (pendingCustomers.isEmpty) return;
 
@@ -31,7 +32,11 @@ class ContactSyncAdapter implements SyncAdapter {
         final response = await http
             .post(
               Uri.parse('$baseUrl/pos/customers'),
-              headers: {'Content-Type': 'application/json'},
+              headers: {
+                'Content-Type': 'application/json',
+                'x-tenant-id': tenantId,
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
               body: jsonEncode({
                 'tenantId': customer.tenantId,
                 'data': customer.toJson(),
@@ -54,15 +59,20 @@ class ContactSyncAdapter implements SyncAdapter {
 
   /// Pull customers delta since [since].
   @override
-  Future<void> pullDelta(
-      String baseUrl, String tenantId, DateTime? since) async {
+  Future<void> pullDelta(String baseUrl, String tenantId, DateTime? since,
+      {String? token}) async {
     final sinceStr = since?.toUtc().toIso8601String() ?? '';
     final url =
         '$baseUrl/pos/customers?tenantId=$tenantId${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
-
+    final headers = {
+      'Content-Type': 'application/json',
+      'x-tenant-id': tenantId,
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
     try {
-      final response =
-          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);

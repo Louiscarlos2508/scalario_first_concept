@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:frontend/features/pos/data/repositories/product_repository.dart';
-import 'package:frontend/features/pos/presentation/state/cart_notifier.dart';
+import 'package:frontend/features/retail/pos/data/repositories/product_repository.dart';
+import 'package:frontend/features/retail/pos/presentation/state/cart_notifier.dart';
 
 class BarcodeScannerService {
   final ProductRepository _productRepository;

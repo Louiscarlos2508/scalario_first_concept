@@ -106,14 +106,33 @@ development_status:
   epic-9-retrospective: optional
 
   # Epic 10: SDUI Foundation & Engine (Phase 1 — après Epics 1–6)
-  epic-10: in-progress
+  epic-10: done
   10-0-fix-compile-errors: done
-  10-1-design-system-theme-tokens: ready-for-dev
-  10-2-sdui-json-schema-definition: ready-for-dev
-  10-3-sdui-backend-layout-service: ready-for-dev
-  10-4-sdui-flutter-renderer: ready-for-dev
-  10-5-sdui-retail-layout: ready-for-dev
+  10-1-design-system-theme-tokens: done
+  10-2-sdui-json-schema-definition: done
+  10-3-sdui-backend-layout-service: done
+  10-4-sdui-flutter-renderer: done
+  10-5-sdui-retail-layout: done
   epic-10-retrospective: optional
+
+  # Epic 15: SDUI Dashboard & UI Polish (Phase 1b — after Epic 10)
+  epic-15-sdui-dashboard-ui-polish: done
+  15-1-sdui-dashboard-wiring: done
+  15-2-sdui-dashboard-widgets: done
+  15-3-ui-french-labels-pos: done
+  15-4-ui-french-labels-backoffice: done
+  15-5-ui-responsive-navigation: done
+  epic-15-retrospective: optional
+
+  # Epic 16: Retail Operations — Gestion Stock Terrain (Phase 1c — after Epic 15)
+  epic-16-retail-operations: done
+  16-1-supplier-delivery-reception: done
+  16-2-stock-transfer: done
+  16-3-stock-loss-declaration: done
+  16-4-partial-inventory: done
+  16-5-inventory-navigation: done
+  16-6-inventory-offline-sync: done
+  epic-16-retrospective: optional
 
   # Epic 11: Programme Ambassadeurs (Phase 2b — after Epic 10)
   # Stories to be defined via create-story workflow

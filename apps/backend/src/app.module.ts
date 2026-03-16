@@ -12,6 +12,7 @@ import { TransactionsModule } from './shared/transactions/transactions.module';
 import { InventoryModule } from './shared/inventory/inventory.module';
 import { RetailModule } from './retail/retail.module';
 import { ReportingModule } from './reporting/reporting.module';
+import { SduiModule } from './kernel/sdui/sdui.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ReportingModule } from './reporting/reporting.module';
     PosModule,
     RetailModule.register(),
     ReportingModule.register(),
+    SduiModule,
     PrismaModule,
   ],
   controllers: [AppController],

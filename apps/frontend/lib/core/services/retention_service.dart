@@ -1,8 +1,8 @@
 import 'package:isar/isar.dart';
 import 'package:frontend/core/models/sync_status.dart';
 import 'package:frontend/core/services/isar_service.dart';
-import 'package:frontend/features/pos/data/models/order.dart';
-import 'package:frontend/features/pos/data/models/pos_session.dart';
+import 'package:frontend/features/retail/pos/data/models/order.dart';
+import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
 
 /// Purges old synced records from local Isar storage.
 ///

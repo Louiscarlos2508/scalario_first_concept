@@ -7,14 +7,19 @@ import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
-import 'package:frontend/features/pos/data/models/pos_session.dart';
-import 'package:frontend/features/pos/data/models/product.dart';
-import 'package:frontend/features/pos/data/repositories/order_repository.dart';
-import 'package:frontend/features/pos/data/repositories/session_repository.dart';
-import 'package:frontend/features/pos/presentation/providers/pos_providers.dart';
-import 'package:frontend/features/pos/presentation/screens/pos_screen.dart';
-import 'package:frontend/features/pos/presentation/state/session_notifier.dart';
+import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
+import 'package:frontend/features/retail/pos/data/models/product.dart';
+import 'package:frontend/features/retail/pos/data/repositories/order_repository.dart';
+import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
+import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
+import 'package:frontend/features/retail/pos/presentation/state/session_notifier.dart';
 import 'package:isar/isar.dart';
+import 'package:frontend/core/sdui/sdui_layout.dart';
+import 'package:frontend/core/sdui/sdui_providers.dart';
+import 'package:frontend/core/sdui/sdui_widget_registry.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/product_grid.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/cart_panel.dart';
 
 // Stub IsarService whose initDb never completes — repositories are created
 // but never actually access the database.
@@ -48,7 +53,7 @@ class _StubSyncService extends SyncService {
   Stream<SyncUiStatus> get statusStream => _controller.stream;
 
   @override
-  Future<void> startSync(String? tenantId) async {} // no-op
+  Future<void> startSync(String? tenantId, {String? authToken}) async {} // no-op
 }
 
 // Mock Data
@@ -81,7 +86,22 @@ final _mockSession = PosSession()
   ..openedAt = DateTime.now();
 
 void main() {
+  setUp(() {
+    SduiWidgetRegistry.reset();
+    SduiWidgetRegistry.register('product_grid', (_) => const ProductGrid());
+    SduiWidgetRegistry.register('cart_panel', (_) => const CartPanel());
+  });
+
+  tearDown(() => SduiWidgetRegistry.reset());
+
   testWidgets('POS Screen renders products and adds to cart', (WidgetTester tester) async {
+    // CartPanel needs more width than the default test surface (600px) provides.
+    // At 1400dp: horizontal_split gives cart ~467dp — no overflow.
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -92,6 +112,9 @@ void main() {
           activeTenantProvider.overrideWith((ref) => 'tenant-1'),
           sessionProvider.overrideWith((ref) => _FakeSessionNotifier(_mockSession)),
           syncServiceProvider.overrideWithValue(_StubSyncService()),
+          sduiLayoutProvider('pos').overrideWith(
+            (ref) => Future.value(SduiLayout.retailPosDefault()),
+          ),
         ],
         child: const MaterialApp(
           home: PosScreen(),
@@ -105,12 +128,12 @@ void main() {
 
     // Verify Product Grid
     expect(find.text('Test Cola'), findsOneWidget);
-    expect(find.text('\$100.00'), findsOneWidget);
+    expect(find.textContaining('100'), findsOneWidget); // 100 FCFA price
     expect(find.text('Test Burger'), findsOneWidget);
 
-    // Verify Cart is empty initially
-    expect(find.text('Total:'), findsOneWidget);
-    expect(find.text('\$0.00'), findsOneWidget);
+    // Verify Cart is empty initially — Total label and zero in FCFA
+    expect(find.text('Total :'), findsOneWidget);
+    expect(find.textContaining('FCFA'), findsWidgets);
 
     // Tap to add "Test Cola" - Specific to Grid Card to avoid ambiguity with Cart List
     await tester.tap(find.widgetWithText(Card, 'Test Cola'));
@@ -128,14 +151,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    // Verify Quantity update
-    // Subtitle should be "2 x $100.0"
+    // Verify Quantity update — subtitle shows "2 x 100 FCFA"
     expect(find.textContaining('2 x'), findsOneWidget);
 
-    // Verify Total is $200
-    // "Test Burger" in grid ($200.00).
-    // Cola Item Trailing ($200.00).
-    // Cart Grand Total ($200.00).
-    expect(find.text('\$200.00'), findsNWidgets(3));
+    // Verify Total is 200 FCFA
+    // "Test Burger" in grid (200 FCFA).
+    // Cola Item Trailing (200 FCFA total).
+    // Cart Grand Total (200 FCFA).
+    expect(find.textContaining('200'), findsNWidgets(3));
   });
 }

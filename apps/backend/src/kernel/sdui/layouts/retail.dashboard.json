@@ -1,0 +1,44 @@
+{
+  "version": "1",
+  "business_type": "retail",
+  "screen": "dashboard",
+  "layout": {
+    "type": "dashboard_scroll",
+    "sections": [
+      {
+        "type": "kpi_card_grid",
+        "cards": [
+          {
+            "icon": "attach_money",
+            "label": "Ventes du jour",
+            "value_provider": "daily_revenue"
+          },
+          {
+            "icon": "receipt_long",
+            "label": "Transactions",
+            "value_provider": "daily_transactions"
+          },
+          {
+            "icon": "people",
+            "label": "Clients actifs",
+            "value_provider": "active_customers"
+          },
+          {
+            "icon": "inventory_2",
+            "label": "Stock faible",
+            "value_provider": "low_stock_count"
+          }
+        ]
+      },
+      {
+        "type": "line_chart",
+        "title": "Ventes des 7 derniers jours",
+        "data_provider": "weekly_sales_series"
+      },
+      {
+        "type": "terminal_status_list",
+        "title": "État des caisses"
+      }
+    ]
+  }
+}

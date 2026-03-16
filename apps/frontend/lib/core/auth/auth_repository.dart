@@ -36,8 +36,9 @@ class AuthRepository {
     try {
       print('[AuthRepo] Fetching profile for user: ${user.id}');
       final response = await _supabase
+          .useSchema('kernel')
           .from('organization_members')
-          .select('*, tenant:tenants(name)')
+          .select('*, tenant:tenants(name), role:roles(name)')
           .eq('user_id', user.id);
 
       if (response == null) {

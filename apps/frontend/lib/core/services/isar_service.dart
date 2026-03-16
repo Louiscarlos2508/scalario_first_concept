@@ -1,15 +1,15 @@
 import 'package:isar/isar.dart';
 import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:frontend/features/pos/data/models/product.dart';
-import 'package:frontend/features/pos/data/models/order.dart';
-import 'package:frontend/features/pos/data/models/pos_session.dart';
-import 'package:frontend/features/pos/data/models/parked_cart.dart';
-import 'package:frontend/features/pos/data/models/customer.dart';
+import 'package:frontend/features/retail/pos/data/models/product.dart';
+import 'package:frontend/features/retail/pos/data/models/order.dart';
+import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
+import 'package:frontend/features/retail/pos/data/models/parked_cart.dart';
+import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/models/sync_status.dart';
-
-import 'package:frontend/features/pos/data/models/category.dart';
+import 'package:frontend/features/retail/pos/data/models/category.dart';
+import 'package:frontend/features/retail/dashboard/data/models/inventory_movement_local.dart';
 
 class IsarService {
   late Future<Isar> db;
@@ -26,7 +26,7 @@ class IsarService {
       // WAL: Isar 3.x uses WAL by default — relaxedDurability omitted intentionally.
       // Committed writes survive unexpected process termination (AC1, Story 8.4).
       return await Isar.open(
-        [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema, SyncMetadataSchema, CategorySchema],
+        [ProductSchema, OrderSchema, PosSessionSchema, ParkedCartSchema, CustomerSchema, SyncMetadataSchema, CategorySchema, InventoryMovementLocalSchema],
         directory: dir.path,
         inspector: true,
       );

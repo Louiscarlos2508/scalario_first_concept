@@ -1,9 +1,9 @@
 import 'package:isar/isar.dart';
-import 'package:frontend/features/pos/data/models/product.dart';
-import 'package:frontend/features/pos/data/models/order.dart';
-import 'package:frontend/features/pos/data/models/pos_session.dart';
-import 'package:frontend/features/pos/data/models/customer.dart';
-import 'package:frontend/features/pos/data/models/parked_cart.dart';
+import 'package:frontend/features/retail/pos/data/models/product.dart';
+import 'package:frontend/features/retail/pos/data/models/order.dart';
+import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
+import 'package:frontend/features/retail/pos/data/models/customer.dart';
+import 'package:frontend/features/retail/pos/data/models/parked_cart.dart';
 import 'dart:io';
 
 void main() async {

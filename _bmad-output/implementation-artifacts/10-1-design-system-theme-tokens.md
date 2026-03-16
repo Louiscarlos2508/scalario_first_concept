@@ -3,7 +3,7 @@
 ## Metadata
 - **Epic:** Epic 10 — SDUI Foundation & Engine
 - **Story ID:** 10-1-design-system-theme-tokens
-- **Status:** in-progress
+- **Status:** review
 - **Priority:** High
 - **Depends on:** 10-0-fix-compile-errors (done)
 
@@ -58,27 +58,27 @@
 
 ## Tasks/Subtasks
 
-- [ ] **Task 1: Create `lib/core/theme/app_theme.dart`**
-  - [ ] Define `AppColors` with all 9 static const Color values
-  - [ ] Define `AppTextStyles` with 8 TextStyle constants
-  - [ ] Implement `AppTheme.light()` with colorScheme, textTheme, component themes
+- [x] **Task 1: Create `lib/core/theme/app_theme.dart`**
+  - [x] Define `AppColors` with all 9 static const Color values
+  - [x] Define `AppTextStyles` with 8 TextStyle constants
+  - [x] Implement `AppTheme.light()` with colorScheme, textTheme, component themes
 
-- [ ] **Task 2: Create `lib/core/theme/app_breakpoints.dart`**
-  - [ ] Export `kCompact = 600.0` and `kMedium = 1024.0`
+- [x] **Task 2: Create `lib/core/theme/app_breakpoints.dart`**
+  - [x] Export `kCompact = 600.0` and `kMedium = 1024.0`
 
-- [ ] **Task 3: Wire theme in `lib/main.dart`**
-  - [ ] Add import for `app_theme.dart`
-  - [ ] Set `theme: AppTheme.light()` in `MaterialApp`
+- [x] **Task 3: Wire theme in `lib/main.dart`**
+  - [x] Add import for `app_theme.dart`
+  - [x] Set `theme: AppTheme.light()` in `MaterialApp`
 
-- [ ] **Task 4: Write unit tests for theme tokens**
-  - [ ] Verify all 9 AppColors values
-  - [ ] Verify all 8 TextTheme slots
-  - [ ] Verify component minimum sizes (Fitts law)
-  - [ ] Verify breakpoint values
+- [x] **Task 4: Write unit tests for theme tokens**
+  - [x] Verify all 9 AppColors values
+  - [x] Verify all 8 TextTheme slots
+  - [x] Verify component minimum sizes (Fitts law)
+  - [x] Verify breakpoint values
 
-- [ ] **Task 5: Run flutter analyze and flutter test**
-  - [ ] Zero new errors
-  - [ ] All tests pass (no regressions)
+- [x] **Task 5: Run flutter analyze and flutter test**
+  - [x] Zero new errors
+  - [x] All tests pass (no regressions) — 40/40
 
 ---
 
@@ -114,7 +114,15 @@ apps/frontend/test/theme_test.dart                 ← CREATE (unit tests)
 
 ### Debug Log
 
+`CardThemeData` used (not deprecated `CardTheme`) for Material 3 compatibility. `ColorScheme.fromSeed(...).copyWith(...)` pattern used to guarantee exact hex values for primary/error/surface while keeping M3 tonal surface generation for other slots.
+
 ### Completion Notes
+
+- Created `AppColors` (9 tokens), `AppTextStyles` (8 styles), `AppTheme.light()` with component defaults
+- Created `AppBreakpoints` (`kCompact=600`, `kMedium=1024`)
+- Wired `AppTheme.light()` in `main.dart` — replaced seed-color ThemeData
+- 27 new unit tests added covering every AC; 40/40 total tests pass
+- Zero screen/widget files modified — pure theme propagation
 
 ---
 
@@ -122,6 +130,10 @@ apps/frontend/test/theme_test.dart                 ← CREATE (unit tests)
 
 | Action | Path |
 |--------|------|
+| Created | `apps/frontend/lib/core/theme/app_theme.dart` |
+| Created | `apps/frontend/lib/core/theme/app_breakpoints.dart` |
+| Modified | `apps/frontend/lib/main.dart` |
+| Created | `apps/frontend/test/theme_test.dart` |
 
 ---
 
@@ -129,3 +141,4 @@ apps/frontend/test/theme_test.dart                 ← CREATE (unit tests)
 
 | Date | Change |
 |------|--------|
+| 2026-03-15 | Story implemented — AppTheme, AppColors, AppBreakpoints created; main.dart wired; 27 tests added |

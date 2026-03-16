@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
-import 'package:frontend/features/pos/data/repositories/session_repository.dart';
+import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
 
 /// Handles POS session push to POST /pos/sessions.
 /// Sessions flow POS → server only (no delta pull needed).
@@ -13,7 +13,8 @@ class SessionSyncAdapter implements SyncAdapter {
 
   /// Push pending sessions (UUID-idempotent upsert).
   @override
-  Future<void> pushPending(String baseUrl, String tenantId) async {
+  Future<void> pushPending(String baseUrl, String tenantId,
+      {String? token}) async {
     final pendingSessions = await _sessionRepo.getPendingSessions();
     if (pendingSessions.isEmpty) return;
 
@@ -30,7 +31,11 @@ class SessionSyncAdapter implements SyncAdapter {
         final response = await http
             .post(
               Uri.parse('$baseUrl/pos/sessions'),
-              headers: {'Content-Type': 'application/json'},
+              headers: {
+                'Content-Type': 'application/json',
+                'x-tenant-id': tenantId,
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
               body: jsonEncode(session.toJson()),
             )
             .timeout(const Duration(seconds: 10));
@@ -49,8 +54,8 @@ class SessionSyncAdapter implements SyncAdapter {
 
   /// Sessions are not pulled — device owns its own session state.
   @override
-  Future<void> pullDelta(
-      String baseUrl, String tenantId, DateTime? since) async {
+  Future<void> pullDelta(String baseUrl, String tenantId, DateTime? since,
+      {String? token}) async {
     // Sessions flow POS → server only. No delta pull needed.
   }
 }

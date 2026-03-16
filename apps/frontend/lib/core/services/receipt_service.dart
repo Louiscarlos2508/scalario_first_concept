@@ -1,8 +1,8 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:frontend/features/pos/presentation/state/cart_state.dart';
-import 'package:frontend/features/pos/data/models/order.dart';
+import 'package:frontend/features/retail/pos/presentation/state/cart_state.dart';
+import 'package:frontend/features/retail/pos/data/models/order.dart';
 import 'package:intl/intl.dart';
 
 class ReceiptService {

@@ -237,6 +237,20 @@ The Flutter app gains a JSON-driven layout engine. A single Flutter binary rende
 **FRs covered:** FR13 (dynamic UI-Driven Engine layer)
 **Prerequisite:** Epics 1–6 complete (all shared modules + Retail vertical operational)
 
+### Epic 15: SDUI Dashboard & UI Polish
+The dashboard is wired to the SDUI engine (retail.dashboard.json), real KPI/chart/terminal widgets replace stubs, all POS and backoffice labels are translated to French with FCFA currency, hardcoded colors are replaced by AppTheme tokens, and navigation adapts to screen size (BottomNavigationBar on phone, NavigationRail on tablet) with SafeArea and Fitts-compliant touch targets throughout.
+**Phase:** 1b (after Epic 10 done)
+**FRs covered:** FR13 (SDUI dashboard), NFR28 (cashier onboarding ≤ 1h — French UI), NFR29 (French error messages)
+**Prerequisite:** Epic 10 complete (SduiRenderer + SduiWidgetRegistry operational)
+
+---
+
+### Epic 16: Retail Operations — Gestion Stock Terrain
+Les 4 opérations stock terrain de Moussa (gestionnaire) sont désormais accessibles depuis le frontend Flutter : réception livraison fournisseur, transfert magasin → rayon avec double validation chain-of-custody, déclaration de pertes avec motif obligatoire, et inventaire partiel avec signal des écarts. Les 4 écrans sont intégrés dans un hub Inventaire tabbed. Toutes les opérations fonctionnent offline (Isar + outbox).
+**Phase:** 1 (après Epic 15 — UI polish complète)
+**FRs covered:** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36
+**Prerequisite:** Epics 1–9 (backend inventory opérationnel — 288 tests NestJS verts), Epic 15 (DashboardShell + navigation tabbed)
+
 ### Epic 11: Programme Ambassadeurs
 Existing tenants generate referral codes and refer new businesses to Scalario. The system tracks referrals via referred_by (seeded in Story 1.6), calculates monthly commissions (20% of referred tenant subscription), and triggers Mobile Money payouts automatically. Ambassadeur dashboard shows referred tenants, commission history, and next payout date.
 **Phase:** 2b
@@ -1772,3 +1786,240 @@ So that the POS is the first validated proof-of-concept for the full SDUI stack 
 - `ProductGrid` and `CartPanel` widget internals are NOT changed in this story
 - Only `PosScreen`'s layout-assembly code is replaced with SDUI rendering
 - Validate on tablet emulator AND phone emulator before marking done
+
+---
+
+## Epic 16: Retail Operations — Gestion Stock Terrain
+
+**Objectif :** Câbler les 4 opérations stock terrain de Moussa (gestionnaire) côté frontend Flutter. Le backend (Epic 5) expose déjà tous les endpoints nécessaires (288 tests NestJS verts). Il manque les écrans Flutter, l'intégration dans la navigation, et le support offline.
+
+**Phase :** 1 (après Epic 15)
+**FRs couverts :** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36
+**Prérequis :** Epics 1–9 (backend inventory opérationnel), Epic 15 (DashboardShell + navigation stable)
+
+### Endpoints backend existants (à consommer)
+
+| Endpoint | Méthode | RBAC | Usage |
+|----------|---------|------|-------|
+| `/inventory/movements` | POST | owner, manager | DELIVERY / LOSS / TRANSFER_OUT |
+| `/inventory/movements/confirm` | POST | owner, manager, commercial | Confirmation TRANSFER_IN |
+| `/inventory/adjust` | POST | owner, manager | Inventaire partiel (ADJUSTMENT signé) |
+| `/inventory/stock` | GET | tous | Stock actuel par catalogItemId |
+| `/inventory/movements` | GET | tous | Historique mouvements (filtres: tenantId, since, referenceId) |
+
+### Types de mouvements (backend)
+
+`DELIVERY` · `TRANSFER_OUT` · `TRANSFER_IN` · `LOSS` · `ADJUSTMENT` · `SALE` (auto)
+
+### Story 16.1: Réception livraison fournisseur
+
+As a manager (Moussa),
+I want to record a supplier delivery with received quantities,
+So that stock is credited and variances are traced (FR29, FR30).
+
+**Acceptance Criteria:**
+
+**AC1 — Formulaire réception :**
+- Sélection du produit (recherche dans le catalogue)
+- Champ quantité reçue (obligatoire, entier > 0)
+- Champ notes/variance (optionnel)
+- Bouton "Valider la réception"
+
+**AC2 — Appel API :**
+- Submit → `POST /inventory/movements` body `{type: "DELIVERY", catalogItemId, quantity, reason?, tenantId}`
+- En cas de succès → snackbar "Réception enregistrée" + retour à l'écran précédent
+- En cas d'erreur → snackbar rouge avec message d'erreur
+
+**AC3 — Feedback visuel :**
+- Loading indicator pendant l'appel
+- Formulaire désactivé pendant l'envoi (évite double-soumission)
+
+**AC4 — Test :**
+- Soumettre une réception → `InventoryMovement.type == 'DELIVERY'` créé avec la bonne quantité
+- Widget test vérifie que le formulaire est présent et soumissible
+
+**Notes dev :**
+- Rôle requis : owner ou manager (backend enforced — pas de vérification frontend nécessaire sauf cacher le bouton)
+- `catalogItemId` = `product.remoteId` (champ existant sur le modèle Product Flutter)
+- Réutiliser le pattern ProductFormDialog pour la sélection produit
+
+---
+
+### Story 16.2: Transfert stock magasin → rayon
+
+As a manager (Moussa) and a commercial (Fatou),
+I want to declare a stock transfer out and confirm reception,
+So that the chain of custody is maintained with automatic variance tracking (FR31, FR32, FR33).
+
+**Acceptance Criteria:**
+
+**AC1 — Formulaire déclaration sortie (gestionnaire) :**
+- Sélection produit + quantité déclarée
+- Submit → `POST /inventory/movements` body `{type: "TRANSFER_OUT", catalogItemId, quantity, reason?, tenantId}`
+- Retourne un `referenceId` (UUID) à conserver pour la confirmation
+
+**AC2 — Affichage en attente de confirmation :**
+- Après TRANSFER_OUT créé → écran ou card "Transfert en attente de confirmation"
+- Affiche : produit, quantité déclarée, referenceId, date
+
+**AC3 — Formulaire confirmation (récepteur) :**
+- Champ quantité effectivement reçue (pré-remplie avec quantité déclarée)
+- Submit → `POST /inventory/movements/confirm` body `{referenceId, catalogItemId, quantity, tenantId}`
+
+**AC4 — Variance automatique :**
+- Si quantité reçue ≠ quantité déclarée → backend crée `TRANSFER_IN` avec `reason: "Variance: X"`
+- Frontend affiche la variance calculée après confirmation
+
+**AC5 — Test :**
+- Flux complet (TRANSFER_OUT + confirm) → 2 InventoryMovements créés
+- Test variance : déclaré 10, reçu 8 → variance = 2 dans le reason
+
+**Notes dev :**
+- RBAC : TRANSFER_OUT = owner/manager ; confirmation = owner/manager/commercial
+- `referenceId` transmis via state local (StateProvider) entre les deux écrans
+
+---
+
+### Story 16.3: Déclaration de pertes
+
+As a manager or commercial,
+I want to declare a stock loss with a mandatory reason,
+So that shrinkage is traced and attributed (FR34).
+
+**Acceptance Criteria:**
+
+**AC1 — Formulaire déclaration :**
+- Sélection produit + quantité perdue (entier > 0)
+- Motif obligatoire — dropdown : Casse · Péremption · Vol · Frotte · Autre
+- Si "Autre" → champ texte libre obligatoire
+- Bouton "Déclarer la perte"
+
+**AC2 — Validation frontend :**
+- Motif non sélectionné → erreur inline "Motif obligatoire"
+- Quantité ≤ 0 → erreur inline "Quantité invalide"
+
+**AC3 — Appel API :**
+- Submit → `POST /inventory/movements` body `{type: "LOSS", catalogItemId, quantity, reason, tenantId}`
+- Backend valide : `reason` obligatoire pour LOSS (BadRequestException si absent)
+- En cas de succès → snackbar "Perte déclarée"
+
+**AC4 — Test :**
+- Soumettre sans motif → snackbar erreur (validation frontend) + pas d'appel API
+- Soumettre avec motif → `InventoryMovement.type == 'LOSS'` créé
+- Widget test vérifie les 4 options du dropdown
+
+**Notes dev :**
+- RBAC backend : owner/manager uniquement pour `POST /inventory/movements`
+- Discordance PRD vs backend : FR34 dit "commercial peut déclarer", mais le backend n'autorise que owner/manager. À aligner en Epic 17 (ou via endpoint dédié). Pour cette story, implémenter avec les contraintes backend actuelles.
+- Motifs labels FR : "Casse", "Péremption", "Vol", "Frotte", "Autre"
+
+---
+
+### Story 16.4: Inventaire partiel
+
+As a manager (Moussa),
+I want to perform a partial inventory count with variance signal,
+So that discrepancies between physical and system stock are identified and corrected (FR35).
+
+**Acceptance Criteria:**
+
+**AC1 — Sélection produits à compter :**
+- Multi-sélection depuis le catalogue (checkbox ou tap)
+- Minimum 1 produit requis pour démarrer l'inventaire
+
+**AC2 — Feuille de comptage :**
+- Pour chaque produit sélectionné : nom, stock système (issu de `GET /inventory/stock`), champ quantité physique comptée
+- Signal visuel : vert si physique == système, rouge si écart
+
+**AC3 — Motif :**
+- Si au moins un produit a un écart → champ motif global obligatoire (ex. "Inventaire mensuel janvier")
+
+**AC4 — Soumission :**
+- Pour chaque produit avec écart → `POST /inventory/adjust` body `{catalogItemId, countedQuantity, reason, tenantId}`
+- Produits sans écart ignorés (backend retourne `{adjusted: false}` — éviter appel inutile)
+- Résumé en fin : "X produits ajustés, Y sans écart"
+
+**AC5 — Test :**
+- Compter 1 produit avec écart → `InventoryMovement.type == 'ADJUSTMENT'` créé avec quantité signée
+- Compter 1 produit sans écart → pas d'appel API (ou appel retourne `adjusted: false`)
+- Widget test vérifie le signal couleur (vert/rouge)
+
+**Notes dev :**
+- `POST /inventory/adjust` calcule la variance côté backend : `variance = countedQuantity - currentStock`
+- La quantité du mouvement ADJUSTMENT est signée (positive = surplus, négative = déficit)
+- `GET /inventory/stock?catalogItemId=X&tenantId=Y` pour afficher le stock système en temps réel
+
+---
+
+### Story 16.5: Hub Inventaire — Navigation intégrée
+
+As a manager using the backoffice,
+I want a unified inventory hub with tabs for all stock operations,
+So that all 4 terrain operations are one tap away from the Inventaire nav item (AC intégration navigation).
+
+**Acceptance Criteria:**
+
+**AC1 — Structure tabbed :**
+- L'écran Inventaire (nav item existant) devient un hub avec `TabBar` ou `NavigationBar` :
+  - **Produits** — écran existant `InventoryScreen` (catalogue + pagination)
+  - **Réceptions** — formulaire 16-1 + liste des réceptions récentes
+  - **Transferts** — formulaire 16-2 + liste des transferts en attente
+  - **Pertes** — formulaire 16-3 + liste des pertes récentes
+  - **Inventaire** — écran 16-4
+
+**AC2 — Labels français, AppTheme :**
+- Tous les labels en français, couleurs AppTheme, FCFA où applicable
+
+**AC3 — Liste récente par onglet :**
+- Chaque onglet affiche une liste des 20 derniers mouvements du type concerné
+- Source : `GET /inventory/movements?tenantId=&limit=20` filtré par type
+
+**AC4 — Raccourci dashboard :**
+- La card "Stock faible" du dashboard (KpiCardGrid) navigue vers l'onglet Réceptions
+
+**AC5 — Test :**
+- Widget test : TabBar présent avec 5 onglets
+- Navigation entre onglets ne déclenche pas d'erreur
+
+**Notes dev :**
+- Réutiliser `DefaultTabController` + `TabBar` + `TabBarView`
+- Les 4 nouveaux écrans (16-1 à 16-4) sont des widgets intégrés dans les `TabBarView` — pas de screens séparés dans la navigation principale
+
+---
+
+### Story 16.6: Sync offline pour les opérations stock
+
+As a manager or commercial working offline,
+I want stock operations to be saved locally and synced when connectivity returns,
+So that terrain work is never lost (FR36, NFR30).
+
+**Acceptance Criteria:**
+
+**AC1 — Modèle Isar `InventoryMovementLocal` :**
+- Champs : `id` (Isar auto), `remoteId` (String?), `catalogItemId`, `quantity`, `type`, `reason`, `tenantId`, `referenceId` (pour transferts), `status` (pending/synced/failed), `createdAt`
+- Fichier : `apps/frontend/lib/features/pos/data/models/inventory_movement.dart` + `.g.dart`
+
+**AC2 — Repository `InventoryRepository` :**
+- `saveLocal(movement)` — écriture Isar
+- `getPending()` — mouvements avec status == pending
+- `markSynced(id)` / `markFailed(id)`
+- `getMovements({type?, limit?})` — lecture locale pour les listes onglets
+
+**AC3 — Opérations offline :**
+- Les 4 formulaires (16-1 à 16-4) sauvegardent d'abord en local (status: pending)
+- Si online → appel API immédiat → markSynced
+- Si offline → stocké en pending → sync automatique à la reconnexion via `SyncService`
+
+**AC4 — Indicateur outbox :**
+- Badge sur l'icône Inventaire dans la navigation si des mouvements pending existent
+
+**AC5 — Test :**
+- Créer un mouvement offline (mock SyncService offline) → status == pending dans Isar
+- Réactiver la connexion → mouvement synced, status == synced
+- Test Isar en mémoire (pas de DB fichier)
+
+**Notes dev :**
+- Suivre le pattern existant : `OrderRepository` (Isar + outbox), `SyncService.startSync()`
+- Générer `.g.dart` avec `flutter pub run build_runner build`
+- Ne pas modifier `SyncService` — ajouter un `InventorySyncAdapter` si l'architecture le prévoit, sinon étendre `SyncService` avec un batch inventory
+

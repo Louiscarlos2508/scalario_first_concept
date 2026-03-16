@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
-import 'package:frontend/features/pos/data/repositories/order_repository.dart';
+import 'package:frontend/features/retail/pos/data/repositories/order_repository.dart';
 
 /// Handles order (transaction/retail sale) push to POST /retail/sales.
 /// Pull is server-authoritative — orders are not pulled back to the device.
@@ -13,7 +13,8 @@ class TransactionSyncAdapter implements SyncAdapter {
 
   /// Push pending orders to POST /retail/sales (UUID-idempotent upsert).
   @override
-  Future<void> pushPending(String baseUrl, String tenantId) async {
+  Future<void> pushPending(String baseUrl, String tenantId,
+      {String? token}) async {
     final pendingOrders = await _orderRepo.getPendingOrders();
     if (pendingOrders.isEmpty) return;
 
@@ -30,7 +31,11 @@ class TransactionSyncAdapter implements SyncAdapter {
         final response = await http
             .post(
               Uri.parse('$baseUrl/retail/sales'),
-              headers: {'Content-Type': 'application/json'},
+              headers: {
+                'Content-Type': 'application/json',
+                'x-tenant-id': tenantId,
+                if (token != null) 'Authorization': 'Bearer $token',
+              },
               body: jsonEncode({
                 'transactionId': order.uuid,
                 'totalAmount': order.totalAmount,
@@ -48,6 +53,15 @@ class TransactionSyncAdapter implements SyncAdapter {
         if (response.statusCode == 200 || response.statusCode == 201) {
           await _orderRepo.markAsSynced(order.uuid);
           print('[TransactionAdapter] Order ${order.uuid} synced');
+        } else if (response.statusCode >= 400 && response.statusCode < 500) {
+          // 4xx = client error (auth, validation) — won't self-resolve, stop retrying.
+          await _orderRepo.markAsError(order.uuid);
+          print(
+              '[TransactionAdapter] Order ${order.uuid} marked error (${response.statusCode}): ${response.body}');
+        } else {
+          // 5xx or unexpected — keep pending, will retry next cycle.
+          print(
+              '[TransactionAdapter] Server error for order ${order.uuid} (${response.statusCode}), will retry');
         }
       } catch (e) {
         print('[TransactionAdapter] Failed to push order ${order.uuid}: $e');
@@ -60,8 +74,8 @@ class TransactionSyncAdapter implements SyncAdapter {
   /// synced copy. Only records with syncStatus == pending are protected from
   /// overwrite (they stay in the outbox until the server confirms receipt).
   @override
-  Future<void> pullDelta(
-      String baseUrl, String tenantId, DateTime? since) async {
+  Future<void> pullDelta(String baseUrl, String tenantId, DateTime? since,
+      {String? token}) async {
     // Orders flow POS → server only. No delta pull needed.
   }
 }
