@@ -97,27 +97,30 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      key: const Key('product_stock_field'),
-                      controller: _stockController,
-                      decoration: const InputDecoration(
-                        labelText: 'Stock initial',
+                  // Stock initial only shown when creating (not editing)
+                  if (!(widget.submitToCatalog && widget.product != null)) ...[
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        key: const Key('product_stock_field'),
+                        controller: _stockController,
+                        decoration: const InputDecoration(
+                          labelText: 'Stock initial',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (value != null &&
+                              value.isNotEmpty &&
+                              double.tryParse(value) == null) {
+                            return 'Nombre invalide';
+                          }
+                          return null;
+                        },
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      validator: (value) {
-                        if (value != null &&
-                            value.isNotEmpty &&
-                            double.tryParse(value) == null) {
-                          return 'Nombre invalide';
-                        }
-                        return null;
-                      },
                     ),
-                  ),
+                  ],
                 ],
               ),
               const SizedBox(height: 16),
@@ -192,7 +195,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
-  // ── Backoffice catalog creation flow ──────────────────────────────────────
+  // ── Backoffice catalog create/update flow ─────────────────────────────────
 
   Future<void> _submitToCatalogApi() async {
     final tenantId = ref.read(activeTenantProvider);
@@ -201,25 +204,41 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     setState(() => _isSubmitting = true);
     try {
       final catalogRepo = ref.read(catalogRepositoryProvider);
-      final result = await catalogRepo.createItem(
-        name: _nameController.text.trim(),
-        price: double.parse(_priceController.text.trim()),
-        tenantId: tenantId,
-        categoryId: _selectedCategoryId,
-        barcode: _barcodeController.text.trim().isEmpty
-            ? null
-            : _barcodeController.text.trim(),
-      );
+      final name = _nameController.text.trim();
+      final price = double.parse(_priceController.text.trim());
+      final barcode = _barcodeController.text.trim().isEmpty
+          ? null
+          : _barcodeController.text.trim();
 
-      final initialStock = double.tryParse(_stockController.text.trim()) ?? 0;
-      if (initialStock > 0) {
-        final inventoryRepo = ref.read(inventoryRepositoryProvider);
-        await inventoryRepo.createMovement(
-          type: 'DELIVERY',
-          catalogItemId: result['id'] as String,
-          quantity: initialStock.toInt(),
+      if (widget.product != null && widget.product!.remoteId != null) {
+        // Edit existing product
+        await catalogRepo.updateItem(
+          id: widget.product!.remoteId!,
+          name: name,
+          price: price,
           tenantId: tenantId,
+          categoryId: _selectedCategoryId,
+          barcode: barcode,
         );
+      } else {
+        // Create new product
+        final result = await catalogRepo.createItem(
+          name: name,
+          price: price,
+          tenantId: tenantId,
+          categoryId: _selectedCategoryId,
+          barcode: barcode,
+        );
+        final initialStock = double.tryParse(_stockController.text.trim()) ?? 0;
+        if (initialStock > 0) {
+          final inventoryRepo = ref.read(inventoryRepositoryProvider);
+          await inventoryRepo.createMovement(
+            type: 'DELIVERY',
+            catalogItemId: result['id'] as String,
+            quantity: initialStock.toInt(),
+            tenantId: tenantId,
+          );
+        }
       }
 
       ref.invalidate(catalogProvider);
@@ -227,10 +246,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
+        final isEdit = widget.product != null;
         messenger.showSnackBar(
-          const SnackBar(
-            key: Key('snackbar_product_created'),
-            content: Text('Produit ajouté'),
+          SnackBar(
+            key: Key(isEdit ? 'snackbar_product_updated' : 'snackbar_product_created'),
+            content: Text(isEdit ? 'Produit modifié' : 'Produit ajouté'),
             backgroundColor: AppColors.success,
           ),
         );

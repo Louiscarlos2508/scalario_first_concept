@@ -88,6 +88,8 @@ class _TransferPendingScreenState
     }
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: pending.length,
       padding: const EdgeInsets.all(8),
       itemBuilder: (context, i) {

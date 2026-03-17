@@ -152,7 +152,7 @@ class SyncService {
       try {
         notifyStatus(SyncUiStatus.syncing);
         print('[SyncIsolate] Starting sync pass...');
-        await _performSyncWithAdapters(
+        final hadChanges = await _performSyncWithAdapters(
           sessionAdapter: sessionAdapter,
           transactionAdapter: transactionAdapter,
           contactAdapter: contactAdapter,
@@ -168,7 +168,9 @@ class SyncService {
         isFirstPass = false;
         retryCount = 0;
         notifyStatus(SyncUiStatus.connected);
-        print('[SyncIsolate] Sync pass completed successfully.');
+        if (hadChanges) {
+          print('[SyncIsolate] Sync pass completed successfully.');
+        }
       } catch (e) {
         retryCount++;
         notifyStatus(SyncUiStatus.error);
@@ -195,7 +197,7 @@ class SyncService {
     runSyncPass();
   }
 
-  static Future<void> _performSyncWithAdapters({
+  static Future<bool> _performSyncWithAdapters({
     required SessionSyncAdapter sessionAdapter,
     required TransactionSyncAdapter transactionAdapter,
     required ContactSyncAdapter contactAdapter,
@@ -209,6 +211,12 @@ class SyncService {
     bool forceFullCatalogPull = false,
   }) async {
     await _sendHeartbeat(baseUrl, tenantId: tenantId, deviceId: deviceId);
+
+    // Snapshot pending counts before pushing to detect actual changes.
+    bool hadChanges = forceFullCatalogPull;
+
+    final pendingInventory = await inventoryAdapter.pendingCount();
+    if (pendingInventory > 0) hadChanges = true;
 
     // Push ordering: sessions first (FK sessionId resolves before transactions)
     await sessionAdapter.pushPending(baseUrl, tenantId ?? '', token: authToken);
@@ -229,6 +237,8 @@ class SyncService {
       await contactAdapter.pullDelta(baseUrl, tenantId, lastCustomerSync,
           token: authToken);
     }
+
+    return hadChanges;
   }
 
   static Future<void> _sendHeartbeat(String baseUrl, {String? tenantId, String? deviceId}) async {

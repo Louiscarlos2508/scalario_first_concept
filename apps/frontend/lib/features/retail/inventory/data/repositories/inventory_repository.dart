@@ -20,11 +20,7 @@ class InventoryRepository {
 
   Map<String, String> _authHeaders({String? tenantId, String? token}) {
     final accessToken = token ?? _tokenGetter?.call();
-    return {
-      'Content-Type': 'application/json',
-      if (tenantId != null) 'x-tenant-id': tenantId,
-      if (accessToken != null) 'Authorization': 'Bearer $accessToken',
-    };
+    return ApiConstants.headers(tenantId: tenantId, token: accessToken);
   }
 
   /// POST /inventory/movements

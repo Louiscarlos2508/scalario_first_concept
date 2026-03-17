@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/widgets/product_autocomplete.dart';
 import 'package:frontend/features/retail/inventory/data/models/inventory_movement_local.dart';
 import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
@@ -132,35 +133,15 @@ class _DeliveryFormState extends ConsumerState<DeliveryForm> {
             const SizedBox(height: 16),
 
             // Product search (Autocomplete)
-            Autocomplete<Product>(
-              displayStringForOption: (p) => p.name,
-              optionsBuilder: (textEditingValue) {
-                if (textEditingValue.text.isEmpty) return products;
-                final query = textEditingValue.text.toLowerCase();
-                return products.where(
-                  (p) => p.name.toLowerCase().contains(query),
-                );
-              },
+            ProductAutocomplete(
+              products: products,
+              fieldKey: const Key('delivery_product_field'),
               onSelected: (product) {
                 setState(() => _selectedProduct = product);
                 _productSearchController.text = product.name;
               },
-              fieldViewBuilder:
-                  (context, controller, focusNode, onFieldSubmitted) {
-                return TextFormField(
-                  key: const Key('delivery_product_field'),
-                  controller: controller,
-                  focusNode: focusNode,
-                  decoration: const InputDecoration(
-                    labelText: 'Produit *',
-                    hintText: 'Rechercher un produit...',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (_) =>
-                      _selectedProduct == null ? 'Sélectionnez un produit' : null,
-                );
-              },
+              validator: (_) =>
+                  _selectedProduct == null ? 'Sélectionnez un produit' : null,
             ),
             const SizedBox(height: 12),
 

@@ -9,7 +9,6 @@ import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/features/retail/inventory/presentation/screens/inventory_screen.dart';
-import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -28,16 +27,6 @@ final _mockProfile = UserProfile(
   memberships: [TenantMembership(tenantId: 'tenant-1', role: 'manager')],
 );
 
-final _mockProducts = [
-  Product()
-    ..id = 1
-    ..remoteId = 'prod-1'
-    ..name = 'Farine de blé'
-    ..price = 800
-    ..stockQuantity = 20
-    ..tenantId = 'tenant-1',
-];
-
 Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
   return ProviderScope(
     overrides: [
@@ -45,13 +34,6 @@ Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
       activeTenantProvider.overrideWith((ref) => 'tenant-1'),
       syncServiceProvider.overrideWithValue(_StubSyncService()),
       inventoryRepositoryProvider.overrideWithValue(repo),
-      paginatedProductListProvider.overrideWith(
-        (ref) => Future.value({
-          'items': _mockProducts,
-          'total': 1,
-          'totalPages': 1,
-        }),
-      ),
     ],
     child: MaterialApp(
       home: InventoryScreen(initialIndex: initialIndex),
@@ -61,7 +43,7 @@ Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
 
 void main() {
   group('InventoryScreen — tab navigation', () {
-    testWidgets('TabBar présent avec 5 onglets aux labels corrects',
+    testWidgets('TabBar présent avec 4 onglets aux labels corrects',
         (tester) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
@@ -71,13 +53,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(TabBar), findsOneWidget);
-      expect(find.byType(Tab), findsNWidgets(5));
-      expect(find.text('Produits'), findsOneWidget);
+      expect(find.byType(Tab), findsNWidgets(4));
+      expect(find.text('Produits'), findsNothing);
       expect(find.text('Réceptions'), findsOneWidget);
       expect(find.text('Transferts'), findsOneWidget);
       expect(find.text('Pertes'), findsOneWidget);
-      // "Inventaire" appears in AppBar title + tab label — at least 2
-      expect(find.text('Inventaire'), findsAtLeastNWidgets(2));
+      // "Inventaire" appears in AppBar title only (tab is now "Comptage")
+      expect(find.text('Inventaire'), findsOneWidget);
+      expect(find.text('Comptage'), findsOneWidget);
     });
 
     testWidgets('tap onglet "Pertes" → LossDeclarationForm visible',
@@ -112,12 +95,12 @@ void main() {
       expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
     });
 
-    testWidgets('initialIndex: 1 → onglet Réceptions actif par défaut',
+    testWidgets('initialIndex: 0 → onglet Réceptions actif par défaut',
         (tester) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
-      await tester.pumpWidget(_buildScreen(repo, initialIndex: 1));
+      await tester.pumpWidget(_buildScreen(repo, initialIndex: 0));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

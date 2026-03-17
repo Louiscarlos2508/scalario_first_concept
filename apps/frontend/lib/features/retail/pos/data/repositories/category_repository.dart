@@ -48,10 +48,7 @@ class CategoryRepository {
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
     final response = await http.delete(
       Uri.parse('${ApiConstants.baseUrl}/pos/categories/$remoteId'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+      headers: ApiConstants.headers(token: token),
     );
 
     // 404 = already gone on server; still delete locally.

@@ -19,7 +19,15 @@ enum _Phase { selection, counting }
 class PartialInventoryScreen extends ConsumerStatefulWidget {
   final InventoryRepository repository;
 
-  const PartialInventoryScreen({super.key, required this.repository});
+  /// When [embedded] is true (used as a tab inside InventoryScreen), the
+  /// Scaffold/AppBar wrapper is omitted to avoid a double AppBar.
+  final bool embedded;
+
+  const PartialInventoryScreen({
+    super.key,
+    required this.repository,
+    this.embedded = false,
+  });
 
   @override
   ConsumerState<PartialInventoryScreen> createState() =>
@@ -194,11 +202,63 @@ class _PartialInventoryScreenState
       orElse: () => <Product>[],
     );
 
+    final phaseTitle = _phase == _Phase.selection
+        ? 'Inventaire partiel — Sélection'
+        : 'Feuille de comptage';
+
+    final body = _phase == _Phase.selection
+        ? _SelectionView(
+            products: _filteredProducts(allProducts),
+            selectedIds: _selectedIds,
+            searchQuery: _searchQuery,
+            onSearchChanged: (q) => setState(() => _searchQuery = q),
+            onToggle: (id) => setState(() {
+              if (_selectedIds.contains(id)) {
+                _selectedIds.remove(id);
+              } else {
+                _selectedIds.add(id);
+              }
+            }),
+            onStartCounting: _selectedIds.isNotEmpty
+                ? () => _startCounting(allProducts)
+                : null,
+          )
+        : _CountingView(
+            products: allProducts
+                .where((p) =>
+                    p.remoteId != null &&
+                    _selectedIds.contains(p.remoteId))
+                .toList(),
+            counted: _counted,
+            systemStock: _systemStock,
+            loadingStock: _loadingStock,
+            onCountChanged: (id, val) =>
+                setState(() => _counted[id] = val),
+            hasAnyVariance: _hasAnyVariance,
+            reasonController: _reasonController,
+            onReasonChanged: () => setState(() {}),
+            canSubmit: _canSubmitCount,
+            isSubmitting: _isSubmitting,
+            onSubmit: () => _submitCount(allProducts),
+          );
+
+    if (widget.embedded) {
+      return Column(
+        children: [
+          _PhaseHeader(
+            title: phaseTitle,
+            onBack: _phase == _Phase.counting
+                ? () => setState(() => _phase = _Phase.selection)
+                : null,
+          ),
+          Expanded(child: body),
+        ],
+      );
+    }
+
     return Scaffold(
       appBar: ScalarioAppBar(
-        title: _phase == _Phase.selection
-            ? 'Inventaire partiel — Sélection'
-            : 'Feuille de comptage',
+        title: phaseTitle,
         leadingOverride: _phase == _Phase.counting
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -206,41 +266,7 @@ class _PartialInventoryScreenState
               )
             : null,
       ),
-      body: _phase == _Phase.selection
-          ? _SelectionView(
-              products: _filteredProducts(allProducts),
-              selectedIds: _selectedIds,
-              searchQuery: _searchQuery,
-              onSearchChanged: (q) => setState(() => _searchQuery = q),
-              onToggle: (id) => setState(() {
-                if (_selectedIds.contains(id)) {
-                  _selectedIds.remove(id);
-                } else {
-                  _selectedIds.add(id);
-                }
-              }),
-              onStartCounting: _selectedIds.isNotEmpty
-                  ? () => _startCounting(allProducts)
-                  : null,
-            )
-          : _CountingView(
-              products: allProducts
-                  .where((p) =>
-                      p.remoteId != null &&
-                      _selectedIds.contains(p.remoteId))
-                  .toList(),
-              counted: _counted,
-              systemStock: _systemStock,
-              loadingStock: _loadingStock,
-              onCountChanged: (id, val) =>
-                  setState(() => _counted[id] = val),
-              hasAnyVariance: _hasAnyVariance,
-              reasonController: _reasonController,
-              onReasonChanged: () => setState(() {}),
-              canSubmit: _canSubmitCount,
-              isSubmitting: _isSubmitting,
-              onSubmit: () => _submitCount(allProducts),
-            ),
+      body: body,
     );
   }
 }
@@ -464,6 +490,39 @@ class _CountingView extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Text('Soumettre l\'inventaire'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Phase header (embedded mode) ──────────────────────────────────────────────
+
+class _PhaseHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback? onBack;
+
+  const _PhaseHeader({required this.title, this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        children: [
+          if (onBack != null)
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBack,
+              visualDensity: VisualDensity.compact,
+            ),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ],

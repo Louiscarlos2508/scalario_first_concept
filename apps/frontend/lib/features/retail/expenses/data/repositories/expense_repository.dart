@@ -20,11 +20,7 @@ class ExpenseRepository {
     } catch (_) {
       // Supabase not initialized in test environment — no auth header
     }
-    return {
-      'Content-Type': 'application/json',
-      if (tenantId != null) 'x-tenant-id': tenantId,
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
+    return ApiConstants.headers(tenantId: tenantId, token: token);
   }
 
   /// POST /retail/expenses — creates an expense.

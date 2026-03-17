@@ -6,17 +6,32 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
 class StockHistoryScreen extends ConsumerWidget {
-  const StockHistoryScreen({super.key});
+  /// When set, filters movements for this specific product.
+  final String? catalogItemId;
+
+  /// Display name shown in AppBar when [catalogItemId] is set.
+  final String? productName;
+
+  const StockHistoryScreen({
+    super.key,
+    this.catalogItemId,
+    this.productName,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final historyAsync = ref.watch(stockHistoryProvider);
+    final isFiltered = catalogItemId != null;
+    final historyAsync = isFiltered
+        ? ref.watch(stockHistoryByItemProvider(catalogItemId!))
+        : ref.watch(stockHistoryProvider);
     final dateRange = ref.watch(stockHistoryDateRangeProvider);
     final dateFormat = DateFormat('dd MMM, HH:mm');
 
     return Scaffold(
       appBar: ScalarioAppBar(
-        title: 'Historique des stocks',
+        title: isFiltered
+            ? (productName ?? 'Mouvements produit')
+            : 'Historique des stocks',
         actions: [
           TextButton.icon(
             onPressed: () async {
@@ -39,7 +54,9 @@ class StockHistoryScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.refresh(stockHistoryProvider),
+            onPressed: () => isFiltered
+                ? ref.refresh(stockHistoryByItemProvider(catalogItemId!))
+                : ref.refresh(stockHistoryProvider),
           ),
           const SizedBox(width: 8),
         ],
@@ -68,10 +85,10 @@ class StockHistoryScreen extends ConsumerWidget {
 
               Color qtyColor;
               IconData icon;
-              if (type == 'IN') {
+              if (type == 'IN' || type == 'DELIVERY') {
                 qtyColor = AppColors.success;
                 icon = Icons.add_circle_outline;
-              } else if (type == 'OUT') {
+              } else if (type == 'OUT' || type == 'LOSS') {
                 qtyColor = AppColors.error;
                 icon = Icons.remove_circle_outline;
               } else {
@@ -84,16 +101,22 @@ class StockHistoryScreen extends ConsumerWidget {
                   backgroundColor: qtyColor.withValues(alpha: 0.1),
                   child: Icon(icon, color: qtyColor),
                 ),
-                title: Text(productName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: isFiltered
+                    ? Text(_typeLabel(type), style: const TextStyle(fontWeight: FontWeight.bold))
+                    : Text(productName, style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (reason.isNotEmpty) Text(reason, style: const TextStyle(fontSize: 12)),
-                    Text(dateFormat.format(date), style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                    if (reason.isNotEmpty)
+                      Text(reason, style: const TextStyle(fontSize: 12)),
+                    Text(
+                      dateFormat.format(date),
+                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                    ),
                   ],
                 ),
                 trailing: Text(
-                  '${qty > 0 ? "+" : ""}${qty.toStringAsFixed(2)}',
+                  '${qty > 0 ? "+" : ""}${qty.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -108,5 +131,18 @@ class StockHistoryScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Erreur : $err')),
       ),
     );
+  }
+
+  String _typeLabel(String type) {
+    return switch (type) {
+      'DELIVERY' => 'Réception',
+      'LOSS' => 'Perte',
+      'TRANSFER_OUT' => 'Transfert sortant',
+      'TRANSFER_IN' => 'Transfert entrant',
+      'ADJUSTMENT' => 'Ajustement',
+      'IN' => 'Entrée',
+      'OUT' => 'Sortie',
+      _ => type,
+    };
   }
 }

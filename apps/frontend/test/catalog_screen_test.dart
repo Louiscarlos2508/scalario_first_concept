@@ -9,11 +9,21 @@ import 'package:frontend/features/retail/catalog/presentation/providers/catalog_
 import 'package:frontend/features/retail/catalog/presentation/screens/catalog_screen.dart';
 import 'package:frontend/features/retail/catalog/presentation/widgets/product_form_dialog.dart';
 import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/retail/inventory/presentation/screens/stock_history_screen.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+import 'package:frontend/features/retail/pos/data/models/product.dart';
+
+Product _buildExistingProduct() => Product()
+  ..remoteId = 'item-001'
+  ..name = 'Farine'
+  ..price = 500
+  ..barcode = null
+  ..categoryId = null;
 
 Widget _buildDialog({
   required http.Client catalogClient,
@@ -212,6 +222,156 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('catalog_fab')), findsOneWidget);
+    });
+
+    testWidgets('tap ⋮ → bottom sheet avec 3 actions', (tester) async {
+      final items = [
+        {'id': 'p1', 'name': 'Farine', 'price': 500, 'stockQuantity': 10},
+      ];
+      await tester.pumpWidget(_buildScreen(items: items));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('catalog_menu_p1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('catalog_action_edit')), findsOneWidget);
+      expect(find.byKey(const Key('catalog_action_adjust')), findsOneWidget);
+      expect(find.byKey(const Key('catalog_action_delete')), findsOneWidget);
+      // Historique n'est plus dans le menu — accessible via tap direct sur la ligne
+      expect(find.byKey(const Key('catalog_action_history')), findsNothing);
+    });
+
+    testWidgets('tap ⋮ → Modifier → ProductFormDialog visible',
+        (tester) async {
+      final items = [
+        {'id': 'p1', 'name': 'Farine', 'price': 500, 'stockQuantity': 10},
+      ];
+      await tester.pumpWidget(_buildScreen(items: items));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('catalog_menu_p1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('catalog_action_edit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('product_name_field')), findsOneWidget);
+    });
+
+    testWidgets('tap produit → StockHistoryScreen pushé', (tester) async {
+      final items = [
+        {'id': 'p1', 'name': 'Farine', 'price': 500, 'stockQuantity': 10},
+      ];
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          activeTenantProvider.overrideWith((ref) => 'tenant-1'),
+          catalogProvider.overrideWith((ref) => Future.value(items)),
+          catalogRepositoryProvider.overrideWithValue(
+            CatalogRepository(
+                httpClient: MockClient((_) async => http.Response('[]', 200))),
+          ),
+          stockHistoryByItemProvider.overrideWith(
+              (ref, id) => Future.value([])),
+        ],
+        child: const MaterialApp(home: CatalogScreen()),
+      ));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('catalog_item_p1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StockHistoryScreen), findsOneWidget);
+    });
+  });
+
+  // ── CatalogScreen — delete product ─────────────────────────────────────────
+
+  group('CatalogScreen — delete product', () {
+    testWidgets('tap Supprimer → confirmation dialog → DELETE called',
+        (tester) async {
+      final deletedIds = <String>[];
+      final fakeClient = MockClient((req) async {
+        if (req.method == 'DELETE') deletedIds.add(req.url.pathSegments.last);
+        return http.Response('', 204);
+      });
+      final catalogRepo = CatalogRepository(httpClient: fakeClient);
+
+      final items = [
+        {'id': 'p1', 'name': 'Farine', 'price': 500, 'stockQuantity': 10},
+      ];
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          activeTenantProvider.overrideWith((ref) => 'tenant-1'),
+          catalogProvider.overrideWith((ref) => Future.value(items)),
+          catalogRepositoryProvider.overrideWithValue(catalogRepo),
+        ],
+        child: const MaterialApp(home: CatalogScreen()),
+      ));
+      await tester.pump();
+
+      // Open ⋮ menu
+      await tester.tap(find.byKey(const Key('catalog_menu_p1')));
+      await tester.pumpAndSettle();
+
+      // Tap delete action
+      await tester.tap(find.byKey(const Key('catalog_action_delete')));
+      await tester.pumpAndSettle();
+
+      // Confirmation dialog shown
+      expect(find.text('Supprimer le produit ?'), findsOneWidget);
+
+      // Confirm
+      await tester.tap(find.text('Supprimer'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(deletedIds, contains('p1'));
+    });
+  });
+
+  // ── ProductFormDialog — edit mode ──────────────────────────────────────────
+
+  group('ProductFormDialog — edit mode (submitToCatalog: true)', () {
+    testWidgets('edit mode calls PUT /catalog/items/:id', (tester) async {
+      final capturedRequests = <http.Request>[];
+      final fakeClient = MockClient((req) async {
+        capturedRequests.add(req);
+        return http.Response('{}', 200);
+      });
+
+      final existingProduct = _buildExistingProduct();
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          activeTenantProvider.overrideWith((ref) => 'tenant-1'),
+          catalogRepositoryProvider.overrideWithValue(
+            CatalogRepository(httpClient: fakeClient),
+          ),
+          catalogProvider.overrideWith((ref) => Future.value([])),
+          categoriesProvider.overrideWith((ref) => Future.value([])),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ProductFormDialog(submitToCatalog: true, product: existingProduct),
+          ),
+        ),
+      ));
+      await tester.pump();
+
+      // Stock field should NOT be shown in edit mode
+      expect(find.byKey(const Key('product_stock_field')), findsNothing);
+
+      // Change name and submit
+      await tester.enterText(
+          find.byKey(const Key('product_name_field')), 'Farine Tamisée');
+      await tester.tap(find.byKey(const Key('product_submit_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(capturedRequests, hasLength(1));
+      expect(capturedRequests.first.method, equals('PUT'));
+      expect(capturedRequests.first.url.path, contains('item-001'));
     });
   });
 }

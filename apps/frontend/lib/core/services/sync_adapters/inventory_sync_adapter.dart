@@ -9,6 +9,12 @@ class InventorySyncAdapter implements SyncAdapter {
 
   InventorySyncAdapter({required InventoryRepository repo}) : _repo = repo;
 
+  /// Returns the count of locally pending inventory movements.
+  Future<int> pendingCount() async {
+    final pending = await _repo.getPendingMovements();
+    return pending.length;
+  }
+
   @override
   Future<void> pushPending(String baseUrl, String tenantId,
       {String? token}) async {
