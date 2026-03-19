@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart';
 
 /// Dashboard KPI card grid panel.
 /// Registered as SDUI type `kpi_card_grid`.
@@ -16,6 +20,10 @@ class KpiCardGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(salesStatsProvider);
     final expensesAsync = ref.watch(expensesProvider);
+    final poStatsAsync = ref.watch(purchaseOrderStatsProvider);
+    final stockAlertCountAsync = ref.watch(stockAlertCountProvider);
+    final role = ref.watch(userProfileProvider).valueOrNull?.role;
+    final canSeeStockAlerts = role == 'owner' || role == 'manager';
 
     return statsAsync.when(
       data: (stats) {
@@ -24,6 +32,7 @@ class KpiCardGrid extends ConsumerWidget {
         final expenses = expensesAsync.valueOrNull ?? [];
         final totalExpenses = expenses.fold<double>(0, (s, e) => s + e.amount);
         final netProfit = totalRevenue - totalExpenses;
+        final pendingOrders = poStatsAsync.valueOrNull?['total'] ?? 0;
         final fcfa = NumberFormat.currency(
           locale: 'fr_FR',
           symbol: 'FCFA',
@@ -86,6 +95,41 @@ class KpiCardGrid extends ConsumerWidget {
                 valueColor: netProfit >= 0 ? null : AppColors.error,
                 showWarning: netProfit < 0,
               ),
+              _KpiCard(
+                key: const Key('kpi_commandes'),
+                icon: Icons.shopping_cart_outlined,
+                label: 'Commandes en attente',
+                value: '$pendingOrders',
+                iconColor: pendingOrders > 0 ? AppColors.warning : AppColors.textSecondary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const InventoryScreen(initialIndex: 4),
+                  ),
+                ),
+              ),
+              if (canSeeStockAlerts)
+                _KpiCard(
+                  key: const Key('kpi_stock_critique'),
+                  icon: Icons.warning_amber_rounded,
+                  label: 'Stock critique',
+                  value: stockAlertCountAsync.when(
+                    data: (n) => n == 0 ? '0 — Tout va bien' : '$n',
+                    loading: () => '…',
+                    error: (_, __) => '--',
+                  ),
+                  iconColor: stockAlertCountAsync.valueOrNull != null &&
+                          stockAlertCountAsync.valueOrNull! > 0
+                      ? AppColors.error
+                      : AppColors.success,
+                  showWarning: (stockAlertCountAsync.valueOrNull ?? 0) > 0,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StockAlertsScreen(),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

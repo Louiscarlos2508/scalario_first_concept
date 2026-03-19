@@ -12,7 +12,7 @@ Map<String, String> _authHeaders({String? tenantId, String? token}) {
       token ?? Supabase.instance.client.auth.currentSession?.accessToken;
   return {
     'Content-Type': 'application/json',
-    'x-tenant-id': ?tenantId,
+    if (tenantId != null) 'x-tenant-id': tenantId,
     if (accessToken != null) 'Authorization': 'Bearer $accessToken',
   };
 }
@@ -99,6 +99,11 @@ class ProductRepository {
   Future<Product?> getProductByBarcode(String barcode) async {
     final isar = await _isarService.db;
     return await isar.products.filter().barcodeEqualTo(barcode).findFirst();
+  }
+
+  Future<Product?> getProductById(String remoteId) async {
+    final isar = await _isarService.db;
+    return await isar.products.filter().remoteIdEqualTo(remoteId).findFirst();
   }
 
   Future<void> syncProduct(Product product) async {
@@ -211,7 +216,7 @@ class ProductRepository {
           if (query != null && query.isNotEmpty) 'q': query,
           'page': page.toString(),
           'limit': limit.toString(),
-          'tenantId': ?tenantId,
+          if (tenantId != null) 'tenantId': tenantId,
         },
       );
 

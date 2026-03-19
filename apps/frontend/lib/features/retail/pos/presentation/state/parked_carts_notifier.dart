@@ -23,7 +23,7 @@ class ParkedCartsNotifier extends StateNotifier<List<CartState>> {
           ..remoteId = i.productId
           ..name = i.name!
           ..price = i.price,
-        quantity: i.quantity.toInt(),
+        quantity: i.quantity,
         discountAmount: i.discountAmount,
         discountType: i.discountType,
       )).toList(),

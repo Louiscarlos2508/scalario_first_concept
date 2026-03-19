@@ -256,7 +256,10 @@ class CatalogScreen extends ConsumerWidget {
       ..name = item['name']?.toString() ?? ''
       ..price = (item['price'] is num) ? (item['price'] as num).toDouble() : 0.0
       ..barcode = item['barcode']?.toString()
-      ..categoryId = item['categoryId']?.toString();
+      ..categoryId = item['categoryId']?.toString()
+      ..minStockLevel = (item['minStockLevel'] is num)
+          ? (item['minStockLevel'] as num).toDouble()
+          : null;
 
     showDialog<void>(
       context: context,
@@ -345,9 +348,13 @@ class _CatalogItemTile extends StatelessWidget {
         ? (item['price'] as num).toDouble()
         : 0.0;
     final stock = (item['stockQuantity'] is num)
-        ? (item['stockQuantity'] as num).toInt()
-        : 0;
-    final lowStock = stock <= 5;
+        ? (item['stockQuantity'] as num).toDouble()
+        : 0.0;
+    final minStockLevel = (item['minStockLevel'] is num)
+        ? (item['minStockLevel'] as num).toDouble()
+        : null;
+    final isCritical = minStockLevel != null && stock <= minStockLevel;
+    final lowStock = isCritical || stock <= 5;
 
     return Dismissible(
       key: Key('dismissible_$id'),
@@ -392,6 +399,18 @@ class _CatalogItemTile extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isCritical)
+                Tooltip(
+                  message: 'Stock critique : ${stock.toStringAsFixed(stock.truncateToDouble() == stock ? 0 : 1)} restants',
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
+                  ),
+                ),
               // Stock badge
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -405,7 +424,9 @@ class _CatalogItemTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '$stock',
+                  stock.truncateToDouble() == stock
+                      ? '${stock.toInt()}'
+                      : stock.toStringAsFixed(1),
                   style: TextStyle(
                     color: lowStock ? AppColors.error : AppColors.success,
                     fontWeight: FontWeight.bold,

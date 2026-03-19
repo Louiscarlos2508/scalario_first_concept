@@ -11,7 +11,7 @@ class ApiConstants {
   static Map<String, String> headers({String? tenantId, String? token}) {
     return {
       'Content-Type': 'application/json',
-      'x-tenant-id': ?tenantId,
+      if (tenantId != null) 'x-tenant-id': tenantId,
       if (token != null) 'Authorization': 'Bearer $token',
     };
   }

@@ -1,10 +1,16 @@
 # Architecture Document — Scalario ERP
 
 **Author:** Carlos-simpore
-**Date:** 2026-03-08
-**Version:** 1.0
+**Date:** 2026-03-19
+**Version:** 1.1
 **Status:** Approved
 **PRD Reference:** `_bmad-output/planning-artifacts/prd.md`
+
+**Revision History:**
+| Version | Date | Changes |
+|:---|:---|:---|
+| 1.0 | 2026-03-08 | Initial architecture document (FR1–FR75) |
+| 1.1 | 2026-03-19 | FR76–FR91: unit types, weight sales, variants, multi-tarifs, promotions, purchase orders, internal requests, freshness batches, loss location, notification config |
 
 ---
 
@@ -492,6 +498,189 @@ function roundFCFA(amount: Decimal): Decimal {
 
 ---
 
+#### 4.2.7 Variants Module (`shared/variants`)
+
+**Purpose:** Per-article variant management (size, color, flavor, or any tenant-defined attribute)
+
+**Responsibilities:**
+- CRUD for `ProductVariant` — independent SKU, price, and stock per variant
+- Tenant-configurable attribute schema (JSON — no hardcoded attribute names)
+- Variant selection UI contract: attributes JSON exposed to frontend via catalog API
+- Module-guarded: only active when `variants` module is enabled for the tenant
+
+**Interfaces:**
+- REST API: `/api/v1/catalog/items/:id/variants`
+- `VariantsService.getVariants(catalogItemId, tenantId)` — internal
+- `VariantsService.adjustVariantStock(variantId, delta)` — called by Inventory on sale
+
+**Dependencies:** Kernel, Catalog, Inventory
+
+**FRs Addressed:** FR76 (unitType), FR88 (variant-as-unit for weight/volume), FR89 (tenant-configurable attributes)
+
+**Data Model:**
+```
+ProductVariant (shared.product_variants)
+  ├── id, catalogItemId, sku, barcode?
+  ├── attributes Json  -- e.g. {"couleur": "rouge", "taille": "M"}
+  ├── price Decimal, stockQuantity Decimal
+  └── tenantId, createdAt, updatedAt
+```
+
+---
+
+#### 4.2.8 Pricing Module (`shared/pricing`)
+
+**Purpose:** Multi-tariff price levels per article (e.g., retail price, wholesale price, VIP price)
+
+**Responsibilities:**
+- N price levels per article, fully configurable per tenant
+- Optional minimum quantity per level (volume pricing)
+- Price level selection at sale time (integrated into POS cart)
+- Module-guarded: only active when `pricing` module is enabled
+
+**Interfaces:**
+- REST API: `/api/v1/catalog/items/:id/price-levels`
+- `PricingService.getPriceLevels(catalogItemId, tenantId)` — internal
+- `PricingService.resolvePrice(catalogItemId, levelId, quantity)` — used by Transactions
+
+**Dependencies:** Kernel, Catalog
+
+**FRs Addressed:** FR90 (multi-tarifs configurables)
+
+**Data Model:**
+```
+PriceLevel (shared.price_levels)
+  ├── id, catalogItemId, level (String label), price Decimal
+  ├── minQuantity Decimal?  -- optional volume threshold
+  └── tenantId, createdAt, updatedAt
+```
+
+---
+
+#### 4.2.9 Promotions Module (`shared/promotions`)
+
+**Purpose:** Time-bounded discount and free-item promotions
+
+**Responsibilities:**
+- Three promotion types: `percent_discount` | `temporary_price` | `buy_x_get_y`
+- Scope: per item, per category, or tenant-wide
+- Active promotion detection at cart calculation time
+- Promotion status lifecycle: `draft` → `active` → `expired`
+- Module-guarded: only active when `promotions` module is enabled
+
+**Interfaces:**
+- REST API: `/api/v1/promotions`
+- `PromotionsService.getActivePromotions(tenantId, date)` — internal
+- `PromotionsService.applyPromotion(cartItems, promotions)` — used by POS cart
+
+**Dependencies:** Kernel, Catalog
+
+**FRs Addressed:** FR91 (promotions configurables)
+
+**Data Model:**
+```
+Promotion (shared.promotions)
+  ├── id, name, type, value Decimal?, buyQuantity Int?, getQuantity Int?
+  ├── catalogItemId? (item-scoped), categoryId? (category-scoped)
+  ├── startDate DateTime, endDate DateTime, status
+  └── tenantId, createdAt, updatedAt
+```
+
+---
+
+#### 4.2.10 Purchase Orders Module (`shared/purchase-orders`)
+
+**Purpose:** Supplier order lifecycle management with reception variance tracking
+
+**Responsibilities:**
+- Create purchase orders with line items (expected quantities per article)
+- Status lifecycle: `draft` → `sent` → `partially_received` → `received` → `cancelled`
+- Reception recording: actual quantity received vs expected, quality notes per line
+- On reception: triggers `DeliveryReceived` event → Inventory auto-increments stock
+
+**Interfaces:**
+- REST API: `/api/v1/purchase-orders`
+- Emits `DeliveryReceived` event (payload: lines with received quantities, tenantId)
+- Inventory listens to `DeliveryReceived` → creates DELIVERY stock movements
+
+**Dependencies:** Kernel, Catalog, Contacts (supplier), Inventory (via events)
+
+**FRs Addressed:** FR79 (commandes fournisseurs), FR80 (réception + variance)
+
+**Data Model:**
+```
+PurchaseOrder (shared.purchase_orders)
+  ├── id, supplierId (FK → Contact), status, expectedDate?, notes?
+  └── tenantId, createdBy, createdAt, updatedAt
+
+PurchaseOrderLine (shared.purchase_order_lines)
+  ├── id, purchaseOrderId, catalogItemId
+  ├── expectedQuantity Decimal, receivedQuantity Decimal?, qualityNotes?
+  └── createdAt
+```
+
+---
+
+#### 4.2.11 Internal Requests Module (`shared/internal-requests`)
+
+**Purpose:** Configurable internal restock circuit (Commercial → Manager → Owner)
+
+**Responsibilities:**
+- Commercial creates a restock request for an article
+- Configurable approval chain per tenant (request → prepare → approve)
+- Status lifecycle: `pending` → `prepared` → `approved` → `fulfilled` → `rejected`
+- On fulfillment: triggers `InternalTransferFulfilled` event → Inventory adjusts stock
+
+**Interfaces:**
+- REST API: `/api/v1/internal-requests`
+- `InternalRequestsService.create(tenantId, userId, data)` — internal
+- Emits `InternalTransferFulfilled` event on status → `fulfilled`
+
+**Dependencies:** Kernel, Catalog, Inventory (via events)
+
+**FRs Addressed:** FR88 (circuit demande réapprovisionnement interne)
+
+**Data Model:**
+```
+InternalRequest (shared.internal_requests)
+  ├── id, catalogItemId, quantity Decimal, urgency
+  ├── status, requestedBy, preparedBy?, approvedBy?, reason?
+  └── tenantId, createdAt, updatedAt
+```
+
+---
+
+#### 4.2.12 Batches Module (`shared/batches`)
+
+**Purpose:** Freshness and batch tracking for perishable products
+
+**Responsibilities:**
+- Track product batches with reception date and expiry date
+- FIFO stock depletion: oldest batch consumed first on sale
+- Freshness status derivation: `fresh` | `expiring_soon` | `expired` (based on tenant-configurable threshold)
+- Low-stock alerts integration: alert when stock < configurable `minStockLevel` per article
+- Module-guarded: only active when `batches` module is enabled
+
+**Interfaces:**
+- REST API: `/api/v1/catalog/items/:id/batches`
+- `BatchesService.getActiveBatches(catalogItemId, tenantId)` — internal
+- `BatchesService.getFreshnessStatus(batch, now)` — returns color-coded status
+- Listens to `DeliveryReceived` → auto-creates batches
+
+**Dependencies:** Kernel, Catalog, Inventory (via events)
+
+**FRs Addressed:** FR81 (alertes stock bas), FR82 (alertes configurables), FR84 (dates fraîcheur), FR85 (code couleur fraîcheur)
+
+**Data Model:**
+```
+ProductBatch (shared.product_batches)
+  ├── id, catalogItemId, quantity Decimal
+  ├── receivedAt DateTime, expiresAt DateTime?
+  └── tenantId, createdAt
+```
+
+---
+
 #### 4.2.6 Reporting Module (`shared/reporting`)
 
 **Purpose:** Cross-module reporting and analytics
@@ -512,6 +701,25 @@ function roundFCFA(amount: Decimal): Decimal {
 **FRs Addressed:** FR48, FR49
 
 **Current State:** Exists as stats/reports methods in PosService. Extract.
+
+---
+
+### 4.2b Frontend Module Boundaries (Shared Activatable Modules)
+
+The following shared modules have corresponding Flutter feature folders. Each is independently activatable per tenant via the Module Registry. If the module is inactive for a tenant, the related UI sections and routes are hidden — no separate app build required.
+
+| Module Code | Flutter Feature Folder | Activation Condition | FRs |
+|:---|:---|:---|:---|
+| `variants` | `features/catalog/variants/` | `hasVariants = true` on at least one item | FR89 |
+| `pricing` | `features/catalog/pricing/` | `pricing` module active for tenant | FR90 |
+| `promotions` | `features/promotions/` | `promotions` module active for tenant | FR91 |
+| `purchase_orders` | `features/inventory/purchase_orders/` | `purchase_orders` module active | FR79, FR80 |
+| `internal_requests` | `features/inventory/internal_requests/` | `internal_requests` module active | FR88 |
+| `batches` | `features/inventory/batches/` | `batches` module active | FR84, FR85 |
+
+**Design Rule:** Each Flutter feature folder contains its own `data/`, `presentation/`, and `state/` subdirectories. Cross-module navigation uses deep links (route names), never direct widget imports.
+
+**Offline behavior:** `variants`, `pricing`, and `batches` are sync-pulled to Isar on startup (delta pull). `promotions` is sync-pulled and evaluated locally at cart calculation time. `purchase_orders` and `internal_requests` are online-only (manager/owner workflows, not cashier-critical).
 
 ---
 
@@ -647,7 +855,14 @@ Target state: Three logical schemas.
 │  │  ├── stock_movs  │                            │
 │  │  ├── contacts    │                            │
 │  │  ├── payments    │                            │
-│  │  └── terminal_st │                            │
+│  │  ├── terminal_st │                            │
+│  │  ├── prod_variants│  ← FR76/FR89              │
+│  │  ├── price_levels│   ← FR90                  │
+│  │  ├── promotions  │   ← FR91                  │
+│  │  ├── purchase_ord│   ← FR79                  │
+│  │  ├── po_lines    │   ← FR80                  │
+│  │  ├── internal_req│   ← FR88                  │
+│  │  └── prod_batches│   ← FR84/FR85             │
 │  └──────────────────┘                            │
 │                                                  │
 │  ┌──────────────────┐                            │
@@ -689,6 +904,15 @@ model Tenant {
   members          OrganizationMember[]
   tenantModules    TenantModule[]
   // Relations to shared/vertical via tenantId on each entity
+
+  // FR86 — Notification channel for daily summaries and alerts. Tenant-configurable.
+  notificationChannel  String?          @map("notification_channel") // whatsapp | sms | push | null
+  // FR86 — Phone/recipient address for notifications (WhatsApp or SMS number).
+  notificationPhone    String?          @map("notification_phone")
+  // FR86 — Enable automatic daily summary notification.
+  dailySummaryEnabled  Boolean          @default(false) @map("daily_summary_enabled")
+  // FR86 — Local time to send daily summary (HH:MM format, interpreted in tenant timezone).
+  dailySummaryTime     String?          @default("18:00") @map("daily_summary_time")
 
   /// Phase 2b — Programme Ambassadeurs. FK to tenants.id. Set at creation if referred by existing tenant.
   referredBy       String?             @map("referred_by") @db.Uuid
@@ -804,21 +1028,46 @@ model AuditLog {
 // ═══════════════════════════════════════════
 
 model CatalogItem {
-  id             String          @id @default(uuid()) @db.Uuid
-  name           String
-  price          Decimal         @db.Decimal(10, 2)
-  barcode        String?
-  itemType       String          @default("physical") @map("item_type") // physical, bookable, service
-  categoryId     String?         @map("category_id") @db.Uuid
-  tenantId       String          @map("tenant_id") @db.Uuid
-  isDeleted      Boolean         @default(false) @map("is_deleted")
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  category       Category?       @relation(fields: [categoryId], references: [id])
-  stockMovements StockMovement[]
-  retailProduct  RetailProduct?
+  id                  String          @id @default(uuid()) @db.Uuid
+  name                String
+  price               Decimal         @db.Decimal(10, 2)
+  barcode             String?
+  itemType            String          @default("physical") @map("item_type") // physical, bookable, service
+  categoryId          String?         @map("category_id") @db.Uuid
+  tenantId            String          @map("tenant_id") @db.Uuid
+  isDeleted           Boolean         @default(false) @map("is_deleted")
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // FR76 — Unit type (piece, weight, volume, length). All UI logic driven by this value, never hardcoded.
+  unitType            String          @default("piece") @map("unit_type") // piece | weight | volume | length
+  // FR76 — Base price per unit (e.g., price per kg). Used when unitType != 'piece'.
+  pricePerUnit        Decimal?        @map("price_per_unit") @db.Decimal(10, 2)
+  // FR81/FR82 — Configurable low-stock threshold per article.
+  minStockLevel       Decimal?        @map("min_stock_level") @db.Decimal(10, 2)
+  // FR84 — Default freshness window in days (expiry = receivedAt + expiryDays).
+  expiryDays          Int?            @map("expiry_days")
+  // FR87 — Acceptable shrinkage tolerance as a percentage (e.g., 2.50 = 2.5%).
+  shrinkageTolerance  Decimal?        @map("shrinkage_tolerance") @db.Decimal(5, 2)
+  // FR83 — Parent item for bulk→detail conversion (e.g., bag of rice → portions).
+  parentItemId        String?         @map("parent_item_id") @db.Uuid
+  // FR83 — Conversion rate from parent unit to this unit (e.g., 1 bag = 50 portions).
+  conversionRate      Decimal?        @map("conversion_rate") @db.Decimal(10, 4)
+  // FR89 — Has per-variant stock/price tracking enabled.
+  hasVariants         Boolean         @default(false) @map("has_variants")
+
+  category            Category?       @relation(fields: [categoryId], references: [id])
+  stockMovements      StockMovement[]
+  retailProduct       RetailProduct?
+  variants            ProductVariant[]
+  priceLevels         PriceLevel[]
+  batches             ProductBatch[]
+  purchaseOrderLines  PurchaseOrderLine[]
+  internalRequests    InternalRequest[]
+  promotions          Promotion[]
+
   /// Phase 3 — Scalario Connect. Supplier's reference ID for this item on the Connect B2B network.
-  supplierReference String?      @map("supplier_reference") @db.Uuid
+  supplierReference   String?         @map("supplier_reference") @db.Uuid
 
   @@index([tenantId, updatedAt])
   @@index([tenantId, categoryId])
@@ -864,13 +1113,17 @@ model StockMovement {
   quantity      Decimal     @db.Decimal(10, 2)
   type          String      // SALE, DELIVERY, TRANSFER_OUT, TRANSFER_IN, LOSS, ADJUSTMENT
   reason        String?
+  // FR87 — Loss location (e.g., "magasin", "rayon", "transit"). Null for non-LOSS movements.
+  location      String?
   tenantId      String      @map("tenant_id") @db.Uuid
   userId        String?     @map("user_id") @db.Uuid
+  referenceId   String?     @map("reference_id") @db.Uuid
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
 
   @@index([tenantId, createdAt])
   @@index([catalogItemId])
+  @@index([referenceId])
   @@map("stock_movements")
   @@schema("shared")
 }
@@ -904,6 +1157,165 @@ model TerminalStatus {
   tenantId String   @map("tenant_id") @db.Uuid
 
   @@map("terminal_statuses")
+  @@schema("shared")
+}
+
+// ─── FR76/FR89: Product Variants ──────────────────────────────────────────────
+// Each variant is an independent SKU with its own price and stock.
+// Attribute keys are tenant-defined (no hardcoded names like "color" or "size").
+
+model ProductVariant {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  sku           String?
+  barcode       String?
+  // Tenant-configurable JSON — e.g. {"couleur": "rouge", "taille": "M"}
+  attributes    Json        @default("{}")
+  price         Decimal     @db.Decimal(10, 2)
+  stockQuantity Decimal     @default(0) @map("stock_quantity") @db.Decimal(10, 2)
+  tenantId      String      @map("tenant_id") @db.Uuid
+  isDeleted     Boolean     @default(false) @map("is_deleted")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@index([catalogItemId])
+  @@index([tenantId])
+  @@map("product_variants")
+  @@schema("shared")
+}
+
+// ─── FR90: Price Levels (Multi-tarifs) ────────────────────────────────────────
+// N configurable price levels per article (e.g., retail, wholesale, VIP).
+// Level label is a free string — tenants name their own price tiers.
+
+model PriceLevel {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  level         String      // Tenant-defined label, e.g. "gros", "detail", "vip"
+  price         Decimal     @db.Decimal(10, 2)
+  // Optional: minimum quantity to qualify for this price level
+  minQuantity   Decimal?    @map("min_quantity") @db.Decimal(10, 2)
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@unique([catalogItemId, level])
+  @@index([catalogItemId])
+  @@index([tenantId])
+  @@map("price_levels")
+  @@schema("shared")
+}
+
+// ─── FR91: Promotions ─────────────────────────────────────────────────────────
+// Time-bounded promotions. Scope: item, category, or tenant-wide (both FKs null).
+// Types: percent_discount | temporary_price | buy_x_get_y
+
+model Promotion {
+  id            String      @id @default(uuid()) @db.Uuid
+  name          String
+  type          String      // percent_discount | temporary_price | buy_x_get_y
+  value         Decimal?    @db.Decimal(10, 2) // % for percent_discount, price for temporary_price
+  buyQuantity   Int?        @map("buy_quantity") // X in buy_x_get_y
+  getQuantity   Int?        @map("get_quantity") // Y in buy_x_get_y
+  // Item-scoped (null = not item-scoped)
+  catalogItemId String?     @map("catalog_item_id") @db.Uuid
+  // Category-scoped (null = not category-scoped)
+  categoryId    String?     @map("category_id") @db.Uuid
+  startDate     DateTime    @map("start_date") @db.Timestamptz(6)
+  endDate       DateTime    @map("end_date") @db.Timestamptz(6)
+  status        String      @default("draft") // draft | active | expired
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem? @relation(fields: [catalogItemId], references: [id])
+
+  @@index([tenantId, status, startDate, endDate])
+  @@index([catalogItemId])
+  @@map("promotions")
+  @@schema("shared")
+}
+
+// ─── FR79/FR80: Purchase Orders ───────────────────────────────────────────────
+
+model PurchaseOrder {
+  id           String              @id @default(uuid()) @db.Uuid
+  supplierId   String              @map("supplier_id") @db.Uuid // FK → Contact (contactType = supplier)
+  status       String              @default("draft") // draft | sent | partially_received | received | cancelled
+  expectedDate DateTime?           @map("expected_date") @db.Date
+  notes        String?
+  tenantId     String              @map("tenant_id") @db.Uuid
+  createdBy    String              @map("created_by") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lines        PurchaseOrderLine[]
+
+  @@index([tenantId, status])
+  @@index([supplierId])
+  @@map("purchase_orders")
+  @@schema("shared")
+}
+
+model PurchaseOrderLine {
+  id               String        @id @default(uuid()) @db.Uuid
+  purchaseOrderId  String        @map("purchase_order_id") @db.Uuid
+  catalogItemId    String        @map("catalog_item_id") @db.Uuid
+  expectedQuantity Decimal       @map("expected_quantity") @db.Decimal(10, 2)
+  receivedQuantity Decimal?      @map("received_quantity") @db.Decimal(10, 2)
+  qualityNotes     String?       @map("quality_notes")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  catalogItem      CatalogItem   @relation(fields: [catalogItemId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
+  @@schema("shared")
+}
+
+// ─── FR88: Internal Restock Requests ──────────────────────────────────────────
+// Configurable approval chain: Commercial → Manager → Owner (per tenant config).
+// Status lifecycle: pending → prepared → approved → fulfilled | rejected
+
+model InternalRequest {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  quantity      Decimal     @db.Decimal(10, 2)
+  urgency       String      @default("normal") // normal | urgent
+  status        String      @default("pending") // pending | prepared | approved | fulfilled | rejected
+  requestedBy   String      @map("requested_by") @db.Uuid
+  preparedBy    String?     @map("prepared_by") @db.Uuid
+  approvedBy    String?     @map("approved_by") @db.Uuid
+  reason        String?
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([catalogItemId])
+  @@map("internal_requests")
+  @@schema("shared")
+}
+
+// ─── FR84/FR85: Product Batches (Freshness Tracking) ──────────────────────────
+// One batch per received lot. FIFO depletion on sales.
+// Freshness status derived at query time: fresh | expiring_soon | expired
+
+model ProductBatch {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  quantity      Decimal     @db.Decimal(10, 2)
+  receivedAt    DateTime    @map("received_at") @db.Timestamptz(6)
+  // Null = no expiry tracking for this batch
+  expiresAt     DateTime?   @map("expires_at") @db.Timestamptz(6)
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@index([catalogItemId, expiresAt])
+  @@index([tenantId])
+  @@map("product_batches")
   @@schema("shared")
 }
 
@@ -1744,8 +2156,24 @@ Push to main → GitHub Actions:
 | FR69–FR72 | Comptabilité OHADA (plan comptable, clôture, FEC) | Epic 13 | enterprise |
 | FR73–FR74 | Import Enterprise CSV + Retail → Enterprise migration | Epic 13 | enterprise |
 | FR75 | Sync failure lifecycle: outbox → retry → FAILED → resolution | Epic 8 | client + API |
+| FR76 | Unit type per article (piece/weight/volume/length), price×quantity calculation | Catalog (CatalogItem.unitType + pricePerUnit) | shared |
+| FR77 | Tenant-configurable unitType via UI-Driven settings (no hardcoded types) | Catalog + Module Registry | shared |
+| FR78 | Weight/volume sale: quantity input at POS, total = pricePerUnit × quantity | POS cart + Payments | retail + shared |
+| FR79 | Create/manage purchase orders with supplier and line items | PurchaseOrders | shared |
+| FR80 | Record delivery reception with per-line variance (expected vs actual) | PurchaseOrders (PurchaseOrderLine.receivedQuantity) + Inventory event | shared |
+| FR81 | Low-stock alert when stock < CatalogItem.minStockLevel | Batches / Reporting | shared |
+| FR82 | minStockLevel configurable per article via UI | Catalog (CatalogItem.minStockLevel) | shared |
+| FR83 | Bulk→detail unit conversion (parentItemId + conversionRate) | Catalog | shared |
+| FR84 | Freshness date tracking per received batch (ProductBatch.expiresAt) | Batches | shared |
+| FR85 | Color-coded freshness status: fresh / expiring_soon / expired | Batches (BatchesService.getFreshnessStatus) | shared |
+| FR86 | Automatic daily summary notification (WhatsApp/SMS/push), tenant-configurable | Reporting + Tenant.notificationChannel/dailySummaryEnabled | shared + kernel |
+| FR87 | Loss declaration with location field (magasin / rayon / transit) | Inventory (StockMovement.location) | shared |
+| FR88 | Internal restock request circuit (Commercial → Manager → Owner, configurable) | InternalRequests | shared |
+| FR89 | Per-variant stock/price tracking with tenant-defined attribute schema | Variants (ProductVariant.attributes JSON) | shared |
+| FR90 | Multi-tariff price levels per article, tenant-configurable labels | Pricing (PriceLevel) | shared |
+| FR91 | Time-bounded promotions: percent discount, temporary price, buy-X-get-Y | Promotions | shared |
 
-**Coverage:** 75/75 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13.)
+**Coverage:** 91/91 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics.)
 
 ---
 
@@ -1953,13 +2381,14 @@ During migration, the backend maintains backward compatibility:
 |:---|:---|
 | **Architecture Pattern** | Modular Monolith (NestJS) + Offline-First Client (Flutter/Isar) |
 | **Schemas** | 3 (kernel, shared, retail) |
-| **Backend Components** | 5 kernel + 6 shared + 3 retail = 14 |
+| **Backend Components** | 5 kernel + 12 shared + 3 retail = 20 |
 | **Client Components** | 3 core services + 5 repositories + 7 Isar collections |
-| **API Endpoints** | ~35 REST endpoints |
-| **FRs Covered** | 54/54 (100%) |
+| **API Endpoints** | ~50 REST endpoints |
+| **FRs Covered** | 91/91 (100%) |
 | **NFRs Covered** | 30/30 (100%) |
 | **Migration Steps** | 9 incremental steps |
 | **Key Innovation** | Offline-first ERP with polymorphic shared entities + chain-of-custody trust pattern |
+| **v1.1 Additions** | 7 new shared models (variants, price levels, promotions, purchase orders, internal requests, batches) + 13 new fields across CatalogItem / StockMovement / Tenant |
 
 ---
 

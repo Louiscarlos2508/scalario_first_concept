@@ -5,7 +5,7 @@ import '../../data/models/tenant_user.dart';
 import '../../data/services/admin_api_service.dart';
 import '../providers/admin_providers.dart';
 
-const List<String> _kRoles = ['owner', 'manager', 'cashier'];
+const List<String> _kRoles = ['owner', 'manager', 'commercial', 'cashier'];
 
 class TenantUsersTab extends ConsumerWidget {
   final String tenantId;

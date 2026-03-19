@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Query,
@@ -65,6 +66,26 @@ export class CatalogController {
   async createItem(@Body() body: any, @Req() req: any) {
     const userId = req.user?.sub ?? null;
     return this.catalogService.createItem(body, userId);
+  }
+
+  @Patch('items/:id')
+  @Roles('owner', 'manager')
+  async updateItem(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Query('tenantId') tenantId: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.sub ?? null;
+    return this.catalogService.updateItem(id, body, userId, tenantId);
+  }
+
+  @Get('items/:id/children')
+  async getChildren(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    return this.catalogService.getChildren(id, tenantId);
   }
 
   @Delete('items/:id')

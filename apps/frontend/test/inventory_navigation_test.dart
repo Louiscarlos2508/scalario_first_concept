@@ -43,7 +43,7 @@ Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
 
 void main() {
   group('InventoryScreen — tab navigation', () {
-    testWidgets('TabBar présent avec 4 onglets aux labels corrects',
+    testWidgets('TabBar présent avec 5 onglets aux labels corrects',
         (tester) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
@@ -53,7 +53,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(TabBar), findsOneWidget);
-      expect(find.byType(Tab), findsNWidgets(4));
+      expect(find.byType(Tab), findsNWidgets(5));
       expect(find.text('Produits'), findsNothing);
       expect(find.text('Réceptions'), findsOneWidget);
       expect(find.text('Transferts'), findsOneWidget);
@@ -61,6 +61,7 @@ void main() {
       // "Inventaire" appears in AppBar title only (tab is now "Comptage")
       expect(find.text('Inventaire'), findsOneWidget);
       expect(find.text('Comptage'), findsOneWidget);
+      expect(find.text('Commandes'), findsOneWidget);
     });
 
     testWidgets('tap onglet "Pertes" → LossDeclarationForm visible',

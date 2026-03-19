@@ -38,18 +38,27 @@ class ReceiptDialog extends StatelessWidget {
                   DateFormat('yyyy-MM-dd HH:mm')
                       .format(order.createdAt ?? DateTime.now())),
               const Divider(),
-              ...order.items.map((item) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                            child: Text(
-                                '${item.name} x${item.quantity.toInt()}')),
-                        Text(_fcfa(item.price * item.quantity)),
-                      ],
-                    ),
-                  )),
+              ...order.items.map((item) {
+                    final isWeighted =
+                        item.unitType != null &&
+                        item.unitType != 'piece' &&
+                        item.pricePerUnit != null;
+                    final lineTotal = item.price * item.quantity;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(isWeighted
+                                ? '${item.name} — ${item.quantity} ${item.unitLabel ?? ''} × ${_fcfa(item.pricePerUnit!)}'
+                                : '${item.name} x${item.quantity.toInt()}'),
+                          ),
+                          Text(_fcfa(lineTotal)),
+                        ],
+                      ),
+                    );
+                  }),
               const Divider(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

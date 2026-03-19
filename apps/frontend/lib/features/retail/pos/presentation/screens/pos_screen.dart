@@ -8,6 +8,7 @@ import '../widgets/session_guard.dart';
 import '../widgets/session_report_dialog.dart';
 import '../widgets/camera_scanner_dialog.dart';
 import '../providers/pos_providers.dart';
+import '../../../../../core/auth/auth_state.dart';
 import '../../../../../core/widgets/barcode_listener.dart';
 import '../widgets/sync_status_indicator.dart';
 
@@ -16,25 +17,33 @@ class PosScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(sessionProvider).valueOrNull;
+    final sessionOpen = session != null && session.status == 'OPEN';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scalario POS'),
         centerTitle: false,
         actions: [
+          if (sessionOpen) ...[
+            IconButton(
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: () => _openCameraScanner(context, ref),
+              tooltip: 'Scanner',
+            ),
+            const SyncStatusIndicator(),
+            IconButton(
+              icon: const Icon(Icons.lock_outline),
+              onPressed: () => _showCloseSessionDialog(context, ref),
+              tooltip: 'Fermer la caisse',
+            ),
+          ],
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => _openCameraScanner(context, ref),
-            tooltip: 'Camera Scanner',
+            icon: const Icon(Icons.logout),
+            onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            tooltip: 'Déconnexion',
           ),
-          const SyncStatusIndicator(),
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () {
-              _showCloseSessionDialog(context, ref);
-            },
-            tooltip: 'Close Session',
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
       ),
       body: BarcodeScannerListener(
@@ -145,7 +154,8 @@ class PosScreen extends ConsumerWidget {
       );
 
       if (confirmed == true) {
-        await ref.read(sessionProvider.notifier).closeSession(physicalAmount);
+        final theoretical = (summary['theoreticalCash'] as double?) ?? 0.0;
+        await ref.read(sessionProvider.notifier).closeSession(physicalAmount, theoretical);
       }
     }
   }

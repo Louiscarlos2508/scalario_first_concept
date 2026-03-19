@@ -32,53 +32,68 @@ const ProductSchema = CollectionSchema(
       name: r'categoryId',
       type: IsarType.string,
     ),
-    r'isDeleted': PropertySchema(
+    r'conversionRate': PropertySchema(
       id: 3,
+      name: r'conversionRate',
+      type: IsarType.double,
+    ),
+    r'isDeleted': PropertySchema(
+      id: 4,
       name: r'isDeleted',
       type: IsarType.bool,
     ),
     r'itemType': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'itemType',
       type: IsarType.string,
     ),
     r'lastUpdated': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lastUpdated',
       type: IsarType.dateTime,
     ),
     r'minStockLevel': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'minStockLevel',
       type: IsarType.double,
     ),
     r'name': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'name',
       type: IsarType.string,
     ),
     r'price': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'price',
       type: IsarType.double,
     ),
+    r'pricePerUnit': PropertySchema(
+      id: 10,
+      name: r'pricePerUnit',
+      type: IsarType.double,
+    ),
     r'remoteId': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'remoteId',
       type: IsarType.string,
     ),
     r'stockQuantity': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'stockQuantity',
       type: IsarType.double,
     ),
     r'tenantId': PropertySchema(
-      id: 11,
+      id: 13,
       name: r'tenantId',
       type: IsarType.string,
     ),
+    r'unitType': PropertySchema(
+      id: 14,
+      name: r'unitType',
+      type: IsarType.string,
+    ),
     r'weightUnit': PropertySchema(
-      id: 12,
+      id: 15,
       name: r'weightUnit',
       type: IsarType.string,
     )
@@ -140,6 +155,7 @@ int _productEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.unitType.length * 3;
   {
     final value = object.weightUnit;
     if (value != null) {
@@ -158,16 +174,19 @@ void _productSerialize(
   writer.writeString(offsets[0], object.barcode);
   writer.writeString(offsets[1], object.category);
   writer.writeString(offsets[2], object.categoryId);
-  writer.writeBool(offsets[3], object.isDeleted);
-  writer.writeString(offsets[4], object.itemType);
-  writer.writeDateTime(offsets[5], object.lastUpdated);
-  writer.writeDouble(offsets[6], object.minStockLevel);
-  writer.writeString(offsets[7], object.name);
-  writer.writeDouble(offsets[8], object.price);
-  writer.writeString(offsets[9], object.remoteId);
-  writer.writeDouble(offsets[10], object.stockQuantity);
-  writer.writeString(offsets[11], object.tenantId);
-  writer.writeString(offsets[12], object.weightUnit);
+  writer.writeDouble(offsets[3], object.conversionRate);
+  writer.writeBool(offsets[4], object.isDeleted);
+  writer.writeString(offsets[5], object.itemType);
+  writer.writeDateTime(offsets[6], object.lastUpdated);
+  writer.writeDouble(offsets[7], object.minStockLevel);
+  writer.writeString(offsets[8], object.name);
+  writer.writeDouble(offsets[9], object.price);
+  writer.writeDouble(offsets[10], object.pricePerUnit);
+  writer.writeString(offsets[11], object.remoteId);
+  writer.writeDouble(offsets[12], object.stockQuantity);
+  writer.writeString(offsets[13], object.tenantId);
+  writer.writeString(offsets[14], object.unitType);
+  writer.writeString(offsets[15], object.weightUnit);
 }
 
 Product _productDeserialize(
@@ -180,17 +199,20 @@ Product _productDeserialize(
   object.barcode = reader.readStringOrNull(offsets[0]);
   object.category = reader.readStringOrNull(offsets[1]);
   object.categoryId = reader.readStringOrNull(offsets[2]);
+  object.conversionRate = reader.readDoubleOrNull(offsets[3]);
   object.id = id;
-  object.isDeleted = reader.readBool(offsets[3]);
-  object.itemType = reader.readStringOrNull(offsets[4]);
-  object.lastUpdated = reader.readDateTimeOrNull(offsets[5]);
-  object.minStockLevel = reader.readDoubleOrNull(offsets[6]);
-  object.name = reader.readString(offsets[7]);
-  object.price = reader.readDouble(offsets[8]);
-  object.remoteId = reader.readStringOrNull(offsets[9]);
-  object.stockQuantity = reader.readDouble(offsets[10]);
-  object.tenantId = reader.readStringOrNull(offsets[11]);
-  object.weightUnit = reader.readStringOrNull(offsets[12]);
+  object.isDeleted = reader.readBool(offsets[4]);
+  object.itemType = reader.readStringOrNull(offsets[5]);
+  object.lastUpdated = reader.readDateTimeOrNull(offsets[6]);
+  object.minStockLevel = reader.readDoubleOrNull(offsets[7]);
+  object.name = reader.readString(offsets[8]);
+  object.price = reader.readDouble(offsets[9]);
+  object.pricePerUnit = reader.readDoubleOrNull(offsets[10]);
+  object.remoteId = reader.readStringOrNull(offsets[11]);
+  object.stockQuantity = reader.readDouble(offsets[12]);
+  object.tenantId = reader.readStringOrNull(offsets[13]);
+  object.unitType = reader.readString(offsets[14]);
+  object.weightUnit = reader.readStringOrNull(offsets[15]);
   return object;
 }
 
@@ -208,24 +230,30 @@ P _productDeserializeProp<P>(
     case 2:
       return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
-    case 4:
-      return (reader.readStringOrNull(offset)) as P;
-    case 5:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 6:
       return (reader.readDoubleOrNull(offset)) as P;
-    case 7:
-      return (reader.readString(offset)) as P;
-    case 8:
-      return (reader.readDouble(offset)) as P;
-    case 9:
+    case 4:
+      return (reader.readBool(offset)) as P;
+    case 5:
       return (reader.readStringOrNull(offset)) as P;
-    case 10:
+    case 6:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 7:
+      return (reader.readDoubleOrNull(offset)) as P;
+    case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readDouble(offset)) as P;
+    case 10:
+      return (reader.readDoubleOrNull(offset)) as P;
     case 11:
       return (reader.readStringOrNull(offset)) as P;
     case 12:
+      return (reader.readDouble(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
+    case 14:
+      return (reader.readString(offset)) as P;
+    case 15:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -755,6 +783,86 @@ extension ProductQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'categoryId',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> conversionRateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'conversionRate',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition>
+      conversionRateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'conversionRate',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> conversionRateEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'conversionRate',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition>
+      conversionRateGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'conversionRate',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> conversionRateLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'conversionRate',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> conversionRateBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'conversionRate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
       ));
     });
   }
@@ -1308,6 +1416,85 @@ extension ProductQueryFilter
     });
   }
 
+  QueryBuilder<Product, Product, QAfterFilterCondition> pricePerUnitIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'pricePerUnit',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition>
+      pricePerUnitIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'pricePerUnit',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> pricePerUnitEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'pricePerUnit',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> pricePerUnitGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'pricePerUnit',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> pricePerUnitLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'pricePerUnit',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> pricePerUnitBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'pricePerUnit',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterFilterCondition> remoteIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1663,6 +1850,136 @@ extension ProductQueryFilter
     });
   }
 
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'unitType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'unitType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'unitType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'unitType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterFilterCondition> unitTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'unitType',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterFilterCondition> weightUnitIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1853,6 +2170,18 @@ extension ProductQuerySortBy on QueryBuilder<Product, Product, QSortBy> {
     });
   }
 
+  QueryBuilder<Product, Product, QAfterSortBy> sortByConversionRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'conversionRate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> sortByConversionRateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'conversionRate', Sort.desc);
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterSortBy> sortByIsDeleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isDeleted', Sort.asc);
@@ -1925,6 +2254,18 @@ extension ProductQuerySortBy on QueryBuilder<Product, Product, QSortBy> {
     });
   }
 
+  QueryBuilder<Product, Product, QAfterSortBy> sortByPricePerUnit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pricePerUnit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> sortByPricePerUnitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pricePerUnit', Sort.desc);
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterSortBy> sortByRemoteId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remoteId', Sort.asc);
@@ -1958,6 +2299,18 @@ extension ProductQuerySortBy on QueryBuilder<Product, Product, QSortBy> {
   QueryBuilder<Product, Product, QAfterSortBy> sortByTenantIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'tenantId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> sortByUnitType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'unitType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> sortByUnitTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'unitType', Sort.desc);
     });
   }
 
@@ -2009,6 +2362,18 @@ extension ProductQuerySortThenBy
   QueryBuilder<Product, Product, QAfterSortBy> thenByCategoryIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'categoryId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> thenByConversionRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'conversionRate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> thenByConversionRateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'conversionRate', Sort.desc);
     });
   }
 
@@ -2096,6 +2461,18 @@ extension ProductQuerySortThenBy
     });
   }
 
+  QueryBuilder<Product, Product, QAfterSortBy> thenByPricePerUnit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pricePerUnit', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> thenByPricePerUnitDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pricePerUnit', Sort.desc);
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterSortBy> thenByRemoteId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'remoteId', Sort.asc);
@@ -2132,6 +2509,18 @@ extension ProductQuerySortThenBy
     });
   }
 
+  QueryBuilder<Product, Product, QAfterSortBy> thenByUnitType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'unitType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Product, Product, QAfterSortBy> thenByUnitTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'unitType', Sort.desc);
+    });
+  }
+
   QueryBuilder<Product, Product, QAfterSortBy> thenByWeightUnit() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'weightUnit', Sort.asc);
@@ -2165,6 +2554,12 @@ extension ProductQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'categoryId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Product, Product, QDistinct> distinctByConversionRate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'conversionRate');
     });
   }
 
@@ -2206,6 +2601,12 @@ extension ProductQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Product, Product, QDistinct> distinctByPricePerUnit() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pricePerUnit');
+    });
+  }
+
   QueryBuilder<Product, Product, QDistinct> distinctByRemoteId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2223,6 +2624,13 @@ extension ProductQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'tenantId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Product, Product, QDistinct> distinctByUnitType(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'unitType', caseSensitive: caseSensitive);
     });
   }
 
@@ -2257,6 +2665,12 @@ extension ProductQueryProperty
   QueryBuilder<Product, String?, QQueryOperations> categoryIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'categoryId');
+    });
+  }
+
+  QueryBuilder<Product, double?, QQueryOperations> conversionRateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'conversionRate');
     });
   }
 
@@ -2296,6 +2710,12 @@ extension ProductQueryProperty
     });
   }
 
+  QueryBuilder<Product, double?, QQueryOperations> pricePerUnitProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pricePerUnit');
+    });
+  }
+
   QueryBuilder<Product, String?, QQueryOperations> remoteIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'remoteId');
@@ -2311,6 +2731,12 @@ extension ProductQueryProperty
   QueryBuilder<Product, String?, QQueryOperations> tenantIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'tenantId');
+    });
+  }
+
+  QueryBuilder<Product, String, QQueryOperations> unitTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'unitType');
     });
   }
 

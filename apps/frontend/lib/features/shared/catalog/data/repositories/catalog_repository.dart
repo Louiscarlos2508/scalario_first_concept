@@ -37,13 +37,19 @@ class CatalogRepository {
     required String tenantId,
     String? categoryId,
     String? barcode,
+    String unitType = 'piece',
+    double? pricePerUnit,
+    double? conversionRate,
   }) async {
     final body = <String, dynamic>{
       'name': name,
       'price': price,
       'tenantId': tenantId,
+      'unitType': unitType,
       if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+      if (conversionRate != null) 'conversionRate': conversionRate,
     };
 
     final response = await _httpClient.post(
@@ -76,7 +82,7 @@ class CatalogRepository {
     }).toList();
   }
 
-  /// PUT /catalog/items/:id — updates a catalog item.
+  /// PATCH /catalog/items/:id — updates a catalog item.
   Future<void> updateItem({
     required String id,
     required String name,
@@ -84,15 +90,27 @@ class CatalogRepository {
     required String tenantId,
     String? categoryId,
     String? barcode,
+    String unitType = 'piece',
+    double? pricePerUnit,
+    double? conversionRate,
+    double? minStockLevel,
+    String? parentItemId,
+    bool clearParent = false,
   }) async {
     final body = <String, dynamic>{
       'name': name,
       'price': price,
       'tenantId': tenantId,
+      'unitType': unitType,
       if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+      if (conversionRate != null) 'conversionRate': conversionRate,
+      'minStockLevel': minStockLevel,
+      if (parentItemId != null) 'parentItemId': parentItemId,
+      if (clearParent) 'parentItemId': null,
     };
-    final response = await _httpClient.put(
+    final response = await _httpClient.patch(
       Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id'),
       headers: _authHeaders(tenantId: tenantId),
       body: jsonEncode(body),
@@ -111,6 +129,24 @@ class CatalogRepository {
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('deleteItem failed: ${response.statusCode} — ${response.body}');
     }
+  }
+
+  /// GET /catalog/items/:id/children — lists child articles of a parent item.
+  Future<List<Map<String, dynamic>>> getChildren({
+    required String id,
+    required String tenantId,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id/children')
+        .replace(queryParameters: {'tenantId': tenantId});
+    final response = await _httpClient.get(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data as List).cast<Map<String, dynamic>>();
+    }
+    throw Exception('getChildren failed: ${response.statusCode}');
   }
 
   /// GET /catalog/items?tenantId= — lists catalog items.

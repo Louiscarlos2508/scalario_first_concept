@@ -7,6 +7,8 @@ import 'package:frontend/features/shared/inventory/presentation/widgets/transfer
 import 'package:frontend/features/shared/inventory/presentation/widgets/transfer_pending_screen.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/loss_declaration_form.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/partial_inventory_screen.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 
 class InventoryScreen extends ConsumerWidget {
   final int initialIndex;
@@ -16,20 +18,30 @@ class InventoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repo = ref.watch(inventoryRepositoryProvider);
+    final statsAsync = ref.watch(purchaseOrderStatsProvider);
+    final pendingCount = statsAsync.valueOrNull?['total'] ?? 0;
 
     return DefaultTabController(
-      length: 4,
+      length: 5,
       initialIndex: initialIndex,
       child: Scaffold(
-        appBar: const ScalarioAppBar(
+        appBar: ScalarioAppBar(
           title: 'Inventaire',
           bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(icon: Icon(Icons.local_shipping_outlined), text: 'Réceptions'),
-              Tab(icon: Icon(Icons.swap_horiz_outlined), text: 'Transferts'),
-              Tab(icon: Icon(Icons.remove_circle_outline), text: 'Pertes'),
-              Tab(icon: Icon(Icons.fact_check_outlined), text: 'Comptage'),
+              const Tab(icon: Icon(Icons.local_shipping_outlined), text: 'Réceptions'),
+              const Tab(icon: Icon(Icons.swap_horiz_outlined), text: 'Transferts'),
+              const Tab(icon: Icon(Icons.remove_circle_outline), text: 'Pertes'),
+              const Tab(icon: Icon(Icons.fact_check_outlined), text: 'Comptage'),
+              Tab(
+                icon: Badge(
+                  isLabelVisible: pendingCount > 0,
+                  label: Text('$pendingCount'),
+                  child: const Icon(Icons.shopping_cart_outlined),
+                ),
+                text: 'Commandes',
+              ),
             ],
           ),
         ),
@@ -39,6 +51,7 @@ class InventoryScreen extends ConsumerWidget {
             _TransfersTab(repo: repo),
             _LossTab(repo: repo),
             _InventoryCountTab(repo: repo),
+            const PurchaseOrdersScreen(),
           ],
         ),
       ),

@@ -140,7 +140,7 @@ class SduiRenderer extends ConsumerWidget {
 
     final cartState = ref.watch(cartProvider);
     final itemCount =
-        cartState.items.fold<int>(0, (sum, i) => sum + i.quantity);
+        cartState.items.fold<double>(0.0, (sum, i) => sum + i.quantity).round();
 
     return Stack(
       children: [

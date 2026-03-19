@@ -2,7 +2,7 @@ import 'package:frontend/features/retail/pos/data/models/product.dart';
 
 class CartItem {
   final Product product;
-  final int quantity;
+  final double quantity;
   final double discountAmount;
   final String discountType; // 'FIXED', 'PERCENTAGE'
 
@@ -13,18 +13,25 @@ class CartItem {
     this.discountType = 'FIXED',
   });
 
-  double get subtotal => product.price * quantity;
+  /// Effective unit price: pricePerUnit for weight/volume/length, price for piece.
+  double get unitPrice =>
+      (product.unitType != 'piece' && product.pricePerUnit != null)
+          ? product.pricePerUnit!
+          : product.price;
+
+  double get subtotal => unitPrice * quantity;
 
   double get total {
-    if (discountType == 'PERCENTAGE') {
-      return subtotal * (1 - (discountAmount / 100));
-    }
-    return (subtotal - discountAmount).clamp(0.0, double.infinity);
+    final raw = discountType == 'PERCENTAGE'
+        ? subtotal * (1 - (discountAmount / 100))
+        : (subtotal - discountAmount).clamp(0.0, double.infinity);
+    // Round to nearest 5 FCFA
+    return (raw / 5).round() * 5.0;
   }
 
   CartItem copyWith({
     Product? product,
-    int? quantity,
+    double? quantity,
     double? discountAmount,
     String? discountType,
   }) {

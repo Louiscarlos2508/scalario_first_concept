@@ -22,8 +22,24 @@ export class InventoryService {
     userId?: string | null;
     referenceId?: string | null;
   }) {
+    // AC6 (Story 24-1) — Auto-reason NATURAL_VARIANCE for LOSS within shrinkage tolerance
+    let resolvedReason = data.reason ?? null;
+    if (data.type === 'LOSS' && data.catalogItemId && (!data.reason || data.reason.trim() === '')) {
+      const item = await this.prisma.catalogItem.findUnique({
+        where: { id: data.catalogItemId },
+        select: { shrinkageTolerance: true },
+      });
+      if (item?.shrinkageTolerance != null) {
+        const totalStock = await this.getCurrentStock(data.catalogItemId, data.tenantId);
+        const toleranceQty = (Number(item.shrinkageTolerance) / 100) * totalStock;
+        if (data.quantity <= toleranceQty) {
+          resolvedReason = 'NATURAL_VARIANCE';
+        }
+      }
+    }
+
     // AC1 — reason is mandatory for LOSS movements
-    if (data.type === 'LOSS' && (!data.reason || data.reason.trim() === '')) {
+    if (data.type === 'LOSS' && (!resolvedReason || resolvedReason.trim() === '')) {
       throw new BadRequestException('reason is required for LOSS movements');
     }
 
@@ -32,7 +48,7 @@ export class InventoryService {
         catalogItemId: data.catalogItemId ?? null,
         quantity: data.quantity,
         type: data.type,
-        reason: data.reason ?? null,
+        reason: resolvedReason,
         tenantId: data.tenantId,
         userId: data.userId ?? null,
         referenceId: data.referenceId ?? null,
@@ -49,7 +65,7 @@ export class InventoryService {
         catalogItemId: data.catalogItemId ?? null,
         quantity: data.quantity,
         type: data.type,
-        reason: data.reason ?? null,
+        reason: resolvedReason,
       },
     });
 
@@ -59,6 +75,28 @@ export class InventoryService {
       type: data.type,
       tenantId: data.tenantId,
     });
+
+    // AC3 (Story 24-1) — Create ProductBatch on DELIVERY if expiryDays is set
+    if (data.type === 'DELIVERY' && data.catalogItemId) {
+      const catalogItem = await this.prisma.catalogItem.findUnique({
+        where: { id: data.catalogItemId },
+        select: { expiryDays: true },
+      });
+      if (catalogItem?.expiryDays != null) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + catalogItem.expiryDays);
+        await this.prisma.productBatch.create({
+          data: {
+            catalogItemId: data.catalogItemId,
+            tenantId: data.tenantId,
+            expiresAt,
+            initialQty: data.quantity,
+            remainingQty: data.quantity,
+            batchRef: data.referenceId ?? null,
+          },
+        });
+      }
+    }
 
     return movement;
   }
@@ -97,6 +135,13 @@ export class InventoryService {
       tenantId: data.tenantId,
       status: 'pending',
     });
+
+    if (data.catalogItemId) {
+      this.eventBus.publish('transfer.out.created', {
+        catalogItemId: data.catalogItemId,
+        tenantId: data.tenantId,
+      });
+    }
 
     return movement;
   }
@@ -170,6 +215,7 @@ export class InventoryService {
         case 'SALE':
         case 'TRANSFER_OUT':
         case 'LOSS':
+        case 'REPACKAGING':
           stock -= qty;
           break;
         case 'ADJUSTMENT':
@@ -247,6 +293,27 @@ export class InventoryService {
     };
   }
 
+  /** AC4 (Story 24-1) — Deplete ProductBatches FIFO for a given item + qty. */
+  private async depletesBatchesFifo(catalogItemId: string, qty: number, tenantId: string) {
+    const activeBatches = await this.prisma.productBatch.findMany({
+      where: { catalogItemId, tenantId, isDepleted: false },
+      orderBy: { expiresAt: 'asc' },
+    });
+
+    let remaining = qty;
+    for (const batch of activeBatches) {
+      if (remaining <= 0) break;
+      const batchRemaining = Number(batch.remainingQty);
+      const deducted = Math.min(remaining, batchRemaining);
+      const newRemaining = batchRemaining - deducted;
+      await this.prisma.productBatch.update({
+        where: { id: batch.id },
+        data: { remainingQty: newRemaining, isDepleted: newRemaining <= 0 },
+      });
+      remaining -= deducted;
+    }
+  }
+
   @OnEvent('transaction.created')
   async handleTransactionCreated(payload: { transactionId: string; tenantId: string }) {
     const tx = await this.prisma.transaction.findUnique({
@@ -258,12 +325,44 @@ export class InventoryService {
     for (const item of items) {
       const qty = Number(item.quantity ?? item.qty ?? 1);
       if (qty <= 0) continue;
-      await this.createMovement({
-        catalogItemId: item.catalogItemId ?? item.productId ?? null,
-        quantity: qty,
-        type: 'SALE',
-        tenantId: payload.tenantId,
+
+      const catalogItemId: string | null = item.catalogItemId ?? item.productId ?? null;
+      if (!catalogItemId) continue;
+
+      // Epic 23 — Check if this is a child item (parent-child relationship)
+      const catalogItem = await this.prisma.catalogItem.findUnique({
+        where: { id: catalogItemId },
+        select: { parentItemId: true, conversionRate: true },
       });
+
+      if (catalogItem?.parentItemId) {
+        // AC3 — Child item: decrement parent stock via REPACKAGING movement
+        const convRate = Number(catalogItem.conversionRate ?? item.conversionRate ?? 1);
+        const parentQty = qty * convRate;
+
+        await this.createMovement({
+          catalogItemId: catalogItem.parentItemId,
+          quantity: parentQty,
+          type: 'REPACKAGING',
+          referenceId: payload.transactionId,
+          tenantId: payload.tenantId,
+        });
+        // No SALE movement for the child — it has no independent stock
+      } else {
+        // AC4 (Story 20-1): Apply conversionRate when decrementing stock.
+        const conversionRate = item.conversionRate != null ? Number(item.conversionRate) : null;
+        const stockQty = conversionRate != null ? qty * conversionRate : qty;
+
+        await this.createMovement({
+          catalogItemId,
+          quantity: stockQty,
+          type: 'SALE',
+          tenantId: payload.tenantId,
+        });
+
+        // AC4 (Story 24-1) — FIFO batch depletion
+        await this.depletesBatchesFifo(catalogItemId, stockQty, payload.tenantId);
+      }
     }
   }
 }

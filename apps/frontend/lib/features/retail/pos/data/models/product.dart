@@ -25,6 +25,17 @@ class Product {
   double? minStockLevel;
   String? weightUnit;
 
+  // Epic 20 — Vente au poids + unités configurables
+  String unitType = 'piece'; // 'piece' | 'weight' | 'volume' | 'length'
+  double? pricePerUnit;
+  double? conversionRate;
+
+  // Epic 23 — Parent-child reconditionnement
+  @ignore
+  String? parentItemId;
+  @ignore
+  bool hasChildren = false;
+
   DateTime? lastUpdated;
   bool isDeleted = false;
 
@@ -41,6 +52,10 @@ class Product {
       'itemType': itemType,
       'minStockLevel': minStockLevel,
       'weightUnit': weightUnit,
+      'unitType': unitType,
+      'pricePerUnit': pricePerUnit,
+      'conversionRate': conversionRate,
+      'parentItemId': parentItemId,
     };
   }
 
@@ -71,6 +86,21 @@ class Product {
                 : null)
         ..weightUnit =
             json['weightUnit']?.toString() ?? json['weight_unit']?.toString()
+        ..unitType = json['unitType']?.toString() ??
+            json['unit_type']?.toString() ??
+            'piece'
+        ..pricePerUnit = json['pricePerUnit'] != null
+            ? _toDouble(json['pricePerUnit'])
+            : (json['price_per_unit'] != null
+                ? _toDouble(json['price_per_unit'])
+                : null)
+        ..conversionRate = json['conversionRate'] != null
+            ? _toDouble(json['conversionRate'])
+            : (json['conversion_rate'] != null
+                ? _toDouble(json['conversion_rate'])
+                : null)
+        ..parentItemId = json['parentItemId']?.toString() ??
+            json['parent_item_id']?.toString()
         ..isDeleted = json['isDeleted'] ?? json['is_deleted'] ?? false
         ..lastUpdated = json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'])

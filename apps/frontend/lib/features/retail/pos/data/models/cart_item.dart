@@ -10,10 +10,16 @@ class PosCartItem {
   double price = 0;
   double discountAmount = 0;
   String discountType = 'FIXED';
-  
+
+  // Epic 20 — unit type support
+  String? unitType;   // 'piece' | 'weight' | 'volume' | 'length'
+  String? unitLabel;  // 'kg', 'g', 'L', 'm', …
+  double? pricePerUnit;
+  String? catalogItemId;
+
   // Calculate total price for this item
   double get subtotal => quantity * price;
-  
+
   double get total {
     if (discountType == 'PERCENTAGE') {
       return subtotal * (1 - (discountAmount / 100));
@@ -24,11 +30,15 @@ class PosCartItem {
   Map<String, dynamic> toJson() {
     return {
       'productId': productId,
+      if (catalogItemId != null) 'catalogItemId': catalogItemId,
       'name': name,
       'quantity': quantity,
       'price': price,
       'discountAmount': discountAmount,
       'discountType': discountType,
+      if (unitType != null) 'unitType': unitType,
+      if (unitLabel != null) 'unitLabel': unitLabel,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
     };
   }
 }

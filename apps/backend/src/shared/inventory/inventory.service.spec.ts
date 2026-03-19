@@ -33,6 +33,14 @@ describe('InventoryService', () => {
             transaction: {
               findUnique: jest.fn(),
             },
+            catalogItem: {
+              findUnique: jest.fn(),
+            },
+            productBatch: {
+              create: jest.fn().mockResolvedValue({}),
+              findMany: jest.fn().mockResolvedValue([]),
+              update: jest.fn().mockResolvedValue({}),
+            },
           },
         },
         {
@@ -164,6 +172,82 @@ describe('InventoryService', () => {
       expect(prisma.inventoryMovement.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ type: 'LOSS', reason: 'Damaged goods' }),
       });
+    });
+
+    // AC3 (Story 24-1) — Batch creation on DELIVERY
+    it('AC3: creates ProductBatch on DELIVERY when expiryDays is set', async () => {
+      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID });
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({ expiryDays: 10 });
+
+      await service.createMovement({
+        catalogItemId: ITEM_ID,
+        quantity: 50,
+        type: 'DELIVERY',
+        tenantId: TENANT_ID,
+      });
+
+      expect(prisma.productBatch.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            catalogItemId: ITEM_ID,
+            tenantId: TENANT_ID,
+            initialQty: 50,
+            remainingQty: 50,
+          }),
+        }),
+      );
+    });
+
+    it('AC3: does NOT create ProductBatch when expiryDays is null', async () => {
+      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID });
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({ expiryDays: null });
+
+      await service.createMovement({
+        catalogItemId: ITEM_ID,
+        quantity: 50,
+        type: 'DELIVERY',
+        tenantId: TENANT_ID,
+      });
+
+      expect(prisma.productBatch.create).not.toHaveBeenCalled();
+    });
+
+    // AC6 (Story 24-1) — Shrinkage tolerance LOSS
+    it('AC6: auto-sets reason NATURAL_VARIANCE for LOSS within shrinkage tolerance', async () => {
+      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID });
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({ shrinkageTolerance: 5 });
+      // getCurrentStock needs inventory movements: stock = 100
+      (prisma.inventoryMovement.findMany as jest.Mock).mockResolvedValue([
+        { type: 'DELIVERY', quantity: 100 },
+      ]);
+
+      await service.createMovement({
+        catalogItemId: ITEM_ID,
+        quantity: 4, // 4% of 100 <= 5% tolerance
+        type: 'LOSS',
+        tenantId: TENANT_ID,
+        // no reason provided
+      });
+
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ reason: 'NATURAL_VARIANCE' }) }),
+      );
+    });
+
+    it('AC6: still throws BadRequestException for LOSS exceeding shrinkage tolerance', async () => {
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({ shrinkageTolerance: 2 });
+      (prisma.inventoryMovement.findMany as jest.Mock).mockResolvedValue([
+        { type: 'DELIVERY', quantity: 100 },
+      ]);
+
+      await expect(
+        service.createMovement({
+          catalogItemId: ITEM_ID,
+          quantity: 10, // 10% > 2% tolerance
+          type: 'LOSS',
+          tenantId: TENANT_ID,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -451,6 +535,12 @@ describe('InventoryService', () => {
   // ── handleTransactionCreated ──────────────────────────────────────────────
 
   describe('handleTransactionCreated (@OnEvent)', () => {
+    beforeEach(() => {
+      // Default: no parent item
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({ parentItemId: null, conversionRate: null });
+      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID, tenantId: TENANT_ID });
+    });
+
     it('creates SALE movement for each item in itemsJson', async () => {
       const tx = {
         id: TX_ID,
@@ -461,7 +551,6 @@ describe('InventoryService', () => {
         ],
       };
       (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
-      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID, tenantId: TENANT_ID });
 
       await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
 
@@ -471,7 +560,6 @@ describe('InventoryService', () => {
     it('falls back to productId field when catalogItemId is absent', async () => {
       const tx = { id: TX_ID, tenantId: TENANT_ID, itemsJson: [{ productId: 'prod-001', qty: 1 }] };
       (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
-      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID, tenantId: TENANT_ID });
 
       await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
 
@@ -508,11 +596,63 @@ describe('InventoryService', () => {
         ],
       };
       (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
-      (prisma.inventoryMovement.create as jest.Mock).mockResolvedValue({ id: MOV_ID, tenantId: TENANT_ID });
 
       await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
 
       expect(prisma.inventoryMovement.create).toHaveBeenCalledTimes(1);
+    });
+
+    // ── Epic 23 — Parent-child REPACKAGING ──────────────────────────────────
+
+    it('AC3: creates REPACKAGING movement on parent when child item sold', async () => {
+      const PARENT_ID = 'parent-uuid';
+      const tx = {
+        id: TX_ID,
+        tenantId: TENANT_ID,
+        itemsJson: [{ catalogItemId: 'child-001', quantity: 5 }],
+      };
+      (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
+      // Child item has a parent
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({
+        parentItemId: PARENT_ID,
+        conversionRate: 0.02,
+      });
+
+      await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
+
+      // No SALE for child, but REPACKAGING for parent with 5 × 0.02 = 0.1
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledTimes(1);
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            catalogItemId: PARENT_ID,
+            quantity: 0.1,
+            type: 'REPACKAGING',
+            referenceId: TX_ID,
+          }),
+        }),
+      );
+    });
+
+    it('AC3: does not create SALE movement for child item — only REPACKAGING for parent', async () => {
+      const PARENT_ID = 'parent-uuid';
+      const tx = {
+        id: TX_ID,
+        tenantId: TENANT_ID,
+        itemsJson: [{ catalogItemId: 'child-001', quantity: 1 }],
+      };
+      (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
+      (prisma.catalogItem.findUnique as jest.Mock).mockResolvedValue({
+        parentItemId: PARENT_ID,
+        conversionRate: 0.5,
+      });
+
+      await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
+
+      const calls = (prisma.inventoryMovement.create as jest.Mock).mock.calls;
+      const types = calls.map((c: any) => c[0].data.type);
+      expect(types).not.toContain('SALE');
+      expect(types).toContain('REPACKAGING');
     });
   });
 });

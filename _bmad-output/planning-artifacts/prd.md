@@ -14,8 +14,16 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '5.0'
+version: '6.1'
 date: '2026-03-11'
+lastEdited: '2026-03-19'
+editHistory:
+  - date: '2026-03-19'
+    changes: 'FR76–FR88 ajoutés (Inventaire Avancé & Vente Configurable). Phases 2a/2b mises à jour. Table des matières, Politique Notifications, UI-Driven retail mis à jour. Source: gaps proposition client Blandine.'
+  - date: '2026-03-19'
+    changes: 'FR89–FR91 ajoutés (Variantes, Multi-tarifs & Promotions). Phase 2b et Phase 3 mises à jour. Table des matières FR1–FR91.'
+  - date: '2026-03-19'
+    changes: 'Post-validation fixes: version header 5.0→6.1, FR45 measurability rewrite, NFR15/NFR16 implementation-name removal.'
 classification:
   projectType: saas_b2b
   domain: erp_multi_vertical_commerce
@@ -36,7 +44,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 5.0** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+**Version 6.1** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
 
 Confidentiel — Carlos-simpore
 
@@ -51,6 +59,8 @@ Confidentiel — Carlos-simpore
 | 3.0 | 2026-03-08 | Carlos-simpore | Ajout Scalario Enterprise multi-départements (RH, Comptabilité OHADA, Secrétariat, Logistique). Modèle Intégré / Fédéré. Flux inter-départements. Mise à jour cohérence Executive Summary, Classification, Succès, NFR, Tarification, Risques. |
 | 4.0 | 2026-03-11 | Carlos-simpore | Ajout journeys Enterprise (DRH/Awa, Comptable/Ibrahim, DG/Serge). RBAC Enterprise complet (5 rôles). Onboarding & Support avec SLAs par offre. Protection des Données & Conformité (loi BF, RGPD, OHADA). Import & Migration Enterprise. Politique Notifications & Alertes. Gestion échecs de sync. Stratégie QA & Tests (DoD, environnements). Positionnement Concurrentiel complet (Retail + Enterprise, matrice comparative). |
 | 5.0 | 2026-03-11 | Carlos-simpore | Corrections post-audit : saut de page FR manquant corrigé, FR3/FR10 mis à jour, réglementations étendues à la zone UEMOA/CEMAC (multi-pays), CNSS sans API corrigé (export fichier uniquement), NFR20 restructuré, FR63–FR75 Enterprise ajoutés, Annexes A et B complétées, OHADA Phase 2b clarifié, Table des matières ajoutée. |
+| 6.0 | 2026-03-19 | Carlos-simpore | Ajout FR76–FR88 (Inventaire Avancé & Vente Configurable) : unitType configurable, vente au poids, commandes fournisseurs + réception liée, alertes stock bas par produit, résumé quotidien automatique, pertes avec emplacement, circuit de réapprovisionnement interne (Phase 2a) ; conversion vrac→détail et dates de fraîcheur + code couleur (Phase 2b). Mise à jour phases 2a/2b, Table des matières, Politique Notifications, UI-Driven retail. Issu des gaps identifiés dans la proposition client Blandine. |
+| 6.1 | 2026-03-19 | Carlos-simpore | Ajout FR89–FR91 (Variantes, Multi-tarifs & Promotions) : variantes article avec attributs tenant-configurables (Phase 2b), niveaux de prix multiples avec sélection automatique par customerType ou quantité (Phase 2b), règles de promotion configurables remise/%/X+Y/prix barré (Phase 3). Mise à jour phases 2b et 3, Table des matières FR1–FR91. |
 
 ---
 
@@ -76,7 +86,7 @@ Confidentiel — Carlos-simpore
 | 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
 | 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
 | 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
-| 19 | Exigences Fonctionnelles (FR1–FR75) | Toutes les exigences numérotées par module |
+| 19 | Exigences Fonctionnelles (FR1–FR91) | Toutes les exigences numérotées par module |
 | 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
 | 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
 | 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
@@ -171,14 +181,19 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 
 ### Phase 2a — Post-restructuration immédiate
 
-- Ventes au poids (valide le pattern d'extension Catalog)
-- Workflow demande de réapprovisionnement (valide événements cross-module)
+- Ventes au poids + unitType configurable par produit (FR76–FR78)
+- Commandes fournisseurs + réception liée avec variance et notes qualité (FR79–FR80)
+- Alertes stock bas configurables par produit (FR81–FR82)
+- Déclaration de perte avec emplacement configurable (FR87)
+- Résumé quotidien automatique WhatsApp / push (FR86)
+- Circuit de demande de réapprovisionnement interne (FR88)
 - Intégration fiscale FEC/DGI (valide file de sync dédiée)
-- Résumé WhatsApp soir (premier hook de rétention)
 
 ### Phase 2b — Croissance
 
-- Suivi des pertes (taux de frotte), dépôts de bouteilles (consignes)
+- Conversion vrac → unité détail avec règles de reconditionnement (FR83)
+- Dates de fraîcheur + coefficient de tolérance déshydratation + code couleur POS (FR84–FR85)
+- Variantes produit (FR89), multi-tarifs configurables (FR90)
 - Dashboard distant propriétaire (mobile)
 - Import CSV catalogue
 - API Mobile Money (Orange Money / Moov Money)
@@ -187,6 +202,7 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 
 ### Phase 3 — Expansion
 
+- Promotions configurables (remise %, X+Y gratuit, prix barré temporaire) (FR91)
 - Deuxième vertical (Pharmacie ou Services)
 - Scalario Connect — Interconnexion inter-entreprises (voir section dédiée)
 - Scalario Enterprise — Modèle multi-départements PME : RH & Paie, Comptabilité OHADA, Secrétariat, Logistique (voir section dédiée)
@@ -211,7 +227,7 @@ Scalario ne gère pas ses verticaux avec des branches de code distinctes. L'appl
 
 | business_type | Widgets activés | Champs spécifiques |
 |:---|:---|:---|
-| retail | Scanner code-barres, Remise rapide, Grille produits | weightUnit, stockQuantity, sessionId |
+| retail | Scanner code-barres, Remise rapide, Grille produits, Indicateur fraîcheur couleur | unitType, weightUnit, stockQuantity, sessionId, freshnessDate, colorCode, lowStockThreshold |
 | pharmacy | Alerte péremption, Filtre DCI, Contrôle ordonnance | expiryDate, dci, ordonnanceRequired, lotNumber |
 | services | Facturation horaire, Gestion devis | hourlyRate, quoteId, serviceDate |
 | wholesale | Picking list, Gestion lots, Tarifs volume | batchId, volumeDiscount, pickingStatus |
@@ -675,10 +691,10 @@ Toute notification Scalario est catégorisée selon son urgence et son canal. Le
 
 | Événement déclencheur | Urgence | Canal | Destinataire | Phase |
 |:---|:---|:---|:---|:---|
-| Stock critique (< seuil configurable) | Haute | Push in-app + WhatsApp | Propriétaire / Gestionnaire | Phase 2a |
+| Stock ≤ seuil configuré par article (FR81–FR82) | Haute | Push in-app + WhatsApp | Propriétaire / Gestionnaire | Phase 2a |
 | Sync échouée après 3 retries (voir section dédiée) | Haute | Push in-app + badge rouge | Utilisateur concerné + Admin | Phase 1 |
 | Transfert de stock en attente de confirmation (> 2h) | Moyenne | Push in-app | Récepteur du transfert | Phase 1 |
-| Résumé soir (CA, pertes, stock critique, top 3) | Info | WhatsApp automatique | Propriétaire | Phase 2a |
+| Résumé quotidien automatique (CA, pertes, articles ≤ seuil, top 3 ventes) — heure configurable, défaut 20h00 (FR86) | Info | WhatsApp (opt-in) + Push | Propriétaire | Phase 2a |
 | Paiement ambassadeur envoyé | Info | WhatsApp + in-app | Ambassadeur | Phase 2b |
 | Contrat employé expiré dans 30 / 15 / 7 jours | Haute | Push in-app + WhatsApp | DRH | Phase 3 Enterprise |
 | Échéance fiscale dans 7 jours (TVA, CNSS, clôture DGI) | Haute | Push in-app + WhatsApp | Comptable + DG | Phase 3 Enterprise |
@@ -870,7 +886,7 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 - **FR42 :** Le système met en file (outbox) toutes les mutations locales pour sync automatique à la reconnexion
 - **FR43 :** Le moteur de sync transmet uniquement les delta (sync incrémentale)
 - **FR44 :** Le système résout les conflits (last-write-wins pour données non critiques, file de résolution manuelle pour données financières)
-- **FR45 :** Indicateur de connectivité discret et non-bloquant
+- **FR45 :** Un indicateur de connectivité visible uniquement dans la barre de statut (< 5 % de la surface écran) s'affiche sans interrompre ni bloquer l'opération en cours. Toutes les actions locales (vente, perte, transfert) restent accessibles sans délai quelle que soit la valeur de l'indicateur. L'indicateur ne génère aucune modale, aucun toast bloquant, ni aucune demande de confirmation liée à la connectivité.
 - **FR46 :** Le système reprend un état cohérent après terminaison inattendue (coupure courant, crash), zéro perte de données
 - **FR47 :** La base locale retient les données opérationnelles pour une période configurable (30–90 jours)
 
@@ -926,6 +942,44 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 - **FR75 :** Le système implémente le cycle de vie complet des mutations en échec : stockage outbox → retry automatique (3 tentatives, exponential backoff) → marquage FAILED si échec définitif → notification admin et utilisateur → interface de résolution manuelle dans le backoffice. Les mutations financières (transactions de vente, écritures comptables, bulletins validés) ne sont jamais soumises au last-write-wins : elles entrent en file de résolution manuelle obligatoire en cas de conflit.
 
+### Inventaire Avancé & Vente Configurable (FR76–FR88)
+
+> *Toutes les fonctionnalités de cette section sont configurables par tenant via l'interface admin (UI-Driven). Aucune valeur n'est codée en dur pour un type de commerce spécifique. Chaque paramètre est optionnel — un tenant qui ne configure pas un champ ne voit pas la fonctionnalité associée.*
+
+- **FR76 :** Le propriétaire peut configurer pour chaque article un `unitType` parmi : `unit` (pièce), `weight` (poids), `volume` (volume), `length` (longueur). Le tenant définit l'unité native de chaque type (ex: kg, g, L, m). La configuration est modifiable depuis la fiche article sans déploiement. Par défaut, `unitType = unit`.
+
+- **FR77 :** Pour les articles dont `unitType = weight` (ou `volume` ou `length`), le terminal POS affiche un champ de saisie de quantité en virgule flottante avec l'unité native de l'article. Le total est calculé automatiquement : `prix_unitaire × quantité_saisie`, arrondi selon la règle devise du tenant (XOF : 5 FCFA). La transaction enregistre la quantité exacte et l'unité native.
+
+- **FR78 :** Le propriétaire peut définir par article : l'unité de vente (label libre, ex: "kg", "sachet 500g", "pièce"), le prix unitaire dans cette unité, et un facteur de conversion optionnel vers l'unité de stock (ex: 1 sachet 500g = 0.5 unité stock). Ces trois champs sont configurables depuis l'UI admin. Le facteur de conversion décrémente le stock dans l'unité de stock à chaque vente.
+
+- **FR79 :** Le propriétaire ou le gestionnaire autorisé peut créer une commande fournisseur en sélectionnant un contact de type fournisseur, en ajoutant les articles commandés avec quantité attendue et unité, la date de livraison prévue, et des notes optionnelles. Chaque commande reçoit un identifiant unique et un statut parmi : `draft`, `confirmed`, `partially_received`, `received`, `cancelled`. Les commandes sont consultables et filtrables par statut, fournisseur et période.
+
+- **FR80 :** Lors de la réception d'une livraison, le gestionnaire peut lier la réception à une commande fournisseur existante (FR79). Pour chaque article, il saisit la quantité effectivement reçue. Le système calcule et enregistre automatiquement la variance (reçu − commandé). Le gestionnaire peut ajouter une observation qualité libre par article (ex: "produits trop mûrs"). Variances et observations sont tracées dans l'audit trail et visibles dans les rapports de réception. La réception sans commande associée reste possible.
+
+- **FR81 :** Le propriétaire peut définir un seuil d'alerte stock (`lowStockThreshold`) par article, exprimé dans l'unité de stock native de l'article. Le seuil est éditable depuis la fiche article sans code. La valeur `null` signifie "pas d'alerte configurée pour cet article".
+
+- **FR82 :** Après chaque mouvement de stock (vente, perte, transfert, ajustement, reconditionnement), le système évalue le stock courant de l'article contre son `lowStockThreshold`. Si stock ≤ seuil et que l'alerte n'a pas déjà été déclenchée depuis le dernier passage au-dessus du seuil, une notification push est envoyée au propriétaire et au gestionnaire, et l'article est signalé dans le prochain résumé quotidien (FR86). L'alerte ne se redéclenche qu'après que le stock soit repassé au-dessus du seuil.
+
+- **FR83 :** Le propriétaire peut définir des règles de reconditionnement par couple (article source, article cible) : unité source (ex: sac 5 kg), unité cible (ex: sachet 100 g), facteur de conversion (ex: 50 sachets par sac). Lorsqu'un reconditionnement est enregistré, le système décrémente le stock de l'article source et incrémente le stock de l'article cible selon le facteur. Un reconditionnement partiel est autorisé. L'opération génère un mouvement de stock de type `REPACKAGING` traçable dans l'audit trail. *(Phase 2b)*
+
+- **FR84 :** Le propriétaire peut configurer par article : (a) une fenêtre de fraîcheur en jours (durée avant péremption depuis la date de réception) ; (b) un coefficient de tolérance en % sur le poids, représentant la perte naturelle acceptable par déshydratation ou évaporation. La date d'expiration est calculée automatiquement à chaque réception. Les écarts de poids inférieurs au coefficient de tolérance configuré ne sont pas signalés comme pertes mais comme variance naturelle. La valeur `null` sur l'un ou l'autre de ces champs signifie "non applicable pour cet article". *(Phase 2b)*
+
+- **FR85 :** Les articles ayant une fenêtre de fraîcheur configurée (FR84) affichent un indicateur couleur dans la grille POS et dans les vues stock : Vert (> 50 % de la fenêtre restante), Orange (20–50 % restante), Rouge (< 20 % restante ou date dépassée). Les seuils de couleur (50 % et 20 %) sont configurables par tenant. Les articles en Orange ou Rouge sont présentés en priorité dans la grille POS. Un filtre "Articles urgents" permet d'afficher uniquement les articles en Orange/Rouge. *(Phase 2b)*
+
+- **FR86 :** Chaque jour à l'heure configurable par le tenant (défaut : 20h00 heure locale du tenant), le système génère et envoie automatiquement un résumé au propriétaire via WhatsApp (si opt-in explicite) et/ou notification push contenant : (1) chiffre d'affaires total du jour, (2) montant total des pertes déclarées du jour, (3) liste des articles dont le stock est ≤ `lowStockThreshold`, (4) top 3 articles les plus vendus en quantité. L'envoi est conditionné à l'opt-in du propriétaire. Si aucune activité dans la journée, le résumé indique "Aucune vente enregistrée". L'heure d'envoi et les canaux sont configurables par tenant depuis le profil propriétaire.
+
+- **FR87 :** Lors de la déclaration d'une perte (FR34), l'utilisateur doit sélectionner l'emplacement de la perte dans une liste configurable par tenant (ex: "Magasin", "Rayon"). Le champ emplacement est obligatoire si au moins un emplacement est configuré pour le tenant ; optionnel si aucun n'est configuré. L'emplacement est enregistré sur le `InventoryMovement` de type `LOSS`. Les rapports de pertes peuvent être filtrés et agrégés par emplacement pour attribution de responsabilité. La liste des emplacements est gérée depuis l'interface admin sans code.
+
+- **FR88 :** Un commercial peut créer une demande de réapprovisionnement interne en spécifiant l'article, la quantité souhaitée, l'unité, et un niveau d'urgence (Normal, Urgent). La demande suit un circuit configurable par tenant : Commercial (Demande) → Gestionnaire (Préparation / validation intermédiaire) → Propriétaire (Validation finale). Chaque transition génère une notification push au prochain acteur du circuit. Le propriétaire peut approuver, modifier la quantité, ou rejeter avec un motif. Une demande approuvée génère automatiquement un transfert magasin → rayon (FR31). Les étapes du circuit sont configurables par tenant — un tenant peut activer ou désactiver l'étape intermédiaire gestionnaire.
+
+### Variantes, Multi-tarifs & Promotions (FR89–FR91)
+
+- **FR89 :** Un article du catalogue peut avoir des variantes configurables par le propriétaire. Chaque variante est définie par des attributs tenant-configurables (ex: taille, couleur, matière — labels libres). Chaque variante possède son propre SKU, code-barres optionnel, prix et stock indépendant. L'article parent agrège le stock total de ses variantes pour le reporting. Au POS, le commercial sélectionne d'abord le produit puis la variante avant d'ajouter au panier. Les variantes sont optionnelles — un article sans variante fonctionne exactement comme aujourd'hui. *(Phase 2b)*
+
+- **FR90 :** Un article peut avoir plusieurs niveaux de prix configurables par le propriétaire : détail (défaut), gros, fidélité, promotionnel. Le prix applicable est déterminé automatiquement soit par le `customerType` du contact associé à la transaction, soit par la quantité commandée (seuil tenant-configurable). Le commercial peut forcer un niveau de prix manuellement si son rôle inclut la permission `price_override`. Les niveaux de prix et leurs labels sont entièrement tenant-configurables — un tenant peut en définir entre 1 et N. Le reçu affiche le niveau de prix appliqué. *(Phase 2b)*
+
+- **FR91 :** Le propriétaire peut créer des règles de promotion configurables : (a) remise en pourcentage sur un article ou une catégorie entière, (b) offre quantitative (ex: 3 acheté = 1 offert — seuil et article offert configurables), (c) prix barré temporaire (prix original affiché barré, nouveau prix actif). Chaque promotion a une date de début, une date de fin, et un statut (active/inactive) modifiable manuellement. Les promotions actives s'appliquent automatiquement au POS dès qu'un article éligible est ajouté au panier — sans intervention du commercial. Le reçu affiche le prix original barré et le prix après remise pour chaque article remisé. Plusieurs promotions peuvent coexister ; en cas de cumul sur un même article, la promotion la plus avantageuse pour le client s'applique (configurable : plus avantageuse ou première définie). *(Phase 3)*
+
 ---
 
 ## Exigences Non-Fonctionnelles
@@ -958,8 +1012,8 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 | Exigence | Cible |
 |:---|:---|
 | NFR14 : Autonomie offline | 8h+ d'opération continue sans connectivité |
-| NFR15 : Reprise après crash | Zéro perte de données sur terminaison inattendue (WAL) |
-| NFR16 : Résilience sync | Retry automatique avec exponential backoff. Zéro intervention manuelle |
+| NFR15 : Reprise après crash | Zéro perte de données sur terminaison inattendue — validé par test de crash-recovery (coupure courant simulée) |
+| NFR16 : Résilience sync | Retry automatique sur échec sync (délais croissants : 5s, 30s, 2min). Zéro intervention manuelle pour les cas récupérables |
 | NFR17 : Uptime serveur | 99 % (Supabase self-hosted, admin solo — cible réaliste) |
 | NFR18 : Durabilité données | Zéro perte de transaction, jamais |
 

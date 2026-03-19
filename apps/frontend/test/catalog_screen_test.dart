@@ -334,7 +334,7 @@ void main() {
   // ── ProductFormDialog — edit mode ──────────────────────────────────────────
 
   group('ProductFormDialog — edit mode (submitToCatalog: true)', () {
-    testWidgets('edit mode calls PUT /catalog/items/:id', (tester) async {
+    testWidgets('edit mode calls PATCH /catalog/items/:id', (tester) async {
       final capturedRequests = <http.Request>[];
       final fakeClient = MockClient((req) async {
         capturedRequests.add(req);
@@ -371,7 +371,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(capturedRequests, hasLength(1));
-      expect(capturedRequests.first.method, equals('PUT'));
+      expect(capturedRequests.first.method, equals('PATCH'));
       expect(capturedRequests.first.url.path, contains('item-001'));
     });
   });

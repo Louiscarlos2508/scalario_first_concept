@@ -149,8 +149,22 @@ final productListProvider = FutureProvider<List<Product>>((ref) async {
   final categoryId = ref.watch(selectedCategoryIdProvider);
   final tenantId = ref.watch(activeTenantProvider);
   if (tenantId == null) return [];
-  return repo.getProducts(categoryId: categoryId, tenantId: tenantId);
+  final products = await repo.getProducts(categoryId: categoryId, tenantId: tenantId);
+  // AC3 — Mark parent products (hasChildren) based on parentItemId references
+  final parentIds = products
+      .where((p) => p.parentItemId != null)
+      .map((p) => p.parentItemId!)
+      .toSet();
+  for (final p in products) {
+    if (p.remoteId != null && parentIds.contains(p.remoteId)) {
+      p.hasChildren = true;
+    }
+  }
+  return products;
 });
+
+/// AC2 — Warning message shown after checkout when parent stock drops low.
+final parentStockWarningProvider = StateProvider<String?>((ref) => null);
 
 final inventorySearchProvider = StateProvider<String>((ref) => '');
 final inventoryPageProvider = StateProvider<int>((ref) => 1);
@@ -196,7 +210,7 @@ final stockHistoryByItemProvider = FutureProvider.family<List<dynamic>, String>(
       uri,
       headers: {
         'Content-Type': 'application/json',
-        'x-tenant-id': ?tenantId,
+        if (tenantId != null) 'x-tenant-id': tenantId,
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
@@ -229,7 +243,7 @@ final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
     uri,
     headers: {
       'Content-Type': 'application/json',
-      'x-tenant-id': ?tenantId,
+      if (tenantId != null) 'x-tenant-id': tenantId,
       if (token != null) 'Authorization': 'Bearer $token',
     },
   );

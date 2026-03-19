@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
 import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
 import 'package:frontend/features/retail/pos/data/repositories/order_repository.dart';
+import 'package:frontend/core/models/sync_status.dart';
 
 class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
   final SessionRepository _repository;
@@ -33,7 +34,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
   }
 
   Future<Map<String, dynamic>> calculateSessionSummary() async {
-    final currentSession = state.value;
+    final currentSession = state.valueOrNull;
     if (currentSession == null) {
       return {};
     }
@@ -41,7 +42,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     // Local-first calculation (even offline)
     // If we have remoteId, use it, otherwise use local Id as fallback if needed
     // But sessionId in Order model is usually remote UUID or app UUID
-    final sessionId = currentSession.remoteId ?? '';
+    final sessionId = currentSession.remoteId;
     final orders = await _orderRepository.getOrdersBySession(sessionId);
 
     final Map<String, double> totalsByMethod = {};
@@ -63,25 +64,29 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     };
   }
 
-  Future<void> closeSession(double closingBalance) async {
-    final currentSession = state.value;
+  Future<void> closeSession(double closingBalance, double theoreticalBalance) async {
+    final currentSession = state.valueOrNull;
     if (currentSession == null) return;
 
     state = const AsyncValue.loading();
     try {
-      final summary = await calculateSessionSummary();
-      final theoreticalBalance = summary['theoreticalCash'] as double;
-
       currentSession.closingBalance = closingBalance;
       currentSession.theoreticalBalance = theoreticalBalance;
       currentSession.variance = closingBalance - theoreticalBalance;
       currentSession.status = 'CLOSED';
       currentSession.closedAt = DateTime.now();
+      currentSession.syncStatus = SyncStatus.pending; // re-sync to push CLOSED status
 
       await _repository.saveSession(currentSession);
-      state = const AsyncValue.data(null);
+      // Keep closed session in state so SessionGuard can show the "closed" screen.
+      state = AsyncValue.data(currentSession);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
+  }
+
+  /// Called when the user taps "Ouvrir nouvelle session" from the closed screen.
+  void resetForNewSession() {
+    state = const AsyncValue.data(null);
   }
 }

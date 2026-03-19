@@ -6,6 +6,12 @@ class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(CartState());
 
   void addProduct(Product product) {
+    if (product.unitType != 'piece') {
+      // Weight/volume/length items always add as a new line (no aggregation)
+      final newItems = [...state.items, CartItem(product: product, quantity: 1.0)];
+      state = state.copyWith(items: newItems);
+      return;
+    }
     final existingIndex = state.items.indexWhere((item) => item.product.id == product.id);
 
     List<CartItem> newItems;
@@ -16,9 +22,15 @@ class CartNotifier extends StateNotifier<CartState> {
       newItems[existingIndex] = existingItem.copyWith(quantity: existingItem.quantity + 1);
     } else {
       // Add new item
-      newItems = [...state.items, CartItem(product: product, quantity: 1)];
+      newItems = [...state.items, CartItem(product: product, quantity: 1.0)];
     }
 
+    state = state.copyWith(items: newItems);
+  }
+
+  /// Add a weight/volume/length product with an explicit quantity.
+  void addProductWithQuantity(Product product, double quantity) {
+    final newItems = [...state.items, CartItem(product: product, quantity: quantity)];
     state = state.copyWith(items: newItems);
   }
 

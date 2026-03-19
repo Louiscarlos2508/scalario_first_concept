@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/quantity_input_dialog.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -71,30 +73,82 @@ class ProductGrid extends ConsumerWidget {
                 itemCount: products.length,
                 itemBuilder: (context, index) {
                   final product = products[index];
-                  return Card(
-                    elevation: 2,
-                    child: InkWell(
-                      onTap: () {
-                        ref.read(cartProvider.notifier).addProduct(product);
-                      },
-                      onLongPress: () => _showBranchStock(context, ref, product),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.inventory_2, size: 48, color: Colors.teal),
-                          const SizedBox(height: 8),
-                          Text(
-                            product.name,
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textAlign: TextAlign.center,
+                  final isCritical = product.minStockLevel != null &&
+                      product.stockQuantity <= product.minStockLevel!;
+                  final isBulkParent = product.hasChildren;
+                  return Stack(
+                    children: [
+                      Card(
+                        elevation: 2,
+                        child: InkWell(
+                          onTap: () async {
+                            if (product.unitType != 'piece') {
+                              final qty = await showDialog<double>(
+                                context: context,
+                                builder: (_) => QuantityInputDialog(product: product),
+                              );
+                              if (qty != null) {
+                                ref.read(cartProvider.notifier).addProductWithQuantity(product, qty);
+                              }
+                            } else {
+                              ref.read(cartProvider.notifier).addProduct(product);
+                            }
+                          },
+                          onLongPress: () => _showBranchStock(context, ref, product),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.inventory_2, size: 48, color: Colors.teal),
+                              const SizedBox(height: 8),
+                              Text(
+                                product.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                              Text(
+                                _fcfa(product.price),
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
-                          Text(
-                            _fcfa(product.price),
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (isCritical)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Tooltip(
+                            message: 'Stock critique : ${product.stockQuantity} restants',
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppColors.warning,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      // AC3 — Badge "VRAC" for parent bulk items
+                      if (isBulkParent)
+                        Positioned(
+                          top: 4,
+                          left: 4,
+                          child: Container(
+                            key: Key('badge_vrac_${product.remoteId}'),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.brown.shade300,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'VRAC',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
               );

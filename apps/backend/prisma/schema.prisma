@@ -30,6 +30,12 @@ model Tenant {
   /// Phase 3 — Scalario Enterprise. FK to tenants.id of the parent Groupe tenant (federated mode only).
   parentTenantId        String?              @map("parent_tenant_id") @db.Uuid
 
+  /// Epic 22 — Notification settings
+  dailySummaryEnabled   Boolean              @default(false) @map("daily_summary_enabled")
+  dailySummaryTime      String               @default("18:00") @map("daily_summary_time")
+  notificationChannel   String               @default("in_app") @map("notification_channel")
+  lastSummarySentDate   DateTime?            @map("last_summary_sent_date") @db.Timestamptz(6)
+
   createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   auditLogs             AuditLog[]
   categories            Category[]
@@ -163,7 +169,24 @@ model CatalogItem {
   /// Phase 3 — Scalario Connect. Supplier's reference ID for this item on the B2B network.
   supplierReference String?       @map("supplier_reference") @db.Uuid
 
-  retailProduct     RetailProduct?
+  // Epic 20 — Vente au poids + unités configurables
+  // Valid values: 'piece' | 'weight' | 'volume' | 'length'
+  unitType          String        @default("piece") @map("unit_type")
+  pricePerUnit      Decimal?      @map("price_per_unit") @db.Decimal(10, 2)
+  conversionRate    Decimal?      @map("conversion_rate") @db.Decimal(10, 4)
+
+  // Epic 23 — Conversion vrac → détail
+  parentItemId      String?       @map("parent_item_id") @db.Uuid
+  parent            CatalogItem?  @relation("ParentChild", fields: [parentItemId], references: [id])
+  children          CatalogItem[] @relation("ParentChild")
+
+  // Epic 24 — Fraîcheur + code couleur
+  expiryDays          Int?          @map("expiry_days")
+  shrinkageTolerance  Decimal?      @map("shrinkage_tolerance") @db.Decimal(5, 2)
+
+  retailProduct       RetailProduct?
+  purchaseOrderLines  PurchaseOrderLine[]
+  productBatches      ProductBatch[]
 
   @@index([tenantId, updatedAt])
   @@index([tenantId, categoryId])
@@ -205,6 +228,48 @@ model Contact {
   @@index([tenantId, phone])
   @@index([tenantId, updatedAt])
   @@map("contacts")
+  @@schema("shared")
+
+  purchaseOrders PurchaseOrder[]
+}
+
+// ── Epic 21 — Commandes fournisseurs ──────────────────────────────────────
+
+model PurchaseOrder {
+  id           String              @id @default(uuid()) @db.Uuid
+  // status: 'draft' | 'confirmed' | 'partially_received' | 'received' | 'cancelled'
+  status       String              @default("draft")
+  expectedDate DateTime?           @map("expected_date") @db.Date
+  notes        String?
+  tenantId     String              @map("tenant_id") @db.Uuid
+  createdBy    String?             @map("created_by") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  supplierId   String?             @map("supplier_id") @db.Uuid
+  supplier     Contact?            @relation(fields: [supplierId], references: [id])
+
+  lines        PurchaseOrderLine[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("purchase_orders")
+  @@schema("shared")
+}
+
+model PurchaseOrderLine {
+  id               String        @id @default(uuid()) @db.Uuid
+  purchaseOrderId  String        @map("purchase_order_id") @db.Uuid
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  catalogItemId    String?       @map("catalog_item_id") @db.Uuid
+  catalogItem      CatalogItem?  @relation(fields: [catalogItemId], references: [id])
+  expectedQuantity Decimal       @map("expected_quantity") @db.Decimal(10, 4)
+  receivedQuantity Decimal?      @map("received_quantity") @db.Decimal(10, 4)
+  qualityNotes     String?       @map("quality_notes")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
   @@schema("shared")
 }
 
@@ -320,6 +385,41 @@ model Expense {
   @@index([tenantId, date])
   @@map("expenses")
   @@schema("retail")
+}
+
+model Notification {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   @default("low_stock")
+  title       String
+  body        String
+  targetId    String?  @map("target_id") @db.Uuid
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, userId, isRead])
+  @@map("notifications")
+  @@schema("shared")
+}
+
+// Epic 24 — Fraîcheur + code couleur priorité vente
+model ProductBatch {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  tenantId      String      @map("tenant_id") @db.Uuid
+  receivedAt    DateTime    @default(now()) @map("received_at") @db.Timestamptz(6)
+  expiresAt     DateTime    @map("expires_at") @db.Timestamptz(6)
+  initialQty    Decimal     @map("initial_qty") @db.Decimal(12, 3)
+  remainingQty  Decimal     @map("remaining_qty") @db.Decimal(12, 3)
+  batchRef      String?     @map("batch_ref")
+  isDepleted    Boolean     @default(false) @map("is_depleted")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, expiresAt])
+  @@map("prod_batches")
+  @@schema("shared")
 }
 
 model RetailSale {

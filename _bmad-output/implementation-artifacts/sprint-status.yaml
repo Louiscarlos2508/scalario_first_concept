@@ -174,3 +174,53 @@ development_status:
   19-6-admin-monitoring: done
   epic-19-retrospective: optional
 
+  # Epic 20: Vente au poids + unités configurables
+  epic-20: done
+  20-1-unit-type-backend: done
+  20-2-product-form-unit-type: done
+  20-3-pos-vente-au-poids: done
+  20-4-tests-sync-poids: done
+  epic-20-retrospective: optional
+
+  # Epic 21: Commandes fournisseurs + réception liée
+  epic-21: done
+  21-1-purchase-order-backend: done
+  21-2-purchase-order-frontend: done
+  21-3-reception-liee-commande: done
+  21-4-navigation-kpi-commandes: done
+  epic-21-retrospective: optional
+
+  # Epic 22: Alertes stock bas + notifications
+  epic-22: done
+  22-1-min-stock-level-backend: done
+  22-2-seuil-stock-frontend: done
+  22-3-ecran-alertes-kpi: done
+  22-4-service-notification: done
+  22-5-resume-quotidien: done
+  epic-22-retrospective: optional
+
+  # Epic 23: Conversion unités vrac → détail
+  epic-23: done
+  23-1-conversion-backend: done
+  23-2-conversion-frontend: done
+  23-3-pos-vente-enfant: done
+  epic-23-retrospective: optional
+
+  # Epic 24: Fraîcheur + code couleur priorité vente
+  epic-24: in-progress
+  24-1-batch-freshness-backend: ready-for-dev
+  24-2-code-couleur-frontend: ready-for-dev
+  24-3-onglet-fraicheur: ready-for-dev
+  epic-24-retrospective: optional
+
+  # Epic 25: Variantes, multi-tarifs & promotions
+  epic-25: in-progress
+  25-1-variant-backend: ready-for-dev
+  25-2-variant-frontend: ready-for-dev
+  25-3-pos-variant-selection: ready-for-dev
+  25-4-price-level-backend: ready-for-dev
+  25-5-price-level-frontend: ready-for-dev
+  25-6-promotion-backend: ready-for-dev
+  25-7-promotion-frontend-pos: ready-for-dev
+  epic-25-retrospective: optional
+

@@ -12,7 +12,7 @@ Map<String, String> _authHeaders({String? tenantId}) {
   final token = Supabase.instance.client.auth.currentSession?.accessToken;
   return {
     'Content-Type': 'application/json',
-    'x-tenant-id': ?tenantId,
+    if (tenantId != null) 'x-tenant-id': tenantId,
     if (token != null) 'Authorization': 'Bearer $token',
   };
 }

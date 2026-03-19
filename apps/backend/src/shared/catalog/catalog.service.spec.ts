@@ -280,6 +280,85 @@ describe('CatalogService', () => {
     });
   });
 
+  // ── Epic 20 — unitType + conversionRate ──────────────────────────────────
+
+  describe('createItem — unitType (AC2, AC5)', () => {
+    it('persists unitType=weight when provided', async () => {
+      const newItem = { id: 'item-w', name: 'Tomates', price: '1500', unitType: 'weight', tenantId: 'tid', itemType: 'physical', pricePerUnit: null, conversionRate: null };
+      mockPrisma.catalogItem.create.mockResolvedValue(newItem);
+      mockAuditLog.log.mockResolvedValue(undefined);
+
+      const result = await service.createItem(
+        { name: 'Tomates', price: 1500, tenantId: 'tid', unitType: 'weight' },
+        null,
+      );
+
+      expect(mockPrisma.catalogItem.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ unitType: 'weight' }),
+      });
+      expect(result.unitType).toBe('weight');
+    });
+
+    it('throws BadRequestException for invalid unitType', async () => {
+      await expect(
+        service.createItem(
+          { name: 'X', price: 100, tenantId: 'tid', unitType: 'invalid' as any },
+          null,
+        ),
+      ).rejects.toThrow('Invalid unitType');
+      expect(mockPrisma.catalogItem.create).not.toHaveBeenCalled();
+    });
+
+    it('defaults unitType to piece when not provided', async () => {
+      const newItem = { id: 'item-p', name: 'Bière', price: '500', unitType: 'piece', tenantId: 'tid', itemType: 'physical', pricePerUnit: null, conversionRate: null };
+      mockPrisma.catalogItem.create.mockResolvedValue(newItem);
+      mockAuditLog.log.mockResolvedValue(undefined);
+
+      await service.createItem({ name: 'Bière', price: 500, tenantId: 'tid' }, null);
+
+      expect(mockPrisma.catalogItem.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ unitType: 'piece' }),
+      });
+    });
+  });
+
+  describe('applyConversionRate (AC4, AC5)', () => {
+    it('returns quantity × conversionRate when conversionRate is set', () => {
+      expect(service.applyConversionRate(3, 0.5)).toBe(1.5);
+    });
+
+    it('returns quantity unchanged when conversionRate is null', () => {
+      expect(service.applyConversionRate(3, null)).toBe(3);
+    });
+
+    it('returns quantity unchanged when conversionRate is undefined', () => {
+      expect(service.applyConversionRate(3, undefined)).toBe(3);
+    });
+  });
+
+  describe('updateItem (AC2, PATCH endpoint)', () => {
+    it('updates unitType on an existing item', async () => {
+      const updated = { id: 'item-1', unitType: 'weight', name: 'Tomates', tenantId: 'tid' };
+      mockPrisma.catalogItem.update.mockResolvedValue(updated);
+      mockAuditLog.log.mockResolvedValue(undefined);
+
+      const result = await service.updateItem('item-1', { unitType: 'weight' }, null, 'tid');
+
+      expect(mockPrisma.catalogItem.update).toHaveBeenCalledWith({
+        where: { id: 'item-1' },
+        data: expect.objectContaining({ unitType: 'weight' }),
+        include: { retailProduct: true },
+      });
+      expect(result.unitType).toBe('weight');
+    });
+
+    it('throws BadRequestException for invalid unitType on update', async () => {
+      await expect(
+        service.updateItem('item-1', { unitType: 'bad' as any }, null, 'tid'),
+      ).rejects.toThrow('Invalid unitType');
+    });
+  });
+
   describe('deleteItem', () => {
     it('soft-deletes item (is_deleted = true)', async () => {
       const updated = { id: 'item-1', isDeleted: true };

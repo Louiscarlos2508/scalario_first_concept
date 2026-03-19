@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/constants/api_constants.dart';
@@ -36,6 +39,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _shopAddressCtrl = TextEditingController();
   final _receiptHeaderCtrl = TextEditingController();
   final _receiptFooterCtrl = TextEditingController();
+
+  // Notification settings
+  bool _dailySummaryEnabled = false;
+  String _dailySummaryTime = '18:00';
+  String _notificationChannel = 'in_app';
+  bool _savingNotif = false;
 
   @override
   void initState() {
@@ -101,6 +110,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
     if (confirmed == true) {
       await ref.read(authRepositoryProvider).signOut();
+    }
+  }
+
+  Future<void> _saveNotificationSettings() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _savingNotif = true);
+    try {
+      String? token;
+      try {
+        token = Supabase.instance.client.auth.currentSession?.accessToken;
+      } catch (_) {}
+      final response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}/organizations/notification-settings'),
+        headers: ApiConstants.headers(tenantId: tenantId, token: token),
+        body: jsonEncode({
+          'dailySummaryEnabled': _dailySummaryEnabled,
+          'dailySummaryTime': _dailySummaryTime,
+          'notificationChannel': _notificationChannel,
+        }),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Paramètres notifications sauvegardés')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : ${response.statusCode}'), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingNotif = false);
+    }
+  }
+
+  Future<void> _pickSummaryTime() async {
+    final parts = _dailySummaryTime.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 18,
+      minute: int.tryParse(parts[1]) ?? 0,
+    );
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked != null && mounted) {
+      setState(() {
+        _dailySummaryTime =
+            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      });
     }
   }
 
@@ -313,7 +376,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // ── 5. Application ────────────────────────────────────────────────
+          const SizedBox(height: 16),
+
+          // ── 5. Notifications ──────────────────────────────────────────────
+          _section('Notifications', [
+            SwitchListTile(
+              key: const Key('notif_daily_summary_toggle'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Résumé quotidien activé'),
+              value: _dailySummaryEnabled,
+              onChanged: (val) => setState(() => _dailySummaryEnabled = val),
+            ),
+            if (_dailySummaryEnabled) ...[
+              const SizedBox(height: 8),
+              ListTile(
+                key: const Key('notif_summary_time'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text("Heure d'envoi"),
+                trailing: Text(_dailySummaryTime, style: AppTextStyles.bodyMedium),
+                onTap: _pickSummaryTime,
+              ),
+            ],
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('notif_channel_selector'),
+              value: _notificationChannel,
+              decoration: const InputDecoration(labelText: 'Canal'),
+              items: const [
+                DropdownMenuItem(value: 'in_app', child: Text('Application (in-app)')),
+                DropdownMenuItem(
+                  value: 'whatsapp',
+                  enabled: false,
+                  child: Text('WhatsApp (bientôt disponible)',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _notificationChannel = val);
+              },
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                key: const Key('notif_save_button'),
+                onPressed: _savingNotif ? null : _saveNotificationSettings,
+                child: _savingNotif
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Sauvegarder'),
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 16),
+
+          // ── 6. Application ────────────────────────────────────────────────
           _section('Application', [
             _infoRow('Version', 'Scalario v1.0.0'),
             _infoRow('Serveur', ApiConstants.baseUrl),

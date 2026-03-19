@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { CurrentUser } from '../kernel/auth/auth.decorator';
 import { CurrentTenant } from '../kernel/tenancy/tenant.decorator';
@@ -17,6 +17,16 @@ export class OrganizationController {
    * Add a member to an organization with a specified role.
    * Only owners can manage team membership.
    */
+  // PATCH /organizations/notification-settings
+  @Patch('notification-settings')
+  @Roles('owner')
+  async updateNotificationSettings(
+    @Body() dto: { dailySummaryEnabled?: boolean; dailySummaryTime?: string; notificationChannel?: string },
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.organizationService.updateNotificationSettings(tenantId, dto);
+  }
+
   @Post(':id/members')
   @Roles('owner')
   async addMember(

@@ -28,7 +28,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   String? _selectedCategoryId;
   late TextEditingController _barcodeController;
   late TextEditingController _stockController;
+  late TextEditingController _unitLabelController;
+  late TextEditingController _conversionRateController;
+  late TextEditingController _minStockController;
+  String _selectedUnitType = 'piece';
   bool _isSubmitting = false;
+
+  // Epic 23 — Reconditionnement (parent-child)
+  bool _isChildItem = false;
+  String? _selectedParentItemId;
+  String? _selectedParentName;
+  List<Map<String, dynamic>> _allItems = [];
+  List<Map<String, dynamic>> _childItems = [];
 
   @override
   void initState() {
@@ -44,6 +55,51 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _stockController = TextEditingController(
       text: widget.product?.stockQuantity.toString() ?? '0',
     );
+    _selectedUnitType = widget.product?.unitType ?? 'piece';
+    _unitLabelController = TextEditingController(
+      text: widget.product?.weightUnit ?? '',
+    );
+    _conversionRateController = TextEditingController(
+      text: widget.product?.conversionRate?.toString() ?? '',
+    );
+    _minStockController = TextEditingController(
+      text: widget.product?.minStockLevel?.toString() ?? '',
+    );
+    _isChildItem = widget.product?.parentItemId != null;
+    _selectedParentItemId = widget.product?.parentItemId;
+    if (widget.submitToCatalog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadCatalogItems());
+    }
+  }
+
+  Future<void> _loadCatalogItems() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    final repo = ref.read(catalogRepositoryProvider);
+    try {
+      final items = await repo.listItems(tenantId: tenantId);
+      if (mounted) setState(() => _allItems = items);
+
+      // If editing a parent item, load its children
+      if (widget.product?.remoteId != null) {
+        final children = await repo.getChildren(
+          id: widget.product!.remoteId!,
+          tenantId: tenantId,
+        );
+        if (mounted) setState(() => _childItems = children);
+      }
+
+      // Resolve parent name for display
+      if (_selectedParentItemId != null) {
+        final parent = items.firstWhere(
+          (i) => i['id'] == _selectedParentItemId,
+          orElse: () => {},
+        );
+        if (mounted && parent.isNotEmpty) {
+          setState(() => _selectedParentName = parent['name'] as String?);
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -52,6 +108,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _priceController.dispose();
     _barcodeController.dispose();
     _stockController.dispose();
+    _unitLabelController.dispose();
+    _conversionRateController.dispose();
+    _minStockController.dispose();
     super.dispose();
   }
 
@@ -75,14 +134,44 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                     value == null || value.isEmpty ? 'Obligatoire' : null,
               ),
               const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                key: const Key('product_unit_type_field'),
+                value: _selectedUnitType,
+                decoration: const InputDecoration(labelText: "Type d'unité"),
+                items: const [
+                  DropdownMenuItem(value: 'piece', child: Text('Pièce')),
+                  DropdownMenuItem(value: 'weight', child: Text('Poids')),
+                  DropdownMenuItem(value: 'volume', child: Text('Volume')),
+                  DropdownMenuItem(value: 'length', child: Text('Longueur')),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _selectedUnitType = val);
+                },
+              ),
+              if (_selectedUnitType != 'piece') ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('product_unit_label_field'),
+                  controller: _unitLabelController,
+                  decoration: const InputDecoration(
+                    labelText: 'Label unité *',
+                    hintText: 'ex: kg, g, L, m',
+                  ),
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Obligatoire' : null,
+                ),
+              ],
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       key: const Key('product_price_field'),
                       controller: _priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Prix *',
+                      decoration: InputDecoration(
+                        labelText: _selectedUnitType != 'piece'
+                            ? 'Prix par ${_unitLabelController.text.isNotEmpty ? _unitLabelController.text : "unité"} *'
+                            : 'Prix *',
                         suffixText: 'FCFA',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
@@ -161,6 +250,167 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                 controller: _barcodeController,
                 decoration: const InputDecoration(labelText: 'Code-barres'),
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                key: const Key('product_min_stock_field'),
+                controller: _minStockController,
+                decoration: const InputDecoration(
+                  labelText: 'Alerte si stock ≤',
+                  hintText: 'Désactivé',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return null;
+                  if (double.tryParse(value) == null) return 'Nombre invalide';
+                  return null;
+                },
+              ),
+              // Epic 23 — Reconditionnement section
+              const SizedBox(height: 16),
+              SwitchListTile(
+                key: const Key('product_is_child_item_toggle'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Cet article est un détail d\'un article vrac'),
+                value: _isChildItem,
+                onChanged: (val) => setState(() {
+                  _isChildItem = val;
+                  if (!val) {
+                    _selectedParentItemId = null;
+                    _selectedParentName = null;
+                    _conversionRateController.clear();
+                  }
+                }),
+              ),
+              if (_isChildItem) ...[
+                const SizedBox(height: 8),
+                // Parent item autocomplete
+                Autocomplete<Map<String, dynamic>>(
+                  displayStringForOption: (opt) =>
+                      '${opt['name']} (${opt['unitType'] ?? 'piece'})',
+                  initialValue: _selectedParentName != null
+                      ? TextEditingValue(text: _selectedParentName!)
+                      : null,
+                  optionsBuilder: (textEditingValue) {
+                    final q = textEditingValue.text.toLowerCase();
+                    if (q.length < 2) return const [];
+                    return _allItems.where((item) {
+                      final isNotChild = item['parentItemId'] == null;
+                      final isNotSelf =
+                          item['id'] != widget.product?.remoteId;
+                      final matchesQuery = (item['name'] as String? ?? '')
+                          .toLowerCase()
+                          .contains(q);
+                      return isNotChild && isNotSelf && matchesQuery;
+                    }).toList();
+                  },
+                  onSelected: (opt) => setState(() {
+                    _selectedParentItemId = opt['id'] as String?;
+                    _selectedParentName = opt['name'] as String?;
+                  }),
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) =>
+                          TextFormField(
+                    key: const Key('product_parent_item_field'),
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      labelText: 'Article parent (≥ 2 car. pour chercher)',
+                    ),
+                    validator: (_) => _isChildItem &&
+                            _selectedParentItemId == null
+                        ? 'Sélectionnez un article parent'
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: const Key('product_child_conversion_rate_field'),
+                  controller: _conversionRateController,
+                  decoration: InputDecoration(
+                    labelText: 'Facteur de conversion *',
+                    helperText: _conversionRateController.text.isNotEmpty &&
+                            _selectedParentName != null
+                        ? 'Vendre 1 ${_nameController.text.isNotEmpty ? _nameController.text : "article"} '
+                            'décrémente ${_conversionRateController.text} '
+                            '${_selectedParentName ?? "parent"}'
+                        : 'Ex: 0.02 si 1 sachet = 0.02 unité vrac',
+                  ),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (_) => setState(() {}),
+                  validator: (value) {
+                    if (!_isChildItem) return null;
+                    if (value == null || value.isEmpty) return 'Obligatoire';
+                    final parsed = double.tryParse(value);
+                    if (parsed == null || parsed <= 0 || parsed > 1) {
+                      return 'Doit être un nombre > 0 et ≤ 1';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+              // Advanced weight conversion settings (hidden for child items)
+              if (_selectedUnitType != 'piece' && !_isChildItem) ...[
+                const SizedBox(height: 8),
+                ExpansionTile(
+                  key: const Key('product_advanced_settings'),
+                  title: const Text('Paramètres avancés'),
+                  tilePadding: EdgeInsets.zero,
+                  children: [
+                    TextFormField(
+                      key: const Key('product_conversion_rate_field'),
+                      controller: _conversionRateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Facteur de conversion (optionnel)',
+                        helperText: 'Ex: 0.5 si 1 sachet 500g = 0.5 kg stock',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return null;
+                        final parsed = double.tryParse(value);
+                        if (parsed == null || parsed <= 0) {
+                          return 'Doit être un nombre décimal > 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ],
+              // AC5 — Children list when editing a parent item
+              if (widget.product != null && _childItems.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const Text(
+                  'Articles détail liés',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                ..._childItems.map(
+                  (child) => ListTile(
+                    key: Key('child_item_${child['id']}'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(child['name'] as String? ?? ''),
+                    subtitle: Text(
+                      'Facteur: ${child['conversionRate'] ?? '—'} · ${child['unitType'] ?? 'piece'}',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      showDialog(
+                        context: context,
+                        builder: (_) => ProductFormDialog(
+                          product: Product.fromJson(child),
+                          submitToCatalog: widget.submitToCatalog,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -209,6 +459,13 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       final barcode = _barcodeController.text.trim().isEmpty
           ? null
           : _barcodeController.text.trim();
+      final conversionRate = _conversionRateController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_conversionRateController.text.trim());
+
+      final minStockLevel = _minStockController.text.trim().isEmpty
+          ? null
+          : double.tryParse(_minStockController.text.trim());
 
       if (widget.product != null && widget.product!.remoteId != null) {
         // Edit existing product
@@ -219,6 +476,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           tenantId: tenantId,
           categoryId: _selectedCategoryId,
           barcode: barcode,
+          unitType: _selectedUnitType,
+          conversionRate: conversionRate,
+          minStockLevel: minStockLevel,
+          parentItemId: _isChildItem ? _selectedParentItemId : null,
+          clearParent: !_isChildItem &&
+              widget.product!.parentItemId != null,
         );
       } else {
         // Create new product
@@ -228,6 +491,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           tenantId: tenantId,
           categoryId: _selectedCategoryId,
           barcode: barcode,
+          unitType: _selectedUnitType,
+          conversionRate: conversionRate,
         );
         final initialStock = double.tryParse(_stockController.text.trim()) ?? 0;
         if (initialStock > 0) {
@@ -279,6 +544,18 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     product.categoryId = _selectedCategoryId;
     product.barcode =
         _barcodeController.text.isEmpty ? null : _barcodeController.text;
+    product.unitType = _selectedUnitType;
+    product.weightUnit = _selectedUnitType != 'piece' &&
+            _unitLabelController.text.isNotEmpty
+        ? _unitLabelController.text
+        : null;
+    product.conversionRate = _conversionRateController.text.isEmpty
+        ? null
+        : double.tryParse(_conversionRateController.text);
+    product.minStockLevel = _minStockController.text.isEmpty
+        ? null
+        : double.tryParse(_minStockController.text);
+    product.parentItemId = _isChildItem ? _selectedParentItemId : null;
     if (widget.product == null) {
       product.stockQuantity = double.tryParse(_stockController.text) ?? 0;
     }

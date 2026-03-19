@@ -39,7 +39,7 @@ class InventoryRepository {
       'quantity': quantity,
       'tenantId': tenantId,
       if (reason != null && reason.isNotEmpty) 'reason': reason,
-      'referenceId': ?referenceId,
+      if (referenceId != null) 'referenceId': referenceId,
     };
 
     final response = await _httpClient.post(
@@ -158,7 +158,7 @@ class InventoryRepository {
       'referenceId': referenceId,
       'quantity': quantity,
       'tenantId': tenantId,
-      'catalogItemId': ?catalogItemId,
+      if (catalogItemId != null) 'catalogItemId': catalogItemId,
     };
 
     final response = await _httpClient.post(

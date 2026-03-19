@@ -69,6 +69,20 @@ FR51: Audit trail is retained indefinitely server-side and for the configured re
 FR52: System supports migration of existing client data from monolithic schema to multi-schema architecture with zero data loss
 FR53: Prisma schema operates across kernel, shared, and retail schemas with referential integrity
 FR54: Sync engine operates module-agnostically with per-module sync adapters
+FR76: Owner configures a unitType per article (unit/weight/volume/length); tenant defines native unit label per type (e.g. kg, L, m). Default = unit. Configurable from product form without deployment.
+FR77: For articles with unitType ≠ unit, POS shows a floating-point quantity input with native unit label. Total = pricePerUnit × quantity, rounded per tenant currency rule (XOF: nearest 5 FCFA). Transaction records exact quantity and native unit.
+FR78: Owner can define per article: sale unit label (free text), price per unit, and optional conversionRate to stock unit (e.g. 1 sachet 500g = 0.5 stock unit). conversionRate is applied to stock decrement on each sale.
+FR79: Owner or authorized manager can create a purchase order: select supplier contact, add items with expected quantities, set expected delivery date and optional notes. Status lifecycle: draft → confirmed → partially_received → received → cancelled. POs are listable and filterable by status, supplier, and period.
+FR80: On delivery reception, manager links reception to existing PO (optional). System records received quantity per line, calculates variance (received − expected), and accepts free-text quality notes per line. Variances and notes are traced in audit trail and visible in reception reports. Reception without linked PO remains possible.
+FR83: Owner can define repackaging rules per (source article, target article) pair: source unit (e.g. 5 kg bag), target unit (e.g. 100 g sachet), conversion factor (e.g. 50 sachets per bag). At POS, selling a child article automatically decrements the parent article's stock by quantity × conversionRate. Partial operations are allowed. The operation generates a traceable REPACKAGING stock movement in the audit trail.
+FR84: Owner configures per article: (a) a freshness window in days (expiryDays) — expiry date calculated automatically as reception date + window; (b) a natural shrinkage tolerance % (shrinkageTolerance) representing acceptable weight loss from dehydration or evaporation. Weight losses within tolerance are classified as natural variance, not losses. Either field can be null (feature inactive for that article).
+FR85: Articles with a configured freshness window display a color indicator in POS grid and stock views: Green (> 50% of window remaining), Orange (20–50% remaining), Red (< 20% remaining or expired). Both color thresholds are configurable per tenant. Orange/Red articles are sorted first in the POS grid. A filter "Articles urgents" shows only Orange/Red articles.
+FR89: Catalog articles support tenant-configurable variant attributes (size, color, material — free labels). Each variant has its own SKU, optional barcode, independent price and stock. Parent article aggregates total variant stock for reporting. At POS, cashier selects article then variant before adding to cart. Articles without variants work exactly as today. (Phase 2b)
+FR90: Articles support multiple tenant-configurable price levels (e.g. retail, wholesale, loyalty, promotional — labels free). Applied price determined automatically by contactType of associated customer OR by ordered quantity threshold (both tenant-configurable). A cashier with price_override permission can force a level manually. Receipt shows applied price level. (Phase 2b)
+FR91: Owner creates promotion rules: (a) % discount on article or full category, (b) quantity offer (buy N get M — threshold + free article configurable), (c) temporary crossed-out price. Each promotion has start/end dates and active/inactive status. Active promotions apply automatically at POS when eligible article added to cart. Receipt shows original crossed-out price + discounted price. Multiple promotions: most-advantageous wins (configurable). (Phase 3)
+FR81: Owner or manager can configure a minimum stock level (minStockLevel) per article from the product form. The field is optional; if unset, no alert is generated for that article.
+FR82: After any stock movement that decrements stock (sale, loss, transfer_out, adjustment), the system evaluates whether stockQuantity ≤ minStockLevel for each affected article. If so, a low-stock alert is recorded and surfaced in the backoffice (badge on catalog, dedicated alerts screen, KPI on dashboard).
+FR86: Owner can enable a daily summary notification per tenant: configure channel (in-app push v1; WhatsApp Phase 2b), delivery time, and on/off switch. When enabled, the system sends a summary each day at the configured time covering: total sales, total revenue, new low-stock alerts count, and pending purchase orders count.
 
 ### NonFunctional Requirements
 
@@ -192,6 +206,20 @@ From Architecture:
 | FR69–FR72 | Epic 13 | Comptabilité OHADA: plan comptable, clôture, bilan, FEC (Phase 3) |
 | FR73–FR74 | Epic 13 | Import Enterprise CSV + migration Retail → Enterprise (Phase 3) |
 | FR75 | Epic 8 | Gestion des Échecs de Sync: cycle de vie outbox complet (Phase 1) |
+| FR76 | Epic 20 | unitType configurable par article (unit/weight/volume/length) |
+| FR77 | Epic 20 | POS vente au poids — saisie quantité flottante, calcul automatique FCFA |
+| FR78 | Epic 20 | Label unité libre + facteur de conversion stock par article |
+| FR79 | Epic 21 | Création et gestion des commandes fournisseurs (lifecycle statuts) |
+| FR80 | Epic 21 | Réception liée à une commande + variance + notes qualité par article |
+| FR81 | Epic 22 | Seuil stock bas configurable par article (minStockLevel) |
+| FR82 | Epic 22 | Alerte stock bas déclenchée après mouvement de stock si stock ≤ seuil |
+| FR83 | Epic 23 | Reconditionnement vrac → détail : parentItemId + conversionRate, décrémentation stock parent à la vente |
+| FR84 | Epic 24 | Fraîcheur configurable par article (expiryDays, shrinkageTolerance) ; date expiration calculée à la réception |
+| FR85 | Epic 24 | Indicateur couleur vert/orange/rouge dans grille POS et stock ; seuils tenant-configurables ; tri priorité |
+| FR89 | Epic 25 | Variantes configurables par article (attributs libres, SKU, prix et stock indépendants) ; sélection au POS |
+| FR90 | Epic 25 | Multi-niveaux de prix tenant-configurables ; résolution automatique par contactType ou quantité |
+| FR91 | Epic 25 | Promotions configurables (%, quantitatif, prix barré) ; application auto au POS ; reçu avec prix barré |
+| FR86 | Epic 22 | Résumé quotidien automatique — canal et heure configurables par tenant |
 
 ## Epic List
 
@@ -262,6 +290,54 @@ Any Scalario tenant can act as Buyer, Seller, or both in a B2B graph. Tenants di
 **Phase:** 3
 **FRs covered:** FR52–FR55 Phase 3 business logic (DB structure already seeded in Story 1.6)
 **Prerequisite:** Epic 11 (Ambassadeurs network established)
+
+### Epic 21: Commandes fournisseurs + réception liée
+Le gestionnaire peut créer des commandes fournisseurs (sélection fournisseur, articles, quantités, date prévue), suivre leur statut (draft → confirmed → partially_received → received → cancelled), et enregistrer la réception liée avec variance automatique et notes qualité par article. Un KPI "Commandes en attente" apparaît sur le dashboard.
+**Phase:** 2a
+**FRs covered:** FR79, FR80
+**Prerequisite:** Epics 1–9, Epic 3 (contacts fournisseurs), Epic 16 (hub inventaire)
+
+---
+
+### Epic 25: Variantes, multi-tarifs & promotions
+Les articles du catalogue supportent des variantes tenant-configurables (taille, couleur, matière) avec stock et prix indépendants. Les prix multi-niveaux (détail, gros, fidélité) s'appliquent automatiquement selon le type de client ou la quantité. Des promotions configurables (%, quantitatives, prix barré) s'appliquent automatiquement au POS dès qu'un article éligible est ajouté au panier.
+**Phase:** 2b (FR89, FR90) + Phase 3 (FR91)
+**FRs covered:** FR89, FR90, FR91
+**Prerequisite:** Epics 1–9, Epic 2 (catalog), Epic 4 (transactions + paiements), Epic 3 (contacts + contactType)
+
+---
+
+### Epic 24: Fraîcheur + code couleur priorité vente
+Chaque article peut avoir une fenêtre de fraîcheur en jours et un coefficient de tolérance au rétrécissement. À la réception, une date d'expiration est calculée automatiquement par lot (`ProductBatch`). La grille POS et les vues stock affichent un indicateur couleur vert/orange/rouge selon le pourcentage de fenêtre restant. Les articles orange/rouge sont triés en priorité. Un onglet "Fraîcheur" dans l'`InventoryScreen` permet de déclasser les lots.
+**Phase:** 2b
+**FRs covered:** FR84, FR85
+**Prerequisite:** Epic 21 (réception fournisseur), Epic 5 (mouvements de stock), Epic 22 (alertes stock)
+
+---
+
+### Epic 23: Conversion unités vrac → détail
+Un article enfant (ex: sachet 100 g) peut être lié à un article parent vrac (ex: sac 5 kg) via `parentItemId` et un `conversionRate`. À la vente de l'article enfant au POS, le stock du parent est décrémenté automatiquement selon le facteur. L'opération est tracée comme mouvement `REPACKAGING` dans l'audit trail.
+**Phase:** 2a
+**FRs covered:** FR83
+**Prerequisite:** Epic 20 (unitType + conversionRate sur CatalogItem), Epic 5 (mouvements de stock)
+
+---
+
+### Epic 22: Alertes stock bas + notifications
+Chaque article peut avoir un seuil de stock bas configurable. Après tout mouvement décrémentant le stock, le système évalue automatiquement les articles sous seuil et publie les alertes. Le backoffice affiche un badge catalogue, un écran alertes dédié, et un KPI dashboard "Stock critique". Un service de notification envoie un résumé quotidien configurable par tenant (canal, heure, on/off).
+**Phase:** 2a
+**FRs covered:** FR81, FR82, FR86
+**Prerequisite:** Epics 1–9, Epic 2 (catalog + minStockLevel field), Epic 5 (mouvements de stock)
+
+---
+
+### Epic 20: Vente au poids + unités configurables
+Les articles peuvent être configurés avec un `unitType` (pièce, poids, volume, longueur) et un label d'unité libre. Au POS, les articles au poids affichent un champ de saisie de quantité en virgule flottante ; le total est calculé automatiquement avec arrondi FCFA. Le reçu affiche la quantité et l'unité native. La décrémentation stock applique le facteur de conversion configuré.
+**Phase:** 2a
+**FRs covered:** FR76, FR77, FR78
+**Prerequisite:** Epics 1–9 (backend catalog opérationnel)
+
+---
 
 ### Epic 13: Scalario Enterprise
 A Retail tenant (org_mode: standalone) upgrades to Enterprise (org_mode: integrated or federated) with zero downtime. Enterprise adds: multi-department org structure (FR59–FR61, DB seeded in Story 1.6), HR & Payroll with CNSS/CARFO/SMIG compliance (FR63–FR68), OHADA accounting with month-end close and FEC export (FR69–FR72), CSV import for employees and chart of accounts (FR73–FR74), and inter-department event flows connecting payroll validation to automatic accounting entries (FR62). User journeys: Awa (DRH), Ibrahim (Comptable), Serge (DG).
@@ -2579,3 +2655,1581 @@ Ce processus est manuel, error-prone et ne scale pas. Epic 19 remplace tout ça 
 **Files to create:**
 - `lib/features/admin/presentation/screens/admin_monitoring_screen.dart`
 - Backend: `apps/backend/src/admin/monitoring/admin-monitoring.controller.ts`
+
+---
+
+## Epic 20: Vente au poids + unités configurables
+
+Les articles peuvent être configurés avec un `unitType` (pièce, poids, volume, longueur) et un label d'unité libre. Au POS, les articles au poids affichent un champ de saisie de quantité en virgule flottante ; le total est calculé automatiquement avec arrondi FCFA. Le reçu affiche la quantité et l'unité native. La décrémentation stock applique le facteur de conversion configuré.
+
+**FRs covered:** FR76, FR77, FR78
+**Phase:** 2a
+**Prerequisite:** Epics 1–9 (backend catalog opérationnel)
+
+---
+
+### Story 20-1: Backend — Migration Prisma unitType + pricePerUnit + conversionRate
+
+**As an** owner,
+**I want** each catalog item to have a configurable unit type, unit price, and stock conversion factor,
+**So that** the system can price and track weight/volume/length articles correctly (FR76, FR78).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma :**
+
+**Given** the current `CatalogItem` table has no `unit_type`, `price_per_unit`, or `conversion_rate` columns
+**When** the Prisma migration runs
+**Then** the following columns are added to `shared.catalog_items`:
+- `unit_type VARCHAR NOT NULL DEFAULT 'piece'` — valeurs acceptées : `piece | weight | volume | length`
+- `price_per_unit NUMERIC(10,2) NULL` — prix par unité native (optionnel, null = même valeur que `price`)
+- `conversion_rate NUMERIC(10,4) NULL` — facteur de conversion unité de vente → unité de stock
+**And** toutes les lignes existantes ont `unit_type = 'piece'`, `price_per_unit = NULL`, `conversion_rate = NULL`
+**And** aucune donnée existante n'est perdue
+
+**AC2 — DTO & validation :**
+
+**Given** `POST /api/v1/catalog/items` ou `PATCH /api/v1/catalog/items/:id`
+**When** le body inclut `unitType`, `pricePerUnit`, `conversionRate`
+**Then** les champs sont validés :
+- `unitType` : enum strict `['piece', 'weight', 'volume', 'length']`, défaut `'piece'`
+- `pricePerUnit` : Decimal ≥ 0, optionnel
+- `conversionRate` : Decimal > 0, optionnel
+**And** une valeur `unitType` invalide retourne HTTP 400 avec message d'erreur lisible
+
+**AC3 — Réponse GET catalog :**
+
+**Given** `GET /api/v1/catalog/items`
+**When** la réponse est sérialisée
+**Then** chaque item inclut `unitType`, `pricePerUnit`, `conversionRate` (null si non définis)
+**And** la sync delta (`?since=`) inclut aussi ces champs
+
+**AC4 — Décrémentation stock avec conversionRate :**
+
+**Given** un article avec `conversionRate = 0.5` (ex: 1 sachet 500g = 0.5 unité stock)
+**When** une vente de quantité `2.0` est enregistrée
+**Then** le `InventoryMovement.quantity` créé est `2.0 × 0.5 = 1.0` (dans l'unité de stock)
+**And** si `conversionRate` est null, la décrémentation est `quantity` sans transformation
+
+**AC5 — Tests backend :**
+
+**Given** `catalog.service.spec.ts`
+**When** les tests unitaires sont exécutés
+**Then** :
+- Créer un item avec `unitType: 'weight'` → champ persisté correctement
+- Créer avec `unitType: 'invalid'` → erreur de validation
+- Décrémentation avec `conversionRate: 0.5`, quantité `3` → stock réduit de `1.5`
+- Décrémentation sans `conversionRate` → stock réduit de `3` (comportement inchangé)
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter les 3 champs sur `CatalogItem`
+- `apps/backend/prisma/migrations/` — nouvelle migration auto-générée
+- `apps/backend/src/shared/catalog/catalog.service.ts` — logique conversionRate
+- `apps/backend/src/shared/catalog/catalog.controller.ts` — accepter nouveaux champs
+- `apps/backend/src/shared/catalog/dto/` — `CreateCatalogItemDto`, `UpdateCatalogItemDto`
+- `apps/backend/src/shared/catalog/catalog.service.spec.ts`
+
+---
+
+### Story 20-2: Frontend — ProductFormDialog supporte unitType
+
+**As an** owner,
+**I want** the product form to let me configure unit type, unit label, and unit price,
+**So that** I can set up weight/volume articles for accurate POS pricing (FR76, FR78).
+
+**Acceptance Criteria:**
+
+**AC1 — Dropdown unitType :**
+
+**Given** `ProductFormDialog` est ouvert (création ou édition)
+**When** l'utilisateur voit le formulaire
+**Then** un dropdown "Type d'unité" est présent avec 4 options :
+- Pièce (`piece`) — sélectionné par défaut
+- Poids (`weight`)
+- Volume (`volume`)
+- Longueur (`length`)
+
+**AC2 — Champ label unité (conditionnel) :**
+
+**Given** `unitType != 'piece'` est sélectionné
+**When** le formulaire se met à jour
+**Then** un champ texte "Label unité" apparaît (ex: "kg", "g", "L", "m")
+**And** ce champ est obligatoire si `unitType != 'piece'`
+**And** si `unitType == 'piece'`, le champ est masqué et sa valeur est ignorée
+
+**AC3 — Affichage prix adapté :**
+
+**Given** `unitType != 'piece'`
+**When** le champ prix est affiché
+**Then** son label affiche "Prix par [label unité]" (ex: "Prix par kg")
+**And** si `unitType == 'piece'`, le label reste "Prix" (comportement actuel)
+
+**AC4 — Champ facteur de conversion (optionnel) :**
+
+**Given** `unitType != 'piece'`
+**When** l'utilisateur développe la section "Paramètres avancés"
+**Then** un champ "Facteur de conversion (optionnel)" est disponible
+**And** son helper text indique "Ex: 0.5 si 1 sachet 500g = 0.5 kg stock"
+**And** le champ accepte uniquement des valeurs numériques décimales > 0
+
+**AC5 — Sauvegarde et pré-remplissage :**
+
+**Given** un article avec `unitType = 'weight'` et `pricePerUnit = 1500` est édité
+**When** `ProductFormDialog` s'ouvre en mode édition
+**Then** le dropdown affiche "Poids", le label unité affiche la valeur persistée, le prix affiche `1500`
+
+**AC6 — Appel API :**
+
+**Given** le formulaire est soumis avec `unitType = 'weight'`, `pricePerUnit = 1500`, `conversionRate = null`
+**When** `POST /api/v1/catalog/items` ou `PATCH` est appelé
+**Then** le body inclut `{"unitType": "weight", "pricePerUnit": 1500, "conversionRate": null}`
+
+**AC7 — Test widget :**
+
+**Given** le widget test de `ProductFormDialog`
+**When** `unitType` est changé à `'weight'`
+**Then** le champ "Label unité" devient visible et obligatoire
+**And** le label du champ prix change en "Prix par [label]"
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart`
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `unitType`, `pricePerUnit`, `conversionRate`
+- `apps/frontend/lib/features/retail/pos/data/models/product.g.dart` — regénérer
+- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — sérialisation nouveaux champs
+
+---
+
+### Story 20-3: Frontend — POS vente au poids
+
+**As a** commercial (Fatou),
+**I want** the POS to show a quantity input when I add a weight/volume article,
+**So that** I can sell 1.5 kg of tomatoes and get the correct total automatically (FR77).
+
+**Acceptance Criteria:**
+
+**AC1 — Déclenchement saisie quantité :**
+
+**Given** la grille POS affiche un article avec `unitType = 'weight'` (ou `volume`, `length`)
+**When** l'utilisateur tape sur la carte produit
+**Then** un dialog "Saisir la quantité" apparaît immédiatement (avant ajout au panier)
+**And** le dialog affiche : nom du produit, champ numérique en virgule flottante, label unité (ex: "kg"), prix unitaire (ex: "1 500 F/kg")
+**And** la validation est immédiate : toute valeur > 0 est acceptée
+
+**AC2 — Calcul total automatique :**
+
+**Given** l'utilisateur saisit `1.5` dans le dialog quantité d'un article à `1 500 F/kg`
+**When** il confirme
+**Then** l'article est ajouté au panier avec quantité `1.5`, total ligne = `2 250 F` (arrondi 5 FCFA)
+**And** le total panier est mis à jour immédiatement
+
+**AC3 — Affichage panier :**
+
+**Given** un article au poids est dans le panier
+**When** le panneau panier (`CartPanel`) affiche la ligne
+**Then** la quantité s'affiche avec l'unité native : "1.5 kg" (pas "1.5 pièce(s)")
+**And** le prix ligne affiche "2 250 F"
+
+**AC4 — Article pièce inchangé :**
+
+**Given** un article avec `unitType = 'piece'`
+**When** l'utilisateur tape sur la carte produit
+**Then** le comportement existant est préservé (ajout direct, quantité entière, pas de dialog)
+
+**AC5 — Reçu adapté :**
+
+**Given** une vente contenant un article au poids est finalisée
+**When** `ReceiptDialog` s'affiche
+**Then** chaque ligne article au poids affiche : `[nom] — [quantité] [unité] × [prix/unité] = [total ligne]`
+**And** les articles pièce affichent le format actuel inchangé
+
+**AC6 — Transaction enregistrée :**
+
+**Given** la vente est soumise au backend
+**When** `itemsJson` est sérialisé dans la `Transaction`
+**Then** chaque item au poids contient : `{"catalogItemId", "quantity": 1.5, "unitType": "weight", "unitLabel": "kg", "pricePerUnit": 1500, "lineTotal": 2250}`
+
+**AC7 — Test widget :**
+
+**Given** le widget test du `QuantityInputDialog`
+**When** l'utilisateur entre `2.3` et confirme
+**Then** le `CartNotifier` reçoit l'article avec `quantity = 2.3`
+**And** le total calculé = `pricePerUnit × 2.3` arrondi au plus proche multiple de 5
+
+**Files to create/modify:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/quantity_input_dialog.dart` — nouveau widget
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/product_grid.dart` — détecter unitType et ouvrir dialog
+- `apps/frontend/lib/features/retail/pos/presentation/state/cart_notifier.dart` — gérer quantité flottante
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — affichage unité
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — format ligne poids
+- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — sérialisation itemsJson
+
+---
+
+### Story 20-4: Tests de bout en bout + sync produits au poids
+
+**As a** developer,
+**I want** weight products to sync correctly and receipts to display correct units end-to-end,
+**So that** the feature is validated from backend to frontend (FR76, FR77, FR78).
+
+**Acceptance Criteria:**
+
+**AC1 — Sync delta produits au poids :**
+
+**Given** un article avec `unitType = 'weight'` et `pricePerUnit = 1500` existe sur le backend
+**When** `CatalogRepository.syncProducts()` exécute un pull delta
+**Then** le `Product` local reçu a `unitType = 'weight'`, `pricePerUnit = 1500.0`
+**And** l'article est stocké dans Isar avec ces valeurs sans troncation ni perte de précision
+
+**AC2 — Robustesse sync — champs absents :**
+
+**Given** le backend retourne un article sans `unitType` (ancienne donnée avant migration)
+**When** `Product.fromJson()` parse la réponse
+**Then** `unitType` prend la valeur par défaut `'piece'`
+**And** aucune exception n'est levée
+
+**AC3 — Reçu affiché correctement :**
+
+**Given** un reçu contenant une ligne "Tomates — 1.5 kg × 1 500 F/kg = 2 250 F"
+**When** `ReceiptDialog` est rendu en test widget
+**Then** le texte "1.5 kg" apparaît dans le widget
+**And** le texte "2 250" apparaît dans le widget
+**And** aucun texte "pièce(s)" ou "1 pcs" n'apparaît pour cette ligne
+
+**AC4 — Calcul arrondi FCFA :**
+
+**Given** un article à `1 333 F/kg`
+**When** la quantité `0.75 kg` est saisie → total brut = `999.75 F`
+**Then** le total affiché et enregistré = `1 000 F` (arrondi au plus proche multiple de 5)
+
+**AC5 — conversionRate appliqué correctement :**
+
+**Given** un article "Sachet farine" avec `conversionRate = 0.5` (1 sachet = 0.5 kg de stock)
+**When** une vente de `3 sachets` est synchronisée avec le backend
+**Then** le `InventoryMovement.quantity` créé par le backend est `1.5` (3 × 0.5)
+**And** le stock de l'article diminue de `1.5`
+
+**AC6 — Test d'intégration backend (NestJS) :**
+
+**Given** `catalog.service.spec.ts`
+**When** les tests d'intégration sont exécutés contre une DB de test
+**Then** :
+- Migration appliquée → colonnes présentes avec bonnes valeurs par défaut
+- Create item `unitType: 'volume'` → GET retourne `unitType: 'volume'`
+- Sync delta `?since=T` → articles modifiés incluent `unitType` et `pricePerUnit`
+
+**Notes dev :**
+- `Product.fromJson()` doit utiliser `json['unitType'] ?? json['unit_type'] ?? 'piece'` pour la compatibilité snake_case/camelCase
+- Isar schema version bump nécessaire si `unitType` est ajouté comme champ indexé
+
+**Files to create/modify:**
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — fromJson robuste
+- `apps/backend/src/shared/catalog/catalog.service.spec.ts` — tests migration + sync
+- `apps/frontend/test/features/pos/quantity_input_dialog_test.dart` — nouveau test widget
+- `apps/frontend/test/features/pos/receipt_dialog_weight_test.dart` — nouveau test reçu poids
+
+---
+
+## Epic 21: Commandes fournisseurs + réception liée
+
+Le gestionnaire peut créer des commandes fournisseurs (sélection fournisseur, articles, quantités, date prévue), suivre leur statut, et enregistrer la réception liée avec variance automatique et notes qualité par article. La réception sans commande associée reste possible. Un KPI "Commandes en attente" apparaît sur le dashboard.
+
+**FRs covered:** FR79, FR80
+**Phase:** 2a
+**Prerequisite:** Epics 1–9, Epic 3 (contacts fournisseurs), Epic 16 (hub inventaire)
+
+---
+
+### Story 21-1: Backend — Modèles PurchaseOrder + endpoints CRUD
+
+**As a** manager (Moussa),
+**I want** a purchase order API to create, update, and track supplier orders,
+**So that** expected deliveries are documented and reception variances are traceable (FR79, FR80).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma :**
+
+**Given** les tables `purchase_orders` et `purchase_order_lines` sont absentes du schéma `shared`
+**When** la migration Prisma s'exécute
+**Then** les tables sont créées avec :
+- `purchase_orders` : `id, supplier_id (UUID → contacts.id), status, expected_date, notes, tenant_id, created_by, created_at, updated_at`
+- `purchase_order_lines` : `id, purchase_order_id, catalog_item_id, expected_quantity, received_quantity (null), quality_notes (null), created_at`
+**And** aucune donnée existante n'est affectée
+
+**AC2 — CRUD commandes :**
+
+**Given** un manager authentifié avec rôle owner ou manager
+**When** `POST /api/v1/purchase-orders` est appelé avec `{supplierId, lines: [{catalogItemId, expectedQuantity}], expectedDate?, notes?}`
+**Then** une `PurchaseOrder` est créée avec `status = 'draft'` et ses lignes associées
+**And** la réponse inclut l'objet complet avec lignes
+
+**Given** `GET /api/v1/purchase-orders` est appelé
+**When** des filtres sont passés (`?status=confirmed&supplierId=uuid&from=date&to=date`)
+**Then** seules les commandes correspondant aux filtres sont retournées, triées par `created_at` DESC
+**And** chaque commande inclut : `id, status, expectedDate, supplierName, lineCount, tenantId`
+
+**Given** `GET /api/v1/purchase-orders/:id` est appelé
+**When** la commande existe pour le tenant courant
+**Then** la réponse inclut l'objet complet avec `lines[]` (chaque ligne : catalogItemId, itemName, expectedQuantity, receivedQuantity, qualityNotes)
+
+**Given** `PATCH /api/v1/purchase-orders/:id` est appelé avec `{status: 'confirmed'}`
+**When** la transition de statut est valide (ex: draft → confirmed)
+**Then** le statut est mis à jour et la réponse inclut l'objet mis à jour
+**And** une transition invalide (ex: received → draft) retourne HTTP 422 avec message d'erreur
+
+**AC3 — Endpoint réception :**
+
+**Given** `POST /api/v1/purchase-orders/:id/receive` est appelé avec `{lines: [{purchaseOrderLineId, receivedQuantity, qualityNotes?}]}`
+**When** la commande est en statut `confirmed` ou `partially_received`
+**Then** pour chaque ligne : `receivedQuantity` est enregistrée, `qualityNotes` sauvegardée
+**And** le système calcule la variance = `receivedQuantity - expectedQuantity` pour chaque ligne
+**And** si toutes les lignes sont reçues → statut passe à `received`
+**And** si certaines lignes sont partiellement reçues → statut passe à `partially_received`
+**And** pour chaque ligne reçue : un `InventoryMovement` de type `DELIVERY` est créé avec `quantity = receivedQuantity`, `referenceId = purchaseOrderId`
+**And** l'événement `DeliveryReceived` est émis (payload : lignes reçues, tenantId)
+
+**AC4 — Réception sans commande associée :**
+
+**Given** `POST /api/v1/inventory/movements` est appelé avec `{type: 'DELIVERY', catalogItemId, quantity}`
+**When** aucun `purchaseOrderId` n'est fourni
+**Then** le mouvement est créé normalement (comportement inchangé — Epic 16 Story 16.1)
+
+**AC5 — Tests backend :**
+
+**Given** `purchase-orders.service.spec.ts`
+**When** les tests sont exécutés
+**Then** :
+- Créer une PO avec 2 lignes → 2 `PurchaseOrderLine` créées avec `receivedQuantity = null`
+- Transition valide `draft → confirmed` → OK ; transition invalide `received → draft` → erreur 422
+- Réception complète (toutes lignes reçues) → statut = `received`, `InventoryMovement` créés
+- Réception partielle → statut = `partially_received`
+- Variance = reçu − commandé, calculée correctement pour chaque ligne
+
+**Files to create:**
+- `apps/backend/src/shared/purchase-orders/purchase-orders.module.ts`
+- `apps/backend/src/shared/purchase-orders/purchase-orders.controller.ts`
+- `apps/backend/src/shared/purchase-orders/purchase-orders.service.ts`
+- `apps/backend/src/shared/purchase-orders/dto/create-purchase-order.dto.ts`
+- `apps/backend/src/shared/purchase-orders/dto/receive-purchase-order.dto.ts`
+- `apps/backend/src/shared/purchase-orders/purchase-orders.service.spec.ts`
+- `apps/backend/prisma/migrations/` — nouvelle migration auto-générée
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter `PurchaseOrder`, `PurchaseOrderLine`
+- `apps/backend/src/app.module.ts` — importer `PurchaseOrdersModule`
+
+---
+
+### Story 21-2: Frontend — Écran liste commandes + formulaire création
+
+**As a** manager (Moussa),
+**I want** a screen to list purchase orders and create new ones,
+**So that** I can document expected supplier deliveries (FR79).
+
+**Acceptance Criteria:**
+
+**AC1 — Écran liste commandes :**
+
+**Given** l'utilisateur navigue vers l'onglet "Commandes" (hub inventaire)
+**When** `PurchaseOrdersScreen` se charge
+**Then** il appelle `GET /api/v1/purchase-orders` et affiche une liste de cards
+**And** chaque card affiche : nom fournisseur, date prévue, statut (chip coloré), nombre d'articles
+**And** un filtre par statut (chips en haut : Tous · Brouillon · Confirmé · Partiel · Reçu · Annulé) est présent
+**And** si la liste est vide → message "Aucune commande" + bouton "Créer la première commande"
+
+**AC2 — Chips statut colorés :**
+
+| Statut | Couleur chip |
+|:---|:---|
+| draft | gris |
+| confirmed | bleu |
+| partially_received | orange |
+| received | vert |
+| cancelled | rouge |
+
+**AC3 — Formulaire création commande :**
+
+**Given** le FAB "+" est tapé
+**When** `CreatePurchaseOrderSheet` s'ouvre (bottom sheet plein écran)
+**Then** le formulaire contient :
+- Sélection fournisseur : `ProductAutocomplete` filtré sur `contactType = 'supplier'` (contacts existants)
+- Champ date de livraison prévue (optionnel) — `DatePicker`
+- Champ notes (optionnel, multiline)
+- Section "Articles commandés" : liste de lignes, chaque ligne = produit (autocomplete) + quantité (numérique)
+- Bouton "Ajouter un article" pour ajouter une ligne
+- Bouton "Supprimer" (icône poubelle) sur chaque ligne
+- Bouton "Créer la commande" (disabled si aucun article ou pas de fournisseur)
+
+**AC4 — Soumission création :**
+
+**Given** le formulaire est valide et soumis
+**When** `POST /api/v1/purchase-orders` est appelé
+**Then** en cas de succès : sheet se ferme, liste se rafraîchit, snackbar "Commande créée"
+**And** en cas d'erreur : snackbar rouge avec message d'erreur de l'API
+
+**AC5 — Transition statut depuis la liste :**
+
+**Given** une card de commande en statut `draft` est affichée
+**When** l'utilisateur la presse longuement (ou via menu contextuel)
+**Then** un menu propose "Confirmer la commande" → appelle `PATCH /api/v1/purchase-orders/:id {status: 'confirmed'}`
+**And** la card se met à jour avec le nouveau statut sans rechargement complet
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/purchase_orders/data/models/purchase_order_local.dart`
+- `apps/frontend/lib/features/shared/purchase_orders/data/repositories/purchase_orders_repository.dart`
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart`
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/widgets/create_purchase_order_sheet.dart`
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart`
+
+---
+
+### Story 21-3: Frontend — Réception liée à une commande
+
+**As a** manager (Moussa),
+**I want** to record a delivery against a purchase order with pre-filled quantities,
+**So that** variances are calculated automatically and quality issues are documented (FR80).
+
+**Acceptance Criteria:**
+
+**AC1 — Accès depuis liste :**
+
+**Given** une commande en statut `confirmed` ou `partially_received` est affichée
+**When** l'utilisateur tape dessus
+**Then** `PurchaseOrderDetailScreen` s'ouvre avec : fournisseur, date prévue, notes, liste des lignes (article, qté commandée)
+**And** un bouton "Réceptionner" est visible si statut ≠ `received` et ≠ `cancelled`
+
+**AC2 — Formulaire réception pré-rempli :**
+
+**Given** le bouton "Réceptionner" est tapé
+**When** `ReceivePurchaseOrderSheet` s'ouvre
+**Then** chaque ligne de la commande est affichée avec :
+- Nom article
+- Quantité commandée (affichée en lecture seule)
+- Champ "Quantité reçue" (pré-rempli avec quantité commandée, modifiable)
+- Champ "Notes qualité" (optionnel, ex: "produits trop mûrs")
+
+**AC3 — Affichage variance en temps réel :**
+
+**Given** l'utilisateur modifie la quantité reçue d'une ligne
+**When** la valeur change
+**Then** la variance s'affiche sous le champ : "+2.5" (vert si positif) ou "-1.0" (orange si négatif)
+**And** une variance de 0 n'est pas affichée
+
+**AC4 — Soumission réception :**
+
+**Given** le formulaire de réception est soumis
+**When** `POST /api/v1/purchase-orders/:id/receive` est appelé
+**Then** en cas de succès : sheet se ferme, détail commande se rafraîchit avec nouveau statut
+**And** snackbar "Réception enregistrée — [n] mouvements de stock créés"
+**And** en cas d'erreur : snackbar rouge avec message d'erreur
+
+**AC5 — Réception sans commande (flux hérité préservé) :**
+
+**Given** l'utilisateur est dans le hub inventaire, onglet "Réceptions"
+**When** il crée une réception sans sélectionner de commande fournisseur
+**Then** le flux `delivery_form.dart` existant (Epic 16 Story 16.1) fonctionne sans changement
+**And** aucune régression sur le flux actuel
+
+**AC6 — Test widget :**
+
+**Given** `ReceivePurchaseOrderSheet` est rendu avec une commande de 2 lignes
+**When** la quantité reçue de la ligne 1 est modifiée à une valeur différente de la quantité commandée
+**Then** la variance s'affiche correctement sur cette ligne
+**And** les autres lignes restent inchangées
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/screens/purchase_order_detail_screen.dart`
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/widgets/receive_purchase_order_sheet.dart`
+- `apps/frontend/test/features/purchase_orders/receive_sheet_test.dart`
+
+---
+
+### Story 21-4: Navigation hub inventaire + KPI "Commandes en attente"
+
+**As a** manager or owner,
+**I want** purchase orders accessible from the inventory hub and visible as a dashboard KPI,
+**So that** pending deliveries are never missed (FR79).
+
+**Acceptance Criteria:**
+
+**AC1 — Onglet "Commandes" dans le hub inventaire :**
+
+**Given** l'utilisateur ouvre le hub inventaire (`InventoryScreen`)
+**When** les onglets s'affichent
+**Then** un onglet "Commandes" est ajouté aux onglets existants (Réceptions · Transferts · Pertes · Inventaire)
+**And** l'onglet "Commandes" charge `PurchaseOrdersScreen`
+**And** si des commandes sont en statut `confirmed` ou `partially_received`, un badge numérique rouge apparaît sur l'onglet
+
+**AC2 — KPI dashboard "Commandes en attente" :**
+
+**Given** le dashboard backoffice (`DashboardScreen`) est chargé
+**When** la section KPI s'affiche
+**Then** une card "Commandes en attente" affiche le nombre de POs avec `status IN ('confirmed', 'partially_received')`
+**And** tapper la card navigue vers `InventoryScreen` avec l'onglet "Commandes" sélectionné et filtre "Confirmé" actif
+**And** si le count = 0, la card affiche "0" sans masquer la card (visibilité permanente)
+
+**AC3 — Endpoint KPI backend :**
+
+**Given** `GET /api/v1/purchase-orders/stats` est appelé
+**When** le backend répond
+**Then** la réponse inclut `{ pendingCount: number }` — count des POs `confirmed` + `partially_received` pour le tenant
+**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
+
+**AC4 — Refresh automatique :**
+
+**Given** le dashboard est visible
+**When** une réception est enregistrée (Story 21-3 AC4)
+**Then** le provider du KPI est invalidé et le count se met à jour automatiquement
+
+**Notes dev :**
+- Le badge sur l'onglet utilise le même provider que le KPI dashboard (source unique de vérité)
+- Rôle requis pour accès commandes : owner ou manager — le commercial ne voit pas l'onglet "Commandes"
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — ajouter onglet Commandes
+- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — ajouter KPI card
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/purchase_orders/presentation/providers/purchase_orders_stats_provider.dart`
+
+---
+
+## Epic 22: Alertes stock bas + notifications
+
+### Story 22-1: Backend — minStockLevel sur CatalogItem + endpoint alertes
+
+**As a** backend developer,
+**I want** a low-stock alert evaluation triggered after every stock-decrementing movement, surfaced via a dedicated endpoint,
+**So that** the backoffice can display real-time low-stock signals (FR81, FR82).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ minStockLevel déjà en schema :**
+
+**Given** la migration Prisma pour `minStockLevel` sur `CatalogItem` est déjà définie dans l'architecture v1.1
+**When** le développeur vérifie `schema.prisma`
+**Then** si le champ n'est pas encore appliqué, une migration `add_min_stock_level_to_catalog_items` est générée et appliquée
+**And** le champ est `Decimal?` nullable — absence = pas d'alerte pour cet article
+
+**AC2 — Endpoint PATCH minStockLevel :**
+
+**Given** `PATCH /api/v1/catalog/:id` est appelé avec `{ "minStockLevel": 5 }`
+**When** la requête est validée
+**Then** le champ `minStockLevel` est mis à jour pour l'article du tenant
+**And** la réponse renvoie l'article mis à jour avec `minStockLevel`
+**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
+
+**AC3 — Évaluation post-mouvement de stock :**
+
+**Given** un `InventoryMovement` de type `SALE`, `LOSS`, `TRANSFER_OUT`, ou `ADJUSTMENT` (quantité négative) est créé
+**When** l'`InventoryService` traite le mouvement
+**Then** pour chaque `catalogItemId` concerné, si `stockQuantity ≤ minStockLevel` et `minStockLevel IS NOT NULL`
+**And** une entrée `StockAlert` est upserted (ou un événement `LowStockDetected` est émis sur l'Event Bus)
+**And** si `stockQuantity > minStockLevel`, aucune alerte n'est créée / l'alerte existante est résolue automatiquement
+
+**AC4 — Endpoint GET alertes actives :**
+
+**Given** `GET /api/v1/stock-alerts` est appelé
+**When** le backend répond
+**Then** la réponse renvoie la liste des articles dont `stockQuantity ≤ minStockLevel` pour le tenant courant
+**And** chaque entrée inclut : `catalogItemId`, `itemName`, `stockQuantity`, `minStockLevel`, `deficit` (minStockLevel − stockQuantity)
+**And** les résultats sont triés par `deficit` décroissant (articles les plus critiques en premier)
+**And** l'endpoint supporte `?limit=` et `?offset=` pour la pagination
+
+**AC5 — Endpoint GET count alertes actives :**
+
+**Given** `GET /api/v1/stock-alerts/count` est appelé
+**When** le backend répond
+**Then** la réponse renvoie `{ criticalCount: number }` — nombre d'articles sous seuil pour le tenant
+**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
+
+**Notes dev :**
+- Créer `StockAlertsModule` dans `apps/backend/src/shared/stock-alerts/`
+- L'évaluation post-mouvement peut être synchrone (dans la transaction) ou via Event Bus (`LowStockDetected`) — privilégier Event Bus pour découplage
+- Pas de table `StockAlert` dédiée si on préfère une vue calculée — acceptable en MVP (query `WHERE stockQuantity <= minStockLevel`)
+
+**Files to create:**
+- `apps/backend/src/shared/stock-alerts/stock-alerts.module.ts`
+- `apps/backend/src/shared/stock-alerts/stock-alerts.service.ts`
+- `apps/backend/src/shared/stock-alerts/stock-alerts.controller.ts`
+- `apps/backend/src/shared/stock-alerts/dto/stock-alert.dto.ts`
+
+**Files to modify:**
+- `apps/backend/src/shared/inventory/inventory.service.ts` — émettre `LowStockDetected` après mouvement décrémentant
+- `apps/backend/prisma/schema.prisma` — vérifier/appliquer `minStockLevel` sur `CatalogItem`
+
+---
+
+### Story 22-2: Frontend — Configuration seuil dans ProductFormDialog + badge catalogue
+
+**As a** owner or manager,
+**I want** to set a minimum stock threshold on each product and see a visual badge when that threshold is breached,
+**So that** I can identify at-risk articles at a glance in the catalog (FR81, FR82).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ minStockLevel dans ProductFormDialog :**
+
+**Given** l'utilisateur ouvre `ProductFormDialog` pour créer ou éditer un article
+**When** le formulaire s'affiche
+**Then** un champ optionnel "Seuil stock bas" (type: nombre décimal, label: "Alerte si stock ≤") est visible
+**And** si le champ est vide, aucune alerte ne sera générée pour cet article (placeholder : "Désactivé")
+**And** le champ accepte des valeurs décimales (ex. 2.5 pour articles au poids)
+
+**AC2 — Sauvegarde du seuil :**
+
+**Given** l'utilisateur saisit `5` dans le champ "Seuil stock bas" et soumet le formulaire
+**When** l'appel `PATCH /api/v1/catalog/:id` est exécuté
+**Then** `minStockLevel: 5` est inclus dans le payload
+**And** la réponse est reflétée dans le modèle `Product` local (Isar mis à jour)
+**And** un message de confirmation "Seuil enregistré" apparaît en snackbar
+
+**AC3 — Badge rouge sur article sous seuil dans la grille catalogue :**
+
+**Given** un article a `stockQuantity ≤ minStockLevel` (et `minStockLevel != null`)
+**When** la grille catalogue s'affiche
+**Then** une icône d'alerte (triangle orange ou badge rouge) apparaît sur la card de l'article
+**And** le tooltip ou sous-label indique "Stock critique : X restants" (X = stockQuantity)
+**And** les articles sans seuil configuré n'affichent aucun badge
+
+**AC4 — Offline :**
+
+**Given** l'appareil est hors ligne
+**When** l'utilisateur ouvre le catalogue
+**Then** les badges de stock bas sont calculés localement depuis le modèle Isar (stockQuantity vs minStockLevel)
+**And** aucun appel réseau n'est requis pour afficher les badges
+
+**Notes dev :**
+- Ajouter `minStockLevel` au modèle `Product` Dart et au `fromJson`
+- La logique de badge est pure (pas de provider supplémentaire) : `product.minStockLevel != null && product.stockQuantity <= product.minStockLevel`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `minStockLevel`
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — ajouter champ seuil
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — badge alerte
+- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — passer `minStockLevel` au PATCH
+
+---
+
+### Story 22-3: Frontend — Écran alertes + KPI dashboard "Stock critique"
+
+**As a** manager or owner,
+**I want** a dedicated low-stock alerts screen and a persistent dashboard KPI,
+**So that** I can act quickly on replenishment decisions without scanning the full catalog (FR82).
+
+**Acceptance Criteria:**
+
+**AC1 — KPI "Stock critique" sur le dashboard :**
+
+**Given** le dashboard backoffice (`DashboardScreen`) est chargé
+**When** la section KPI s'affiche
+**Then** une card "Stock critique" affiche le nombre d'articles sous seuil (`criticalCount` de `GET /api/v1/stock-alerts/count`)
+**And** si criticalCount > 0, la card est colorée en orange/rouge (couleur d'alerte)
+**And** si criticalCount = 0, la card affiche "0 — Tout va bien" en vert
+**And** tapper la card navigue vers `StockAlertsScreen`
+
+**AC2 — Écran StockAlertsScreen :**
+
+**Given** l'utilisateur navigue vers `StockAlertsScreen`
+**When** l'écran se charge
+**Then** une liste d'articles sous seuil est affichée, triée par déficit décroissant
+**And** chaque item affiche : nom de l'article, stock actuel, seuil configuré, et déficit en rouge
+**And** un bouton "Réapprovisionner" sur chaque item navigue vers `CreatePurchaseOrderSheet` pré-rempli avec l'article
+**And** si aucune alerte, l'écran affiche un état vide "Aucun stock critique"
+
+**AC3 — Refresh automatique :**
+
+**Given** l'écran alertes est visible
+**When** un mouvement de stock est synchronisé (post-vente, post-perte)
+**Then** le provider est invalidé et la liste se rafraîchit automatiquement
+**And** si un article repasse au-dessus de son seuil, il disparaît de la liste
+
+**AC4 — Accès rôle :**
+
+**Given** un utilisateur avec le rôle `commercial` accède au dashboard
+**When** le dashboard s'affiche
+**Then** la card KPI "Stock critique" est masquée (visible uniquement pour `owner` et `manager`)
+
+**Notes dev :**
+- `StockAlertsScreen` dans `apps/frontend/lib/features/shared/stock_alerts/presentation/screens/`
+- Provider : `stockAlertsProvider` (Riverpod AutoDisposeFutureProvider)
+- Le bouton "Réapprovisionner" nécessite Epic 21 complété (navigation vers CreatePurchaseOrderSheet)
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart`
+- `apps/frontend/lib/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart`
+- `apps/frontend/lib/features/shared/stock_alerts/data/repositories/stock_alerts_repository.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — ajouter KPI "Stock critique"
+
+---
+
+### Story 22-4: Backend — Service notification (cron/event, push in-app v1)
+
+**As a** backend developer,
+**I want** a notification service that listens for low-stock events and sends in-app push notifications to authorized users,
+**So that** managers and owners are alerted in real-time when stock drops below threshold (FR82).
+
+**Acceptance Criteria:**
+
+**AC1 — Listener LowStockDetected :**
+
+**Given** l'Event Bus reçoit un événement `LowStockDetected { tenantId, catalogItemId, itemName, stockQuantity, minStockLevel }`
+**When** le `NotificationService` traite l'événement
+**Then** une notification in-app est persistée pour tous les utilisateurs du tenant ayant le rôle `owner` ou `manager`
+**And** la notification contient : titre "Stock critique", corps "X — il reste Y unité(s) (seuil : Z)", et `catalogItemId` comme deep-link cible
+**And** la notification est marquée `unread` à la création
+
+**AC2 — Endpoint GET notifications non lues :**
+
+**Given** `GET /api/v1/notifications?unread=true` est appelé
+**When** le backend répond
+**Then** la réponse renvoie la liste des notifications non lues de l'utilisateur courant
+**And** chaque notification inclut : `id`, `title`, `body`, `type`, `targetId`, `createdAt`, `isRead`
+**And** l'endpoint est paginé (`?limit=`, `?offset=`)
+
+**AC3 — Endpoint POST marquer comme lue :**
+
+**Given** `POST /api/v1/notifications/:id/read` est appelé
+**When** le backend répond
+**Then** la notification est marquée `isRead: true`
+**And** la réponse renvoie `{ success: true }`
+
+**AC4 — Endpoint GET count non lues :**
+
+**Given** `GET /api/v1/notifications/unread-count` est appelé
+**When** le backend répond
+**Then** la réponse renvoie `{ unreadCount: number }`
+**And** ce count est utilisé par le frontend pour afficher le badge de notification dans l'AppBar
+
+**AC5 — Isolation tenant :**
+
+**Given** deux tenants ont des alertes stock bas
+**When** l'endpoint notifications est appelé pour un utilisateur du tenant A
+**Then** seules les notifications du tenant A sont retournées — aucune fuite cross-tenant
+
+**Notes dev :**
+- Créer `NotificationsModule` dans `apps/backend/src/shared/notifications/`
+- Table `notifications` dans le schema `shared` : `id`, `tenantId`, `userId`, `type`, `title`, `body`, `targetId`, `isRead`, `createdAt`
+- Phase 2b : intégration WhatsApp Business API (hors scope de cette story)
+- Phase 2b : FCM/APNs push mobile (hors scope — in-app only pour v1)
+
+**Files to create:**
+- `apps/backend/src/shared/notifications/notifications.module.ts`
+- `apps/backend/src/shared/notifications/notifications.service.ts`
+- `apps/backend/src/shared/notifications/notifications.controller.ts`
+- `apps/backend/src/shared/notifications/dto/notification.dto.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_notifications_table/migration.sql`
+
+**Files to modify:**
+- `apps/backend/src/shared/stock-alerts/stock-alerts.service.ts` — émettre `LowStockDetected`
+- `apps/backend/src/app.module.ts` — enregistrer `NotificationsModule`
+
+---
+
+### Story 22-5: Backend — Résumé quotidien (FR86) + config canal par tenant dans panel admin
+
+**As a** owner,
+**I want** to receive a daily summary notification at a configured time, and to control this setting from the admin panel,
+**So that** I stay informed of daily performance without opening the app every day (FR86).
+
+**Acceptance Criteria:**
+
+**AC1 — Config tenant pour résumé quotidien :**
+
+**Given** `PATCH /api/v1/tenants/notification-settings` est appelé avec `{ dailySummaryEnabled: true, dailySummaryTime: "18:00", notificationChannel: "in_app" }`
+**When** la requête est validée
+**Then** les champs `dailySummaryEnabled`, `dailySummaryTime`, `notificationChannel` sont mis à jour sur le `Tenant`
+**And** seul un utilisateur avec le rôle `owner` peut appeler cet endpoint
+**And** la réponse renvoie les settings mis à jour
+
+**AC2 — Cron job résumé quotidien :**
+
+**Given** le cron job `DailySummaryJob` est planifié et `dailySummaryEnabled = true` pour un tenant
+**When** l'heure locale du tenant (timezone) atteint `dailySummaryTime`
+**Then** le système calcule pour la journée : total ventes (`transactionCount`), chiffre d'affaires (`totalRevenue`), nouvelles alertes stock bas (`newAlerts`), commandes en attente (`pendingPOs`)
+**And** une notification in-app est persistée pour tous les `owner` du tenant
+**And** le corps de la notification inclut ces 4 métriques formatées
+
+**AC3 — Canal WhatsApp (stub Phase 2b) :**
+
+**Given** `notificationChannel = "whatsapp"` est configuré
+**When** le résumé quotidien est envoyé
+**Then** le système log "WhatsApp channel not yet implemented — fallback to in_app" et envoie la notification in-app
+**And** aucune erreur n'est levée (graceful degradation)
+
+**AC4 — Frontend — Section "Notifications" dans le panel admin tenant :**
+
+**Given** l'administrateur ouvre le panel de configuration tenant (`TenantSettingsScreen`)
+**When** la section "Notifications" s'affiche
+**Then** un toggle "Résumé quotidien activé" est visible
+**And** si le toggle est ON, un champ "Heure d'envoi" (time picker, format HH:mm) est visible
+**And** un sélecteur "Canal" propose "Application (in-app)" et "WhatsApp (bientôt disponible)" (WhatsApp grisé)
+**And** les modifications sont sauvegardées via `PATCH /api/v1/tenants/notification-settings`
+
+**AC5 — Timezone awareness :**
+
+**Given** le cron job évalue quels tenants envoyer
+**When** le job s'exécute toutes les minutes
+**Then** seuls les tenants dont `dailySummaryTime` correspond à l'heure courante dans leur `timezone` sont traités
+**And** chaque tenant n'est traité qu'une fois par jour (idempotence via un flag `lastSummarySentDate`)
+
+**Notes dev :**
+- Utiliser `@nestjs/schedule` (`@Cron('* * * * *')`) pour le job minute-by-minute
+- `lastSummarySentDate` peut être un champ `DateTime?` sur `Tenant` ou une entrée dans un cache Redis (MVP : champ Tenant)
+- Le calcul des métriques réutilise les services existants : `TransactionsService`, `StockAlertsService`, `PurchaseOrdersService`
+
+**Files to create:**
+- `apps/backend/src/shared/notifications/jobs/daily-summary.job.ts`
+
+**Files to modify:**
+- `apps/backend/src/kernel/tenants/tenants.controller.ts` — ajouter `PATCH notification-settings`
+- `apps/backend/src/kernel/tenants/tenants.service.ts` — méthode `updateNotificationSettings`
+- `apps/backend/prisma/schema.prisma` — vérifier/appliquer champs notification sur `Tenant`
+- `apps/frontend/lib/features/admin/presentation/screens/tenant_settings_screen.dart` — section Notifications
+- Backend: `GET /api/v1/purchase-orders/stats` dans `purchase-orders.controller.ts`
+
+---
+
+## Epic 23: Conversion unités vrac → détail
+
+### Story 23-1: Backend — parentItemId + conversionRate sur CatalogItem + logique REPACKAGING
+
+**As a** backend developer,
+**I want** parent-child article relationships persisted and the POS sale endpoint to automatically decrement parent stock when a child article is sold,
+**So that** bulk → retail unit stock tracking is automated and fully traced (FR83).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration parentItemId + conversionRate :**
+
+**Given** les champs `parentItemId` et `conversionRate` sont définis dans l'architecture v1.1 pour `CatalogItem`
+**When** le développeur applique la migration Prisma
+**Then** `parentItemId String? @map("parent_item_id") @db.Uuid` est présent sur `catalog_items`
+**And** `conversionRate Decimal? @map("conversion_rate") @db.Decimal(10, 4)` est présent
+**And** les deux champs sont nullable — absence = article autonome sans relation parent
+
+**AC2 — Validation relation parent-enfant :**
+
+**Given** `PATCH /api/v1/catalog/:id` est appelé avec `{ "parentItemId": "uuid", "conversionRate": 0.02 }`
+**When** le service valide la relation
+**Then** le parent référencé doit appartenir au même tenant (`tenantId` identique) — sinon erreur 400
+**And** pas de référence circulaire tolérée (A → B → A) — le service vérifie 1 niveau
+**And** profondeur max = 1 : un article enfant ne peut pas lui-même avoir des enfants
+**And** `conversionRate` doit être > 0 et ≤ 1 pour les sous-unités (ex: sachet = 0.02 sac)
+
+**AC3 — Décrémentation stock parent à la vente :**
+
+**Given** un article enfant avec `parentItemId` et `conversionRate` est vendu au POS
+**When** `POST /api/v1/transactions` traite la vente
+**Then** le stock de l'article enfant n'est PAS décrémenté (l'enfant n'a pas de stock propre)
+**And** le stock du parent est décrémenté de `quantity × conversionRate` (ex: 3 sachets × 0.02 = 0.06 sac)
+**And** un `InventoryMovement` de type `REPACKAGING` est créé avec `catalogItemId` = parent, `quantity` = -(quantity × conversionRate), `referenceId` = transactionId
+
+**AC4 — Endpoint GET articles enfants d'un parent :**
+
+**Given** `GET /api/v1/catalog/:id/children` est appelé
+**When** le backend répond
+**Then** la réponse liste tous les articles dont `parentItemId` = `:id` pour le tenant courant
+**And** chaque entrée inclut `id`, `name`, `unitType`, `pricePerUnit`, `conversionRate`
+
+**AC5 — Vérification stock parent insuffisant :**
+
+**Given** la vente d'un article enfant décrémenterait le stock parent en dessous de 0
+**When** la transaction est traitée
+**Then** le backend renvoie un avertissement `{ warning: "PARENT_STOCK_LOW", parentItemName: string, parentStockAfter: number }` dans la réponse (non bloquant — la vente passe quand même)
+**And** le stock parent peut devenir négatif (comportement identique aux articles ordinaires)
+
+**Notes dev :**
+- Si l'article enfant a aussi son propre `conversionRate` (FR78 sans `parentItemId`), les deux logiques coexistent : `parentItemId` déclenche la décrémentation parent, le `conversionRate` autonome décrémente self
+- Le type `REPACKAGING` est ajouté à l'enum commentaire de `InventoryMovement`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter `parentItemId`, `conversionRate` à `CatalogItem`
+- `apps/backend/src/shared/catalog/catalog.service.ts` — validation parent-enfant + endpoint children
+- `apps/backend/src/shared/catalog/catalog.controller.ts` — `GET /:id/children`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — décrémentation parent lors d'une vente
+
+---
+
+### Story 23-2: Frontend — Formulaire conversion dans ProductFormDialog
+
+**As a** owner or manager,
+**I want** to link a child article to a parent bulk article and configure the conversion factor from the product form,
+**So that** I can set up bulk → retail splits without leaving the admin UI (FR83).
+
+**Acceptance Criteria:**
+
+**AC1 — Section "Lié à un article parent" dans ProductFormDialog :**
+
+**Given** l'utilisateur ouvre `ProductFormDialog` pour créer ou éditer un article
+**When** le formulaire s'affiche
+**Then** une section optionnelle "Reconditionnement" est visible, avec un toggle "Cet article est un détail d'un article vrac"
+**And** si le toggle est OFF, les champs de relation sont masqués
+**And** si le toggle est ON, deux champs apparaissent : "Article parent" (autocomplete) et "Facteur de conversion" (nombre décimal > 0)
+
+**AC2 — Autocomplete article parent :**
+
+**Given** l'utilisateur saisit du texte dans le champ "Article parent"
+**When** l'autocomplete se déclenche (≥ 2 caractères)
+**Then** la liste propose les articles du tenant qui ne sont pas eux-mêmes des articles enfants (pas de `parentItemId` défini)
+**And** l'article en cours d'édition est exclu de la liste (pas d'auto-référence)
+**And** chaque résultat affiche : nom, unitType, stock actuel
+
+**AC3 — Affichage du facteur de conversion :**
+
+**Given** l'utilisateur a sélectionné un article parent et saisi un facteur de conversion (ex: 0.02)
+**When** le facteur est confirmé
+**Then** un texte d'aide s'affiche sous le champ : "Vendre 1 [label enfant] décrémente [1/facteur] → [facteur] [unitLabel parent]" (ex: "Vendre 1 sachet décrémente 0.02 sac")
+**And** si le facteur est invalide (≤ 0 ou > 1), une erreur de validation s'affiche
+
+**AC4 — Sauvegarde :**
+
+**Given** l'utilisateur soumet le formulaire avec parentItemId + conversionRate
+**When** `PATCH /api/v1/catalog/:id` est appelé
+**Then** `parentItemId` et `conversionRate` sont inclus dans le payload
+**And** le modèle `Product` Dart est mis à jour avec ces champs
+
+**AC5 — Fiche parent — liste des articles enfants :**
+
+**Given** l'utilisateur ouvre la fiche d'un article parent (via le catalogue)
+**When** la fiche s'affiche
+**Then** une section "Articles détail liés" liste les articles enfants avec leur facteur de conversion
+**And** chaque enfant est cliquable pour ouvrir son `ProductFormDialog`
+
+**Notes dev :**
+- Ajouter `parentItemId` et `conversionRate` au modèle `Product` Dart et `fromJson`
+- L'autocomplete peut réutiliser le `catalogSearchProvider` existant avec un filtre `hasNoParent=true`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `parentItemId`, `conversionRate`
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section Reconditionnement
+- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — PATCH avec nouveaux champs
+
+---
+
+### Story 23-3: Frontend — POS vente du produit enfant (décrémente stock parent)
+
+**As a** cashier,
+**I want** to sell child articles (sachets, portions) at the POS with automatic parent stock tracking and a clear warning when parent stock is low,
+**So that** bulk consumption is tracked without manual intervention (FR83).
+
+**Acceptance Criteria:**
+
+**AC1 — Vente article enfant au POS — flux normal :**
+
+**Given** un article enfant (avec `parentItemId`) est ajouté au panier
+**When** la transaction est validée
+**Then** la vente se complète normalement — aucune différence visible pour le caissier
+**And** le backend décrémente le stock du parent (Story 23-1 AC3)
+**And** le reçu affiche l'article enfant vendu (nom, quantité, prix) sans mention du parent
+
+**AC2 — Alerte stock parent faible :**
+
+**Given** la transaction renvoie `warning: "PARENT_STOCK_LOW"` dans la réponse
+**When** la transaction est confirmée
+**Then** une snackbar orange apparaît après validation : "Stock faible : [nomParent] — [stockAfter] [unitLabel] restant(s)"
+**And** la snackbar est non bloquante (ne nécessite pas d'action) et disparaît après 4 secondes
+**And** la vente n'est PAS annulée — la snackbar est informationnelle uniquement
+
+**AC3 — Grille POS — badge "vrac" sur article parent :**
+
+**Given** un article a des enfants liés (`hasChildren = true`)
+**When** la grille POS s'affiche
+**Then** un badge discret "VRAC" apparaît sur la card de l'article parent pour signaler qu'il ne se vend pas à l'unité directement
+**And** les articles enfants n'ont pas ce badge
+
+**AC4 — Stock parent local mis à jour après vente :**
+
+**Given** une vente d'article enfant est synchronisée
+**When** la sync retour met à jour les stocks locaux
+**Then** le stock local du parent (dans Isar) est décrémenté de `quantity × conversionRate`
+**And** si le stock parent passe sous `minStockLevel`, l'alerte stock bas (Epic 22) se déclenche
+
+**Notes dev :**
+- Le `cartNotifier` doit lire `parentItemId` pour informer l'UI post-validation
+- La logique de décrémentation parent est entièrement backend — le frontend ne calcule pas, il affiche le warning du backend
+- Le badge "VRAC" sur la card parent est optionnel MVP — peut être un simple chip texte
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — lire `warning` de la réponse transaction
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher snackbar alerte parent
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — badge VRAC sur article parent
+
+---
+
+## Epic 24: Fraîcheur + code couleur priorité vente
+
+### Story 24-1: Backend — ProductBatch + expiryDays + endpoints expiring
+
+**As a** backend developer,
+**I want** a `ProductBatch` model tracking freshness per reception lot, and endpoints to query expiring articles,
+**So that** the system can drive color-coded freshness indicators and the "Fraîcheur" tab (FR84, FR85).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration expiryDays + shrinkageTolerance sur CatalogItem :**
+
+**Given** les champs sont définis dans l'architecture v1.1
+**When** la migration est appliquée
+**Then** `expiryDays Int? @map("expiry_days")` est présent sur `catalog_items`
+**And** `shrinkageTolerance Decimal? @map("shrinkage_tolerance") @db.Decimal(5, 2)` est présent
+**And** les deux sont nullable — absence = fraîcheur non trackée pour cet article
+
+**AC2 — Migration ProductBatch :**
+
+**Given** le modèle `ProductBatch` est défini dans l'architecture v1.1 (§4.2.12)
+**When** la migration est appliquée
+**Then** la table `prod_batches` existe dans le schema `shared` avec les colonnes : `id`, `catalog_item_id`, `tenant_id`, `received_at`, `expires_at`, `initial_qty`, `remaining_qty`, `batch_ref`, `is_depleted`, `created_at`
+**And** un index existe sur `(tenant_id, expires_at)` pour les requêtes de tri par expiration
+
+**AC3 — Création automatique ProductBatch à la réception :**
+
+**Given** une réception fournisseur est enregistrée (`POST /api/v1/inventory/receive` ou via Epic 21 `POST /api/v1/purchase-orders/:id/receive`)
+**When** l'article reçu a `expiryDays != null`
+**Then** un `ProductBatch` est créé avec : `receivedAt = now()`, `expiresAt = now() + expiryDays days`, `initialQty = receivedQuantity`, `remainingQty = receivedQuantity`
+**And** si `expiryDays = null`, aucun batch n'est créé (article non tracé)
+
+**AC4 — Dépletion FIFO des batches à la vente :**
+
+**Given** un article avec des batches actifs est vendu au POS
+**When** la transaction est traitée
+**Then** le batch avec la date `expiresAt` la plus ancienne est consommé en premier (FIFO)
+**And** `remainingQty` est décrémenté de la quantité vendue
+**And** si `remainingQty ≤ 0`, le batch est marqué `isDepleted = true`
+**And** si la vente dépasse le `remainingQty` d'un batch, le surplus est prélevé sur le batch suivant (cascade)
+
+**AC5 — Endpoint GET articles expirant :**
+
+**Given** `GET /api/v1/batches/expiring?days=7` est appelé
+**When** le backend répond
+**Then** la réponse liste les batches dont `expiresAt ≤ now() + 7 days` et `isDepleted = false` pour le tenant
+**And** chaque entrée inclut : `batchId`, `catalogItemId`, `itemName`, `expiresAt`, `remainingQty`, `freshnessPercent` (% de fenêtre restante = (expiresAt − now) / expiryDays × 100)
+**And** les résultats sont triés par `expiresAt` croissant (plus urgents en premier)
+**And** `GET /api/v1/batches/expiring/count` renvoie `{ urgentCount: number }` (batches avec `freshnessPercent < 50%`)
+
+**AC6 — Tolérance rétrécissement sur mouvements LOSS :**
+
+**Given** un mouvement de stock de type `LOSS` est enregistré pour un article avec `shrinkageTolerance`
+**When** la quantité perdue est ≤ `shrinkageTolerance %` du stock total
+**Then** le mouvement est enregistré avec `reason: "NATURAL_VARIANCE"` (pas une perte signalée)
+**And** ce mouvement n'apparaît pas dans les KPIs de pertes du dashboard
+
+**Notes dev :**
+- La dépletion FIFO est optionnelle en MVP — acceptable de décrémenter le stock global sans tracker le batch précis ; tracker le batch est la v2
+- `ProductBatch` est dans `@@schema("shared")`
+
+**Files to create:**
+- `apps/backend/src/shared/batches/batches.module.ts`
+- `apps/backend/src/shared/batches/batches.service.ts`
+- `apps/backend/src/shared/batches/batches.controller.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_product_batches/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter `expiryDays`, `shrinkageTolerance` à `CatalogItem` + modèle `ProductBatch`
+- `apps/backend/src/shared/inventory/inventory.service.ts` — créer batch à la réception + dépletion FIFO
+
+---
+
+### Story 24-2: Frontend — Code couleur dans catalogue et POS (vert/orange/rouge)
+
+**As a** cashier or manager,
+**I want** a color freshness indicator on product cards in the POS grid and catalog,
+**So that** I can prioritize selling perishable articles before they expire (FR85).
+
+**Acceptance Criteria:**
+
+**AC1 — Widget indicateur fraîcheur :**
+
+**Given** un article a `expiryDays != null` et un batch actif
+**When** la card de l'article s'affiche (POS grid ou catalogue)
+**Then** une bande de couleur ou un chip apparaît sur la card : **Vert** si `freshnessPercent > seuil_vert` (défaut 50%), **Orange** si entre `seuil_orange` et `seuil_vert` (défaut 20–50%), **Rouge** si `freshnessPercent < seuil_orange` ou date dépassée
+**And** le chip affiche le nombre de jours restants (ex: "3j" en rouge, "12j" en vert)
+**And** les articles sans `expiryDays` ou sans batch actif n'affichent aucun indicateur
+
+**AC2 — Seuils configurables par tenant :**
+
+**Given** l'owner modifie les seuils dans les paramètres tenant (`PATCH /api/v1/tenants/freshness-thresholds`)
+**When** les seuils sont mis à jour (`greenThreshold: 50, orangeThreshold: 20`)
+**Then** tous les indicateurs couleur recalculent selon les nouveaux seuils
+**And** les seuils sont persistés et chargés au démarrage de l'app (Isar local)
+
+**AC3 — Tri priorité orange/rouge dans la grille POS :**
+
+**Given** la grille POS s'affiche
+**When** des articles avec indicateurs orange ou rouge sont présents
+**Then** ces articles apparaissent en premier dans la grille (avant les verts et les sans-indicateur)
+**And** à l'intérieur du groupe rouge, tri par `expiresAt` croissant (plus urgent en premier)
+**And** le tri fraîcheur est appliqué après le tri par catégorie (catégorie est prioritaire)
+
+**AC4 — Filtre "Articles urgents" dans la grille POS :**
+
+**Given** l'utilisateur est dans la grille POS
+**When** il active le filtre "Articles urgents" (toggle ou chip dans la barre de filtres)
+**Then** seuls les articles avec indicateur orange ou rouge sont affichés
+**And** le filtre est persisté pour la session POS courante (disparaît à la fermeture du panier)
+
+**AC5 — Offline :**
+
+**Given** l'appareil est hors ligne
+**When** la grille POS ou le catalogue s'affiche
+**Then** la couleur est calculée localement depuis le batch Isar le plus récent de l'article (`expiresAt` vs date locale)
+**And** aucun appel réseau n'est requis pour afficher les indicateurs
+
+**Notes dev :**
+- Créer un widget `FreshnessChip` réutilisable (couleur + texte jours)
+- `freshnessPercent` peut être calculé localement : `(expiresAt.difference(now).inDays / expiryDays) × 100`
+- Le modèle `Product` Dart doit exposer le batch courant (`nearestExpiryDate`, `freshnessPercent`)
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/freshness_chip.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `nearestExpiryDate`, `expiryDays`
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — tri priorité + filtre urgent + chip fraîcheur
+- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — toggle filtre urgent
+
+---
+
+### Story 24-3: Frontend — Onglet Fraîcheur dans InventoryScreen + action déclasser
+
+**As a** manager,
+**I want** a dedicated "Fraîcheur" tab in the inventory hub showing all expiring batches, with a declassify action,
+**So that** I can proactively manage perishable stock and record natural shrinkage (FR84, FR85).
+
+**Acceptance Criteria:**
+
+**AC1 — Onglet "Fraîcheur" dans InventoryScreen :**
+
+**Given** l'utilisateur ouvre le hub inventaire (`InventoryScreen`)
+**When** les onglets s'affichent
+**Then** un onglet "Fraîcheur" est ajouté aux onglets existants (Réceptions · Transferts · Pertes · Inventaire · Commandes)
+**And** un badge numérique orange/rouge apparaît sur l'onglet si `urgentCount > 0`
+**And** l'onglet charge `FreshnessScreen`
+
+**AC2 — FreshnessScreen — liste des lots :**
+
+**Given** `FreshnessScreen` se charge
+**When** les données sont disponibles
+**Then** la liste affiche tous les batches actifs avec fraîcheur trackée, triés par `expiresAt` croissant
+**And** chaque item affiche : nom de l'article, date d'expiration, jours restants, quantité restante, indicateur couleur
+**And** des sections séparent : "Expirés" (rouges dépassés), "Urgents" (rouges non dépassés), "À surveiller" (orange), "OK" (verts)
+**And** si aucun batch urgent, l'écran affiche un état vide "Tous vos lots sont frais"
+
+**AC3 — Action "Déclasser" un lot :**
+
+**Given** l'utilisateur appuie longuement sur un item ou ouvre son menu contextuel
+**When** il sélectionne "Déclasser"
+**Then** une bottom sheet s'ouvre avec : quantité à déclasser (pré-remplie avec `remainingQty`), motif ("Péremption", "Détérioration qualité", "Variance naturelle")
+**And** si le motif = "Variance naturelle" et la quantité ≤ `shrinkageTolerance %`, le formulaire indique "Sera enregistré comme variance naturelle (non comptabilisé en perte)"
+**And** à la validation, un mouvement `LOSS` est créé avec le motif sélectionné et le batch est marqué `isDepleted = true`
+
+**AC4 — KPI dashboard "Lots urgents" :**
+
+**Given** le dashboard backoffice est chargé
+**When** la section KPI s'affiche
+**Then** une card "Lots urgents" affiche `urgentCount` (batches avec `freshnessPercent < orangeThreshold`)
+**And** si urgentCount > 0, la card est colorée en orange
+**And** tapper la card navigue vers `InventoryScreen` avec l'onglet "Fraîcheur" sélectionné
+
+**Notes dev :**
+- `FreshnessScreen` dans `apps/frontend/lib/features/shared/freshness/presentation/screens/`
+- Le provider recharge depuis `GET /api/v1/batches/expiring?days=90` (large fenêtre pour tout afficher)
+- L'action "Déclasser" réutilise l'endpoint de déclaration de perte existant (`POST /api/v1/inventory/loss`)
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/freshness/presentation/screens/freshness_screen.dart`
+- `apps/frontend/lib/features/shared/freshness/presentation/widgets/declassify_sheet.dart`
+- `apps/frontend/lib/features/shared/freshness/presentation/providers/freshness_provider.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — ajouter onglet Fraîcheur
+- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — KPI "Lots urgents"
+
+---
+
+## Epic 25: Variantes, multi-tarifs & promotions
+
+### Story 25-1: Backend — ProductVariant + endpoints CRUD
+
+**As a** backend developer,
+**I want** a `ProductVariant` model with its own price, stock and attributes, linked to a parent `CatalogItem`,
+**So that** articles can have multiple sellable variants (size S/M/L, color blue/red) with independent inventory (FR89).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration ProductVariant :**
+
+**Given** le modèle `ProductVariant` est défini dans l'architecture v1.1 (§4.2.7)
+**When** la migration est appliquée
+**Then** la table `prod_variants` existe dans le schema `shared` avec : `id`, `catalog_item_id`, `tenant_id`, `sku`, `barcode`, `price`, `stock_quantity`, `attributes` (Json), `is_active`, `created_at`, `updated_at`
+**And** `catalog_items.has_variants` est un booléen permettant de savoir si l'article parent a des variantes actives
+**And** un index existe sur `(tenant_id, catalog_item_id)`
+
+**AC2 — CRUD variantes :**
+
+**Given** `POST /api/v1/catalog/:id/variants` est appelé avec `{ sku, price, stockQuantity, attributes: { taille: "M", couleur: "Bleu" } }`
+**When** la requête est validée
+**Then** une variante est créée liée à l'article parent du tenant
+**And** `CatalogItem.hasVariants` est mis à `true` automatiquement si c'est la première variante active
+**And** `GET /api/v1/catalog/:id/variants` retourne toutes les variantes actives de l'article
+**And** `PATCH /api/v1/catalog/:id/variants/:variantId` permet de modifier prix, stock, attributs
+**And** `DELETE /api/v1/catalog/:id/variants/:variantId` désactive la variante (`isActive = false`)
+
+**AC3 — Stock agrégé sur l'article parent :**
+
+**Given** un article parent a 3 variantes avec des stocks respectifs de 10, 5, 8
+**When** `GET /api/v1/catalog/:id` est appelé
+**Then** la réponse inclut `totalStockQuantity: 23` (somme des `stockQuantity` des variantes actives)
+**And** le stock de l'article parent lui-même (`RetailProduct.stockQuantity`) n'est pas utilisé quand `hasVariants = true`
+
+**AC4 — Lookup par barcode de variante :**
+
+**Given** le caissier scanne un barcode de variante
+**When** `GET /api/v1/catalog/barcode/:barcode` est appelé
+**Then** si le barcode correspond à une variante, la réponse inclut l'article parent ET la variante correspondante (`matchedVariant: { id, attributes, price, stockQuantity }`)
+**And** le flux POS sélectionne automatiquement la variante sans étape manuelle
+
+**AC5 — Décrémentation stock variante à la vente :**
+
+**Given** une variante est vendue au POS
+**When** la transaction est traitée
+**Then** `stockQuantity` de la variante spécifique est décrémenté (pas celui du parent)
+**And** un `InventoryMovement` de type `SALE` est créé avec `catalogItemId` = parent et `variantId` = variante
+
+**Notes dev :**
+- Ajouter `variantId String? @map("variant_id") @db.Uuid` à `InventoryMovement` pour tracer les mouvements par variante
+- Les attributs `{ taille, couleur }` sont libres (Json) — pas d'enum fixe côté backend
+
+**Files to create:**
+- `apps/backend/src/shared/catalog/variants/variants.service.ts`
+- `apps/backend/src/shared/catalog/variants/variants.controller.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_product_variants/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter modèle `ProductVariant`, `hasVariants` sur `CatalogItem`
+- `apps/backend/src/shared/catalog/catalog.service.ts` — `totalStockQuantity` agrégé + barcode lookup
+- `apps/backend/src/shared/transactions/transactions.service.ts` — décrémenter stock variante
+
+---
+
+### Story 25-2: Frontend — Gestion variantes dans le catalogue (attributs configurables)
+
+**As a** owner or manager,
+**I want** to define variants for an article with tenant-configurable attribute labels, directly from the product sheet,
+**So that** I can manage different sizes, colors, or grades without creating separate catalog entries (FR89).
+
+**Acceptance Criteria:**
+
+**AC1 — Toggle "Cet article a des variantes" dans ProductFormDialog :**
+
+**Given** l'utilisateur édite un article dans `ProductFormDialog`
+**When** il active le toggle "Cet article a des variantes"
+**Then** une section "Variantes" apparaît avec un bouton "Ajouter une variante"
+**And** un avertissement s'affiche : "Le prix et le stock de l'article seront gérés par variante"
+**And** si des variantes existent déjà, elles sont listées sous forme de chips éditables
+
+**AC2 — Formulaire de création de variante :**
+
+**Given** l'utilisateur clique "Ajouter une variante"
+**When** la bottom sheet s'ouvre
+**Then** il peut saisir : SKU (optionnel), barcode (optionnel), prix (requis), stock initial (requis), et 1 à N attributs libres (ex: `Taille = XL`)
+**And** les labels d'attributs proposés en autocomplete sont ceux définis dans les paramètres tenant (ex: "Taille", "Couleur", "Grade")
+**And** le tenant peut créer de nouveaux labels d'attributs à la volée depuis ce formulaire
+
+**AC3 — Vue liste variantes dans la fiche article :**
+
+**Given** un article a des variantes
+**When** sa fiche s'affiche dans le catalogue
+**Then** un tableau récapitulatif liste les variantes avec : attributs, SKU, prix, stock
+**And** chaque ligne est cliquable pour éditer la variante
+**And** un agrégat "Stock total : X" est affiché en en-tête
+
+**AC4 — Gestion attributs tenant depuis les paramètres :**
+
+**Given** l'owner ouvre les paramètres catalogue
+**When** la section "Attributs variantes" s'affiche
+**Then** il peut créer/renommer/supprimer les labels d'attributs disponibles (ex: "Pointure", "Parfum")
+**And** ces labels sont synchronisés sur tous les appareils
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section variantes
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `hasVariants`, `variants`
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/variant_form_sheet.dart`
+- `apps/frontend/lib/features/shared/catalog/data/models/product_variant.dart`
+
+---
+
+### Story 25-3: Frontend — POS sélection variante à la vente
+
+**As a** cashier,
+**I want** a variant selector to appear automatically when I tap an article with variants,
+**So that** I can sell the exact variant the customer wants without leaving the POS screen (FR89).
+
+**Acceptance Criteria:**
+
+**AC1 — Sélecteur de variante au tap :**
+
+**Given** un article avec `hasVariants = true` est tappé dans la grille POS
+**When** la grille détecte le tap
+**Then** une bottom sheet `VariantSelectorSheet` s'ouvre avec la liste des variantes actives
+**And** chaque variante affiche ses attributs (ex: "Taille M — Bleu"), son prix et son stock
+**And** les variantes en rupture de stock (`stockQuantity = 0`) sont grisées mais visibles
+
+**AC2 — Ajout au panier avec variante :**
+
+**Given** le caissier sélectionne une variante
+**When** il confirme
+**Then** la variante est ajoutée au panier avec son prix propre (pas le prix parent)
+**And** la ligne panier affiche : nom article + attributs variante (ex: "T-Shirt — Taille M, Bleu")
+**And** le reçu affiche également les attributs de la variante
+
+**AC3 — Scan barcode variante :**
+
+**Given** le caissier scanne un barcode de variante
+**When** la grille POS reçoit le barcode
+**Then** la variante est directement ajoutée au panier sans passer par le sélecteur
+**And** si le barcode correspond à l'article parent (pas une variante), le sélecteur s'ouvre normalement
+
+**AC4 — Offline :**
+
+**Given** l'appareil est hors ligne
+**When** le sélecteur de variantes s'ouvre
+**Then** les variantes sont chargées depuis Isar (synchronisées lors de la dernière connexion)
+**And** le stock affiché est le stock local (peut être décalé — acceptable offline)
+
+**Files to create:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/variant_selector_sheet.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — détecter `hasVariants` et ouvrir sélecteur
+- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — addToCart avec variantId
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher attributs variante
+
+---
+
+### Story 25-4: Backend — PriceLevel + endpoints multi-tarifs
+
+**As a** backend developer,
+**I want** a `PriceLevel` model and price resolution logic that automatically selects the correct price per transaction context,
+**So that** wholesale, loyalty, and promotional prices apply without manual cashier intervention (FR90).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration PriceLevel :**
+
+**Given** le modèle `PriceLevel` est défini dans l'architecture v1.1 (§4.2.8)
+**When** la migration est appliquée
+**Then** la table `price_levels` existe dans le schema `shared` avec : `id`, `catalog_item_id`, `tenant_id`, `level_code` (ex: "GROS", "FIDELITE"), `label` (libre), `price`, `min_qty` (nullable), `customer_types` (String[] nullable), `is_active`, `created_at`
+**And** un index existe sur `(tenant_id, catalog_item_id)`
+
+**AC2 — CRUD price levels :**
+
+**Given** `POST /api/v1/catalog/:id/price-levels` est appelé avec `{ levelCode: "GROS", label: "Prix gros", price: 4500, minQty: 10 }`
+**When** la requête est validée
+**Then** un niveau de prix est créé pour l'article du tenant
+**And** `GET /api/v1/catalog/:id/price-levels` retourne tous les niveaux actifs
+**And** `PATCH` et `DELETE` (soft) sont disponibles
+
+**AC3 — Résolution automatique du prix à la vente :**
+
+**Given** une transaction inclut un article avec des niveaux de prix configurés
+**When** la transaction est traitée
+**Then** le service évalue dans l'ordre : (1) `minQty` — si `quantity >= minQty`, le niveau s'applique ; (2) `customerTypes` — si le contact a un `contactType` dans `customerTypes`, le niveau s'applique
+**And** si plusieurs niveaux sont éligibles, le plus avantageux (prix le plus bas) est sélectionné
+**And** si aucun niveau n'est éligible, le prix par défaut de l'article est utilisé
+**And** la réponse transaction inclut `appliedPriceLevel: { levelCode, label }` par ligne de vente
+
+**AC4 — Permission price_override :**
+
+**Given** un cashier avec la permission `price_override` sélectionne manuellement un niveau de prix
+**When** `POST /api/v1/transactions` est appelé avec `{ items: [{ ..., forcedPriceLevelCode: "GROS" }] }`
+**Then** le niveau forcé est appliqué sans vérification des conditions `minQty`/`customerTypes`
+**And** si l'utilisateur n'a pas `price_override`, une erreur 403 est renvoyée si `forcedPriceLevelCode` est présent
+
+**Notes dev :**
+- `contactType` sur le modèle `Contact` est déjà en place (Epic 3)
+- Le niveau "RETAIL" (défaut) n'a pas besoin d'être stocké en `PriceLevel` — c'est le prix `CatalogItem.price`
+
+**Files to create:**
+- `apps/backend/src/shared/catalog/price-levels/price-levels.service.ts`
+- `apps/backend/src/shared/catalog/price-levels/price-levels.controller.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_price_levels/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter modèle `PriceLevel`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — résolution prix + `forcedPriceLevelCode`
+
+---
+
+### Story 25-5: Frontend — Configuration prix par niveau dans ProductFormDialog + POS override
+
+**As a** owner,
+**I want** to configure price levels per article from the product form, and cashiers with permission to manually select a price level at the POS,
+**So that** wholesale and loyalty pricing is managed centrally and applied consistently (FR90).
+
+**Acceptance Criteria:**
+
+**AC1 — Section "Prix par niveau" dans ProductFormDialog :**
+
+**Given** l'utilisateur édite un article
+**When** le formulaire s'affiche
+**Then** une section "Tarification" liste les niveaux de prix actifs du tenant (ex: "Gros", "Fidélité")
+**And** chaque niveau affiche un champ prix + champ "Quantité min" (optionnel) + champ "Types client" (multiselect optionnel)
+**And** les niveaux du tenant sont configurables depuis les paramètres tenant ("Gérer les niveaux de prix")
+
+**AC2 — Configuration des niveaux disponibles par tenant :**
+
+**Given** l'owner ouvre `TenantSettingsScreen` section "Tarification"
+**When** il crée un niveau "Grossiste" avec le code "GROS"
+**Then** ce niveau apparaît dans tous les `ProductFormDialog` du tenant
+**And** le tenant peut avoir entre 1 et N niveaux (pas de limite fixe)
+
+**AC3 — Affichage du niveau appliqué dans le panier POS :**
+
+**Given** un article est ajouté au panier et un niveau de prix est appliqué automatiquement
+**When** la ligne panier s'affiche
+**Then** un chip discret indique le niveau appliqué (ex: chip "GROS" en bleu sous le prix)
+**And** si le prix par défaut (RETAIL) est appliqué, aucun chip n'est affiché
+
+**AC4 — Override manuel par le caissier autorisé :**
+
+**Given** un caissier avec la permission `price_override` appuie longuement sur une ligne du panier
+**When** le menu contextuel s'ouvre
+**Then** une option "Changer le niveau de prix" est visible
+**And** une bottom sheet liste les niveaux disponibles pour cet article
+**And** la sélection met à jour le prix de la ligne et affiche le chip du niveau sélectionné
+**And** pour un caissier sans `price_override`, l'option "Changer le niveau de prix" est masquée
+
+**Files to modify:**
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section Tarification
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — chip niveau + menu override
+- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `priceLevels`
+
+---
+
+### Story 25-6: Backend — Promotion + endpoints CRUD + moteur d'éligibilité
+
+**As a** backend developer,
+**I want** a `Promotion` model with a promotion engine that evaluates eligibility at POS cart time,
+**So that** discounts apply automatically and the best promotion wins per article (FR91).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Promotion :**
+
+**Given** le modèle `Promotion` est défini dans l'architecture v1.1 (§4.2.9)
+**When** la migration est appliquée
+**Then** la table `promotions` existe dans le schema `shared` avec : `id`, `tenant_id`, `type` (`PERCENT` | `BUY_N_GET_M` | `CROSSED_PRICE`), `scope` (`ITEM` | `CATEGORY`), `scope_id` (catalogItemId ou categoryId), `value` (Json — contient les paramètres selon le type), `start_date`, `end_date`, `status` (`active` | `inactive`), `conflict_rule` (`BEST` | `FIRST`), `created_at`
+**And** un index existe sur `(tenant_id, status, start_date, end_date)`
+
+**AC2 — CRUD promotions :**
+
+**Given** `POST /api/v1/promotions` est appelé avec un payload typé PERCENT
+**When** la requête est validée
+**Then** une promotion est créée avec `status: active` et les dates configurées
+**And** `GET /api/v1/promotions` liste les promotions avec filtre `?status=active&type=PERCENT`
+**And** `PATCH /api/v1/promotions/:id` permet de modifier le statut, les dates, ou les paramètres
+**And** `DELETE /api/v1/promotions/:id` soft-delete la promotion
+
+**AC3 — Moteur d'éligibilité à la vente :**
+
+**Given** une transaction inclut un article éligible à une ou plusieurs promotions actives
+**When** la transaction est traitée
+**Then** le moteur évalue toutes les promotions actives dont `start_date <= now <= end_date` et dont `scope` couvre l'article (par `catalogItemId` ou `categoryId`)
+**And** pour `PERCENT` : le discount = `price × value.percent / 100`
+**And** pour `BUY_N_GET_M` : si `quantity >= value.buyN`, `value.getMQty` articles supplémentaires sont offerts (ligne séparée avec prix 0)
+**And** pour `CROSSED_PRICE` : le prix affiché = `value.newPrice`, le prix original est tracé
+**And** si plusieurs promotions sont éligibles et `conflict_rule = BEST`, la promotion avec le discount le plus élevé est sélectionnée
+**And** la réponse transaction inclut par ligne : `appliedPromotion: { id, type, originalPrice, discountedPrice }`
+
+**AC4 — Endpoint GET promotions actives pour un article :**
+
+**Given** `GET /api/v1/promotions/active?catalogItemId=:id` est appelé
+**When** le backend répond
+**Then** la réponse liste toutes les promotions actives couvrant cet article, avec leur type et valeur calculée
+
+**Notes dev :**
+- `value` est un Json flexible pour éviter d'avoir une table par type de promotion
+- Exemple PERCENT : `{ "percent": 20 }` ; BUY_N_GET_M : `{ "buyN": 3, "getM": 1, "freeItemId": null }` ; CROSSED_PRICE : `{ "originalPrice": 5000, "newPrice": 3500 }`
+
+**Files to create:**
+- `apps/backend/src/shared/promotions/promotions.module.ts`
+- `apps/backend/src/shared/promotions/promotions.service.ts`
+- `apps/backend/src/shared/promotions/promotions.controller.ts`
+- `apps/backend/src/shared/promotions/promotion-engine.service.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_promotions/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter modèle `Promotion`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — appeler `PromotionEngineService` avant calcul total
+
+---
+
+### Story 25-7: Frontend — PromotionsScreen (backoffice) + application auto au POS + prix barré reçu
+
+**As a** owner or cashier,
+**I want** to manage promotions from the backoffice and see them automatically applied at the POS with struck-through prices on the receipt,
+**So that** promotional pricing is transparent and requires zero cashier intervention (FR91).
+
+**Acceptance Criteria:**
+
+**AC1 — PromotionsScreen dans le backoffice :**
+
+**Given** l'owner navigue vers la section promotions du backoffice
+**When** `PromotionsScreen` se charge
+**Then** une liste des promotions est affichée avec : nom/type, article/catégorie cible, dates, statut (badge vert/gris)
+**And** un bouton "Nouvelle promotion" ouvre `CreatePromotionSheet`
+**And** des filtres permettent de voir : Actives, Planifiées, Expirées
+
+**AC2 — Formulaire création promotion :**
+
+**Given** l'owner ouvre `CreatePromotionSheet`
+**When** il sélectionne le type "Remise %"
+**Then** les champs apparaissent : article ou catégorie (autocomplete), pourcentage de remise, date début, date fin
+**And** pour "Offre quantitative" : champs buyN, getM, article offert (optionnel)
+**And** pour "Prix barré" : champ prix original (pré-rempli depuis l'article), nouveau prix
+**And** un aperçu en temps réel montre l'effet sur le prix (ex: "5 000 F → 4 000 F (-20%)")
+
+**AC3 — Application automatique au POS :**
+
+**Given** une promotion active couvre un article
+**When** cet article est ajouté au panier POS
+**Then** la promotion est appliquée automatiquement — sans action du caissier
+**And** la ligne panier affiche : prix original barré (strikethrough) + prix après remise en vert
+**And** un badge "PROMO" apparaît sur la ligne
+
+**AC4 — Offre quantitative BUY_N_GET_M :**
+
+**Given** une promotion "3 achetés = 1 offert" est active
+**When** le caissier ajoute 3 exemplaires de l'article au panier
+**Then** une ligne supplémentaire "Article offert (×1)" est ajoutée automatiquement avec prix 0 F
+**And** si le caissier ajoute un 4ème exemplaire, la ligne offerte reste à ×1 (pas de cumul partiel)
+**And** si le caissier ajoute 6 exemplaires, ×2 articles sont offerts
+
+**AC5 — Reçu avec prix barré :**
+
+**Given** une transaction avec promotion est finalisée
+**When** le reçu s'affiche ou est imprimé
+**Then** chaque ligne remisée affiche : nom, prix original (barré), prix payé, et le label de la promotion (ex: "-20% Promo été")
+**And** le total du reçu reflète les prix après remise
+**And** le montant total d'économies est affiché en bas du reçu (ex: "Vous avez économisé 1 500 F")
+
+**Notes dev :**
+- Les promotions sont synchronisées localement (Isar) pour fonctionner offline — la promotion engine est dupliquée côté client
+- La ligne "article offert" dans le panier est de type `CartLineType.freeItem` — non modifiable par le caissier
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/promotions/presentation/screens/promotions_screen.dart`
+- `apps/frontend/lib/features/shared/promotions/presentation/widgets/create_promotion_sheet.dart`
+- `apps/frontend/lib/features/shared/promotions/data/models/promotion.dart`
+- `apps/frontend/lib/features/shared/promotions/data/repositories/promotions_repository.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — appliquer promotions localement à l'ajout panier
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher prix barré + badge PROMO
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — prix barré + total économies
+- `apps/frontend/lib/features/retail/backoffice/presentation/widgets/dashboard_shell.dart` — lien vers PromotionsScreen

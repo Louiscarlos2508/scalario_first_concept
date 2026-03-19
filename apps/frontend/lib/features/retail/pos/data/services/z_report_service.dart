@@ -57,7 +57,7 @@ class ZReportService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                    pw.Text('Opening Balance:'),
-                   pw.Text('${(summary['openingBalance'] as double).toStringAsFixed(0)} FCFA'),
+                   pw.Text('${((summary['openingBalance'] as double?) ?? 0.0).toStringAsFixed(0)} FCFA'),
                 ],
               ),
               pw.Row(

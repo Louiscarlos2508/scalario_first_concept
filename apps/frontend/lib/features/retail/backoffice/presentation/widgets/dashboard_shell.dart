@@ -168,16 +168,18 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.point_of_sale),
-                    tooltip: 'Ouvrir la caisse',
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const PosScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
+                  if (userProfileAsync.valueOrNull?.role == 'owner') ...[
+                    IconButton(
+                      icon: const Icon(Icons.point_of_sale),
+                      tooltip: 'Ouvrir la caisse',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PosScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   IconButton(
                     icon: const Icon(Icons.logout),
                     tooltip: 'Déconnexion',

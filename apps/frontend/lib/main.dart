@@ -82,7 +82,9 @@ class _ScalarioAppState extends ConsumerState<ScalarioApp> {
                       if (profile?.role == 'superadmin') {
                         return const AdminDashboard();
                       }
-                      if (profile?.role == 'cashier') {
+                      // POS-only roles — no backoffice access
+                      if (profile?.role == 'cashier' ||
+                          profile?.role == 'commercial') {
                         return const PosScreen();
                       }
                       return const DashboardScreen();

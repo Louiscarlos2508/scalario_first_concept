@@ -21,7 +21,7 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
 
     state = const AsyncLoading();
     try {
-      final session = _ref.read(sessionProvider).value;
+      final session = _ref.read(sessionProvider).valueOrNull;
       final selectedCustomer = _ref.read(selectedCustomerProvider);
       
       final order = Order()
@@ -31,12 +31,21 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
         ..paymentMethod = cart.paymentMethod
         ..paymentSplits = cart.paymentSplits.isNotEmpty ? jsonEncode(cart.paymentSplits) : null
         ..customerId = selectedCustomer?.remoteId
-        ..items = cart.items.map((e) => model.PosCartItem()
-          ..productId = e.product.remoteId
-          ..name = e.product.name
-          ..quantity = e.quantity.toDouble()
-          ..price = e.product.price
-        ).toList()
+        ..items = cart.items.map((e) {
+          final isWeighted = e.product.unitType != 'piece';
+          final effectivePrice = isWeighted && e.product.pricePerUnit != null
+              ? e.product.pricePerUnit! * e.quantity
+              : e.product.price * e.quantity;
+          return model.PosCartItem()
+            ..productId = e.product.remoteId
+            ..catalogItemId = e.product.remoteId
+            ..name = e.product.name
+            ..quantity = e.quantity
+            ..price = effectivePrice / e.quantity // unit price for receipt
+            ..unitType = e.product.unitType
+            ..unitLabel = isWeighted ? (e.product.weightUnit ?? e.product.unitType) : null
+            ..pricePerUnit = isWeighted ? e.product.pricePerUnit : null;
+        }).toList()
         ..createdAt = DateTime.now();
 
       // Save order locally
@@ -66,7 +75,29 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
           await _productRepository.decrementStock(item.product.remoteId!, item.quantity.toDouble());
         }
       }
-      
+
+      // AC4 — Decrement parent stock locally for child items
+      String? parentStockWarning;
+      for (final item in cart.items) {
+        final parentId = item.product.parentItemId;
+        final convRate = item.product.conversionRate ?? 1.0;
+        if (parentId == null) continue;
+        final parentQty = item.quantity * convRate;
+        await _productRepository.decrementStock(parentId, parentQty);
+        // AC2 — check if parent stock dropped below minStockLevel
+        final parentProduct = await _productRepository.getProductById(parentId);
+        if (parentProduct != null &&
+            parentProduct.minStockLevel != null &&
+            parentProduct.stockQuantity <= parentProduct.minStockLevel!) {
+          parentStockWarning =
+              'Stock faible : ${parentProduct.name} — ${parentProduct.stockQuantity.toStringAsFixed(2)} restant(s)';
+        }
+      }
+
+      if (parentStockWarning != null) {
+        _ref.read(parentStockWarningProvider.notifier).state = parentStockWarning;
+      }
+
       _cartNotifier.clearCart();
       _ref.read(selectedCustomerProvider.notifier).state = null;
       state = const AsyncData(null);

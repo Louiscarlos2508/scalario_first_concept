@@ -40,6 +40,21 @@ class CartPanel extends ConsumerWidget {
       );
     });
 
+    // AC2 — Parent stock low warning snackbar
+    ref.listen(parentStockWarningProvider, (_, warning) {
+      if (warning == null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('snackbar_parent_stock_low'),
+          content: Text(warning),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      // Reset warning after display
+      ref.read(parentStockWarningProvider.notifier).state = null;
+    });
+
     return Container(
       width: 350,
       color: Colors.grey.shade100,
@@ -84,8 +99,9 @@ class CartPanel extends ConsumerWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                          '${item.quantity} x ${_fcfa(item.product.price)}'),
+                      Text(item.product.unitType != 'piece'
+                          ? '${item.quantity} ${item.product.weightUnit ?? item.product.unitType} × ${_fcfa(item.unitPrice)}'
+                          : '${item.quantity.toInt()} x ${_fcfa(item.product.price)}'),
                       if (item.discountAmount > 0)
                         Text(
                           'Remise : ${item.discountType == 'PERCENTAGE' ? '${item.discountAmount}%' : _fcfa(item.discountAmount)}',
@@ -168,7 +184,7 @@ class CartPanel extends ConsumerWidget {
                             ? null
                             : () async {
                                 final session =
-                                    ref.read(sessionProvider).value;
+                                    ref.read(sessionProvider).valueOrNull;
                                 final selectedCustomer =
                                     ref.read(selectedCustomerProvider);
 

@@ -17,6 +17,7 @@ import 'package:frontend/features/shared/expenses/presentation/screens/expenses_
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
 import 'package:frontend/core/providers/active_modules_provider.dart';
+import 'package:frontend/core/auth/auth_state.dart';
 import 'dart:async';
 
 // ── Navigation + screen mapping ───────────────────────────────────────────────
@@ -88,12 +89,21 @@ final _allNavScreens = <_NavScreenPair>[
   ),
 ];
 
-List<_NavScreenPair> _visiblePairs(Set<String> activeModules) {
-  return _allNavScreens
-      .where((p) =>
-          p.navItem.moduleCode == null ||
-          activeModules.contains(p.navItem.moduleCode))
-      .toList();
+/// Modules each role is allowed to see in the backoffice.
+/// null = no restriction (all active modules visible).
+const _roleAllowedModules = <String, Set<String>?>{
+  'owner': null,
+  'manager': {'inventory', 'reports', 'contacts', 'transactions'},
+};
+
+List<_NavScreenPair> _visiblePairs(Set<String> activeModules, String? role) {
+  final allowedByRole = _roleAllowedModules[role]; // null = owner/unrestricted
+  return _allNavScreens.where((p) {
+    if (p.navItem.moduleCode == null) return true; // Accueil, Paramètres always shown
+    if (!activeModules.contains(p.navItem.moduleCode)) return false;
+    if (allowedByRole != null && !allowedByRole.contains(p.navItem.moduleCode)) return false;
+    return true;
+  }).toList();
 }
 
 // ── DashboardScreen ───────────────────────────────────────────────────────────
@@ -112,7 +122,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final modulesAsync = ref.watch(activeModulesProvider);
     final activeModules = modulesAsync.valueOrNull ?? {};
-    final pairs = _visiblePairs(activeModules);
+    final role = ref.watch(userProfileProvider).valueOrNull?.role;
+    final pairs = _visiblePairs(activeModules, role);
 
     // Clamp index when module list shrinks
     final clampedIndex = _selectedIndex.clamp(0, pairs.length - 1);

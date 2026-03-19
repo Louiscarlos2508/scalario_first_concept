@@ -30,6 +30,9 @@ class SessionGuard extends ConsumerWidget {
             if (session == null) {
               return OpenSessionScreen(profile: profile);
             }
+            if (session.status == 'CLOSED') {
+              return SessionClosedScreen(profile: profile);
+            }
             return child;
           },
           loading: () =>
@@ -46,6 +49,70 @@ class SessionGuard extends ConsumerWidget {
     );
   }
 }
+
+// ── Session closed screen ─────────────────────────────────────────────────────
+
+class SessionClosedScreen extends ConsumerWidget {
+  final dynamic profile;
+
+  const SessionClosedScreen({super.key, required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey.shade900,
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle_outline,
+                  size: 72, color: Colors.green),
+              const SizedBox(height: 24),
+              const Text(
+                'Caisse fermée',
+                style:
+                    TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Bonne journée !',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.add_box_outlined),
+                  label: const Text('Ouvrir une nouvelle session'),
+                  onPressed: () =>
+                      ref.read(sessionProvider.notifier).resetForNewSession(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Open session screen ───────────────────────────────────────────────────────
 
 class OpenSessionScreen extends ConsumerStatefulWidget {
   final dynamic profile; // Using dynamic or importing UserProfile

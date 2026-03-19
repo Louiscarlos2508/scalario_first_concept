@@ -66,6 +66,30 @@ export class OrganizationService {
     return tenant;
   }
 
+  async updateNotificationSettings(
+    tenantId: string,
+    data: {
+      dailySummaryEnabled?: boolean;
+      dailySummaryTime?: string;
+      notificationChannel?: string;
+    },
+  ) {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(data.dailySummaryEnabled !== undefined && { dailySummaryEnabled: data.dailySummaryEnabled }),
+        ...(data.dailySummaryTime !== undefined && { dailySummaryTime: data.dailySummaryTime }),
+        ...(data.notificationChannel !== undefined && { notificationChannel: data.notificationChannel }),
+      },
+      select: {
+        id: true,
+        dailySummaryEnabled: true,
+        dailySummaryTime: true,
+        notificationChannel: true,
+      },
+    });
+  }
+
   async addMember(
     tenantId: string,
     userId: string,
