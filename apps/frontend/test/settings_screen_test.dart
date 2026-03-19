@@ -9,7 +9,7 @@ import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
-import 'package:frontend/features/retail/settings/presentation/screens/settings_screen.dart';
+import 'package:frontend/core/settings/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 

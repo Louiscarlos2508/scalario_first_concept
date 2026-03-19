@@ -15,7 +15,7 @@ import { RequiresModule } from '../kernel/modules/module.decorator';
 import { Roles } from '../kernel/rbac/roles.decorator';
 
 @Controller('retail/expenses')
-@RequiresModule('retail')
+@RequiresModule('expenses')
 export class RetailExpenseController {
   constructor(private readonly expenseService: ExpenseService) {}
 

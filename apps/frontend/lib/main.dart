@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/retail/backoffice/presentation/screens/dashboard_screen.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/admin/presentation/screens/admin_dashboard.dart';
 
 import 'app/sdui_registry_setup.dart';
 import 'features/retail/pos/presentation/screens/pos_screen.dart';
@@ -78,6 +79,9 @@ class _ScalarioAppState extends ConsumerState<ScalarioApp> {
 
                   return userProfileAsync.when(
                     data: (profile) {
+                      if (profile?.role == 'superadmin') {
+                        return const AdminDashboard();
+                      }
                       if (profile?.role == 'cashier') {
                         return const PosScreen();
                       }

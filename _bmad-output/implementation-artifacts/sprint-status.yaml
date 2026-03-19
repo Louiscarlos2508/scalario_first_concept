@@ -164,3 +164,13 @@ development_status:
   18-3-terminal-status-display: done
   epic-18-retrospective: optional
 
+  # Epic 19: Admin Backoffice — Gestion Plateforme
+  epic-19-admin-backoffice: done
+  19-1-admin-endpoints-tenants: done
+  19-2-admin-endpoints-modules: done
+  19-3-admin-endpoints-users: done
+  19-4-admin-frontend-shell: done
+  19-5-admin-frontend-tenant-crud: done
+  19-6-admin-monitoring: done
+  epic-19-retrospective: optional
+

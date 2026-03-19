@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/features/retail/expenses/data/models/expense.dart';
-import 'package:frontend/features/retail/expenses/data/repositories/expense_repository.dart';
-import 'package:frontend/features/retail/expenses/presentation/providers/expense_providers.dart';
-import 'package:frontend/features/retail/expenses/presentation/screens/expenses_screen.dart';
-import 'package:frontend/features/retail/expenses/presentation/widgets/expense_form.dart';
+import 'package:frontend/features/shared/expenses/data/models/expense.dart';
+import 'package:frontend/features/shared/expenses/data/repositories/expense_repository.dart';
+import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
+import 'package:frontend/features/shared/expenses/presentation/screens/expenses_screen.dart';
+import 'package:frontend/features/shared/expenses/presentation/widgets/expense_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 

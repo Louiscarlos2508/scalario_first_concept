@@ -12,8 +12,8 @@ import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/data/models/order.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
-import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
-import 'package:frontend/features/retail/inventory/data/models/inventory_movement_local.dart';
+import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/shared/inventory/data/models/inventory_movement_local.dart';
 import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_adapters/catalog_sync_adapter.dart';
@@ -130,11 +130,14 @@ class SyncService {
     final sessionAdapter = SessionSyncAdapter(sessionRepo: sessionRepo);
     final transactionAdapter = TransactionSyncAdapter(orderRepo: orderRepo);
     final contactAdapter = ContactSyncAdapter(
-        customerRepo: customerRepo, sessionRepo: sessionRepo);
+      customerRepo: customerRepo,
+      sessionRepo: sessionRepo,
+    );
     final catalogAdapter = CatalogSyncAdapter(
-        productRepo: productRepo,
-        categoryRepo: categoryRepo,
-        sessionRepo: sessionRepo);
+      productRepo: productRepo,
+      categoryRepo: categoryRepo,
+      sessionRepo: sessionRepo,
+    );
     final inventoryAdapter = InventorySyncAdapter(repo: inventoryRepo);
 
     int retryCount = 0;
@@ -220,28 +223,47 @@ class SyncService {
 
     // Push ordering: sessions first (FK sessionId resolves before transactions)
     await sessionAdapter.pushPending(baseUrl, tenantId ?? '', token: authToken);
-    await transactionAdapter.pushPending(baseUrl, tenantId ?? '',
-        token: authToken);
+    await transactionAdapter.pushPending(
+      baseUrl,
+      tenantId ?? '',
+      token: authToken,
+    );
     await contactAdapter.pushPending(baseUrl, tenantId ?? '', token: authToken);
-    await inventoryAdapter.pushPending(baseUrl, tenantId ?? '',
-        token: authToken);
+    await inventoryAdapter.pushPending(
+      baseUrl,
+      tenantId ?? '',
+      token: authToken,
+    );
 
     // Delta pulls — first pass forces full replace to flush stale local-only products.
-    final lastProductSync =
-        forceFullCatalogPull ? null : await sessionRepo.getLastSync('products');
-    await catalogAdapter.pullDelta(baseUrl, tenantId ?? '', lastProductSync,
-        token: authToken);
+    final lastProductSync = forceFullCatalogPull
+        ? null
+        : await sessionRepo.getLastSync('products');
+    await catalogAdapter.pullDelta(
+      baseUrl,
+      tenantId ?? '',
+      lastProductSync,
+      token: authToken,
+    );
 
     if (tenantId != null) {
       final lastCustomerSync = await sessionRepo.getLastSync('customers');
-      await contactAdapter.pullDelta(baseUrl, tenantId, lastCustomerSync,
-          token: authToken);
+      await contactAdapter.pullDelta(
+        baseUrl,
+        tenantId,
+        lastCustomerSync,
+        token: authToken,
+      );
     }
 
     return hadChanges;
   }
 
-  static Future<void> _sendHeartbeat(String baseUrl, {String? tenantId, String? deviceId}) async {
+  static Future<void> _sendHeartbeat(
+    String baseUrl, {
+    String? tenantId,
+    String? deviceId,
+  }) async {
     try {
       await http
           .post(
@@ -250,7 +272,7 @@ class SyncService {
             body: jsonEncode({
               'deviceId': deviceId ?? 'terminal_unknown',
               'status': 'online',
-              if (tenantId != null) 'tenantId': tenantId,
+              'tenantId': ?tenantId,
               'metadata': {'platform': 'linux', 'version': '1.0.0'},
               'timestamp': DateTime.now().toIso8601String(),
             }),

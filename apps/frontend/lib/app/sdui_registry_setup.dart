@@ -1,7 +1,7 @@
 import 'package:frontend/core/sdui/sdui_widget_registry.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/kpi_card_grid.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/line_chart_widget.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/terminal_status_list.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/kpi_card_grid.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/line_chart_widget.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/terminal_status_list.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/cart_panel.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/product_grid.dart';
 

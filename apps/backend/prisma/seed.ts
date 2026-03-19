@@ -48,6 +48,13 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     'sales.process',
     'losses.declare',
   ],
+  cashier: [
+    'stock.transfer_confirm',
+    'session.open',
+    'session.close',
+    'sales.process',
+    'losses.declare',
+  ],
   // Phase 3 reserved roles — zero permissions seeded intentionally
   department_admin: [],
   employee: [],
@@ -86,21 +93,26 @@ async function seedRbac() {
     }
     console.log(`  ✓ Role "${roleName}" seeded with ${permCodes.length} permissions`);
   }
+
+  // Superadmin role — system vertical, no specific permissions (bypasses all guards)
+  await prisma.role.upsert({
+    where: { name_vertical: { name: 'superadmin', vertical: 'system' } },
+    update: {},
+    create: { name: 'superadmin', vertical: 'system' },
+  });
+  console.log('  ✓ Role "superadmin" (system) seeded');
 }
 
 const MODULES = [
   // Shared modules — core ERP capabilities
-  { code: 'catalog',      name: 'Catalogue',          type: 'shared',   dependencies: [] },
-  { code: 'contacts',     name: 'Contacts',           type: 'shared',   dependencies: [] },
-  { code: 'inventory',    name: 'Inventaire',         type: 'shared',   dependencies: ['catalog'] },
-  { code: 'transactions', name: 'Transactions',       type: 'shared',   dependencies: ['catalog', 'contacts'] },
-  { code: 'reporting',    name: 'Rapports',           type: 'shared',   dependencies: [] },
-  { code: 'dashboard',    name: 'Tableau de bord',    type: 'shared',   dependencies: [] },
-  // Retail vertical
-  { code: 'pos',          name: 'Point de Vente',     type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions'] },
-  // Phase 3 — pre-registered so future activation requires no schema migration
-  { code: 'connect',      name: 'Scalario Connect',   type: 'vertical', dependencies: [] },
-  { code: 'enterprise',   name: 'Scalario Enterprise', type: 'vertical', dependencies: [] },
+  { code: 'catalog',      name: 'Catalogue',    type: 'shared',   dependencies: [] },
+  { code: 'contacts',     name: 'Contacts',     type: 'shared',   dependencies: [] },
+  { code: 'inventory',    name: 'Inventaire',   type: 'shared',   dependencies: ['catalog'] },
+  { code: 'transactions', name: 'Transactions', type: 'shared',   dependencies: ['catalog', 'contacts'] },
+  { code: 'expenses',     name: 'Dépenses',     type: 'shared',   dependencies: [] },
+  { code: 'reports',      name: 'Rapports',     type: 'shared',   dependencies: ['transactions'] },
+  // Retail vertical — POS, sessions sont des sous-fonctionnalités de retail
+  { code: 'retail',       name: 'Retail',       type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions', 'contacts'] },
 ];
 
 async function seedModules() {
@@ -133,40 +145,6 @@ async function main() {
     console.log('Using existing tenant:', tenant.id);
   }
 
-  // Create some products
-  const products = [
-    { name: 'Coca Cola', price: 500, categoryName: 'Drinks', stockQuantity: 100 },
-    { name: 'Sandwich', price: 1500, categoryName: 'Food', stockQuantity: 50 },
-    { name: 'Perrier', price: 800, categoryName: 'Drinks', stockQuantity: 30 },
-  ];
-
-  for (const pData of products) {
-    let category = await prisma.category.findFirst({
-      where: { name: pData.categoryName, tenantId: tenant.id }
-    });
-    if (!category) {
-      category = await prisma.category.create({
-        data: { name: pData.categoryName, tenantId: tenant.id }
-      });
-    }
-    const existing = await prisma.product.findFirst({
-      where: { name: pData.name, tenantId: tenant.id }
-    });
-    if (!existing) {
-      await prisma.product.create({
-        data: {
-          name: pData.name,
-          price: pData.price,
-          stockQuantity: pData.stockQuantity,
-          tenantId: tenant.id,
-          categoryId: category.id,
-        },
-      });
-      console.log('Created product:', pData.name);
-    } else {
-      console.log('Product already exists:', pData.name);
-    }
-  }
 }
 
 main()

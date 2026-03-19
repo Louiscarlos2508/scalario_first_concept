@@ -7,24 +7,20 @@ import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dar
 import 'package:frontend/features/retail/pos/presentation/widgets/sync_status_indicator.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 
-// Navigation destination data (Loi de Hick — 7 items max)
-class _NavItem {
+/// Navigation destination item.
+/// [moduleCode] null = always visible; non-null = visible only when module is active.
+class NavItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
-  const _NavItem({required this.icon, required this.selectedIcon, required this.label});
+  final String? moduleCode;
+  const NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    this.moduleCode,
+  });
 }
-
-const List<_NavItem> _allItems = [
-  _NavItem(icon: Icons.dashboard_outlined, selectedIcon: Icons.dashboard, label: 'Accueil'),
-  _NavItem(icon: Icons.inventory_2_outlined, selectedIcon: Icons.inventory_2, label: 'Inventaire'),
-  _NavItem(icon: Icons.shopping_bag_outlined, selectedIcon: Icons.shopping_bag, label: 'Catalogue'),
-  _NavItem(icon: Icons.people_outline, selectedIcon: Icons.people, label: 'Clients'),
-  _NavItem(icon: Icons.history_outlined, selectedIcon: Icons.history, label: 'Historique'),
-  _NavItem(icon: Icons.analytics_outlined, selectedIcon: Icons.analytics, label: 'Rapports'),
-  _NavItem(icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long, label: 'Dépenses'),
-  _NavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: 'Paramètres'),
-];
 
 // Phone: max 5 items in BottomNavigationBar (AC3 — MVP overflow handling)
 const int _maxBottomItems = 5;
@@ -33,12 +29,14 @@ class DashboardShell extends ConsumerStatefulWidget {
   final Widget child;
   final int selectedIndex;
   final Function(int) onDestinationSelected;
+  final List<NavItem> items;
 
   const DashboardShell({
     super.key,
     required this.child,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.items,
   });
 
   @override
@@ -46,9 +44,9 @@ class DashboardShell extends ConsumerStatefulWidget {
 }
 
 class _DashboardShellState extends ConsumerState<DashboardShell> {
-  /// Returns an icon widget with an outbox badge for the Inventaire tab (index 1).
-  Widget _navIcon(WidgetRef ref, int index, IconData icon) {
-    if (index != 1) return Icon(icon);
+  /// Returns an icon widget with an outbox badge for the Inventaire tab.
+  Widget _navIcon(WidgetRef ref, String label, IconData icon) {
+    if (label != 'Inventaire') return Icon(icon);
     final countAsync = ref.watch(inventoryOutboxCountProvider);
     final count = countAsync.when(
       data: (n) => n,
@@ -87,13 +85,11 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
             extended: MediaQuery.of(context).size.width >= 1200,
             selectedIndex: widget.selectedIndex,
             onDestinationSelected: widget.onDestinationSelected,
-            destinations: _allItems
-                .asMap()
-                .entries
-                .map((e) => NavigationRailDestination(
-                      icon: _navIcon(ref, e.key, e.value.icon),
-                      selectedIcon: _navIcon(ref, e.key, e.value.selectedIcon),
-                      label: Text(e.value.label),
+            destinations: widget.items
+                .map((item) => NavigationRailDestination(
+                      icon: _navIcon(ref, item.label, item.icon),
+                      selectedIcon: _navIcon(ref, item.label, item.selectedIcon),
+                      label: Text(item.label),
                     ))
                 .toList(),
             leading: Column(
@@ -197,7 +193,6 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
             ),
           ),
           const VerticalDivider(thickness: 1, width: 1),
-          // Main content with SafeArea (AC5 — notch/status-bar protection)
           Expanded(
             child: SafeArea(child: widget.child),
           ),
@@ -209,26 +204,22 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
   // ── Phone layout (< 600dp) — BottomNavigationBar ─────────────────────────
 
   Widget _buildPhoneLayout(BuildContext context) {
-    // Clamp index: BottomNavBar shows only first 5 items (AC3 — MVP)
-    final bottomIndex = widget.selectedIndex.clamp(0, _maxBottomItems - 1);
+    final visibleBottom = widget.items.take(_maxBottomItems).toList();
+    final bottomIndex = widget.selectedIndex.clamp(0, visibleBottom.length - 1);
 
     return Scaffold(
-      // SafeArea on body for notch/status-bar (AC5); BottomNavBar handles
-      // system nav bar inset automatically via the Scaffold slot.
       body: SafeArea(bottom: false, child: widget.child),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: bottomIndex,
         onTap: widget.onDestinationSelected,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primary,
-        items: _allItems
-            .take(_maxBottomItems)
-            .toList()
+        items: visibleBottom
             .asMap()
             .entries
             .map((e) => BottomNavigationBarItem(
-                  icon: _navIcon(ref, e.key, e.value.icon),
-                  activeIcon: _navIcon(ref, e.key, e.value.selectedIcon),
+                  icon: _navIcon(ref, e.value.label, e.value.icon),
+                  activeIcon: _navIcon(ref, e.value.label, e.value.selectedIcon),
                   label: e.value.label,
                 ))
             .toList(),

@@ -1,7 +1,9 @@
 import { Controller, Post, Body, Get, Query, Param } from '@nestjs/common';
+import { RequiresModule } from '../kernel/modules/module.decorator';
 import { PosSessionService } from './pos-session.service';
 
 @Controller('pos/sessions')
+@RequiresModule('retail')
 export class PosSessionController {
     constructor(private readonly posSessionService: PosSessionService) { }
 

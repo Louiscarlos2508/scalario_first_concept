@@ -3,19 +3,100 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
-import 'package:frontend/features/retail/inventory/presentation/screens/inventory_screen.dart';
-import 'package:frontend/features/retail/catalog/presentation/screens/catalog_screen.dart';
-import 'package:frontend/features/retail/inventory/presentation/screens/stock_history_screen.dart';
-import 'package:frontend/features/retail/reports/presentation/screens/reports_screen.dart';
-import 'package:frontend/features/retail/customers/presentation/screens/customers_screen.dart';
-import 'package:frontend/features/retail/reports/presentation/providers/report_providers.dart' show salesStatsProvider, activeSessionsProvider, salesStatsDateRangeProvider;
+import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
+import 'package:frontend/features/shared/catalog/presentation/screens/catalog_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/stock_history_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
+import 'package:frontend/features/shared/contacts/presentation/screens/contacts_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart'
+    show salesStatsProvider, activeSessionsProvider, salesStatsDateRangeProvider;
 import 'package:frontend/core/sdui/sdui_layout.dart';
 import 'package:frontend/core/sdui/sdui_providers.dart';
 import 'package:frontend/core/sdui/sdui_renderer.dart';
-import 'package:frontend/features/retail/expenses/presentation/screens/expenses_screen.dart';
-import 'package:frontend/features/retail/expenses/presentation/providers/expense_providers.dart';
-import 'package:frontend/features/retail/settings/presentation/screens/settings_screen.dart';
+import 'package:frontend/features/shared/expenses/presentation/screens/expenses_screen.dart';
+import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
+import 'package:frontend/core/settings/settings_screen.dart';
+import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'dart:async';
+
+// ── Navigation + screen mapping ───────────────────────────────────────────────
+
+typedef _NavScreenPair = ({NavItem navItem, Widget screen});
+
+final _allNavScreens = <_NavScreenPair>[
+  (
+    navItem: const NavItem(
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+        label: 'Accueil'),
+    screen: const OverviewScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.inventory_2_outlined,
+        selectedIcon: Icons.inventory_2,
+        label: 'Inventaire',
+        moduleCode: 'inventory'),
+    screen: const InventoryScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.shopping_bag_outlined,
+        selectedIcon: Icons.shopping_bag,
+        label: 'Catalogue',
+        moduleCode: 'catalog'),
+    screen: const CatalogScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.people_outline,
+        selectedIcon: Icons.people,
+        label: 'Clients',
+        moduleCode: 'contacts'),
+    screen: const ContactsScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.history_outlined,
+        selectedIcon: Icons.history,
+        label: 'Historique',
+        moduleCode: 'transactions'),
+    screen: const StockHistoryScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.analytics_outlined,
+        selectedIcon: Icons.analytics,
+        label: 'Rapports',
+        moduleCode: 'reports'),
+    screen: const ReportsScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.receipt_long_outlined,
+        selectedIcon: Icons.receipt_long,
+        label: 'Dépenses',
+        moduleCode: 'expenses'),
+    screen: const ExpensesScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+        label: 'Paramètres'),
+    screen: const SettingsScreen(),
+  ),
+];
+
+List<_NavScreenPair> _visiblePairs(Set<String> activeModules) {
+  return _allNavScreens
+      .where((p) =>
+          p.navItem.moduleCode == null ||
+          activeModules.contains(p.navItem.moduleCode))
+      .toList();
+}
+
+// ── DashboardScreen ───────────────────────────────────────────────────────────
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -27,31 +108,33 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _selectedIndex = 0;
 
-  // IndexedStack : tous les écrans restent montés → état (scroll, onglet)
-  // préservé lors des changements de section.
-  static const List<Widget> _screens = [
-    OverviewScreen(),
-    InventoryScreen(),
-    CatalogScreen(),
-    CustomersScreen(),
-    StockHistoryScreen(),
-    ReportsScreen(),
-    ExpensesScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final modulesAsync = ref.watch(activeModulesProvider);
+    final activeModules = modulesAsync.valueOrNull ?? {};
+    final pairs = _visiblePairs(activeModules);
+
+    // Clamp index when module list shrinks
+    final clampedIndex = _selectedIndex.clamp(0, pairs.length - 1);
+    if (clampedIndex != _selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _selectedIndex = clampedIndex);
+      });
+    }
+
     return DashboardShell(
-      selectedIndex: _selectedIndex,
+      items: pairs.map((p) => p.navItem).toList(),
+      selectedIndex: clampedIndex,
       onDestinationSelected: (index) => setState(() => _selectedIndex = index),
       child: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
+        index: clampedIndex,
+        children: pairs.map((p) => p.screen).toList(),
       ),
     );
   }
 }
+
+// ── OverviewScreen ────────────────────────────────────────────────────────────
 
 class OverviewScreen extends ConsumerStatefulWidget {
   const OverviewScreen({super.key});
@@ -67,7 +150,6 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-refresh every 30 seconds
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) {
         ref.invalidate(salesStatsProvider);
@@ -130,9 +212,8 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
     final layout = layoutAsync.when(
       data: (l) => l,
       loading: () => SduiLayout.dashboardDefault(),
-      error: (_, _) => SduiLayout.dashboardDefault(),
+      error: (_, __) => SduiLayout.dashboardDefault(),
     );
     return SduiRenderer(layout: layout);
   }
 }
-

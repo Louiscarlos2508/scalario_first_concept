@@ -8,14 +8,14 @@ import 'package:frontend/core/sdui/sdui_layout.dart';
 import 'package:frontend/core/sdui/sdui_providers.dart';
 import 'package:frontend/core/sdui/sdui_renderer.dart';
 import 'package:frontend/core/sdui/sdui_widget_registry.dart';
-import 'package:frontend/features/retail/expenses/data/models/expense.dart';
-import 'package:frontend/features/retail/expenses/presentation/providers/expense_providers.dart';
-import 'package:frontend/features/retail/reports/data/models/sales_stat.dart';
-import 'package:frontend/features/retail/reports/presentation/providers/report_providers.dart';
+import 'package:frontend/features/shared/expenses/data/models/expense.dart';
+import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
+import 'package:frontend/features/shared/reports/data/models/sales_stat.dart';
+import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/kpi_card_grid.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/line_chart_widget.dart';
-import 'package:frontend/features/retail/reports/presentation/widgets/terminal_status_list.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/kpi_card_grid.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/line_chart_widget.dart';
+import 'package:frontend/features/shared/reports/presentation/widgets/terminal_status_list.dart';
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 

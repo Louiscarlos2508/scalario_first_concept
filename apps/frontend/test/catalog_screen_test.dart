@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/features/retail/catalog/data/repositories/catalog_repository.dart';
-import 'package:frontend/features/retail/catalog/presentation/providers/catalog_providers.dart';
-import 'package:frontend/features/retail/catalog/presentation/screens/catalog_screen.dart';
-import 'package:frontend/features/retail/catalog/presentation/widgets/product_form_dialog.dart';
-import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
-import 'package:frontend/features/retail/inventory/presentation/screens/stock_history_screen.dart';
+import 'package:frontend/features/shared/catalog/data/repositories/catalog_repository.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
+import 'package:frontend/features/shared/catalog/presentation/screens/catalog_screen.dart';
+import 'package:frontend/features/shared/catalog/presentation/widgets/product_form_dialog.dart';
+import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/stock_history_screen.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -53,6 +53,7 @@ Widget _buildScreen({List<Map<String, dynamic>> items = const []}) {
     overrides: [
       activeTenantProvider.overrideWith((ref) => 'tenant-1'),
       catalogProvider.overrideWith((ref) => Future.value(items)),
+      categoriesProvider.overrideWith((ref) => Future.value([])),
       catalogRepositoryProvider.overrideWithValue(
         CatalogRepository(httpClient: MockClient((_) async => http.Response('[]', 200))),
       ),

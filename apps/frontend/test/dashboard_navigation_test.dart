@@ -28,6 +28,23 @@ final _mockProfile = UserProfile(
   memberships: [TenantMembership(tenantId: 'tenant-nav', role: 'owner')],
 );
 
+/// Sample nav items that include "Dépenses".
+final _items = [
+  const NavItem(
+      icon: Icons.dashboard_outlined,
+      selectedIcon: Icons.dashboard,
+      label: 'Tableau de bord'),
+  const NavItem(
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long,
+      label: 'Dépenses',
+      moduleCode: 'expenses'),
+  const NavItem(
+      icon: Icons.inventory_2_outlined,
+      selectedIcon: Icons.inventory_2,
+      label: 'Inventaire'),
+];
+
 /// Build DashboardShell constrained to [width] inside a Scaffold body.
 /// SizedBox(width) ensures LayoutBuilder inside DashboardShell receives
 /// accurate maxWidth constraints regardless of the test surface size.
@@ -45,6 +62,7 @@ Widget _buildShellAt(double width) {
           child: DashboardShell(
             selectedIndex: 0,
             onDestinationSelected: (_) {},
+            items: _items,
             child: const SizedBox(),
           ),
         ),

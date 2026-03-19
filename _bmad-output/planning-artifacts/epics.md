@@ -2312,3 +2312,270 @@ lib/features/retail/catalog/
 - Widget test : formulaire présent, validation Nom + Prix obligatoires
 - Submit valide → `CatalogRepository.createItem()` appelé
 - Cas erreur réseau → snackbar rouge affiché
+
+---
+
+## Epic 19: Admin Backoffice — Gestion Plateforme
+
+**Objectif :** Permettre à Carlos d'onboarder de nouveaux clients directement depuis l'application Flutter sans toucher à Supabase ou la base SQL manuellement. Le panel admin est intégré dans l'app existante, accessible uniquement au rôle `superadmin`, et couvre la création de tenants, la gestion des modules, des utilisateurs, et un dashboard de monitoring.
+
+**Phase :** 1 (après Epic 18)
+**FRs couverts :** FR1, FR2, FR7, FR8, FR9, FR10
+**Prérequis :** Epics 1–9 (kernel, tenancy, module registry opérationnels), Epic 15 (DashboardShell + navigation stable)
+
+### Contexte métier
+
+Aujourd'hui, pour onboarder un client, Carlos effectue des `INSERT` SQL manuels dans Supabase :
+- Créer le tenant dans `kernel.tenants`
+- Créer l'owner dans Supabase Auth
+- Créer le membre dans `kernel.organization_members`
+- Activer les modules dans `kernel.tenant_modules`
+- Insérer les seed data (rôles, permissions)
+
+Ce processus est manuel, error-prone et ne scale pas. Epic 19 remplace tout ça par un panel admin intégré dans l'app Flutter, accessible uniquement si `userProfile.role == 'superadmin'`.
+
+### Architecture admin
+
+- **PAS** une app séparée — c'est un écran dans l'app Flutter existante
+- Si `userProfile.role == 'superadmin'` → affiche `AdminDashboard` au lieu du POS/backoffice retail
+- Les endpoints admin sont sous `/admin/*` avec un `SuperAdminGuard` (vérifie rôle superadmin dans `OrganizationMember`)
+- Le panel admin n'a **pas besoin** de fonctionner offline (toujours connecté)
+
+---
+
+### Story 19.1: Backend — CRUD Tenants sous /admin/tenants
+
+**As a** superadmin,
+**I want** REST endpoints to create, list, and update tenants,
+**So that** I can onboard new clients without manual SQL.
+
+**Acceptance Criteria:**
+
+**Given** a `SuperAdminGuard` is in place
+**When** any `/admin/*` endpoint is called
+**Then** only users with `role = 'superadmin'` in `organization_members` can access it; others get 403
+
+**Given** `POST /admin/tenants` with `{ name, ownerEmail, ownerPassword, currency?, timezone?, businessType? }`
+**When** the body is valid
+**Then** the following is executed in a single Prisma transaction:
+- Supabase Auth user created for the owner (email + password)
+- `kernel.tenants` record created with provided name, currency (default XOF), timezone, status = active
+- `kernel.organization_members` record created linking the new userId to the tenant with `role = 'owner'`
+- Default retail modules activated via `ModuleRegistryService.activateDefaultModulesForTenant()` (catalog, inventory, transactions, retail)
+- Response: `{ tenantId, userId, name, currency, timezone, status, modulesActivated }`
+
+**Given** `GET /admin/tenants`
+**When** called by a superadmin
+**Then** returns an array of tenants with: `id`, `name`, `status`, `currency`, `timezone`, `createdAt`, `membersCount` (count of active org members), `activeModules` (array of module codes with status = active)
+
+**Given** `PATCH /admin/tenants/:id` with `{ name?, currency?, timezone?, status? }`
+**When** the tenant exists
+**Then** the specified fields are updated; `status` accepts only `active | suspended | archived`
+**And** if status changes to `suspended`, the change is reflected immediately (tenant guard blocks access)
+
+**Given** a step in the POST transaction fails (e.g., Supabase Auth returns an error)
+**When** the error is caught
+**Then** the entire transaction is rolled back — no orphaned tenant or org_member records exist
+
+---
+
+### Story 19.2: Backend — Activation/Désactivation Modules par Tenant
+
+**As a** superadmin,
+**I want** endpoints to manage which modules are active per tenant,
+**So that** I can enable or disable features for a client without touching the database.
+
+**Acceptance Criteria:**
+
+**Given** `GET /admin/modules`
+**When** called by a superadmin
+**Then** returns the full module catalog from `kernel.modules`: `{ id, code, name, type, dependencies }`
+
+**Given** `GET /admin/tenants/:tenantId/modules`
+**When** called by a superadmin
+**Then** returns all modules with their activation status for that tenant: `{ moduleCode, name, type, status: 'active'|'inactive', activatedAt? }`
+
+**Given** `POST /admin/tenants/:tenantId/modules/:moduleCode/activate`
+**When** the module has dependencies (e.g., `retail` depends on `catalog`, `inventory`, `transactions`)
+**Then** all dependency modules are validated as active before activating the requested module
+**And** if a dependency is inactive, return 422 with `{ error: 'MISSING_DEPENDENCY', missing: ['catalog'] }`
+**And** if all dependencies are met, the module status is set to `active` with `activatedAt = now()`
+
+**Given** `POST /admin/tenants/:tenantId/modules/:moduleCode/deactivate`
+**When** another active module depends on the module being deactivated
+**Then** return 422 with `{ error: 'HAS_DEPENDENTS', dependents: ['retail'] }`
+**And** if no other active module depends on it, set status to `inactive`
+
+**Given** `POST /admin/tenants` creates a retail tenant (Story 19.1)
+**When** the seed step runs
+**Then** modules `catalog`, `inventory`, `transactions`, `retail` are all activated automatically
+
+---
+
+### Story 19.3: Backend — Gestion Users par Tenant
+
+**As a** superadmin,
+**I want** endpoints to create, list, update, and deactivate users within a tenant,
+**So that** I can manage client team members without Supabase dashboard access.
+
+**Acceptance Criteria:**
+
+**Given** `POST /admin/tenants/:tenantId/users` with `{ email, password, role }`
+**When** the body is valid and `role` is one of `owner | manager | cashier`
+**Then** a Supabase Auth user is created with the given email/password
+**And** an `organization_members` record is created linking the userId to the tenant with the given role
+**And** response: `{ userId, email, role, createdAt }`
+
+**Given** `GET /admin/tenants/:tenantId/users`
+**When** called by a superadmin
+**Then** returns all `organization_members` for that tenant with: `userId`, `email` (from Supabase Auth), `role`, `createdAt`, `lastSignInAt` (from Supabase Auth metadata)
+
+**Given** `PATCH /admin/tenants/:tenantId/users/:userId` with `{ role }`
+**When** the user is a member of that tenant
+**Then** the `role_id` in `organization_members` is updated to the new role
+**And** return the updated member record
+
+**Given** `DELETE /admin/tenants/:tenantId/users/:userId`
+**When** the user is a member of that tenant
+**Then** the `organization_members` record is deleted (hard delete — user removed from org)
+**And** the Supabase Auth user is disabled (`banned_until = far future`) — not deleted (preserves audit trail)
+**And** return 204 No Content
+
+**Given** the target userId is the only owner of the tenant
+**When** DELETE is attempted
+**Then** return 422 with `{ error: 'CANNOT_REMOVE_LAST_OWNER' }`
+
+---
+
+### Story 19.4: Frontend — Admin Shell avec Navigation
+
+**As a** superadmin,
+**I want** a dedicated admin dashboard to appear when I log in,
+**So that** I can manage the platform without seeing the retail POS interface.
+
+**Acceptance Criteria:**
+
+**Given** `main.dart` evaluates `userProfile.role`
+**When** `profile.role == 'superadmin'`
+**Then** `AdminDashboard` is shown instead of `PosScreen` or `DashboardScreen`
+**And** the existing cashier/manager routing is unchanged
+
+**Given** `AdminDashboard` is rendered
+**When** on a tablet (width ≥ 1024px)
+**Then** a `NavigationRail` is shown on the left with 3 destinations: Tenants / Modules / Monitoring
+**When** on a phone or medium (width < 1024px)
+**Then** a `NavigationBar` (BottomNav) is shown with the same 3 destinations
+**And** the same `LayoutBuilder` + `kMedium = 1024.0` breakpoint from `app_breakpoints.dart` is used
+
+**Given** the Tenants tab is selected
+**When** `AdminTenantsScreen` renders
+**Then** it shows a scrollable list of tenants with: name, status badge (active=green / suspended=orange / archived=grey), member count, active module chips
+**And** a FAB "Nouveau client" (bottom-right) navigates to the tenant creation form
+
+**Given** the admin panel has no offline requirement
+**When** the device goes offline
+**Then** a non-blocking banner "Connexion requise pour l'admin" is shown — no crash, no data corruption
+
+**Files to create:**
+- `lib/features/admin/presentation/screens/admin_dashboard.dart`
+- `lib/features/admin/presentation/screens/admin_tenants_screen.dart`
+- `lib/features/admin/presentation/providers/admin_providers.dart`
+- Modify: `lib/main.dart` — add `superadmin` branch in `userProfileAsync.when(data: ...)`
+
+---
+
+### Story 19.5: Frontend — Formulaire Création Tenant + Gestion Modules & Users
+
+**As a** superadmin,
+**I want** forms to create a new client and manage their modules and users,
+**So that** onboarding is a guided flow with no SQL required.
+
+**Acceptance Criteria:**
+
+**Given** the FAB "Nouveau client" is tapped
+**When** `NewTenantForm` renders
+**Then** it presents: Nom boutique (required), Email owner (required, validated), Mot de passe owner (required, min 8 chars), Devise (dropdown: XOF default, EUR, USD, MAD), Timezone (dropdown: Africa/Abidjan default), Type métier (radio: Retail — seul choix MVP)
+
+**Given** the form is submitted with valid data
+**When** `POST /admin/tenants` returns 201
+**Then** success snackbar "Client [nom] créé avec succès", form closes, tenants list refreshes
+
+**Given** the form is submitted with invalid data (missing name, bad email)
+**When** local validation runs before submit
+**Then** invalid fields are underlined in red; submit is blocked
+
+**Given** a tenant card is tapped in the list
+**When** `TenantDetailScreen` renders
+**Then** it shows 3 tabs: Infos, Modules, Users
+
+**Given** the Modules tab is selected
+**When** `TenantModulesTab` renders
+**Then** each module in the catalog is shown as a row with: module name, type badge, a toggle switch
+**And** toggling ON calls `POST /admin/tenants/:tenantId/modules/:code/activate`
+**And** toggling OFF calls `POST /admin/tenants/:tenantId/modules/:code/deactivate`
+**And** if the API returns 422 (dependency error), the toggle reverts and a snackbar shows the error message
+
+**Given** the Users tab is selected
+**When** `TenantUsersTab` renders
+**Then** it lists users with: email, role chip, last sign-in date
+**And** a "+" button opens `AddUserDialog` (email, password, role dropdown)
+**And** a long-press on a user row offers "Changer rôle" and "Désactiver"
+
+**Files to create:**
+- `lib/features/admin/presentation/screens/new_tenant_form.dart`
+- `lib/features/admin/presentation/screens/tenant_detail_screen.dart`
+- `lib/features/admin/presentation/widgets/tenant_modules_tab.dart`
+- `lib/features/admin/presentation/widgets/tenant_users_tab.dart`
+
+---
+
+### Story 19.6: Frontend — Dashboard Monitoring
+
+**As a** superadmin,
+**I want** a monitoring dashboard showing platform health,
+**So that** I can proactively identify tenants with sync issues or high error rates.
+
+**Acceptance Criteria:**
+
+**Given** the Monitoring tab is selected
+**When** `AdminMonitoringScreen` renders
+**Then** it calls `GET /admin/monitoring/health` and displays:
+- Total tenants actifs (count where status = 'active')
+- Total utilisateurs sur la plateforme
+- Liste des tenants avec: nom, statut, dernière activité (dernière mutation créée), nombre de mutations FAILED en attente
+
+**Given** a tenant has > 10 mutations FAILED en attente
+**When** its row renders in the monitoring list
+**Then** a warning icon (⚠️) and red badge showing the count are displayed
+**And** tapping the row shows a detail card with the failed mutation IDs
+
+**Given** `GET /admin/monitoring/health` is called (backend endpoint — à créer dans Story 19.6)
+**When** the backend responds
+**Then** the response shape is:
+```json
+{
+  "activeTenants": 5,
+  "totalUsers": 23,
+  "tenants": [
+    {
+      "id": "uuid",
+      "name": "Boutique Koné",
+      "status": "active",
+      "lastActivityAt": "ISO8601",
+      "failedMutationsCount": 0
+    }
+  ]
+}
+```
+
+**Given** the monitoring screen is open
+**When** the user pulls to refresh
+**Then** `GET /admin/monitoring/health` is re-fetched and the data updates
+
+**Backend endpoint à créer :**
+- `GET /admin/monitoring/health` — agrège `Tenant`, `OrganizationMember`, et une future table `sync_mutations` (ou `audit_log` comme proxy pour lastActivity)
+- Pour MVP : `lastActivityAt` = MAX(`audit_log.created_at`) par tenant, `failedMutationsCount` = 0 (placeholder — réel quand outbox server-side existe)
+
+**Files to create:**
+- `lib/features/admin/presentation/screens/admin_monitoring_screen.dart`
+- Backend: `apps/backend/src/admin/monitoring/admin-monitoring.controller.ts`

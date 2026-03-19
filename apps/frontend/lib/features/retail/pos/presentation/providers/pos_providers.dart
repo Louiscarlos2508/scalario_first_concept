@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/services/retention_service.dart';
-import 'package:frontend/features/retail/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/core/services/realtime_service.dart';
@@ -165,8 +165,7 @@ final paginatedProductListProvider = FutureProvider<Map<String, dynamic>>((
   final limit = ref.watch(inventoryLimitProvider);
   final tenantId = ref.watch(activeTenantProvider);
 
-  final token =
-      Supabase.instance.client.auth.currentSession?.accessToken;
+  final token = Supabase.instance.client.auth.currentSession?.accessToken;
   return repo.getProductsRemote(
     query: query,
     page: page,
@@ -181,28 +180,33 @@ final stockHistoryDateRangeProvider = StateProvider<DateTimeRange?>(
 );
 
 /// History filtered by a specific catalog item (used from CatalogScreen).
-final stockHistoryByItemProvider =
-    FutureProvider.family<List<dynamic>, String>((ref, catalogItemId) async {
-  final range = ref.watch(stockHistoryDateRangeProvider);
-  final tenantId = ref.watch(activeTenantProvider);
-  final queryParams = <String, String>{'catalogItemId': catalogItemId};
-  if (range != null) queryParams['since'] = range.start.toIso8601String();
-  if (tenantId != null) queryParams['tenantId'] = tenantId;
+final stockHistoryByItemProvider = FutureProvider.family<List<dynamic>, String>(
+  (ref, catalogItemId) async {
+    final range = ref.watch(stockHistoryDateRangeProvider);
+    final tenantId = ref.watch(activeTenantProvider);
+    final queryParams = <String, String>{'catalogItemId': catalogItemId};
+    if (range != null) queryParams['since'] = range.start.toIso8601String();
+    if (tenantId != null) queryParams['tenantId'] = tenantId;
 
-  final uri = Uri.parse('${ApiConstants.baseUrl}/inventory/movements')
-      .replace(queryParameters: queryParams);
-  final token = Supabase.instance.client.auth.currentSession?.accessToken;
-  final response = await http.get(uri, headers: {
-    'Content-Type': 'application/json',
-    if (tenantId != null) 'x-tenant-id': tenantId,
-    if (token != null) 'Authorization': 'Bearer $token',
-  });
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return (data['items'] as List<dynamic>?) ?? [];
-  }
-  throw Exception('Failed to fetch item history: ${response.statusCode}');
-});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/inventory/movements',
+    ).replace(queryParameters: queryParams);
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': ?tenantId,
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['items'] as List<dynamic>?) ?? [];
+    }
+    throw Exception('Failed to fetch item history: ${response.statusCode}');
+  },
+);
 
 final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
   final range = ref.watch(stockHistoryDateRangeProvider);
@@ -220,13 +224,15 @@ final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
   }
 
   final uri = Uri.parse(url).replace(queryParameters: queryParams);
-  final token =
-      Supabase.instance.client.auth.currentSession?.accessToken;
-  final response = await http.get(uri, headers: {
-    'Content-Type': 'application/json',
-    if (tenantId != null) 'x-tenant-id': tenantId,
-    if (token != null) 'Authorization': 'Bearer $token',
-  });
+  final token = Supabase.instance.client.auth.currentSession?.accessToken;
+  final response = await http.get(
+    uri,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-tenant-id': ?tenantId,
+      if (token != null) 'Authorization': 'Bearer $token',
+    },
+  );
 
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);

@@ -9,7 +9,7 @@ import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/core/models/sync_metadata.dart';
 import 'package:frontend/core/models/sync_status.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
-import 'package:frontend/features/retail/inventory/data/models/inventory_movement_local.dart';
+import 'package:frontend/features/shared/inventory/data/models/inventory_movement_local.dart';
 
 class IsarService {
   late Future<Isar> db;

@@ -1,8 +1,10 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ReportingService } from './reporting.service';
 import { Roles } from '../kernel/rbac/roles.decorator';
+import { RequiresModule } from '../kernel/modules/module.decorator';
 
 @Controller('reports')
+@RequiresModule('reports')
 @Roles('owner', 'manager')
 export class ReportingController {
   constructor(private readonly reportingService: ReportingService) {}

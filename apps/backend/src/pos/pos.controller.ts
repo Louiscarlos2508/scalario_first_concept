@@ -1,8 +1,9 @@
 import { Controller, Get, Post, Body, UseGuards, Query, Param, Delete } from '@nestjs/common';
 import { PosService } from './pos.service';
-// import { AuthGuard } from '../core/guards/auth/auth.guard';
+import { RequiresModule } from '../kernel/modules/module.decorator';
 
 @Controller('pos')
+@RequiresModule('retail')
 export class PosController {
     constructor(
         private readonly posService: PosService,
