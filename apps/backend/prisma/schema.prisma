@@ -340,6 +340,7 @@ model PurchaseOrderLine {
   expectedQuantity Decimal       @map("expected_quantity") @db.Decimal(10, 4)
   receivedQuantity Decimal?      @map("received_quantity") @db.Decimal(10, 4)
   qualityNotes     String?       @map("quality_notes")
+  variantId        String?       @map("variant_id") @db.Uuid
   createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([purchaseOrderId])

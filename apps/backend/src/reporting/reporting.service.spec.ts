@@ -256,6 +256,34 @@ describe('ReportingService', () => {
       expect(result.top3Products).toHaveLength(0);
     });
 
+    it('counts distinct customers with a purchase in the period (AC1 7.2)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { totalAmount: new Prisma.Decimal(10000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20'), customerId: 'cust-A' },
+        { totalAmount: new Prisma.Decimal(5000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20'), customerId: 'cust-A' },
+        { totalAmount: new Prisma.Decimal(8000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20'), customerId: 'cust-B' },
+        { totalAmount: new Prisma.Decimal(3000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20'), customerId: null },
+      ]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      // 2 distinct customers (cust-A and cust-B); null customerId excluded
+      expect(result.activeCustomerCount).toBe(2);
+    });
+
+    it('returns activeCustomerCount=0 when no transactions (AC1 7.2)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      expect(result.activeCustomerCount).toBe(0);
+    });
+
     it('returns totalExpenses and netProfit in getSalesStats (AC5)', async () => {
       mockPrisma.transaction.findMany.mockResolvedValue([
         { totalAmount: new Prisma.Decimal(100000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20') },

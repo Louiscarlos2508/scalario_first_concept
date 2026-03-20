@@ -14,7 +14,7 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '6.4'
+version: '6.5'
 date: '2026-03-11'
 lastEdited: '2026-03-19'
 editHistory:
@@ -30,6 +30,8 @@ editHistory:
     changes: 'FR98–FR99 ajoutés (Retours & Réservations). Phase 2a (FR98) et Phase 2b (FR99) mises à jour. Table des matières FR1–FR99. Version 6.2→6.3.'
   - date: '2026-03-20'
     changes: 'FR100–FR103 ajoutés (Plans Tarifaires & Facturation). PlanDefinition par tenant (FR100, Phase 2a) ; frais installation + statuts facturation trial/active/overdue/suspended (FR101, Phase 2a) ; consultation plan + demande upgrade propriétaire (FR102, Phase 2a préparé Phase 3) ; paiement en ligne Mobile Money/carte + auto-provisioning tenant (FR103, Phase 3). Table des matières FR1–FR103. Version 6.3→6.4.'
+  - date: '2026-03-20'
+    changes: 'FR104–FR106 ajoutés (Configuration Business Type). BusinessTypeDefinition configurable sans déploiement avec flags produit par défaut, sections visibles et catégories suggérées (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — priorité et pré-remplissage des champs pertinents, masquage des champs non-pertinents, override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). Phase 2a mise à jour. Table des matières FR1–FR106. Version 6.4→6.5.'
 classification:
   projectType: saas_b2b
   domain: erp_multi_vertical_commerce
@@ -50,7 +52,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 6.4** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+**Version 6.5** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
 
 Confidentiel — Carlos-simpore
 
@@ -70,6 +72,7 @@ Confidentiel — Carlos-simpore
 | 6.2 | 2026-03-19 | Carlos-simpore | Ajout FR92–FR97 (Traçabilité Articles & Configurations Métier) : numéros de série traçables par unité (FR92), certificats de garantie (FR93), prescription ordonnance (FR94), date de garde optimale sur lot (FR95), prix dynamique avec historique (FR96), article unique dépôt-vente (FR97). Mise à jour Phase 2b, Table des matières FR1–FR97. |
 | 6.3 | 2026-03-19 | Carlos-simpore | Ajout FR98–FR99 (Retours & Réservations) : retour article au POS avec politique tenant configurable — remboursement/avoir/échange, réintégration stock RETURN (FR98, Phase 2a) ; réservation avec acompte partiel configurable, suivi solde client, KPI dashboard (FR99, Phase 2b). Mise à jour phases 2a/2b, Table des matières FR1–FR99. |
 | 6.4 | 2026-03-20 | Carlos-simpore | Ajout FR100–FR103 (Plans Tarifaires & Facturation) : plan tarifaire par tenant avec PlanDefinition — free/standard/premium/enterprise, changement plan auto-applique modules et maxUsers, downgrade avec confirmation (FR100, Phase 2a) ; frais d'installation/formation + statuts facturation trial/active/overdue/suspended + suspension auto configurable (FR101, Phase 2a) ; consultation plan et demande upgrade par propriétaire tenant (FR102, Phase 2a — self-service préparé Phase 3) ; paiement en ligne Mobile Money/carte + onboarding self-service + auto-provisioning tenant (FR103, Phase 3). Architecture anticipée dès Phase 2a (champs Tenant + PlanDefinition). Mise à jour phases 2a et 3, Table des matières FR1–FR103. |
+| 6.5 | 2026-03-20 | Carlos-simpore | Ajout FR104–FR106 (Configuration Business Type) : BusinessTypeDefinition configurable sans déploiement — code unique, nom, flags produit par défaut (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), sections visibles dans le formulaire produit, catégories suggérées, icône admin (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — champs pertinents prioritaires et pré-remplis, champs non-pertinents masqués avec toggle "Afficher plus d'options", override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). 13 types seedés (généraliste, épicerie, téléphonie, textile, pharmacie, quincaillerie, électroménager, cave à vin, bijouterie, dépôt-vente, boulangerie, station service, grossiste). Mise à jour Phase 2a, Table des matières FR1–FR106. |
 
 ---
 
@@ -95,7 +98,7 @@ Confidentiel — Carlos-simpore
 | 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
 | 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
 | 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
-| 19 | Exigences Fonctionnelles (FR1–FR103) | Toutes les exigences numérotées par module |
+| 19 | Exigences Fonctionnelles (FR1–FR106) | Toutes les exigences numérotées par module |
 | 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
 | 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
 | 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
@@ -200,6 +203,7 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 - Retours articles et remboursements (FR98)
 - Plans tarifaires et facturation admin (FR100–FR101)
 - Consultation plan par le propriétaire (FR102)
+- Types de business configurables (FR104–FR106)
 
 ### Phase 2b — Croissance
 
@@ -1079,6 +1083,40 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 > Phase 3 = self-service client (paiement en ligne + auto-provisioning).
 > L'architecture est conçue dès Phase 2a pour supporter Phase 3
 > sans migration (champs anticipation sur Tenant + PlanDefinition).
+
+---
+
+### Configuration Business Type (FR104–FR106)
+
+- **FR104 :** Le superadmin peut assigner un type de business à chaque
+  tenant lors de la création. Les types de business sont définis dans
+  une table BusinessTypeDefinition configurable sans déploiement.
+  Chaque type définit : un code unique, un nom affiché, des flags
+  produit par défaut (trackSerialNumbers, hasVariants, warrantyMonths,
+  expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType),
+  les sections visibles dans le formulaire produit, et une liste de
+  catégories suggérées. Le type "generaliste" est le défaut — tout
+  désactivé, le propriétaire configure manuellement. *(Phase 2a)*
+
+- **FR105 :** Le formulaire de création/édition de produit dans le
+  backoffice s'adapte au businessType du tenant. Les champs pertinents
+  pour le type de business sont affichés en priorité et pré-remplis
+  avec les défauts du type. Les champs non-pertinents sont masqués
+  par défaut mais accessibles via un toggle "Afficher plus d'options".
+  Le propriétaire peut toujours override chaque flag par produit —
+  rien n'est verrouillé. *(Phase 2a)*
+
+- **FR106 :** À la création d'un tenant avec un businessType, le
+  système pré-crée les catégories suggérées du type (ex: "Smartphones",
+  "Accessoires", "Cartes SIM" pour téléphonie). Le propriétaire peut
+  renommer, supprimer ou ajouter des catégories librement. *(Phase 2a)*
+
+> **Note d'encadrement :**
+> Le businessType est un facilitateur, pas un verrou. Il pré-configure
+> les défauts et masque les champs non-pertinents pour simplifier l'UX.
+> Le propriétaire garde le contrôle total sur chaque produit.
+> Un tenant "téléphonie" peut vendre des fruits — il suffit d'activer
+> expiryDays sur ce produit spécifique.
 
 ---
 

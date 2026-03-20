@@ -37,6 +37,7 @@ export class PurchaseOrdersService {
           create: data.lines.map((l) => ({
             catalogItemId: l.catalogItemId,
             expectedQuantity: l.expectedQuantity,
+            ...(l.variantId ? { variantId: l.variantId } : {}),
           })),
         },
       },
@@ -114,7 +115,20 @@ export class PurchaseOrdersService {
       include: {
         supplier: true,
         lines: {
-          include: { catalogItem: { select: { name: true } } },
+          include: {
+            catalogItem: {
+              select: {
+                name: true,
+                hasVariants: true,
+                trackSerialNumbers: true,
+                expiryDays: true,
+                variants: {
+                  where: { isActive: true },
+                  select: { id: true, sku: true, attributes: true },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -130,6 +144,15 @@ export class PurchaseOrdersService {
         expectedQuantity: l.expectedQuantity,
         receivedQuantity: l.receivedQuantity,
         qualityNotes: l.qualityNotes,
+        variantId: l.variantId ?? null,
+        hasVariants: l.catalogItem?.hasVariants ?? false,
+        trackSerialNumbers: l.catalogItem?.trackSerialNumbers ?? false,
+        expiryDays: l.catalogItem?.expiryDays ?? null,
+        variants: (l.catalogItem?.variants ?? []).map((v) => ({
+          id: v.id,
+          sku: v.sku ?? null,
+          attributes: v.attributes,
+        })),
       })),
     };
   }
@@ -210,8 +233,54 @@ export class PurchaseOrdersService {
             tenantId: po.tenantId,
             userId: userId ?? null,
             referenceId: id,
+            variantId: input.variantId ?? null,
           },
         });
+
+        // Create SerialRecords if serial numbers provided
+        if (input.serialNumbers?.length) {
+          for (const serial of input.serialNumbers) {
+            await this.prisma.serialRecord.create({
+              data: { catalogItemId: line.catalogItemId, serial, tenantId: po.tenantId },
+            });
+          }
+        }
+
+        // Create ProductBatch if expiresAt provided; else auto-calculate from expiryDays
+        const providedExpiresAt = input.expiresAt ? new Date(input.expiresAt) : null;
+        if (providedExpiresAt) {
+          await this.prisma.productBatch.create({
+            data: {
+              catalogItemId: line.catalogItemId,
+              tenantId: po.tenantId,
+              expiresAt: providedExpiresAt,
+              bestBeforeDate: input.bestBeforeDate ? new Date(input.bestBeforeDate) : null,
+              initialQty: input.receivedQuantity,
+              remainingQty: input.receivedQuantity,
+              batchRef: id,
+            },
+          });
+        } else {
+          const catalogItem = await this.prisma.catalogItem.findUnique({
+            where: { id: line.catalogItemId },
+            select: { expiryDays: true },
+          });
+          if (catalogItem?.expiryDays != null) {
+            const autoExpiry = new Date();
+            autoExpiry.setDate(autoExpiry.getDate() + catalogItem.expiryDays);
+            await this.prisma.productBatch.create({
+              data: {
+                catalogItemId: line.catalogItemId,
+                tenantId: po.tenantId,
+                expiresAt: autoExpiry,
+                bestBeforeDate: input.bestBeforeDate ? new Date(input.bestBeforeDate) : null,
+                initialQty: input.receivedQuantity,
+                remainingQty: input.receivedQuantity,
+                batchRef: id,
+              },
+            });
+          }
+        }
       }
 
       receivedLines.push({

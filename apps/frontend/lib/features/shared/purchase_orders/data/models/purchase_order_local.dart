@@ -5,6 +5,14 @@ class PurchaseOrderLineLocal {
   final double expectedQuantity;
   final double? receivedQuantity;
   final String? qualityNotes;
+  // variantId pre-selected when the PO was created with a specific variant
+  final String? variantId;
+  // Catalog item traceability flags — drive adaptive form fields
+  final bool hasVariants;
+  final bool trackSerialNumbers;
+  final int? expiryDays;
+  // [{id, sku, attributes: {size: 'M', color: 'Bleu'}}]
+  final List<Map<String, dynamic>> variants;
 
   PurchaseOrderLineLocal({
     required this.id,
@@ -13,6 +21,11 @@ class PurchaseOrderLineLocal {
     required this.expectedQuantity,
     this.receivedQuantity,
     this.qualityNotes,
+    this.variantId,
+    this.hasVariants = false,
+    this.trackSerialNumbers = false,
+    this.expiryDays,
+    this.variants = const [],
   });
 
   factory PurchaseOrderLineLocal.fromJson(Map<String, dynamic> json) {
@@ -25,6 +38,14 @@ class PurchaseOrderLineLocal {
           ? _toDouble(json['receivedQuantity'])
           : null,
       qualityNotes: json['qualityNotes'] as String?,
+      variantId: json['variantId'] as String?,
+      hasVariants: json['hasVariants'] as bool? ?? false,
+      trackSerialNumbers: json['trackSerialNumbers'] as bool? ?? false,
+      expiryDays: json['expiryDays'] as int?,
+      variants: (json['variants'] as List<dynamic>?)
+              ?.map((v) => v as Map<String, dynamic>)
+              .toList() ??
+          const [],
     );
   }
 

@@ -48,6 +48,34 @@ class LineChartWidget extends ConsumerWidget {
                 padding: const EdgeInsets.only(top: 16, right: 16, left: 8),
                 child: LineChart(
                   LineChartData(
+                    lineTouchData: LineTouchData(
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipColor: (_) => AppColors.textPrimary,
+                        tooltipRoundedRadius: 8,
+                        tooltipPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        getTooltipItems: (touchedSpots) {
+                          return touchedSpots.map((spot) {
+                            final formatted = spot.y
+                                .toStringAsFixed(0)
+                                .replaceAllMapped(
+                                  RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+                                  (m) => '${m[1]} ',
+                                );
+                            return LineTooltipItem(
+                              '$formatted FCFA',
+                              const TextStyle(
+                                color: AppColors.surface,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            );
+                          }).toList();
+                        },
+                      ),
+                    ),
                     gridData: const FlGridData(show: false),
                     borderData: FlBorderData(show: false),
                     titlesData: FlTitlesData(

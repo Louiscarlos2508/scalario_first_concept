@@ -145,6 +145,50 @@ describe('RetailOrchestrationService', () => {
       expect(creditCalls).toHaveLength(0);
     });
 
+    it('uses client createdAt so the sale date reflects the device time, not the sync time (AC2)', async () => {
+      const saleDate = '2026-03-16T10:30:00.000Z'; // sale made on the 16th
+      const createdTransaction = { id: TX_ID, totalAmount: 20000, tenantId: TENANT_ID };
+      const createdSale = { id: SALE_ID, transactionId: TX_ID };
+
+      mockTx.transaction.create.mockResolvedValue(createdTransaction);
+      mockTx.retailSale.create.mockResolvedValue(createdSale);
+      mockPrisma.$transaction.mockImplementation((fn: (tx: typeof mockTx) => Promise<any>) => fn(mockTx));
+
+      await service.createSale({
+        totalAmount: 20000,
+        paymentMethod: 'CASH',
+        tenantId: TENANT_ID,
+        userId: USER_ID,
+        createdAt: saleDate,
+      });
+
+      expect(mockTx.transaction.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ createdAt: new Date(saleDate) }),
+        }),
+      );
+    });
+
+    it('omits createdAt in data when not provided — DB default (now()) applies (AC2)', async () => {
+      const createdTransaction = { id: TX_ID, totalAmount: 20000, tenantId: TENANT_ID };
+      const createdSale = { id: SALE_ID, transactionId: TX_ID };
+
+      mockTx.transaction.create.mockResolvedValue(createdTransaction);
+      mockTx.retailSale.create.mockResolvedValue(createdSale);
+      mockPrisma.$transaction.mockImplementation((fn: (tx: typeof mockTx) => Promise<any>) => fn(mockTx));
+
+      await service.createSale({
+        totalAmount: 20000,
+        paymentMethod: 'CASH',
+        tenantId: TENANT_ID,
+        userId: USER_ID,
+        // no createdAt
+      });
+
+      const callData = mockTx.transaction.create.mock.calls[0][0].data;
+      expect(callData).not.toHaveProperty('createdAt');
+    });
+
     it('uses provided transactionId (idempotency support) (AC2)', async () => {
       const createdTransaction = { id: TX_ID, totalAmount: 20000, tenantId: TENANT_ID };
       const createdSale = { id: SALE_ID, transactionId: TX_ID };

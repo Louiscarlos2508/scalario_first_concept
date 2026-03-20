@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsDateString,
   IsNumber,
   IsOptional,
   IsString,
@@ -21,6 +22,23 @@ export class ReceivePurchaseOrderLineDto {
   @IsOptional()
   @IsString()
   qualityNotes?: string;
+
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  serialNumbers?: string[];
+
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  bestBeforeDate?: string;
 }
 
 export class ReceivePurchaseOrderDto {

@@ -6,6 +6,7 @@ import 'package:frontend/features/shared/purchase_orders/data/models/purchase_or
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_order_detail_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/widgets/create_purchase_order_sheet.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/widgets/receive_purchase_order_sheet.dart';
 
 // Status chip color mapping
 Color _statusColor(String status) {
@@ -217,43 +218,97 @@ class _PurchaseOrderCard extends ConsumerWidget {
         onLongPress: () => _showContextMenu(context, ref),
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.supplierName ?? 'Fournisseur inconnu',
-                      style: Theme.of(context).textTheme.titleSmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.supplierName ?? 'Fournisseur inconnu',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(dateStr,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12)),
+                        const SizedBox(height: 4),
+                        Text('${order.lineCount} article(s)',
+                            style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12)),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(dateStr,
-                        style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Text('${order.lineCount} article(s)',
-                        style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12)),
-                  ],
-                ),
+                  ),
+                  Chip(
+                    label: Text(
+                      _statusLabel(order.status),
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 12),
+                    ),
+                    backgroundColor: _statusColor(order.status),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
               ),
-              Chip(
-                label: Text(
-                  _statusLabel(order.status),
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 12),
+              if (order.status == 'confirmed' ||
+                  order.status == 'partially_received') ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  key: Key('po_receive_${order.id}'),
+                  icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                  label: const Text('Réceptionner'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: () => _openReceiveSheet(context, ref),
                 ),
-                backgroundColor: _statusColor(order.status),
-                padding: EdgeInsets.zero,
-              ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _openReceiveSheet(BuildContext context, WidgetRef ref) async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+
+    final repo = ref.read(purchaseOrdersRepositoryProvider);
+
+    try {
+      final fullOrder = await repo.getOrder(order.id, tenantId: tenantId);
+      if (!context.mounted) return;
+
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (_) => ReceivePurchaseOrderSheet(
+          order: fullOrder,
+          onSuccess: () => ref.invalidate(purchaseOrdersProvider),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showContextMenu(BuildContext context, WidgetRef ref) {

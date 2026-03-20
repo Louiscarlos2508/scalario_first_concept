@@ -32,6 +32,9 @@ class InventoryRepository {
     String? referenceId,
     required String tenantId,
     String? token,
+    String? variantId,
+    List<String>? serialNumbers,
+    DateTime? expiresAt,
     DateTime? bestBeforeDate,
   }) async {
     final body = <String, dynamic>{
@@ -41,7 +44,12 @@ class InventoryRepository {
       'tenantId': tenantId,
       if (reason != null && reason.isNotEmpty) 'reason': reason,
       if (referenceId != null) 'referenceId': referenceId,
-      if (bestBeforeDate != null) 'bestBeforeDate': bestBeforeDate.toIso8601String(),
+      if (variantId != null) 'variantId': variantId,
+      if (serialNumbers != null && serialNumbers.isNotEmpty)
+        'serialNumbers': serialNumbers,
+      if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
+      if (bestBeforeDate != null)
+        'bestBeforeDate': bestBeforeDate.toIso8601String(),
     };
 
     final response = await _httpClient.post(

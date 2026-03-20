@@ -29,6 +29,10 @@ export class RetailOrchestrationService {
     cashierId?: string;
     tenantId: string;
     userId?: string | null;
+    // Date de vente locale du device POS (offline-first).
+    // Utilisé pour createdAt afin que le reporting reflète la vraie date de vente
+    // et non le moment du sync.
+    createdAt?: string;
     // Epic 26 — Serial number tracking (extracted from items[].serialNumber)
   }) {
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,6 +61,9 @@ export class RetailOrchestrationService {
           customerId: toUuid(data.customerId),
           sessionId: sessionIdUuid,
           tenantId: data.tenantId,
+          // Preserve the device sale timestamp so reports show the real sale date,
+          // not the sync date.
+          ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
         },
       });
 

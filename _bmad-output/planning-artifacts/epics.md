@@ -5407,3 +5407,306 @@ Le superadmin peut assigner un plan tarifaire par tenant (free, standard, premiu
 - `apps/backend/src/app.module.ts` — enregistrer `BillingGuard` comme `APP_GUARD` global
 - `apps/frontend/lib/core/network/api_client.dart` — intercepteur `403 TENANT_SUSPENDED`
 - `apps/backend/src/kernel/billing/billing-events/billing-events.service.ts` — `reactivateTenant()` crée le `BillingEvent` de réactivation
+
+---
+
+## Epic 29: Types de Business Configurables (FR104–FR106)
+
+Le superadmin peut assigner un type de business à chaque tenant lors de sa création. Les types sont définis dans une table `BusinessTypeDefinition` configurable sans déploiement — chaque type porte un code unique, un nom affiché, des flags produit par défaut (`defaultFlags`), les sections visibles dans le formulaire produit (`visibleSections`), et une liste de catégories suggérées (FR104, Phase 2a). Le formulaire de création/édition de produit dans le backoffice lit le `businessType` du tenant pour afficher en priorité les champs pertinents, pré-remplir les flags par défaut, et masquer les champs non-pertinents derrière un toggle "Afficher plus d'options" — le propriétaire peut toujours override chaque flag par produit (FR105, Phase 2a). À la création d'un tenant avec un `businessType != "generaliste"`, les catégories suggérées sont automatiquement pré-créées dans son catalogue ; le propriétaire peut les renommer, supprimer ou en ajouter (FR106, Phase 2a).
+
+---
+
+### Story 29-1: Backend — BusinessTypeDefinition model, seed 13 types, endpoints (FR104)
+
+**As a** superadmin,
+**I want** a `BusinessTypeDefinition` model with seed data for 13 business types, two read endpoints listing and fetching types, and a `PATCH /admin/tenants/:id/business-type` endpoint to assign a type to a tenant,
+**So that** business types are configurable without deployment and serve as the source of truth for product form defaults and suggested categories (FR104).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma BusinessTypeDefinition :**
+
+**Given** le fichier `schema.prisma` est mis à jour avec le modèle `BusinessTypeDefinition`
+**When** la migration est appliquée
+**Then** la table `business_type_definitions` existe dans le schéma `kernel` avec les colonnes : `id`, `code` (unique), `name`, `description` (nullable), `default_flags` (Json), `visible_sections` (String[]), `suggested_categories` (String[]), `icon` (nullable), `is_active` (default true), `created_at`
+
+**AC2 — Migration Prisma Tenant.businessType :**
+
+**Given** la migration est appliquée
+**When** on inspecte la table `tenants`
+**Then** la colonne `business_type` (String, default `"generaliste"`) est présente
+**And** aucune contrainte FK stricte sur `business_type` — le code est libre (flexibilité seed)
+
+**AC3 — Seed 13 types :**
+
+**Given** la commande `prisma db seed` est exécutée
+**When** la base est vide ou les types sont absents
+**Then** 13 types sont créés par upsert sur `code` :
+
+| code | name | defaultFlags (clés non-nulles) | visibleSections | suggestedCategories |
+|:---|:---|:---|:---|:---|
+| `generaliste` | Généraliste | tous false/null | [] | [] |
+| `epicerie` | Épicerie & Alimentation | expiryDays: 30 | ["expiry"] | ["Fruits & Légumes", "Épices", "Céréales", "Boissons", "Produits laitiers", "Conserves"] |
+| `telephonie` | Téléphonie & Accessoires | hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 | ["variants", "serial", "warranty"] | ["Smartphones", "Accessoires", "Cartes SIM", "Recharge", "Réparation"] |
+| `textile` | Textile & Habillement | hasVariants: true | ["variants"] | ["Hauts", "Bas", "Robes", "Chaussures", "Accessoires", "Tissu"] |
+| `pharmacie` | Pharmacie & Parapharmacie | expiryDays: 365, requiresPrescription: false | ["expiry", "prescription"] | ["Médicaments", "Parapharmacie", "Matériel médical", "Vitamines"] |
+| `quincaillerie` | Quincaillerie & Matériaux | hasVariants: true, unitType: "weight" | ["variants", "weight"] | ["Peinture", "Plomberie", "Électricité", "Outillage", "Ciment", "Fer"] |
+| `cosmetique` | Cosmétique & Beauté | hasVariants: true, expiryDays: 730 | ["variants", "expiry"] | ["Soin visage", "Soin corps", "Cheveux", "Parfums", "Maquillage"] |
+| `restaurant` | Restaurant & Restauration rapide | tous false/null | [] | ["Plats", "Boissons", "Entrées", "Desserts", "Menus"] |
+| `boulangerie` | Boulangerie & Pâtisserie | expiryDays: 3 | ["expiry"] | ["Pain", "Viennoiseries", "Gâteaux", "Sandwichs", "Boissons"] |
+| `services` | Services & Prestation | tous false/null | [] | ["Consultation", "Réparation", "Formation", "Livraison", "Autre"] |
+| `informatique` | Informatique & Électronique | trackSerialNumbers: true, warrantyMonths: 12, hasVariants: true | ["variants", "serial", "warranty"] | ["Ordinateurs", "Téléphones", "Accessoires", "Composants", "Imprimantes", "Réparation"] |
+| `vehicules` | Véhicules & Pièces détachées | trackSerialNumbers: true, warrantyMonths: 6 | ["serial", "warranty"] | ["Pièces moteur", "Carrosserie", "Pneumatiques", "Électronique auto", "Huiles & Filtres"] |
+| `grossiste` | Commerce de gros | hasVariants: true, unitType: "weight" | ["variants", "weight"] | ["Alimentaire", "Cosmétique", "Textile", "Quincaillerie", "Électronique"] |
+
+**And** le seed est idempotent (upsert par `code`)
+
+**AC4 — GET /admin/business-types — liste :**
+
+**Given** un superadmin authentifié appelle `GET /api/v1/admin/business-types`
+**When** la requête est valide
+**Then** la réponse est `200 OK` avec la liste de tous les `BusinessTypeDefinition` actifs triés par `name` ASC
+**And** les types inactifs (`isActive = false`) sont exclus (seuls les actifs sont affichés dans les sélecteurs)
+
+**AC5 — GET /admin/business-types/:code — détail :**
+
+**Given** un superadmin appelle `GET /api/v1/admin/business-types/:code`
+**When** le code existe
+**Then** la réponse est `200 OK` avec le `BusinessTypeDefinition` complet incluant `defaultFlags`, `visibleSections` et `suggestedCategories`
+**When** le code n'existe pas
+**Then** la réponse est `404 Not Found` : `"Type de business introuvable : :code"`
+
+**AC6 — PATCH /admin/tenants/:id/business-type — assignation :**
+
+**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/business-type` avec `{ businessType: "telephonie" }`
+**When** le tenant existe et le code correspond à un type actif
+**Then** `tenant.businessType` est mis à jour et le tenant mis à jour est retourné en `200 OK`
+**When** le code n'existe pas dans `business_type_definitions`
+**Then** la réponse est `404 Not Found` : `"Type de business inconnu : :code"`
+**And** le `businessType` du tenant n'est pas modifié
+
+**Notes dev :**
+- Module `BusinessTypeModule` dans `apps/backend/src/kernel/business-type/`
+- `BusinessTypeService` expose : `listActive()`, `getDefinition(code)`, `seedCategories(tenantId, code)` (utilisée en 29-4)
+- `SuperadminGuard` sur toutes les routes admin ; `TenantGuard` sur `PATCH /admin/tenants/:id/business-type`
+- Le `defaultFlags` est un objet JSON libre — ne pas typer rigidement côté DTO (Prisma `Json`)
+- À la création tenant (`POST /admin/tenants`), si un `businessType` est fourni, le setter appelle `BusinessTypeService.seedCategories()` — prévu pour Story 29-4
+- Seed dans `apps/backend/prisma/seed.ts` section kernel — ajouter après le seed `PlanDefinition`
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260320040000_add_business_type_definitions/migration.sql`
+- `apps/backend/src/kernel/business-type/business-type.module.ts`
+- `apps/backend/src/kernel/business-type/business-type.controller.ts`
+- `apps/backend/src/kernel/business-type/business-type.service.ts`
+- `apps/backend/src/kernel/business-type/dto/assign-business-type.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — modèle `BusinessTypeDefinition` + champ `businessType` sur `Tenant`
+- `apps/backend/prisma/seed.ts` — seed 13 types
+- `apps/backend/src/app.module.ts` — importer `BusinessTypeModule`
+
+---
+
+### Story 29-2: Admin panel — Dropdown "Type de business" dans NewTenantForm + écran types (FR104)
+
+**As a** superadmin,
+**I want** a business type dropdown in the tenant creation form, the assigned type displayed on the tenant detail screen, and a read-only screen listing all available business types,
+**So that** I can configure the business context of each tenant at creation time and consult available types from the admin panel (FR104).
+
+**Acceptance Criteria:**
+
+**AC1 — Dropdown "Type de business" dans NewTenantForm :**
+
+**Given** le superadmin ouvre le formulaire de création de tenant dans l'admin panel Flutter
+**When** il arrive sur le champ "Type de business"
+**Then** un `DropdownButtonFormField` affiche la liste des types actifs chargée depuis `GET /api/v1/admin/business-types`
+**And** la valeur par défaut est `"generaliste"` (Généraliste)
+**And** chaque entrée affiche le nom du type (ex: "Téléphonie & Accessoires")
+
+**AC2 — Soumission du formulaire avec businessType :**
+
+**Given** le superadmin sélectionne un type (ex: `"telephonie"`) et soumet le formulaire
+**When** l'appel `POST /api/v1/admin/tenants` est envoyé
+**Then** le body inclut `businessType: "telephonie"`
+**And** en cas de succès, un message de confirmation indique que les catégories suggérées ont été créées si `businessType != "generaliste"`
+
+**AC3 — Affichage businessType dans TenantDetailScreen :**
+
+**Given** le superadmin consulte la fiche d'un tenant existant
+**When** le tenant a un `businessType` assigné
+**Then** le nom complet du type (ex: "Téléphonie & Accessoires") est affiché dans la section informations générales
+**And** un bouton "Modifier" ouvre une boîte de dialogue permettant de changer le type via `PATCH /admin/tenants/:id/business-type`
+
+**AC4 — Changement de type depuis TenantDetailScreen :**
+
+**Given** le superadmin clique sur "Modifier" dans la section type de business
+**When** il sélectionne un nouveau type et confirme
+**Then** `PATCH /api/v1/admin/tenants/:id/business-type` est appelé
+**And** la fiche se met à jour avec le nouveau type affiché
+**And** un message d'avertissement indique que les catégories suggérées du nouveau type ne sont pas recréées automatiquement (la création ne se fait qu'à la création initiale du tenant)
+
+**AC5 — Écran lecture seule "Types de business" :**
+
+**Given** le superadmin navigue vers la section "Types de business" de l'admin panel
+**When** l'écran se charge
+**Then** la liste de tous les types actifs est affichée avec : code, nom, nombre de catégories suggérées, icône (si disponible)
+**And** en tapant sur un type, un panneau de détail affiche `defaultFlags` et `suggestedCategories` en lecture seule
+**And** aucun bouton de modification n'est exposé (édition réservée à une Phase 3 du backoffice admin)
+
+**Notes dev :**
+- `BusinessTypeRepository` Flutter dans `apps/frontend/lib/features/admin/business_type/data/`
+- Provider Riverpod `businessTypesProvider` charge la liste depuis l'API au montage de l'écran
+- `NewTenantForm` est dans `apps/frontend/lib/features/admin/tenants/presentation/` — ajouter le champ `businessType` après le champ `plan`
+- `TenantDetailScreen` est dans le même dossier — ajouter une section "Type de business" avec badge + bouton Modifier
+- L'écran "Types de business" est accessible via la navigation latérale admin (item après "Plans tarifaires")
+
+**Files to create:**
+- `apps/frontend/lib/features/admin/business_type/data/business_type_repository.dart`
+- `apps/frontend/lib/features/admin/business_type/presentation/screens/business_types_screen.dart`
+- `apps/frontend/lib/features/admin/business_type/presentation/providers/business_type_providers.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/admin/tenants/presentation/widgets/new_tenant_form.dart` — dropdown businessType
+- `apps/frontend/lib/features/admin/tenants/presentation/screens/tenant_detail_screen.dart` — section type + bouton Modifier
+- `apps/frontend/lib/features/admin/navigation/admin_navigation.dart` — item "Types de business"
+
+---
+
+### Story 29-3: Frontend backoffice — ProductFormDialog adaptatif selon businessType (FR105)
+
+**As a** tenant owner,
+**I want** the product creation/edit form to automatically show relevant fields first, pre-fill flag defaults, and hide non-relevant fields behind an "Afficher plus d'options" toggle based on my business type,
+**So that** I can create products faster without being overwhelmed by irrelevant options, while keeping full control over every flag (FR105).
+
+**Acceptance Criteria:**
+
+**AC1 — Chargement de la config businessType au démarrage :**
+
+**Given** le propriétaire ouvre l'application backoffice
+**When** la session est établie
+**Then** la config du type de business est chargée depuis `GET /api/v1/business-type/config` (endpoint tenant-scoped qui retourne le `BusinessTypeDefinition` correspondant à `Tenant.businessType`)
+**And** la config est mise en cache localement (valide pour la durée de la session)
+
+**AC2 — Sections visibles déterminées par visibleSections :**
+
+**Given** le propriétaire ouvre `ProductFormDialog` pour créer ou éditer un produit
+**When** son `businessType` est `"telephonie"` (visibleSections: ["variants", "serial", "warranty"])
+**Then** les sections "Variantes", "Numéro de série" et "Garantie" sont affichées par défaut dans le formulaire
+**And** les autres sections (ex: "Date de péremption", "Ordonnance") sont masquées par défaut
+
+**AC3 — defaultFlags pré-remplissent les flags produit :**
+
+**Given** le propriétaire ouvre `ProductFormDialog` pour créer un nouveau produit
+**When** son `businessType` est `"telephonie"` (defaultFlags: { hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 })
+**Then** le champ `hasVariants` est coché (true) par défaut
+**And** le champ `trackSerialNumbers` est coché (true) par défaut
+**And** le champ `warrantyMonths` est pré-rempli à `12`
+**When** son `businessType` est `"generaliste"` (tous flags false/null)
+**Then** tous les flags sont décochés et tous les champs optionnels sont vides par défaut
+
+**AC4 — Toggle "Afficher plus d'options" :**
+
+**Given** des sections sont masquées par défaut (non listées dans `visibleSections`)
+**When** le propriétaire clique sur "Afficher plus d'options"
+**Then** toutes les sections cachées deviennent visibles dans le formulaire
+**And** le libellé du bouton devient "Masquer les options avancées"
+**When** il clique à nouveau
+**Then** les sections non-pertinentes sont à nouveau masquées (et non modifiées si l'utilisateur les avait remplies)
+
+**AC5 — Override libre par le propriétaire :**
+
+**Given** le formulaire est pré-rempli avec les defaults du businessType
+**When** le propriétaire déccoche `trackSerialNumbers` ou modifie `warrantyMonths`
+**Then** la valeur saisie est respectée et sauvegardée telle quelle
+**And** aucun message d'avertissement ni blocage n'est affiché — l'override est silencieux et immédiat
+
+**AC6 — Produits existants non affectés :**
+
+**Given** le propriétaire édite un produit existant dont les flags ont été saisis manuellement
+**When** le formulaire se charge
+**Then** les valeurs sauvegardées du produit sont affichées (non écrasées par les defaults du businessType)
+**And** les defaults du businessType s'appliquent uniquement à la création de nouveaux produits
+
+**Notes dev :**
+- Endpoint backend requis : `GET /api/v1/business-type/config` — retourne le `BusinessTypeDefinition` du tenant courant (lu depuis `Tenant.businessType`) ; protégé par `JwtAuthGuard` + `TenantGuard`
+- Ajouter ce endpoint dans `BusinessTypeController` côté backend (non admin)
+- `ProductFormDialog` est dans `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — lire la config depuis `businessTypeConfigProvider`
+- Implémenter un provider Riverpod `businessTypeConfigProvider` qui appelle `BusinessTypeRepository.getMyConfig()` et met en cache le résultat
+- La logique de masquage est purement Flutter : `visibleSections` drive `_showSection(String section)` → bool
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/business_type/data/business_type_config_repository.dart`
+- `apps/frontend/lib/features/shared/business_type/presentation/providers/business_type_config_provider.dart`
+
+**Files to modify:**
+- `apps/backend/src/kernel/business-type/business-type.controller.ts` — ajouter `GET /business-type/config` (tenant-scoped)
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — adapter selon `visibleSections` et `defaultFlags`
+
+---
+
+### Story 29-4: Backend + Frontend — Pré-création des catégories suggérées à la création du tenant (FR106)
+
+**As a** tenant owner,
+**I want** to find the suggested categories of my business type already created in my catalog when I first log in,
+**So that** I can start adding products immediately without manual category setup (FR106).
+
+**Acceptance Criteria:**
+
+**AC1 — Seed des catégories à la création tenant :**
+
+**Given** le superadmin crée un tenant avec `businessType = "telephonie"` (suggestedCategories: ["Smartphones", "Accessoires", "Cartes SIM", "Recharge", "Réparation"])
+**When** le tenant est créé avec succès
+**Then** `BusinessTypeService.seedCategories(tenantId, "telephonie")` est appelé automatiquement dans le flux de création
+**And** 5 `CatalogCategory` sont créées dans le schéma `shared` pour ce tenant avec les noms correspondants
+**And** chaque catégorie a `tenantId` correct, `createdBy` = id du superadmin (ou un uuid système), `isActive = true`
+
+**AC2 — Pas de seed pour le type "generaliste" :**
+
+**Given** le superadmin crée un tenant avec `businessType = "generaliste"` (suggestedCategories: [])
+**When** le tenant est créé
+**Then** `BusinessTypeService.seedCategories()` est appelé mais ne crée aucune catégorie (liste vide)
+**And** aucune erreur n'est levée
+
+**AC3 — Idempotence du seed de catégories :**
+
+**Given** `BusinessTypeService.seedCategories(tenantId, code)` est appelé deux fois pour le même tenant
+**When** la deuxième exécution se produit (ex: retry après erreur réseau)
+**Then** aucune catégorie dupliquée n'est créée (upsert ou skip si `name` + `tenantId` existent déjà)
+
+**AC4 — Propriétaire voit les catégories prêtes à l'emploi :**
+
+**Given** le propriétaire se connecte pour la première fois après la création du tenant
+**When** il navigue vers la gestion des catégories dans le backoffice
+**Then** les catégories suggérées de son type de business sont listées et actives
+**And** il peut immédiatement assigner ces catégories aux produits qu'il crée
+
+**AC5 — Propriétaire peut renommer une catégorie suggérée :**
+
+**Given** le propriétaire voit la catégorie "Cartes SIM" dans sa liste
+**When** il la renomme en "Forfaits & SIM"
+**Then** le nom est mis à jour via `PATCH /api/v1/catalog/categories/:id`
+**And** aucune contrainte ne bloque le renommage (les catégories suggérées ne sont pas verrouillées)
+
+**AC6 — Propriétaire peut supprimer une catégorie suggérée :**
+
+**Given** le propriétaire voit la catégorie "Réparation" dans sa liste
+**When** il la supprime (soft delete)
+**Then** la catégorie est marquée inactive et disparaît de la liste principale
+**And** aucune contrainte ne bloque la suppression (même si des produits y sont associés — les produits conservent leur catégorie, qui passe en état archivé)
+
+**AC7 — Propriétaire peut ajouter de nouvelles catégories :**
+
+**Given** le propriétaire a ses catégories suggérées créées
+**When** il crée une nouvelle catégorie "Dongles WiFi" via l'interface habituelle
+**Then** la nouvelle catégorie est créée normalement via `POST /api/v1/catalog/categories`
+**And** elle coexiste avec les catégories suggérées sans distinction visuelle particulière
+
+**Notes dev :**
+- `BusinessTypeService.seedCategories(tenantId, code)` est appelé dans `OrganizationService.createTenant()` après la création du tenant, dans un try/catch — un échec du seed ne doit PAS faire échouer la création du tenant (erreur loggée, pas propagée)
+- La méthode `seedCategories` appelle `CatalogService.createCategory()` ou insère directement via Prisma (dépendance à valider selon l'architecture du `CatalogModule`)
+- Frontend : aucun changement requis sur les écrans existants — les catégories apparaissent automatiquement via le endpoint `GET /api/v1/catalog/categories` déjà implémenté
+- Un log structuré est émis au moment du seed : `{ event: "business_type_categories_seeded", tenantId, businessType, count }` pour traçabilité admin
+
+**Files to modify:**
+- `apps/backend/src/kernel/business-type/business-type.service.ts` — implémenter `seedCategories(tenantId, code)`
+- `apps/backend/src/organization/organization.service.ts` — appeler `BusinessTypeService.seedCategories()` dans le flux `createTenant()`

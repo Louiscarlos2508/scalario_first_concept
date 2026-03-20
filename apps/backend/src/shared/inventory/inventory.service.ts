@@ -24,6 +24,10 @@ export class InventoryService {
     variantId?: string | null;
     // Epic 26 — AC2 (Story 26-4): optional best-before date for DELIVERY batches
     bestBeforeDate?: string | null;
+    // User-provided expiry date (overrides auto-calculation from expiryDays)
+    expiresAt?: string | null;
+    // Serial numbers to register on DELIVERY
+    serialNumbers?: string[] | null;
   }) {
     // AC6 (Story 24-1) — Auto-reason NATURAL_VARIANCE for LOSS within shrinkage tolerance
     let resolvedReason = data.reason ?? null;
@@ -98,26 +102,51 @@ export class InventoryService {
       tenantId: data.tenantId,
     });
 
-    // AC3 (Story 24-1) — Create ProductBatch on DELIVERY if expiryDays is set
     if (data.type === 'DELIVERY' && data.catalogItemId) {
-      const catalogItem = await this.prisma.catalogItem.findUnique({
-        where: { id: data.catalogItemId },
-        select: { expiryDays: true },
-      });
-      if (catalogItem?.expiryDays != null) {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + catalogItem.expiryDays);
+      // Create SerialRecords if serial numbers provided
+      if (data.serialNumbers?.length) {
+        for (const serial of data.serialNumbers) {
+          await this.prisma.serialRecord.create({
+            data: { catalogItemId: data.catalogItemId, serial, tenantId: data.tenantId },
+          });
+        }
+      }
+
+      // AC3 (Story 24-1) — Create ProductBatch on DELIVERY
+      // User-provided expiresAt takes precedence; fallback to auto-calculation from expiryDays
+      const providedExpiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+      if (providedExpiresAt) {
         await this.prisma.productBatch.create({
           data: {
             catalogItemId: data.catalogItemId,
             tenantId: data.tenantId,
-            expiresAt,
+            expiresAt: providedExpiresAt,
             bestBeforeDate: data.bestBeforeDate ? new Date(data.bestBeforeDate) : null,
             initialQty: data.quantity,
             remainingQty: data.quantity,
             batchRef: data.referenceId ?? null,
           },
         });
+      } else {
+        const catalogItem = await this.prisma.catalogItem.findUnique({
+          where: { id: data.catalogItemId },
+          select: { expiryDays: true },
+        });
+        if (catalogItem?.expiryDays != null) {
+          const autoExpiry = new Date();
+          autoExpiry.setDate(autoExpiry.getDate() + catalogItem.expiryDays);
+          await this.prisma.productBatch.create({
+            data: {
+              catalogItemId: data.catalogItemId,
+              tenantId: data.tenantId,
+              expiresAt: autoExpiry,
+              bestBeforeDate: data.bestBeforeDate ? new Date(data.bestBeforeDate) : null,
+              initialQty: data.quantity,
+              remainingQty: data.quantity,
+              batchRef: data.referenceId ?? null,
+            },
+          });
+        }
       }
     }
 

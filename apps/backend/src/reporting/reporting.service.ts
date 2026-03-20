@@ -172,6 +172,11 @@ export class ReportingService {
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const netProfit = totalRevenue - totalExpenses;
 
+    // Distinct customers who made a purchase in the period.
+    const activeCustomerCount = new Set(
+      transactions.filter((tx) => tx.customerId).map((tx) => tx.customerId),
+    ).size;
+
     // Daily breakdown for the line chart — group transactions by YYYY-MM-DD.
     const dailyMap: Record<string, { revenue: number; orderCount: number }> = {};
     for (const tx of transactions) {
@@ -193,6 +198,7 @@ export class ReportingService {
       totalCashVariance,
       totalExpenses,
       netProfit,
+      activeCustomerCount,
       dailyStats,
       from: from ?? null,
       to: to ?? null,

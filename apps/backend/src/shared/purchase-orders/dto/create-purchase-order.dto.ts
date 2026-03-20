@@ -19,6 +19,10 @@ export class CreatePurchaseOrderLineDto {
   @Min(0.0001)
   @Type(() => Number)
   expectedQuantity: number;
+
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
 }
 
 export class CreatePurchaseOrderDto {

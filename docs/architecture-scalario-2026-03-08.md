@@ -2,7 +2,7 @@
 
 **Author:** Carlos-simpore
 **Date:** 2026-03-19
-**Version:** 1.4
+**Version:** 1.5
 **Status:** Approved
 **PRD Reference:** `_bmad-output/planning-artifacts/prd.md`
 
@@ -14,6 +14,7 @@
 | 1.2 | 2026-03-19 | FR92–FR97: serial number tracking (SerialRecord), warranty certificates, prescription field, bestBeforeDate on ProductBatch, dynamic pricing (PriceHistory), unique items. New fields on CatalogItem. Two new shared models. |
 | 1.3 | 2026-03-19 | FR98–FR99: return policy fields on Tenant (returnPolicyDays, returnRequiresReason, returnRequiresApproval), two new shared models (ReturnRecord, Reservation). |
 | 1.4 | 2026-03-20 | FR100–FR103: billing fields on Tenant (plan, maxUsers, installationFee/Paid, trainingFee/Paid, billingStartDate, billingStatus, trialEndsAt, notes), two new kernel models (PlanDefinition, BillingEvent). New section 4.1.6 Billing Module. Diagram and FR traceability updated. |
+| 1.5 | 2026-03-20 | FR104–FR106: businessType field on Tenant, new kernel model BusinessTypeDefinition (code, name, defaultFlags JSON, visibleSections, suggestedCategories, icon, isActive). New section 4.1.7 Business Type Module. Diagram, FR traceability, and Summary updated. 13 types seeded. |
 
 ---
 
@@ -379,6 +380,40 @@ TenantModule(tenantId, moduleId, activatedAt, status: 'active'|'inactive')
 PlanDefinition(id, code, name, monthlyPrice, maxUsers, includedModules[], suggestedInstallationFee?, suggestedTrainingFee?, isActive)
 BillingEvent(id, tenantId, type, amount, description?, paidAt?, dueDate?, status, paymentMethod?, paymentRef?)
 Tenant.plan, Tenant.maxUsers, Tenant.installationFee/Paid, Tenant.trainingFee/Paid, Tenant.billingStartDate, Tenant.billingStatus, Tenant.trialEndsAt, Tenant.notes
+```
+
+---
+
+#### 4.1.7 Business Type Module (`kernel/business-type`)
+
+**Purpose:** Define business type profiles that pre-configure product form defaults and suggested categories per tenant vertical. Phase 2a = superadmin assigns at tenant creation. The type is a facilitator, not a lock.
+
+**Responsibilities:**
+
+- Store and expose `BusinessTypeDefinition` catalogue — configurable by superadmin without deployment
+- Provide `defaultFlags` JSON read by the product form to pre-fill and prioritise visible fields per tenant's `businessType`
+- Provide `visibleSections` array to drive which product form sections are shown by default (others hidden behind "Afficher plus d'options" toggle)
+- Provide `suggestedCategories` list; on tenant creation, auto-create these categories in the tenant's catalog
+- `generaliste` type ships as the default — all flags false/null, owner configures manually
+
+**Interfaces:**
+
+- `BusinessTypeService.getDefinition(code)` — returns full definition for a given type code
+- `BusinessTypeService.listActive()` — returns all active types (for superadmin selector)
+- `BusinessTypeService.seedCategories(tenantId, code)` — creates suggested categories on tenant creation (FR106)
+- `GET /admin/business-types` — superadmin panel (list + edit)
+- `GET /business-type/config` — tenant-scoped: returns the definition matching `Tenant.businessType`
+
+**Dependencies:** Tenancy Module, Catalog Module (for category seeding), Prisma (kernel schema)
+
+**FRs Addressed:** FR104, FR105, FR106
+
+**Current State:** Does not exist. New module. Phase 2a scope: definition management + tenant assignment + category seeding.
+
+**Data Model:**
+```
+BusinessTypeDefinition(id, code, name, description?, defaultFlags JSON, visibleSections String[], suggestedCategories String[], icon?, isActive)
+Tenant.businessType  (FK by code, default "generaliste")
 ```
 
 ---
@@ -887,7 +922,8 @@ Target state: Three logical schemas.
 │  │  ├── tenant_mods │                            │
 │  │  ├── audit_log   │                            │
 │  │  ├── plan_defs   │   ← FR100                 │
-│  │  └── billing_evs │   ← FR101/FR102/FR103     │
+│  │  ├── billing_evs │   ← FR101/FR102/FR103     │
+│  │  └── biz_type_defs│  ← FR104/FR105/FR106     │
 │  └──────────────────┘                            │
 │                                                  │
 │  ┌──────────────────┐                            │
@@ -969,6 +1005,9 @@ model Tenant {
   returnRequiresReason  Boolean         @default(true) @map("return_requires_reason")
   // FR98 — Require manager approval before a return is finalised.
   returnRequiresApproval Boolean        @default(false) @map("return_requires_approval")
+
+  // FR104 — Business type code assigned to this tenant. Drives product form defaults via BusinessTypeDefinition.
+  businessType         String              @default("generaliste") @map("business_type")
 
   // FR100 — Pricing plan code assigned to this tenant. Drives maxUsers and includedModules via PlanDefinition.
   plan                 String              @default("free")
@@ -1531,6 +1570,34 @@ model BillingEvent {
 
   @@index([tenantId, status])
   @@map("billing_events")
+  @@schema("kernel")
+}
+
+// ─── FR104/FR105/FR106: Business Type Definitions ─────────────────────────────
+// Catalogue of business type profiles, configurable by superadmin without
+// deployment. Each type pre-configures product form defaults (defaultFlags),
+// which sections are visible (visibleSections), and which categories are
+// auto-created on tenant creation (suggestedCategories).
+// The "generaliste" type is seeded as default: all flags false/null.
+// Tenant.businessType references a code from this table.
+// The type is a facilitator, not a lock: owners can override per product.
+
+model BusinessTypeDefinition {
+  id                  String   @id @default(uuid()) @db.Uuid
+  code                String   @unique // generaliste, epicerie, telephonie, textile, pharmacie, etc.
+  name                String   // "Épicerie & Alimentation"
+  description         String?  // "Fruits, légumes, épices, produits frais"
+  defaultFlags        Json     // {"trackSerialNumbers": false, "hasVariants": false,
+                               //  "warrantyMonths": null, "expiryDays": null,
+                               //  "requiresPrescription": false, "isUnique": false,
+                               //  "dynamicPricing": false, "unitType": "piece"}
+  visibleSections     String[] @map("visible_sections") // ["expiry", "weight"] — shown by default in ProductFormDialog
+  suggestedCategories String[] @map("suggested_categories") // ["Fruits", "Légumes", "Épices", "Boissons"]
+  icon                String?  // Material icon name for admin panel
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("business_type_definitions")
   @@schema("kernel")
 }
 
@@ -2399,8 +2466,11 @@ Push to main → GitHub Actions:
 | FR101 | Superadmin records installation/training fees per tenant; billing status lifecycle (trial→active→overdue→suspended); auto-suspension after 30 days overdue (configurable); suspended tenant sees expiry message | BillingEvent + Tenant billing fields | kernel |
 | FR102 | Tenant owner consults current plan, included modules, billing status and payment history from backoffice Settings; can request a plan upgrade (superadmin notification for manual validation in Phase 2a) | BillingEvent (read) + Tenant billing fields | kernel |
 | FR103 | Online subscription payment via dedicated onboarding page (Mobile Money: Orange Money / Moov Money, or card); tenant created and activated automatically on payment confirmation; plan upgrade from backoffice with integrated payment | BillingEvent + PlanDefinition | kernel (Phase 3) |
+| FR104 | Superadmin assigns a business type to each tenant at creation; BusinessTypeDefinition configurable without deployment — code, name, defaultFlags (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), visibleSections, suggestedCategories, icon; "generaliste" is default (all flags off) | BusinessTypeDefinition + Tenant.businessType | kernel |
+| FR105 | Product form adapts to tenant businessType — relevant fields shown first and pre-filled with type defaults, irrelevant fields hidden behind "Afficher plus d'options" toggle; owner can always override each flag per product | BusinessTypeDefinition.defaultFlags + BusinessTypeDefinition.visibleSections | kernel + backoffice |
+| FR106 | On tenant creation with a businessType, system auto-creates suggested categories from the type's suggestedCategories list; owner can rename, delete or add categories freely | BusinessTypeService.seedCategories + CatalogCategory | kernel + shared |
 
-**Coverage:** 103/103 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics. FR92–FR97 added in architecture v1.2 — traceability and configuration fields. FR98–FR99 added in architecture v1.3 — return records and reservations. FR100–FR103 added in architecture v1.4 — billing module, plan definitions, billing events.)
+**Coverage:** 106/106 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics. FR92–FR97 added in architecture v1.2 — traceability and configuration fields. FR98–FR99 added in architecture v1.3 — return records and reservations. FR100–FR103 added in architecture v1.4 — billing module, plan definitions, billing events. FR104–FR106 added in architecture v1.5 — business type definitions, product form adaptation, category seeding.)
 
 ---
 
@@ -2611,13 +2681,15 @@ During migration, the backend maintains backward compatibility:
 | **Backend Components** | 5 kernel + 12 shared + 3 retail = 20 |
 | **Client Components** | 3 core services + 5 repositories + 7 Isar collections |
 | **API Endpoints** | ~50 REST endpoints |
-| **FRs Covered** | 99/99 (100%) |
+| **FRs Covered** | 106/106 (100%) |
 | **NFRs Covered** | 30/30 (100%) |
 | **Migration Steps** | 9 incremental steps |
 | **Key Innovation** | Offline-first ERP with polymorphic shared entities + chain-of-custody trust pattern |
 | **v1.1 Additions** | 7 new shared models (variants, price levels, promotions, purchase orders, internal requests, batches) + 13 new fields across CatalogItem / StockMovement / Tenant |
 | **v1.2 Additions** | 2 new shared models (SerialRecord, PriceHistory) + 5 new fields on CatalogItem + bestBeforeDate on ProductBatch (FR92–FR97) |
 | **v1.3 Additions** | 2 new shared models (ReturnRecord, Reservation) + 3 return policy fields on Tenant (FR98–FR99) |
+| **v1.4 Additions** | 2 new kernel models (PlanDefinition, BillingEvent) + 9 billing fields on Tenant + new section 4.1.6 Billing Module (FR100–FR103) |
+| **v1.5 Additions** | 1 new kernel model (BusinessTypeDefinition) + 1 field on Tenant (businessType) + new section 4.1.7 Business Type Module + 13 types seeded (FR104–FR106) |
 
 ---
 

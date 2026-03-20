@@ -29,6 +29,8 @@ export class TransactionsService {
     customerId?: string | null;
     sessionId?: string | null;
     tenantId: string;
+    // Date de vente locale du device POS — préserve la vraie date même après un sync différé.
+    createdAt?: string | Date;
     // Epic 26 — Serial number tracking
     serialNumbers?: Array<{ catalogItemId: string; serial: string }>;
     // Epic 26 — Prescription
@@ -58,6 +60,9 @@ export class TransactionsService {
         sessionId: data.sessionId ?? null,
         tenantId: data.tenantId,
         metadata: prescriptionMeta ?? Prisma.JsonNull,
+        // Preserve the device sale timestamp so reports show the real sale date,
+        // not the sync date.
+        ...(data.createdAt ? { createdAt: new Date(data.createdAt) } : {}),
       },
     });
 

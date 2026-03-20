@@ -23,6 +23,9 @@ export class RetailController {
       sessionId?: string | null;
       receiptNumber?: string;
       tenantId: string;
+      // Date de vente locale du device (POS offline-first).
+      // Si absent → now() par défaut (vente en ligne directe).
+      createdAt?: string;
     },
     @Req() req: any,
   ) {
