@@ -18,12 +18,14 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   String _currency = 'XOF';
-  String _timezone = 'Africa/Abidjan';
+  String _timezone = 'Africa/Ouagadougou';
+  String _billingStatus = 'trial';
   bool _loading = false;
   bool _obscure = true;
 
   static const _currencies = ['XOF', 'EUR', 'USD', 'MAD'];
   static const _timezones = [
+    'Africa/Ouagadougou',
     'Africa/Abidjan',
     'Africa/Dakar',
     'Africa/Lagos',
@@ -60,6 +62,7 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
         ownerPassword: _passwordCtrl.text,
         currency: _currency,
         timezone: _timezone,
+        billingStatus: _billingStatus,
       );
 
       await ref
@@ -177,6 +180,28 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) => setState(() => _timezone = v ?? _timezone),
+              ),
+              const SizedBox(height: 16),
+
+              // Statut de facturation
+              DropdownButtonFormField<String>(
+                initialValue: _billingStatus,
+                decoration: const InputDecoration(
+                  labelText: 'Statut de facturation',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'trial',
+                    child: Text('Essai gratuit (30 jours)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'active',
+                    child: Text('Actif (client a déjà payé)'),
+                  ),
+                ],
+                onChanged: (v) =>
+                    setState(() => _billingStatus = v ?? _billingStatus),
               ),
               const SizedBox(height: 16),
 

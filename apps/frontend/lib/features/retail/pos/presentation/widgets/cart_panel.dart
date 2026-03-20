@@ -9,6 +9,12 @@ import 'package:frontend/features/retail/pos/presentation/widgets/customer_selec
 import 'package:frontend/features/retail/pos/presentation/widgets/parked_carts_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/discount_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/receipt_dialog.dart';
+import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
+import 'package:frontend/features/shared/catalog/presentation/widgets/serial_input_dialog.dart';
+import 'prescription_input_dialog.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/return_search_sheet.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -94,15 +100,91 @@ class CartPanel extends ConsumerWidget {
               itemCount: cartState.items.length,
               itemBuilder: (context, index) {
                 final item = cartState.items[index];
+                final hasPromo = item.appliedPromoId != null && !item.isFreeItem;
+                final hasDiscount = item.discountAmount > 0 && !hasPromo;
                 return ListTile(
-                  title: Text(item.product.name),
+                  onLongPress: isManager && !item.isFreeItem
+                      ? () => _showPriceLevelOverride(context, ref, index, item)
+                      : null,
+                  title: Row(
+                    children: [
+                      Expanded(child: Text(item.isFreeItem
+                          ? '${item.product.name} (offert)'
+                          : item.product.name)),
+                      // AC3 (Story 25-7) — PROMO badge
+                      if (hasPromo)
+                        Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade600,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'PROMO',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                    ],
+                  ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.product.unitType != 'piece'
-                          ? '${item.quantity} ${item.product.weightUnit ?? item.product.unitType} × ${_fcfa(item.unitPrice)}'
-                          : '${item.quantity.toInt()} x ${_fcfa(item.product.price)}'),
-                      if (item.discountAmount > 0)
+                      // AC5 (Story 25-3) — variant label
+                      if (item.variantLabel != null)
+                        Text(item.variantLabel!,
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.blueGrey)),
+                      // Price line — strikethrough original + green discounted
+                      if (hasPromo)
+                        Row(
+                          children: [
+                            Text(
+                              item.product.unitType != 'piece'
+                                  ? '${item.quantity} ${item.product.weightUnit ?? item.product.unitType} × ${_fcfa(item.unitPrice)}'
+                                  : '${item.quantity.toInt()} × ${_fcfa(item.unitPrice)}',
+                              style: const TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                  color: Colors.grey,
+                                  fontSize: 12),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(_fcfa(item.total),
+                                style: const TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
+                          ],
+                        )
+                      else
+                        Text(item.product.unitType != 'piece'
+                            ? '${item.quantity} ${item.product.weightUnit ?? item.product.unitType} × ${_fcfa(item.unitPrice)}'
+                            : item.isFreeItem
+                                ? '${item.quantity.toInt()} × 0 FCFA'
+                                : '${item.quantity.toInt()} × ${_fcfa(item.unitPrice)}'),
+                      // Promo label
+                      if (hasPromo && item.appliedPromoLabel != null)
+                        Text(item.appliedPromoLabel!,
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.green)),
+                      // AC3 (Story 25-5) — price level chip
+                      if (item.appliedPriceLevelLabel != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Chip(
+                            key: Key('price_level_chip_$index'),
+                            label: Text(item.appliedPriceLevelLabel!),
+                            labelStyle: const TextStyle(fontSize: 10),
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                            backgroundColor: Colors.blue.withAlpha(30),
+                          ),
+                        ),
+                      if (hasDiscount)
                         Text(
                           'Remise : ${item.discountType == 'PERCENTAGE' ? '${item.discountAmount}%' : _fcfa(item.discountAmount)}',
                           style: const TextStyle(
@@ -114,28 +196,32 @@ class CartPanel extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _fcfa(item.total),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        item.isFreeItem ? '0 FCFA' : _fcfa(item.total),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: item.isFreeItem ? Colors.green : null),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_note),
-                        onPressed: isManager
-                            ? () => showDialog(
-                                  context: context,
-                                  builder: (context) =>
-                                      DiscountDialog(item: item),
-                                )
-                            : () => _showPermissionDenied(context),
-                        tooltip: 'Appliquer une remise',
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline),
-                        onPressed: isManager
-                            ? () => ref
-                                .read(cartProvider.notifier)
-                                .removeProduct(item.product)
-                            : () => _showPermissionDenied(context),
-                      ),
+                      if (!item.isFreeItem) ...[
+                        IconButton(
+                          icon: const Icon(Icons.edit_note),
+                          onPressed: isManager
+                              ? () => showDialog(
+                                    context: context,
+                                    builder: (context) =>
+                                        DiscountDialog(item: item),
+                                  )
+                              : () => _showPermissionDenied(context),
+                          tooltip: 'Appliquer une remise',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          onPressed: isManager
+                              ? () => ref
+                                  .read(cartProvider.notifier)
+                                  .removeProduct(item.product)
+                              : () => _showPermissionDenied(context),
+                        ),
+                      ],
                     ],
                   ),
                 );
@@ -163,22 +249,51 @@ class CartPanel extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                OverflowBar(
+                  spacing: 8,
+                  overflowSpacing: 4,
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: cartState.items.isEmpty
-                            ? null
-                            : () =>
-                                _showParkDialog(context, ref, cartState),
-                        icon: const Icon(Icons.pause),
-                        label: const Text('ATTENTE'),
+                    OutlinedButton.icon(
+                      onPressed: cartState.items.isEmpty
+                          ? null
+                          : () => _showParkDialog(context, ref, cartState),
+                      icon: const Icon(Icons.pause),
+                      label: const Text('ATTENTE'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => const ReturnSearchSheet(),
+                      ),
+                      icon: const Icon(Icons.undo, color: Colors.orange),
+                      label: const Text(
+                        'RETOUR',
+                        style: TextStyle(color: Colors.orange),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: FilledButton(
+                    OutlinedButton.icon(
+                      onPressed: cartState.items.isEmpty
+                          ? null
+                          : () => showDialog<void>(
+                                context: context,
+                                builder: (_) => ReservationDepositDialog(
+                                  cartState: cartState,
+                                ),
+                              ),
+                      icon: const Icon(Icons.bookmark_border,
+                          color: Colors.purple),
+                      label: const Text(
+                        'RÉSERVATION',
+                        style: TextStyle(color: Colors.purple),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
                         onPressed: cartState.items.isEmpty ||
                                 checkoutState.isLoading
                             ? null
@@ -200,16 +315,48 @@ class CartPanel extends ConsumerWidget {
                                   return;
                                 }
 
+                                // Epic 26 — Collect serial numbers for items that require tracking
+                                CartState effectiveCart = cartState;
+                                for (int i = 0; i < cartState.items.length; i++) {
+                                  final item = cartState.items[i];
+                                  if (item.isFreeItem) continue;
+                                  final trackSerial = item.product.trackSerialNumbers;
+                                  if (trackSerial && item.serialNumber == null) {
+                                    if (!context.mounted) return;
+                                    final serial = await showSerialInputDialog(
+                                      context,
+                                      productName: item.product.name,
+                                    );
+                                    if (serial == null) return; // user cancelled
+                                    final updatedItems = List<CartItem>.from(effectiveCart.items);
+                                    updatedItems[i] = updatedItems[i].copyWith(serialNumber: serial);
+                                    effectiveCart = effectiveCart.copyWith(items: updatedItems);
+                                  }
+                                }
+
+                                // Epic 26 — Prescription dialog (AC2 — FR94)
+                                final needsPrescription = effectiveCart.items.any(
+                                  (i) => !i.isFreeItem && i.product.requiresPrescription,
+                                );
+                                if (needsPrescription) {
+                                  if (!context.mounted) return;
+                                  final rx = await showPrescriptionDialog(context);
+                                  if (rx == null) return; // user cancelled
+                                  effectiveCart = effectiveCart.copyWith(prescriptionData: rx);
+                                }
+
                                 final order = await ref
                                     .read(checkoutControllerProvider.notifier)
                                     .checkout(
-                                        cartState, session?.remoteId);
+                                        effectiveCart, session?.remoteId);
                                 if (order != null && context.mounted) {
                                   showDialog(
                                     context: context,
                                     barrierDismissible: false,
-                                    builder: (context) =>
-                                        ReceiptDialog(order: order),
+                                    builder: (context) => ReceiptDialog(
+                                      order: order,
+                                      cartSnapshot: effectiveCart,
+                                    ),
                                   );
                                 }
                               },
@@ -217,9 +364,7 @@ class CartPanel extends ConsumerWidget {
                             ? const CircularProgressIndicator(
                                 color: Colors.white)
                             : const Text('ENCAISSER'),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 // Sélecteur de mode de paiement
                 Container(
@@ -227,7 +372,7 @@ class CartPanel extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -364,6 +509,50 @@ class CartPanel extends ConsumerWidget {
             child: const Text('Enregistrer'),
           ),
         ],
+      ),
+    );
+  }
+
+  // AC4 (Story 25-5) — Price level override bottom sheet
+  void _showPriceLevelOverride(BuildContext context, WidgetRef ref, int index, CartItem item) {
+    final tenantId = ref.read(activeTenantProvider);
+    final itemId = item.product.remoteId;
+    if (tenantId == null || itemId == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => FutureBuilder<List<Map<String, dynamic>>>(
+        future: ref.read(catalogRepositoryProvider).getPriceLevels(
+          itemId: itemId,
+          tenantId: tenantId,
+        ),
+        builder: (ctx, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()));
+          }
+          final levels = (snapshot.data ?? []).map(PriceLevel.fromJson).toList();
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Changer le niveau de prix', style: Theme.of(ctx).textTheme.titleMedium),
+                const Divider(height: 20),
+                if (levels.isEmpty)
+                  const Text('Aucun niveau configuré pour cet article.'),
+                ...levels.map((pl) => ListTile(
+                  title: Text(pl.label),
+                  subtitle: Text('${pl.price.toStringAsFixed(0)} FCFA${pl.minQty != null ? ' · min ${pl.minQty}' : ''}'),
+                  onTap: () {
+                    ref.read(cartProvider.notifier).applyPriceLevel(index, pl);
+                    Navigator.of(ctx).pop();
+                  },
+                )),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

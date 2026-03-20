@@ -11,6 +11,8 @@ import '../providers/pos_providers.dart';
 import '../../../../../core/auth/auth_state.dart';
 import '../../../../../core/widgets/barcode_listener.dart';
 import '../widgets/sync_status_indicator.dart';
+import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -82,6 +84,28 @@ class PosScreen extends ConsumerWidget {
   }
 
   void _handleBarcodeScanned(WidgetRef ref, String barcode, BuildContext context) async {
+    // AC3 (Story 25-3) — Try catalog API barcode lookup first (handles variant barcodes)
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId != null) {
+      final catalogResult = await ref.read(catalogRepositoryProvider).getByBarcode(
+        barcode: barcode,
+        tenantId: tenantId,
+      );
+      if (catalogResult != null && catalogResult.containsKey('matchedVariant')) {
+        // Variant barcode — add directly without selector
+        final productRepo = ref.read(productRepositoryProvider);
+        final product = await productRepo.getProductByBarcode(barcode) ??
+            await productRepo.getProductByBarcode(catalogResult['barcode']?.toString() ?? barcode);
+        if (product != null && context.mounted) {
+          final variantData = catalogResult['matchedVariant'] as Map<String, dynamic>;
+          final variant = ProductVariant.fromJson(variantData);
+          ref.read(cartProvider.notifier).addProductWithVariant(product, variant);
+          return;
+        }
+      }
+    }
+
+    // Fallback — local Isar lookup
     final repo = ref.read(productRepositoryProvider);
     final product = await repo.getProductByBarcode(barcode);
     if (product != null) {

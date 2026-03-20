@@ -41,8 +41,39 @@ class SessionReportDialog extends ConsumerWidget {
             _buildSectionTitle('Ventes par méthode'),
             ...totalsByMethod.entries.map((e) => _buildRow(e.key, e.value)),
             const Divider(),
-            _buildRow('Total des ventes', summary['totalSales'] as double,
-                bold: true),
+            // Story 27-3 — 3-line Z-report: gross / returns / net
+            Builder(builder: (context) {
+              final returns = summary['returns'] as Map<String, dynamic>?;
+              final returnsCount = (returns?['count'] as num?)?.toInt() ?? 0;
+              if (returnsCount > 0) {
+                final grossSales = summary['grossSales'] as Map<String, dynamic>?;
+                final netSales = summary['netSales'] as Map<String, dynamic>?;
+                final grossCount = (grossSales?['count'] as num?)?.toInt() ?? 0;
+                final grossAmount = (grossSales?['amount'] as num?)?.toDouble() ?? (summary['totalSales'] as double);
+                final returnsAmount = (returns?['amount'] as num?)?.toDouble() ?? 0.0;
+                final netAmount = (netSales?['amount'] as num?)?.toDouble() ?? grossAmount;
+                return Column(
+                  children: [
+                    _buildRow('Ventes brutes ($grossCount transactions)', grossAmount),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Retours ($returnsCount retour${returnsCount > 1 ? 's' : ''})'),
+                          Text(
+                            '− ${_fcfa(returnsAmount)}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _buildRow('Ventes nettes', netAmount, bold: true),
+                  ],
+                );
+              }
+              return _buildRow('Total des ventes', summary['totalSales'] as double, bold: true);
+            }),
             const SizedBox(height: 20),
             _buildSectionTitle('Réconciliation espèces'),
             _buildRow('Fond de caisse', summary['openingBalance'] as double),

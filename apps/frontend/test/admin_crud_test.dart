@@ -132,7 +132,8 @@ void main() {
       await tester.pumpWidget(_wrap(const NewTenantForm(), stub));
       await tester.pump();
 
-      // Tap submit without filling anything
+      // Scroll to submit button (form is taller than test viewport)
+      await tester.ensureVisible(find.text('Créer le client'));
       await tester.tap(find.text('Créer le client'));
       await tester.pump();
 
@@ -156,6 +157,7 @@ void main() {
           find.widgetWithText(TextFormField, 'Mot de passe owner'),
           'password123');
 
+      await tester.ensureVisible(find.text('Créer le client'));
       await tester.tap(find.text('Créer le client'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -180,6 +182,7 @@ void main() {
           find.widgetWithText(TextFormField, 'Mot de passe owner'),
           'password123');
 
+      await tester.ensureVisible(find.text('Créer le client'));
       await tester.tap(find.text('Créer le client'));
       await tester.pump();
       await tester.pumpAndSettle();

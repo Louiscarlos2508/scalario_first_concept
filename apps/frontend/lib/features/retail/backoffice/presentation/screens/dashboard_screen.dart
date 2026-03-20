@@ -15,10 +15,18 @@ import 'package:frontend/core/sdui/sdui_providers.dart';
 import 'package:frontend/core/sdui/sdui_renderer.dart';
 import 'package:frontend/features/shared/expenses/presentation/screens/expenses_screen.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
+import 'package:frontend/features/shared/promotions/presentation/screens/promotions_screen.dart';
+import 'package:frontend/features/shared/reservations/presentation/screens/reservations_screen.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
 import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'dart:async';
+
+// ── Navigation providers ──────────────────────────────────────────────────────
+
+/// Set to a module code (e.g. 'inventory', 'reservations') to programmatically
+/// switch the dashboard to that tab. Automatically reset after navigation.
+final dashboardNavigationProvider = StateProvider<String?>((ref) => null);
 
 // ── Navigation + screen mapping ───────────────────────────────────────────────
 
@@ -82,6 +90,22 @@ final _allNavScreens = <_NavScreenPair>[
   ),
   (
     navItem: const NavItem(
+        icon: Icons.local_offer_outlined,
+        selectedIcon: Icons.local_offer,
+        label: 'Promotions',
+        moduleCode: 'promotions'),
+    screen: const PromotionsScreen(),
+  ),
+  (
+    navItem: const NavItem(
+        icon: Icons.bookmark_outline,
+        selectedIcon: Icons.bookmark,
+        label: 'Réservations',
+        moduleCode: 'reservations'),
+    screen: const ReservationsScreen(),
+  ),
+  (
+    navItem: const NavItem(
         icon: Icons.settings_outlined,
         selectedIcon: Icons.settings,
         label: 'Paramètres'),
@@ -124,6 +148,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final activeModules = modulesAsync.valueOrNull ?? {};
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
     final pairs = _visiblePairs(activeModules, role);
+
+    // Handle programmatic navigation from KPI cards (by module code)
+    ref.listen(dashboardNavigationProvider, (_, moduleCode) {
+      if (moduleCode == null) return;
+      final idx = pairs.indexWhere(
+        (p) => p.navItem.moduleCode == moduleCode || p.navItem.label == moduleCode,
+      );
+      if (idx >= 0 && mounted) setState(() => _selectedIndex = idx);
+      ref.read(dashboardNavigationProvider.notifier).state = null;
+    });
 
     // Clamp index when module list shrinks
     final clampedIndex = _selectedIndex.clamp(0, pairs.length - 1);
@@ -223,7 +257,7 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
     final layout = layoutAsync.when(
       data: (l) => l,
       loading: () => SduiLayout.dashboardDefault(),
-      error: (_, __) => SduiLayout.dashboardDefault(),
+      error: (_, _) => SduiLayout.dashboardDefault(),
     );
     return SduiRenderer(layout: layout);
   }

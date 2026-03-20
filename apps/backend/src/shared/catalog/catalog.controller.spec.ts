@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
+import { PriceHistoryService } from './price-history/price-history.service';
 
 const mockCatalogService = {
   getCategories: jest.fn(),
@@ -22,6 +23,7 @@ describe('CatalogController', () => {
       controllers: [CatalogController],
       providers: [
         { provide: CatalogService, useValue: mockCatalogService },
+        { provide: PriceHistoryService, useValue: {} },
       ],
     }).compile();
 

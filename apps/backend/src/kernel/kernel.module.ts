@@ -10,6 +10,7 @@ import { AuthGuard } from './auth/auth.guard';
 import { TenantGuard } from './tenancy/tenant.guard';
 import { ModuleGuard } from './modules/module.guard';
 import { RolesGuard } from './rbac/roles.guard';
+import { BillingGuard } from './billing/billing.guard';
 
 @Global()
 @Module({
@@ -19,7 +20,9 @@ import { RolesGuard } from './rbac/roles.guard';
     { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: ModuleGuard }, // Auth → Tenant → Module → Roles
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: BillingGuard }, // After TenantGuard — reads tenantId from request
+    BillingGuard,
   ],
-  exports: [AuthModule, TenancyModule, RbacModule, ModulesModule, AuditLogModule, EventsModule],
+  exports: [AuthModule, TenancyModule, RbacModule, ModulesModule, AuditLogModule, EventsModule, BillingGuard],
 })
 export class KernelModule {}

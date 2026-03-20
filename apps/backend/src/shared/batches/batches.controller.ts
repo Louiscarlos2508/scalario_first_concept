@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { BatchesService } from './batches.service';
 import { RequiresModule } from '../../kernel/modules/module.decorator';
 import { Roles } from '../../kernel/rbac/roles.decorator';
@@ -20,5 +20,13 @@ export class BatchesController {
   @Get('expiring/count')
   async getExpiringCount(@Query('tenantId') tenantId: string) {
     return this.batchesService.getExpiringCount(tenantId);
+  }
+
+  @Patch(':id/deplete')
+  async depleteBatch(
+    @Param('id') batchId: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    return this.batchesService.depleteBatch(batchId, tenantId);
   }
 }

@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 24 — Fraîcheur + code couleur priorité vente
 - **Story ID:** 24-3-onglet-fraicheur
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** Medium
 - **Depends on:** 24-1 (endpoint batches), 24-2 (FreshnessChip)
 
@@ -57,29 +57,29 @@
 
 ## Tasks/Subtasks
 
-- [ ] **Task 1 : FreshnessScreen**
-  - [ ] Créer `apps/frontend/lib/features/shared/freshness/presentation/screens/freshness_screen.dart`
-  - [ ] Appeler `GET /api/v1/batches/expiring?days=90`
-  - [ ] Sections : Expirés | Urgents | À surveiller | OK
-  - [ ] Chaque item avec `FreshnessChip`, nom, date expiration, qté restante
-  - [ ] État vide "Tous vos lots sont frais"
+- [x] **Task 1 : FreshnessScreen**
+  - [x] Créer `apps/frontend/lib/features/shared/freshness/presentation/screens/freshness_screen.dart`
+  - [x] Appeler `GET /api/v1/batches/expiring?days=90`
+  - [x] Sections : Expirés | Urgents | À surveiller | OK
+  - [x] Chaque item avec `FreshnessChip`, nom, date expiration, qté restante
+  - [x] État vide "Tous vos lots sont frais"
 
-- [ ] **Task 2 : DeclassifySheet**
-  - [ ] Bottom sheet avec quantité (pré-remplie), dropdown motif
-  - [ ] Message conditionnel si variance naturelle
-  - [ ] Submit → `POST /api/v1/inventory/loss` avec motif + marquer batch isDepleted
+- [x] **Task 2 : DeclassifySheet**
+  - [x] Bottom sheet avec quantité (pré-remplie), dropdown motif
+  - [x] Message conditionnel si variance naturelle
+  - [x] Submit → `POST /api/v1/inventory/loss` avec motif + marquer batch isDepleted
 
-- [ ] **Task 3 : FreshnessProvider**
-  - [ ] `freshnessProvider` : `FutureProvider<List<BatchDto>>`
-  - [ ] `urgentCountProvider` : `FutureProvider<int>`
+- [x] **Task 3 : FreshnessProvider**
+  - [x] `freshnessProvider` : `FutureProvider<List<BatchDto>>`
+  - [x] `urgentCountProvider` : `FutureProvider<int>`
 
-- [ ] **Task 4 : InventoryScreen — onglet Fraîcheur**
-  - [ ] Ajouter onglet "Fraîcheur" dans `inventory_screen.dart`
-  - [ ] Badge orange si `urgentCount > 0`
+- [x] **Task 4 : InventoryScreen — onglet Fraîcheur**
+  - [x] Ajouter onglet "Fraîcheur" dans `inventory_screen.dart`
+  - [x] Badge orange si `urgentCount > 0`
 
-- [ ] **Task 5 : KPI card dashboard**
-  - [ ] Card "Lots urgents" dans `DashboardScreen`
-  - [ ] Navigation tap → `InventoryScreen` onglet Fraîcheur
+- [x] **Task 5 : KPI card dashboard**
+  - [x] Card "Lots urgents" dans `DashboardScreen`
+  - [x] Navigation tap → `InventoryScreen` onglet Fraîcheur
 
 ---
 

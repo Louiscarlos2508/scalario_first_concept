@@ -41,6 +41,9 @@ describe('InventoryService', () => {
               findMany: jest.fn().mockResolvedValue([]),
               update: jest.fn().mockResolvedValue({}),
             },
+            productVariant: {
+              update: jest.fn().mockResolvedValue({}),
+            },
           },
         },
         {
@@ -653,6 +656,35 @@ describe('InventoryService', () => {
       const types = calls.map((c: any) => c[0].data.type);
       expect(types).not.toContain('SALE');
       expect(types).toContain('REPACKAGING');
+    });
+
+    it('AC5 (25-1): decrements variant stockQuantity and creates SALE movement with variantId', async () => {
+      const tx = {
+        id: TX_ID,
+        tenantId: TENANT_ID,
+        itemsJson: [{ catalogItemId: 'item-001', variantId: 'var-001', quantity: 2 }],
+      };
+      (prisma.transaction.findUnique as jest.Mock).mockResolvedValue(tx);
+      (prisma.productVariant.update as jest.Mock).mockResolvedValue({});
+
+      await service.handleTransactionCreated({ transactionId: TX_ID, tenantId: TENANT_ID });
+
+      expect(prisma.productVariant.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'var-001' },
+          data: { stockQuantity: { decrement: 2 } },
+        }),
+      );
+      expect(prisma.inventoryMovement.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            catalogItemId: 'item-001',
+            variantId: 'var-001',
+            type: 'SALE',
+            quantity: 2,
+          }),
+        }),
+      );
     });
   });
 });

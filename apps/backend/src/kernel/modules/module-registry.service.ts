@@ -16,15 +16,29 @@ export class ModuleRegistryService {
     return tenantModule !== null;
   }
 
-  async activateDefaultModulesForTenant(tenantId: string): Promise<void> {
-    const defaultModules = await this.prisma.module.findMany({
-      where: {
-        OR: [{ type: 'shared' }, { code: 'retail' }],
-      },
+  async setModuleStatus(tenantId: string, moduleCode: string, status: 'active' | 'inactive'): Promise<void> {
+    const mod = await this.prisma.module.findUnique({ where: { code: moduleCode } });
+    if (!mod) return;
+    await this.prisma.tenantModule.upsert({
+      where: { tenantId_moduleId: { tenantId, moduleId: mod.id } },
+      create: { tenantId, moduleId: mod.id, status },
+      update: { status },
+    });
+  }
+
+  async activateDefaultModulesForTenant(tenantId: string, planCode: string): Promise<void> {
+    // Resolve which modules the plan includes
+    const plan = await this.prisma.planDefinition.findUnique({ where: { code: planCode } });
+    const includedCodes: string[] = plan ? (plan.includedModules as string[]) : ['catalog', 'retail'];
+
+    if (includedCodes.length === 0) return;
+
+    const modules = await this.prisma.module.findMany({
+      where: { code: { in: includedCodes } },
     });
 
     await Promise.all(
-      defaultModules.map((mod) =>
+      modules.map((mod) =>
         this.prisma.tenantModule.upsert({
           where: { tenantId_moduleId: { tenantId, moduleId: mod.id } },
           create: { tenantId, moduleId: mod.id, status: 'active' },

@@ -13,6 +13,9 @@ describe('ModuleRegistryService', () => {
     module: {
       findMany: jest.fn(),
     },
+    planDefinition: {
+      findUnique: jest.fn(),
+    },
   };
 
   const validTenantId = 'f1e2d3c4-b5a6-7890-abcd-ef1234567890';
@@ -104,28 +107,30 @@ describe('ModuleRegistryService', () => {
       { id: 'mod-catalog', code: 'catalog', type: 'shared' },
       { id: 'mod-retail', code: 'retail', type: 'vertical' },
     ];
+    const freePlan = { code: 'free', includedModules: ['catalog', 'retail'] };
 
-    it('should query shared and retail modules then upsert TenantModule for each', async () => {
+    it('should query only plan-included modules then upsert TenantModule for each', async () => {
+      mockPrismaService.planDefinition.findUnique.mockResolvedValue(freePlan);
       mockPrismaService.module.findMany.mockResolvedValue(mockModules);
       mockPrismaService.tenantModule.upsert.mockResolvedValue({});
 
-      await service.activateDefaultModulesForTenant(validTenantId);
+      await service.activateDefaultModulesForTenant(validTenantId, 'free');
 
+      expect(mockPrismaService.planDefinition.findUnique).toHaveBeenCalledWith({ where: { code: 'free' } });
       expect(mockPrismaService.module.findMany).toHaveBeenCalledWith({
-        where: {
-          OR: [{ type: 'shared' }, { code: 'retail' }],
-        },
+        where: { code: { in: ['catalog', 'retail'] } },
       });
       expect(mockPrismaService.tenantModule.upsert).toHaveBeenCalledTimes(2);
     });
 
     it('should upsert each module with status active and correct composite key', async () => {
+      mockPrismaService.planDefinition.findUnique.mockResolvedValue({ code: 'free', includedModules: ['catalog'] });
       mockPrismaService.module.findMany.mockResolvedValue([
         { id: 'mod-catalog', code: 'catalog', type: 'shared' },
       ]);
       mockPrismaService.tenantModule.upsert.mockResolvedValue({});
 
-      await service.activateDefaultModulesForTenant(validTenantId);
+      await service.activateDefaultModulesForTenant(validTenantId, 'free');
 
       expect(mockPrismaService.tenantModule.upsert).toHaveBeenCalledWith({
         where: { tenantId_moduleId: { tenantId: validTenantId, moduleId: 'mod-catalog' } },
@@ -134,10 +139,23 @@ describe('ModuleRegistryService', () => {
       });
     });
 
-    it('should do nothing when no default modules exist', async () => {
+    it('should fallback to catalog+retail when plan not found in DB', async () => {
+      mockPrismaService.planDefinition.findUnique.mockResolvedValue(null);
+      mockPrismaService.module.findMany.mockResolvedValue(mockModules);
+      mockPrismaService.tenantModule.upsert.mockResolvedValue({});
+
+      await service.activateDefaultModulesForTenant(validTenantId, 'unknown');
+
+      expect(mockPrismaService.module.findMany).toHaveBeenCalledWith({
+        where: { code: { in: ['catalog', 'retail'] } },
+      });
+    });
+
+    it('should do nothing when plan has no included modules', async () => {
+      mockPrismaService.planDefinition.findUnique.mockResolvedValue({ code: 'free', includedModules: [] });
       mockPrismaService.module.findMany.mockResolvedValue([]);
 
-      await service.activateDefaultModulesForTenant(validTenantId);
+      await service.activateDefaultModulesForTenant(validTenantId, 'free');
 
       expect(mockPrismaService.tenantModule.upsert).not.toHaveBeenCalled();
     });

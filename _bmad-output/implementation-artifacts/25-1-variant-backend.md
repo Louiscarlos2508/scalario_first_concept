@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 25 — Variantes, multi-tarifs & promotions
 - **Story ID:** 25-1-variant-backend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** Epics 1–9, Epic 2 (CatalogItem)
 

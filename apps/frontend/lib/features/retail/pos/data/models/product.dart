@@ -1,4 +1,6 @@
 import 'package:isar/isar.dart';
+import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
+import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 
 part 'product.g.dart';
 
@@ -35,6 +37,32 @@ class Product {
   String? parentItemId;
   @ignore
   bool hasChildren = false;
+
+  // Epic 24 — Fraîcheur + code couleur
+  @ignore
+  DateTime? nearestExpiryDate;
+  @ignore
+  int? expiryDays;
+
+  // Epic 25 — Variantes
+  @ignore
+  bool hasVariants = false;
+
+  // Epic 26 — Traçabilité
+  @ignore
+  bool trackSerialNumbers = false;
+  @ignore
+  int? warrantyMonths;
+  @ignore
+  bool requiresPrescription = false;
+  @ignore
+  bool dynamicPricing = false;
+  @ignore
+  bool isUnique = false;
+  @ignore
+  List<ProductVariant> variants = [];
+  @ignore
+  List<PriceLevel> priceLevels = [];
 
   DateTime? lastUpdated;
   bool isDeleted = false;
@@ -101,6 +129,26 @@ class Product {
                 : null)
         ..parentItemId = json['parentItemId']?.toString() ??
             json['parent_item_id']?.toString()
+        ..nearestExpiryDate = json['nearestExpiryDate'] != null
+            ? DateTime.tryParse(json['nearestExpiryDate'].toString())
+            : (json['nearest_expiry_date'] != null
+                ? DateTime.tryParse(json['nearest_expiry_date'].toString())
+                : null)
+        ..expiryDays = json['expiryDays'] as int? ?? json['expiry_days'] as int?
+        ..hasVariants = json['hasVariants'] ?? json['has_variants'] ?? false
+        ..trackSerialNumbers = json['trackSerialNumbers'] ?? json['track_serial_numbers'] ?? false
+        ..warrantyMonths = json['warrantyMonths'] as int? ?? json['warranty_months'] as int?
+        ..requiresPrescription = json['requiresPrescription'] ?? json['requires_prescription'] ?? false
+        ..dynamicPricing = json['dynamicPricing'] ?? json['dynamic_pricing'] ?? false
+        ..isUnique = json['isUnique'] ?? json['is_unique'] ?? false
+        ..variants = (json['variants'] as List<dynamic>?)
+                ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+                .toList() ??
+            []
+        ..priceLevels = (json['priceLevels'] as List<dynamic>?)
+                ?.map((p) => PriceLevel.fromJson(p as Map<String, dynamic>))
+                .toList() ??
+            []
         ..isDeleted = json['isDeleted'] ?? json['is_deleted'] ?? false
         ..lastUpdated = json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'])

@@ -14,7 +14,7 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '6.1'
+version: '6.4'
 date: '2026-03-11'
 lastEdited: '2026-03-19'
 editHistory:
@@ -24,6 +24,12 @@ editHistory:
     changes: 'FR89–FR91 ajoutés (Variantes, Multi-tarifs & Promotions). Phase 2b et Phase 3 mises à jour. Table des matières FR1–FR91.'
   - date: '2026-03-19'
     changes: 'Post-validation fixes: version header 5.0→6.1, FR45 measurability rewrite, NFR15/NFR16 implementation-name removal.'
+  - date: '2026-03-19'
+    changes: 'FR92–FR97 ajoutés (Traçabilité Articles & Configurations Métier). Phase 2b mise à jour. Table des matières FR1–FR97. Version 6.1→6.2.'
+  - date: '2026-03-19'
+    changes: 'FR98–FR99 ajoutés (Retours & Réservations). Phase 2a (FR98) et Phase 2b (FR99) mises à jour. Table des matières FR1–FR99. Version 6.2→6.3.'
+  - date: '2026-03-20'
+    changes: 'FR100–FR103 ajoutés (Plans Tarifaires & Facturation). PlanDefinition par tenant (FR100, Phase 2a) ; frais installation + statuts facturation trial/active/overdue/suspended (FR101, Phase 2a) ; consultation plan + demande upgrade propriétaire (FR102, Phase 2a préparé Phase 3) ; paiement en ligne Mobile Money/carte + auto-provisioning tenant (FR103, Phase 3). Table des matières FR1–FR103. Version 6.3→6.4.'
 classification:
   projectType: saas_b2b
   domain: erp_multi_vertical_commerce
@@ -44,7 +50,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 6.1** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+**Version 6.4** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
 
 Confidentiel — Carlos-simpore
 
@@ -61,6 +67,9 @@ Confidentiel — Carlos-simpore
 | 5.0 | 2026-03-11 | Carlos-simpore | Corrections post-audit : saut de page FR manquant corrigé, FR3/FR10 mis à jour, réglementations étendues à la zone UEMOA/CEMAC (multi-pays), CNSS sans API corrigé (export fichier uniquement), NFR20 restructuré, FR63–FR75 Enterprise ajoutés, Annexes A et B complétées, OHADA Phase 2b clarifié, Table des matières ajoutée. |
 | 6.0 | 2026-03-19 | Carlos-simpore | Ajout FR76–FR88 (Inventaire Avancé & Vente Configurable) : unitType configurable, vente au poids, commandes fournisseurs + réception liée, alertes stock bas par produit, résumé quotidien automatique, pertes avec emplacement, circuit de réapprovisionnement interne (Phase 2a) ; conversion vrac→détail et dates de fraîcheur + code couleur (Phase 2b). Mise à jour phases 2a/2b, Table des matières, Politique Notifications, UI-Driven retail. Issu des gaps identifiés dans la proposition client Blandine. |
 | 6.1 | 2026-03-19 | Carlos-simpore | Ajout FR89–FR91 (Variantes, Multi-tarifs & Promotions) : variantes article avec attributs tenant-configurables (Phase 2b), niveaux de prix multiples avec sélection automatique par customerType ou quantité (Phase 2b), règles de promotion configurables remise/%/X+Y/prix barré (Phase 3). Mise à jour phases 2b et 3, Table des matières FR1–FR91. |
+| 6.2 | 2026-03-19 | Carlos-simpore | Ajout FR92–FR97 (Traçabilité Articles & Configurations Métier) : numéros de série traçables par unité (FR92), certificats de garantie (FR93), prescription ordonnance (FR94), date de garde optimale sur lot (FR95), prix dynamique avec historique (FR96), article unique dépôt-vente (FR97). Mise à jour Phase 2b, Table des matières FR1–FR97. |
+| 6.3 | 2026-03-19 | Carlos-simpore | Ajout FR98–FR99 (Retours & Réservations) : retour article au POS avec politique tenant configurable — remboursement/avoir/échange, réintégration stock RETURN (FR98, Phase 2a) ; réservation avec acompte partiel configurable, suivi solde client, KPI dashboard (FR99, Phase 2b). Mise à jour phases 2a/2b, Table des matières FR1–FR99. |
+| 6.4 | 2026-03-20 | Carlos-simpore | Ajout FR100–FR103 (Plans Tarifaires & Facturation) : plan tarifaire par tenant avec PlanDefinition — free/standard/premium/enterprise, changement plan auto-applique modules et maxUsers, downgrade avec confirmation (FR100, Phase 2a) ; frais d'installation/formation + statuts facturation trial/active/overdue/suspended + suspension auto configurable (FR101, Phase 2a) ; consultation plan et demande upgrade par propriétaire tenant (FR102, Phase 2a — self-service préparé Phase 3) ; paiement en ligne Mobile Money/carte + onboarding self-service + auto-provisioning tenant (FR103, Phase 3). Architecture anticipée dès Phase 2a (champs Tenant + PlanDefinition). Mise à jour phases 2a et 3, Table des matières FR1–FR103. |
 
 ---
 
@@ -86,7 +95,7 @@ Confidentiel — Carlos-simpore
 | 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
 | 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
 | 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
-| 19 | Exigences Fonctionnelles (FR1–FR91) | Toutes les exigences numérotées par module |
+| 19 | Exigences Fonctionnelles (FR1–FR103) | Toutes les exigences numérotées par module |
 | 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
 | 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
 | 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
@@ -188,16 +197,21 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 - Résumé quotidien automatique WhatsApp / push (FR86)
 - Circuit de demande de réapprovisionnement interne (FR88)
 - Intégration fiscale FEC/DGI (valide file de sync dédiée)
+- Retours articles et remboursements (FR98)
+- Plans tarifaires et facturation admin (FR100–FR101)
+- Consultation plan par le propriétaire (FR102)
 
 ### Phase 2b — Croissance
 
 - Conversion vrac → unité détail avec règles de reconditionnement (FR83)
 - Dates de fraîcheur + coefficient de tolérance déshydratation + code couleur POS (FR84–FR85)
 - Variantes produit (FR89), multi-tarifs configurables (FR90)
+- Traçabilité articles : séries, garantie, ordonnance, garde, prix dynamique, articles uniques (FR92–FR97)
 - Dashboard distant propriétaire (mobile)
 - Import CSV catalogue
 - API Mobile Money (Orange Money / Moov Money)
 - Export OHADA Retail (Phase 2b) : export des écritures de ventes au format OHADA pour remise à un expert-comptable externe. Distinct de la comptabilité intégrée Enterprise (Phase 3).
+- Réservations avec acompte (FR99)
 - Programme Ambassadeurs (voir section dédiée ci-dessous)
 
 ### Phase 3 — Expansion
@@ -206,6 +220,7 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 - Deuxième vertical (Pharmacie ou Services)
 - Scalario Connect — Interconnexion inter-entreprises (voir section dédiée)
 - Scalario Enterprise — Modèle multi-départements PME : RH & Paie, Comptabilité OHADA, Secrétariat, Logistique (voir section dédiée)
+- Paiement en ligne + onboarding self-service (FR103)
 - Facturation et abonnement intégrés
 - Reporting avancé, prédictions IA
 - Open API, multi-devises, expansion internationale
@@ -979,6 +994,91 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 - **FR90 :** Un article peut avoir plusieurs niveaux de prix configurables par le propriétaire : détail (défaut), gros, fidélité, promotionnel. Le prix applicable est déterminé automatiquement soit par le `customerType` du contact associé à la transaction, soit par la quantité commandée (seuil tenant-configurable). Le commercial peut forcer un niveau de prix manuellement si son rôle inclut la permission `price_override`. Les niveaux de prix et leurs labels sont entièrement tenant-configurables — un tenant peut en définir entre 1 et N. Le reçu affiche le niveau de prix appliqué. *(Phase 2b)*
 
 - **FR91 :** Le propriétaire peut créer des règles de promotion configurables : (a) remise en pourcentage sur un article ou une catégorie entière, (b) offre quantitative (ex: 3 acheté = 1 offert — seuil et article offert configurables), (c) prix barré temporaire (prix original affiché barré, nouveau prix actif). Chaque promotion a une date de début, une date de fin, et un statut (active/inactive) modifiable manuellement. Les promotions actives s'appliquent automatiquement au POS dès qu'un article éligible est ajouté au panier — sans intervention du commercial. Le reçu affiche le prix original barré et le prix après remise pour chaque article remisé. Plusieurs promotions peuvent coexister ; en cas de cumul sur un même article, la promotion la plus avantageuse pour le client s'applique (configurable : plus avantageuse ou première définie). *(Phase 3)*
+
+---
+
+### Traçabilité Articles & Configurations Métier (FR92–FR97)
+
+> **Note :** Tous ces champs sont optionnels et désactivés par défaut. Chaque tenant active uniquement les fonctionnalités pertinentes pour son métier via le panel admin.
+
+- **FR92 :** Un article du catalogue peut avoir un numéro de série (IMEI, numéro de châssis, etc.) traçable par unité vendue. Le champ `serialNumber` est saisi à la vente (pas au catalogue). Le système enregistre le lien article–série–client–date de vente. L'historique des séries vendues est consultable par le propriétaire. Configurable : le propriétaire active/désactive le suivi par série par catégorie de produit. *(Phase 2b)*
+
+- **FR93 :** Un article peut avoir une durée de garantie configurable (`warrantyMonths` sur CatalogItem). À la vente d'un article avec garantie, le système génère un certificat de garantie (numéro unique, date d'achat, date d'expiration garantie, client). Le client peut être recherché par numéro de garantie. *(Phase 2b)*
+
+- **FR94 :** Un article peut être marqué `requiresPrescription: true` (pharmacie). À la vente, le système exige la saisie d'un numéro d'ordonnance et du nom du prescripteur avant validation. Le numéro d'ordonnance est enregistré sur la transaction. Configurable par tenant — désactivé par défaut. *(Phase 2b)*
+
+- **FR95 :** Un lot de produit (ProductBatch) peut avoir une date de consommation optimale (`bestBeforeDate`) en plus de la date d'expiration (`expiresAt`). Le code couleur fraîcheur utilise `bestBeforeDate` si renseigné, sinon `expiresAt`. Utile pour les produits avec fenêtre de garde (vin, fromage). *(Phase 2b)*
+
+- **FR96 :** Un article peut être marqué `dynamicPricing: true`. Le prix unitaire est mis à jour quotidiennement par le propriétaire (ou via une source externe configurable). L'historique des prix est conservé. Le POS utilise toujours le dernier prix en vigueur. Utile pour : or, carburant, matières premières. *(Phase 2b)*
+
+- **FR97 :** Un article peut être marqué `isUnique: true` (dépôt-vente, antiquités, occasion). Le stock maximum est 1. L'article n'est pas réapprovisable — une fois vendu, il disparaît du catalogue actif. Le propriétaire peut dupliquer un article unique pour en créer un similaire. *(Phase 2b)*
+
+---
+
+### Retours & Réservations (FR98–FR99)
+
+- **FR98 :** Le commercial peut enregistrer un retour article au POS.
+  Le retour est lié à la transaction de vente originale (recherche par
+  numéro de reçu ou scan code-barres). Le système propose :
+  remboursement cash, avoir client (crédit sur le compte Contact),
+  ou échange article. Le stock est automatiquement réintégré
+  (StockMovement type RETURN). Le Z-report distingue les ventes
+  brutes et les retours. Le propriétaire peut configurer une
+  politique de retour par tenant : délai maximum (jours),
+  nécessité d'un motif obligatoire, approbation manager requise
+  ou non. *(Phase 2a — bloquant pour tout retail)*
+
+- **FR99 :** Le commercial peut créer une réservation avec acompte.
+  Le client paie un montant partiel (configurable : minimum 10% à 50%
+  du total). La réservation crée une transaction de type "reservation"
+  avec statut "pending". Le solde restant est visible sur la fiche client.
+  Quand le client récupère l'article, le commercial complète le paiement
+  et la transaction passe en "completed". Le propriétaire peut annuler
+  une réservation — l'acompte est converti en avoir client ou remboursé.
+  Le dashboard affiche un KPI "Réservations en cours" avec le montant
+  total des acomptes. *(Phase 2b)*
+
+### Plans Tarifaires & Facturation (FR100–FR103)
+
+- **FR100 :** Le superadmin peut assigner un plan tarifaire par tenant
+  (free, standard, premium, enterprise). Chaque plan est défini dans
+  une table PlanDefinition : code, nom, prix mensuel, maxUsers,
+  liste des modules inclus. Le changement de plan met à jour
+  automatiquement les modules activés et le maxUsers. Le downgrade
+  désactive les modules hors-plan (avec confirmation). Le plan
+  "free" est le défaut à la création. Les plans sont configurables
+  par le superadmin sans déploiement. *(Phase 2a)*
+
+- **FR101 :** Le superadmin peut enregistrer des frais d'installation
+  et de formation par tenant. Les montants sont libres (négociés
+  avec le client), pré-remplis par le plan mais modifiables.
+  Le panel admin affiche le statut facturation de chaque tenant :
+  trial (30j gratuit), active, overdue, suspended. Un tenant
+  "overdue" depuis plus de 30 jours peut être suspendu
+  automatiquement (configurable). Le tenant suspendu voit un
+  message "Abonnement expiré — contactez votre administrateur"
+  au lieu de l'app. *(Phase 2a)*
+
+- **FR102 :** Le propriétaire du tenant peut consulter son plan
+  actuel, les modules inclus, le statut de facturation et
+  l'historique des paiements depuis l'écran Paramètres de son
+  backoffice. Il peut demander un upgrade de plan (notification
+  envoyée au superadmin pour validation manuelle en Phase 2a).
+  *(Phase 2a — self-service préparé pour Phase 3)*
+
+- **FR103 :** Le système supporte le paiement en ligne de
+  l'abonnement via une page d'onboarding dédiée. Le client
+  peut : choisir son plan, payer via Mobile Money (Orange Money,
+  Moov Money) ou carte bancaire, et son tenant est créé et
+  activé automatiquement à la confirmation du paiement.
+  L'upgrade de plan est possible depuis le backoffice avec
+  paiement intégré. *(Phase 3 — auto-provisioning complet)*
+
+> **Note d'encadrement :**
+> Phase 2a = gestion manuelle par Carlos (panel admin).
+> Phase 3 = self-service client (paiement en ligne + auto-provisioning).
+> L'architecture est conçue dès Phase 2a pour supporter Phase 3
+> sans migration (champs anticipation sur Tenant + PlanDefinition).
 
 ---
 

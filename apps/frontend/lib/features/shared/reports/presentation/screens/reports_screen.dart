@@ -4,17 +4,47 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/session_history_screen.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
         .format(amount);
 
-class ReportsScreen extends ConsumerWidget {
+class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
+  bool _showHistory = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // React to external signals (e.g. from TerminalStatusList)
+    ref.listen(showSessionHistoryProvider, (_, show) {
+      if (show && mounted) setState(() => _showHistory = true);
+    });
+
+    if (_showHistory) {
+      return PopScope(
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) {
+            setState(() => _showHistory = false);
+            ref.read(showSessionHistoryProvider.notifier).state = false;
+          }
+        },
+        child: SessionHistoryScreen(
+          onBack: () {
+            setState(() => _showHistory = false);
+            ref.read(showSessionHistoryProvider.notifier).state = false;
+          },
+        ),
+      );
+    }
+
     final reportAsync = ref.watch(salesReportProvider);
     final dateRange = ref.watch(salesReportDateRangeProvider);
 
@@ -49,14 +79,14 @@ class ReportsScreen extends ConsumerWidget {
         ],
       ),
       body: reportAsync.when(
-        data: (data) => _buildReportBody(context, data),
+        data: (data) => _buildReportBody(data),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Erreur : $err')),
+        error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
     );
   }
 
-  Widget _buildReportBody(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildReportBody(Map<String, dynamic> data) {
     final productSales = (data['productSales'] as List<dynamic>?) ?? [];
     final paymentMethodStats =
         (data['paymentMethodStats'] as List<dynamic>?) ?? [];
@@ -66,24 +96,49 @@ class ReportsScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle(context, 'Ventes par produit'),
+          _buildSessionHistoryCard(),
+          const SizedBox(height: 24),
+          _buildSectionTitle('Ventes par produit'),
           const SizedBox(height: 16),
           _buildProductSalesTable(productSales),
           const SizedBox(height: 40),
-          _buildSectionTitle(context, 'Ventes par méthode de paiement'),
+          _buildSectionTitle('Ventes par méthode de paiement'),
           const SizedBox(height: 16),
-          _buildPaymentMethodChart(context, paymentMethodStats),
+          _buildPaymentMethodChart(paymentMethodStats),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
+  Widget _buildSessionHistoryCard() {
+    return Card(
+      key: const Key('session_history_card'),
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        side: BorderSide(color: AppColors.border),
+      ),
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.primary,
+          child: Icon(Icons.point_of_sale, color: Colors.white, size: 20),
+        ),
+        title: const Text('Historique des sessions',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: const Text('Consulter les Z-reports des caisses clôturées'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => setState(() => _showHistory = true),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: Theme.of(
-        context,
-      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(context)
+          .textTheme
+          .titleLarge
+          ?.copyWith(fontWeight: FontWeight.bold),
     );
   }
 
@@ -122,8 +177,10 @@ class ReportsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPaymentMethodChart(BuildContext context, List<dynamic> stats) {
-    if (stats.isEmpty) return const Text('Aucune donnée de paiement pour cette période.');
+  Widget _buildPaymentMethodChart(List<dynamic> stats) {
+    if (stats.isEmpty) {
+      return const Text('Aucune donnée de paiement pour cette période.');
+    }
 
     return Row(
       children: [
@@ -137,7 +194,8 @@ class ReportsScreen extends ConsumerWidget {
               sections: stats.asMap().entries.map((e) {
                 final index = e.key;
                 final val = e.value;
-                final color = Colors.primaries[index % Colors.primaries.length];
+                final color =
+                    Colors.primaries[index % Colors.primaries.length];
                 return PieChartSectionData(
                   color: color,
                   value: (val['value'] as num).toDouble(),
@@ -155,7 +213,8 @@ class ReportsScreen extends ConsumerWidget {
             children: stats.asMap().entries.map((e) {
               final index = e.key;
               final val = e.value;
-              final color = Colors.primaries[index % Colors.primaries.length];
+              final color =
+                  Colors.primaries[index % Colors.primaries.length];
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(

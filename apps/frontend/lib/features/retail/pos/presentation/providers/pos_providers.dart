@@ -26,6 +26,7 @@ import 'package:frontend/features/retail/pos/presentation/state/cart_notifier.da
 import 'package:frontend/features/retail/pos/presentation/state/cart_state.dart';
 import 'package:frontend/features/retail/pos/presentation/state/checkout_controller.dart';
 import 'package:frontend/features/retail/pos/presentation/state/parked_carts_notifier.dart';
+import 'package:frontend/features/shared/returns/data/repositories/returns_repository.dart';
 
 // Services & Repositories
 final isarServiceProvider = Provider<IsarService>((ref) {
@@ -137,6 +138,23 @@ final checkoutControllerProvider =
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
 
+// Epic 24 — Freshness filter state (persisted for POS session duration)
+final urgentOnlyFilterProvider = StateProvider<bool>((ref) => false);
+
+// Epic 24 — Freshness thresholds (configurable per tenant; defaults match backend)
+class FreshnessThresholds {
+  final double greenThreshold;
+  final double orangeThreshold;
+  const FreshnessThresholds({
+    this.greenThreshold = 50.0,
+    this.orangeThreshold = 20.0,
+  });
+}
+
+final freshnessThresholdsProvider = StateProvider<FreshnessThresholds>(
+  (ref) => const FreshnessThresholds(),
+);
+
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final repo = ref.watch(categoryRepositoryProvider);
   final tenantId = ref.watch(activeTenantProvider);
@@ -160,6 +178,44 @@ final productListProvider = FutureProvider<List<Product>>((ref) async {
       p.hasChildren = true;
     }
   }
+
+  // AC5 (Story 24-2) — Merge batch freshness data (fails gracefully offline)
+  try {
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    final uri = Uri.parse('${ApiConstants.baseUrl}/batches/expiring').replace(
+      queryParameters: {'tenantId': tenantId, 'days': '365'},
+    );
+    final response = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': tenantId,
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode == 200) {
+      final batches = jsonDecode(response.body) as List<dynamic>;
+      // Build map: catalogItemId → earliest batch (already sorted by expiresAt ASC)
+      final batchMap = <String, Map<String, dynamic>>{};
+      for (final b in batches) {
+        final itemId = b['catalogItemId']?.toString();
+        if (itemId != null && !batchMap.containsKey(itemId)) {
+          batchMap[itemId] = b as Map<String, dynamic>;
+        }
+      }
+      for (final p in products) {
+        if (p.remoteId != null && batchMap.containsKey(p.remoteId)) {
+          final b = batchMap[p.remoteId]!;
+          p.nearestExpiryDate = b['expiresAt'] != null
+              ? DateTime.tryParse(b['expiresAt'].toString())
+              : null;
+        }
+      }
+    }
+  } catch (_) {
+    // Offline or error — products shown without freshness indicator
+  }
+
   return products;
 });
 
@@ -254,4 +310,12 @@ final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
   } else {
     throw Exception('Failed to fetch stock history: ${response.statusCode}');
   }
+});
+
+// Epic 27 — Returns repository (online-only, no Isar)
+final returnsRepositoryProvider = Provider<ReturnsRepository>((ref) {
+  return ReturnsRepository(
+    tokenGetter: () =>
+        Supabase.instance.client.auth.currentSession?.accessToken,
+  );
 });

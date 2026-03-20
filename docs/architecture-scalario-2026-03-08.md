@@ -2,7 +2,7 @@
 
 **Author:** Carlos-simpore
 **Date:** 2026-03-19
-**Version:** 1.1
+**Version:** 1.4
 **Status:** Approved
 **PRD Reference:** `_bmad-output/planning-artifacts/prd.md`
 
@@ -11,6 +11,9 @@
 |:---|:---|:---|
 | 1.0 | 2026-03-08 | Initial architecture document (FR1–FR75) |
 | 1.1 | 2026-03-19 | FR76–FR91: unit types, weight sales, variants, multi-tarifs, promotions, purchase orders, internal requests, freshness batches, loss location, notification config |
+| 1.2 | 2026-03-19 | FR92–FR97: serial number tracking (SerialRecord), warranty certificates, prescription field, bestBeforeDate on ProductBatch, dynamic pricing (PriceHistory), unique items. New fields on CatalogItem. Two new shared models. |
+| 1.3 | 2026-03-19 | FR98–FR99: return policy fields on Tenant (returnPolicyDays, returnRequiresReason, returnRequiresApproval), two new shared models (ReturnRecord, Reservation). |
+| 1.4 | 2026-03-20 | FR100–FR103: billing fields on Tenant (plan, maxUsers, installationFee/Paid, trainingFee/Paid, billingStartDate, billingStatus, trialEndsAt, notes), two new kernel models (PlanDefinition, BillingEvent). New section 4.1.6 Billing Module. Diagram and FR traceability updated. |
 
 ---
 
@@ -338,6 +341,44 @@ OrganizationMember.role → references Role
 ```
 Module(id, code, name, type: 'shared'|'vertical', dependencies: string[])
 TenantModule(tenantId, moduleId, activatedAt, status: 'active'|'inactive')
+```
+
+---
+
+#### 4.1.6 Billing Module (`kernel/billing`)
+
+**Purpose:** Plan assignment, billing status lifecycle, and installation/training fee tracking per tenant. Phase 2a = manual management by superadmin. Phase 3 = online self-service payment.
+
+**Responsibilities:**
+
+- Store and expose `PlanDefinition` catalogue (free, standard, premium, enterprise) — configurable by superadmin without deployment
+- On plan change: auto-apply `maxUsers` and activate/deactivate `TenantModule` entries; require confirmation before downgrade that removes modules
+- Track `BillingEvent` records for each subscription payment, installation fee, and training fee
+- Manage tenant billing status lifecycle: `trial` → `active` → `overdue` → `suspended`
+- Auto-suspend tenants that have been `overdue` beyond configurable threshold (default 30 days)
+- Serve billing history and current plan info to the tenant owner's backoffice Settings screen (FR102)
+- Phase 3: integrate with Mobile Money (Orange Money, Moov Money) and card payment gateway for online onboarding and plan upgrades (FR103)
+
+**Interfaces:**
+
+- `BillingService.assignPlan(tenantId, planCode)` — applies plan, syncs modules and maxUsers
+- `BillingService.recordPayment(tenantId, event)` — creates BillingEvent, updates billingStatus
+- `BillingService.runOverdueCheck()` — scheduled job (daily), flags overdue/suspends tenants
+- `GET /admin/tenants/:id/billing` — superadmin panel
+- `GET /settings/billing` — tenant owner (reads own plan + history)
+- `POST /settings/billing/upgrade-request` — tenant owner upgrade request (Phase 2a: notification to superadmin)
+
+**Dependencies:** Tenancy Module, Module Registry, Prisma (kernel schema)
+
+**FRs Addressed:** FR100, FR101, FR102, FR103
+
+**Current State:** Does not exist. New module. Phase 2a scope: plan assignment + manual billing management. Phase 3 scope: online payment integration.
+
+**Data Model:**
+```
+PlanDefinition(id, code, name, monthlyPrice, maxUsers, includedModules[], suggestedInstallationFee?, suggestedTrainingFee?, isActive)
+BillingEvent(id, tenantId, type, amount, description?, paidAt?, dueDate?, status, paymentMethod?, paymentRef?)
+Tenant.plan, Tenant.maxUsers, Tenant.installationFee/Paid, Tenant.trainingFee/Paid, Tenant.billingStartDate, Tenant.billingStatus, Tenant.trialEndsAt, Tenant.notes
 ```
 
 ---
@@ -844,7 +885,9 @@ Target state: Three logical schemas.
 │  │  ├── role_perms  │                            │
 │  │  ├── modules     │                            │
 │  │  ├── tenant_mods │                            │
-│  │  └── audit_log   │                            │
+│  │  ├── audit_log   │                            │
+│  │  ├── plan_defs   │   ← FR100                 │
+│  │  └── billing_evs │   ← FR101/FR102/FR103     │
 │  └──────────────────┘                            │
 │                                                  │
 │  ┌──────────────────┐                            │
@@ -862,7 +905,11 @@ Target state: Three logical schemas.
 │  │  ├── purchase_ord│   ← FR79                  │
 │  │  ├── po_lines    │   ← FR80                  │
 │  │  ├── internal_req│   ← FR88                  │
-│  │  └── prod_batches│   ← FR84/FR85             │
+│  │  ├── prod_batches│   ← FR84/FR85             │
+│  │  ├── serial_recs │   ← FR92/FR93             │
+│  │  ├── price_hist  │   ← FR96/FR97             │
+│  │  ├── return_recs │   ← FR98                  │
+│  │  └── reservations│   ← FR99                  │
 │  └──────────────────┘                            │
 │                                                  │
 │  ┌──────────────────┐                            │
@@ -916,6 +963,35 @@ model Tenant {
 
   /// Phase 2b — Programme Ambassadeurs. FK to tenants.id. Set at creation if referred by existing tenant.
   referredBy       String?             @map("referred_by") @db.Uuid
+  // FR98 — Return policy: maximum days after sale a return is accepted (null = no limit).
+  returnPolicyDays      Int?            @default(30) @map("return_policy_days")
+  // FR98 — Require a reason to be entered when processing a return.
+  returnRequiresReason  Boolean         @default(true) @map("return_requires_reason")
+  // FR98 — Require manager approval before a return is finalised.
+  returnRequiresApproval Boolean        @default(false) @map("return_requires_approval")
+
+  // FR100 — Pricing plan code assigned to this tenant. Drives maxUsers and includedModules via PlanDefinition.
+  plan                 String              @default("free")
+  // FR100 — Maximum concurrent users allowed (synced from PlanDefinition on plan change).
+  maxUsers             Int                 @default(1)
+  // FR101 — One-off installation fee negotiated with client (pre-filled from PlanDefinition but editable).
+  installationFee      Decimal?            @db.Decimal(10, 0) @map("installation_fee")
+  // FR101 — Whether the installation fee has been collected.
+  installationPaid     Boolean             @default(false) @map("installation_paid")
+  // FR101 — One-off training fee negotiated with client (pre-filled from PlanDefinition but editable).
+  trainingFee          Decimal?            @db.Decimal(10, 0) @map("training_fee")
+  // FR101 — Whether the training fee has been collected.
+  trainingPaid         Boolean             @default(false) @map("training_paid")
+  // FR101 — Date from which recurring subscription billing starts.
+  billingStartDate     DateTime?           @map("billing_start_date")
+  // FR101 — Current billing status: trial | active | overdue | suspended.
+  billingStatus        String              @default("trial") @map("billing_status")
+  // FR101 — End of the free trial period (default: createdAt + 30 days).
+  trialEndsAt          DateTime?           @map("trial_ends_at")
+  // FR101 — Free-text notes for superadmin (e.g. "early adopter, remise 20%").
+  notes                String?
+  billingEvents        BillingEvent[]
+
   /// Phase 3 — Scalario Connect. Visible in B2B supplier discovery network.
   networkVisible   Boolean             @default(false) @map("network_visible")
   /// Phase 3 — Scalario Enterprise. standalone = Retail. integrated = Enterprise single-tenant. federated = Groupe/Holding.
@@ -1055,6 +1131,16 @@ model CatalogItem {
   conversionRate      Decimal?        @map("conversion_rate") @db.Decimal(10, 4)
   // FR89 — Has per-variant stock/price tracking enabled.
   hasVariants         Boolean         @default(false) @map("has_variants")
+  // FR92 — Enable serial number tracking per unit sold for this item.
+  trackSerialNumbers  Boolean         @default(false) @map("track_serial_numbers")
+  // FR93 — Warranty duration in months (null = no warranty).
+  warrantyMonths      Int?            @map("warranty_months")
+  // FR94 — Requires prescription number at sale (pharmacie). Disabled by default.
+  requiresPrescription Boolean        @default(false) @map("requires_prescription")
+  // FR96 — Price updated dynamically (gold, fuel, raw materials). PriceHistory tracks changes.
+  dynamicPricing      Boolean         @default(false) @map("dynamic_pricing")
+  // FR97 — Unique item (consignment, antiques). Max stock = 1, not replenishable.
+  isUnique            Boolean         @default(false) @map("is_unique")
 
   category            Category?       @relation(fields: [categoryId], references: [id])
   stockMovements      StockMovement[]
@@ -1065,6 +1151,8 @@ model CatalogItem {
   purchaseOrderLines  PurchaseOrderLine[]
   internalRequests    InternalRequest[]
   promotions          Promotion[]
+  serialRecords       SerialRecord[]
+  priceHistory        PriceHistory[]
 
   /// Phase 3 — Scalario Connect. Supplier's reference ID for this item on the Connect B2B network.
   supplierReference   String?         @map("supplier_reference") @db.Uuid
@@ -1309,6 +1397,7 @@ model ProductBatch {
   receivedAt    DateTime    @map("received_at") @db.Timestamptz(6)
   // Null = no expiry tracking for this batch
   expiresAt     DateTime?   @map("expires_at") @db.Timestamptz(6)
+  bestBeforeDate DateTime?  @map("best_before_date") @db.Timestamptz(6)
   tenantId      String      @map("tenant_id") @db.Uuid
   createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
@@ -1317,6 +1406,132 @@ model ProductBatch {
   @@index([tenantId])
   @@map("product_batches")
   @@schema("shared")
+}
+
+model SerialRecord {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  serial        String
+  soldAt        DateTime?   @map("sold_at") @db.Timestamptz(6)
+  warrantyUntil DateTime?   @map("warranty_until") @db.Timestamptz(6)
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@unique([tenantId, serial])
+  @@index([catalogItemId])
+  @@map("serial_records")
+  @@schema("shared")
+}
+
+model PriceHistory {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  price         Decimal     @db.Decimal(12, 2)
+  effectiveFrom DateTime    @map("effective_from") @db.Timestamptz(6)
+  reason        String?
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+
+  @@index([catalogItemId, effectiveFrom])
+  @@index([tenantId])
+  @@map("price_history")
+  @@schema("shared")
+}
+
+// ─── FR98: Return Records ─────────────────────────────────────────────────────
+// Tracks every article return at POS. Linked to the original sale transaction.
+// Resolution: cash_refund | credit_note | exchange. Stock is reinstated via
+// a StockMovement of type RETURN. Approval flow governed by Tenant return policy.
+
+model ReturnRecord {
+  id                String      @id @default(uuid()) @db.Uuid
+  transactionId     String      @map("transaction_id") @db.Uuid
+  catalogItemId     String      @map("catalog_item_id") @db.Uuid
+  variantId         String?     @map("variant_id") @db.Uuid
+  quantity          Decimal     @db.Decimal(10, 2)
+  reason            String?
+  resolution        String      // "cash_refund", "credit_note", "exchange"
+  approvedBy        String?     @map("approved_by") @db.Uuid
+  tenantId          String      @map("tenant_id") @db.Uuid
+  createdBy         String      @map("created_by") @db.Uuid
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  @@index([tenantId, transactionId])
+  @@map("return_records")
+  @@schema("shared")
+}
+
+// ─── FR99: Reservations (deposit-based) ───────────────────────────────────────
+// A customer pays a partial deposit (10–50% configurable). Status lifecycle:
+// pending → completed (full payment collected) | cancelled (deposit refunded or
+// converted to credit note). Dashboard KPI tracks open reservations + total deposits.
+
+model Reservation {
+  id                        String      @id @default(uuid()) @db.Uuid
+  customerId                String      @map("customer_id") @db.Uuid
+  itemsJson                 Json        @map("items_json")
+  totalAmount               Decimal     @map("total_amount") @db.Decimal(10, 2)
+  depositAmount             Decimal     @map("deposit_amount") @db.Decimal(10, 2)
+  remainingAmount           Decimal     @map("remaining_amount") @db.Decimal(10, 2)
+  status                    String      @default("pending")  // pending, completed, cancelled
+  depositTransactionId      String?     @map("deposit_transaction_id") @db.Uuid
+  completionTransactionId   String?     @map("completion_transaction_id") @db.Uuid
+  tenantId                  String      @map("tenant_id") @db.Uuid
+  createdBy                 String      @map("created_by") @db.Uuid
+  createdAt                 DateTime    @default(now()) @map("created_at")
+  completedAt               DateTime?   @map("completed_at")
+
+  @@index([tenantId, status])
+  @@index([customerId])
+  @@map("reservations")
+  @@schema("shared")
+}
+
+// ─── FR100: Plan Definitions ──────────────────────────────────────────────────
+// Configurable by superadmin without deployment. Drives maxUsers and module
+// activation on plan assignment or change.
+
+model PlanDefinition {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique  // free, standard, premium, enterprise
+  name            String
+  monthlyPrice    Decimal  @db.Decimal(10, 0) @map("monthly_price")
+  maxUsers        Int      @map("max_users")
+  includedModules String[] @map("included_modules") // ["catalog", "retail", "inventory", ...]
+  suggestedInstallationFee Decimal? @db.Decimal(10, 0) @map("suggested_installation_fee")
+  suggestedTrainingFee     Decimal? @db.Decimal(10, 0) @map("suggested_training_fee")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("plan_definitions")
+  @@schema("kernel")
+}
+
+// ─── FR101/FR102/FR103: Billing Events ────────────────────────────────────────
+// Immutable ledger of all financial interactions per tenant: subscription
+// payments, installation fees, training fees, upgrades. Used for billing history
+// (tenant owner, FR102) and payment reconciliation (superadmin, FR101).
+// Phase 3: paymentRef and paymentMethod populated by Mobile Money / card gateway.
+
+model BillingEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  type          String    // "subscription" | "installation" | "training" | "upgrade" | "payment"
+  amount        Decimal   @db.Decimal(10, 0)
+  description   String?
+  paidAt        DateTime? @map("paid_at")
+  dueDate       DateTime? @map("due_date")
+  status        String    @default("pending") @map("status") // pending, paid, overdue, cancelled
+  paymentMethod String?   @map("payment_method") // cash, mobile_money, card, bank_transfer
+  paymentRef    String?   @map("payment_ref")    // référence paiement externe (Phase 3)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("billing_events")
+  @@schema("kernel")
 }
 
 // ═══════════════════════════════════════════
@@ -2172,8 +2387,20 @@ Push to main → GitHub Actions:
 | FR89 | Per-variant stock/price tracking with tenant-defined attribute schema | Variants (ProductVariant.attributes JSON) | shared |
 | FR90 | Multi-tariff price levels per article, tenant-configurable labels | Pricing (PriceLevel) | shared |
 | FR91 | Time-bounded promotions: percent discount, temporary price, buy-X-get-Y | Promotions | shared |
+| FR92 | Serial number tracking per unit sold (trackSerialNumbers flag) | SerialRecord | shared |
+| FR93 | Warranty certificate generation from serial record + warrantyMonths | SerialRecord.warrantyUntil | shared |
+| FR94 | Prescription requirement flag on catalog item | CatalogItem.requiresPrescription | shared |
+| FR95 | Best-before date on product batch (consumer goods freshness) | ProductBatch.bestBeforeDate | shared |
+| FR96 | Dynamic pricing flag enabling PriceHistory log | CatalogItem.dynamicPricing | shared |
+| FR97 | Unique article flag (one-off, non-replenishable items) | CatalogItem.isUnique | shared |
+| FR98 | POS return with cash refund / credit note / exchange; stock reinstated (RETURN); tenant return policy (days, reason, approval) | ReturnRecord + Tenant return policy fields | shared + kernel |
+| FR99 | Reservation with partial deposit (10–50%), pending→completed lifecycle, dashboard KPI | Reservation | shared |
+| FR100 | Superadmin assigns a pricing plan per tenant (free/standard/premium/enterprise); PlanDefinition drives maxUsers and included modules; downgrade disables out-of-plan modules (with confirmation) | PlanDefinition + Tenant.plan + Tenant.maxUsers | kernel |
+| FR101 | Superadmin records installation/training fees per tenant; billing status lifecycle (trial→active→overdue→suspended); auto-suspension after 30 days overdue (configurable); suspended tenant sees expiry message | BillingEvent + Tenant billing fields | kernel |
+| FR102 | Tenant owner consults current plan, included modules, billing status and payment history from backoffice Settings; can request a plan upgrade (superadmin notification for manual validation in Phase 2a) | BillingEvent (read) + Tenant billing fields | kernel |
+| FR103 | Online subscription payment via dedicated onboarding page (Mobile Money: Orange Money / Moov Money, or card); tenant created and activated automatically on payment confirmation; plan upgrade from backoffice with integrated payment | BillingEvent + PlanDefinition | kernel (Phase 3) |
 
-**Coverage:** 91/91 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics.)
+**Coverage:** 103/103 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics. FR92–FR97 added in architecture v1.2 — traceability and configuration fields. FR98–FR99 added in architecture v1.3 — return records and reservations. FR100–FR103 added in architecture v1.4 — billing module, plan definitions, billing events.)
 
 ---
 
@@ -2384,11 +2611,13 @@ During migration, the backend maintains backward compatibility:
 | **Backend Components** | 5 kernel + 12 shared + 3 retail = 20 |
 | **Client Components** | 3 core services + 5 repositories + 7 Isar collections |
 | **API Endpoints** | ~50 REST endpoints |
-| **FRs Covered** | 91/91 (100%) |
+| **FRs Covered** | 99/99 (100%) |
 | **NFRs Covered** | 30/30 (100%) |
 | **Migration Steps** | 9 incremental steps |
 | **Key Innovation** | Offline-first ERP with polymorphic shared entities + chain-of-custody trust pattern |
 | **v1.1 Additions** | 7 new shared models (variants, price levels, promotions, purchase orders, internal requests, batches) + 13 new fields across CatalogItem / StockMovement / Tenant |
+| **v1.2 Additions** | 2 new shared models (SerialRecord, PriceHistory) + 5 new fields on CatalogItem + bestBeforeDate on ProductBatch (FR92–FR97) |
+| **v1.3 Additions** | 2 new shared models (ReturnRecord, Reservation) + 3 return policy fields on Tenant (FR98–FR99) |
 
 ---
 

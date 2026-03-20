@@ -172,6 +172,18 @@ export class ReportingService {
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const netProfit = totalRevenue - totalExpenses;
 
+    // Daily breakdown for the line chart — group transactions by YYYY-MM-DD.
+    const dailyMap: Record<string, { revenue: number; orderCount: number }> = {};
+    for (const tx of transactions) {
+      const day = tx.createdAt.toISOString().slice(0, 10);
+      if (!dailyMap[day]) dailyMap[day] = { revenue: 0, orderCount: 0 };
+      dailyMap[day].revenue += Number(tx.totalAmount);
+      dailyMap[day].orderCount += 1;
+    }
+    const dailyStats = Object.entries(dailyMap)
+      .map(([day, v]) => ({ day, revenue: v.revenue, orderCount: v.orderCount }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
     return {
       totalRevenue,
       saleCount,
@@ -181,6 +193,7 @@ export class ReportingService {
       totalCashVariance,
       totalExpenses,
       netProfit,
+      dailyStats,
       from: from ?? null,
       to: to ?? null,
     };

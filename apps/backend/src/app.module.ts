@@ -19,6 +19,9 @@ import { PurchaseOrdersModule } from './shared/purchase-orders/purchase-orders.m
 import { StockAlertsModule } from './shared/stock-alerts/stock-alerts.module';
 import { NotificationsModule } from './shared/notifications/notifications.module';
 import { BatchesModule } from './shared/batches/batches.module';
+import { PromotionsModule } from './shared/promotions/promotions.module';
+import { ReturnsModule } from './shared/returns/returns.module';
+import { ReservationsModule } from './shared/reservations/reservations.module';
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { BatchesModule } from './shared/batches/batches.module';
     StockAlertsModule.register(),
     NotificationsModule.register(),
     BatchesModule.register(),
+    PromotionsModule.register(),
+    ReturnsModule.register(),
+    ReservationsModule.register(),
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../kernel/audit/audit-log.service';
+import { PriceHistoryService } from './price-history/price-history.service';
 
 const VALID_UNIT_TYPES = ['piece', 'weight', 'volume', 'length'] as const;
 
@@ -10,6 +11,7 @@ export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly priceHistoryService: PriceHistoryService,
   ) {}
 
   async getCategories(tenantId: string, since?: string) {
@@ -68,18 +70,26 @@ export class CatalogService {
         orderBy: { updatedAt: 'asc' },
         skip,
         take: limit,
-        include: { retailProduct: true },
+        include: {
+          retailProduct: true,
+          variants: { where: { isActive: true }, select: { stockQuantity: true } },
+        },
       }),
       this.prisma.catalogItem.count({ where }),
     ]);
 
     const mappedItems = items.map((item) => {
-      const { retailProduct, ...rest } = item as any;
+      const { retailProduct, variants, ...rest } = item as any;
+      // AC3 — aggregate stock from variants when hasVariants is true
+      const totalStockQuantity = rest.hasVariants
+        ? (variants as Array<{ stockQuantity: any }>).reduce((s, v) => s + Number(v.stockQuantity), 0)
+        : null;
       return {
         ...rest,
         stockQuantity: retailProduct?.stockQuantity ?? null,
         weightUnit: retailProduct?.weightUnit ?? null,
         minStockLevel: retailProduct?.minStockLevel ?? null,
+        ...(rest.hasVariants ? { totalStockQuantity } : {}),
       };
     });
 
@@ -92,6 +102,49 @@ export class CatalogService {
         hasMore: skip + items.length < total,
         serverTime,
       },
+    };
+  }
+
+  // AC4 — Barcode lookup: check variant barcodes first
+  async getByBarcode(barcode: string, tenantId: string) {
+    // First try to find a variant with this barcode
+    const variant = await this.prisma.productVariant.findFirst({
+      where: { barcode, tenantId, isActive: true },
+      include: { catalogItem: { include: { retailProduct: true } } },
+    });
+
+    if (variant) {
+      const { catalogItem, ...variantRest } = variant as any;
+      const { retailProduct, variants: _v, ...itemRest } = catalogItem as any;
+      return {
+        ...itemRest,
+        stockQuantity: retailProduct?.stockQuantity ?? null,
+        weightUnit: retailProduct?.weightUnit ?? null,
+        minStockLevel: retailProduct?.minStockLevel ?? null,
+        matchedVariant: {
+          id: variantRest.id,
+          attributes: variantRest.attributes,
+          price: variantRest.price,
+          stockQuantity: variantRest.stockQuantity,
+          sku: variantRest.sku,
+          barcode: variantRest.barcode,
+        },
+      };
+    }
+
+    // Fallback: find catalog item by barcode
+    const item = await this.prisma.catalogItem.findFirst({
+      where: { barcode, tenantId, isDeleted: false },
+      include: { retailProduct: true },
+    });
+    if (!item) return null;
+
+    const { retailProduct, ...rest } = item as any;
+    return {
+      ...rest,
+      stockQuantity: retailProduct?.stockQuantity ?? null,
+      weightUnit: retailProduct?.weightUnit ?? null,
+      minStockLevel: retailProduct?.minStockLevel ?? null,
     };
   }
 
@@ -118,6 +171,7 @@ export class CatalogService {
       unitType?: string;
       pricePerUnit?: number | null;
       conversionRate?: number | null;
+      isUnique?: boolean;
     },
     userId: string | null,
   ) {
@@ -140,6 +194,7 @@ export class CatalogService {
         unitType,
         pricePerUnit: data.pricePerUnit ?? null,
         conversionRate: data.conversionRate ?? null,
+        isUnique: data.isUnique ?? false,
       },
     });
 
@@ -175,6 +230,13 @@ export class CatalogService {
       conversionRate?: number | null;
       minStockLevel?: number | null;
       parentItemId?: string | null;
+      // Epic 26 — Traçabilité
+      trackSerialNumbers?: boolean;
+      warrantyMonths?: number | null;
+      requiresPrescription?: boolean;
+      dynamicPricing?: boolean;
+      isUnique?: boolean;
+      reason?: string; // for price history
     },
     userId: string | null,
     tenantId: string,
@@ -218,12 +280,23 @@ export class CatalogService {
     if ('parentItemId' in data) updateData.parentItemId = data.parentItemId;
     if ('pricePerUnit' in data) updateData.pricePerUnit = data.pricePerUnit;
     if ('conversionRate' in data) updateData.conversionRate = data.conversionRate;
+    // Epic 26 — Traçabilité fields
+    if (data.trackSerialNumbers !== undefined) updateData.trackSerialNumbers = data.trackSerialNumbers;
+    if ('warrantyMonths' in data) updateData.warrantyMonths = data.warrantyMonths;
+    if (data.requiresPrescription !== undefined) updateData.requiresPrescription = data.requiresPrescription;
+    if (data.dynamicPricing !== undefined) updateData.dynamicPricing = data.dynamicPricing;
+    if (data.isUnique !== undefined) updateData.isUnique = data.isUnique;
 
     const updated = await this.prisma.catalogItem.update({
       where: { id },
       data: updateData,
       include: { retailProduct: true },
     });
+
+    // AC2 (Story 26-5) — Record price history when dynamicPricing is enabled
+    if (data.price !== undefined && updated.dynamicPricing) {
+      await this.priceHistoryService.recordPrice(tenantId, id, Number(data.price), data.reason);
+    }
 
     // minStockLevel lives on RetailProduct, not CatalogItem
     if ('minStockLevel' in data) {
@@ -267,6 +340,45 @@ export class CatalogService {
         parentItemId: true,
       },
     });
+  }
+
+  // AC4 (Story 26-6) — Duplicate a catalog item (copy, no stock/serials/price history)
+  async duplicateCatalogItem(id: string, tenantId: string, userId: string | null) {
+    const original = await this.prisma.catalogItem.findFirst({
+      where: { id, tenantId },
+    });
+    if (!original) throw new NotFoundException(`Item ${id} not found`);
+
+    const copy = await this.prisma.catalogItem.create({
+      data: {
+        name: `${original.name} (copie)`,
+        price: original.price,
+        tenantId: original.tenantId,
+        barcode: null,
+        categoryId: original.categoryId,
+        itemType: original.itemType,
+        unitType: original.unitType,
+        pricePerUnit: original.pricePerUnit,
+        conversionRate: original.conversionRate,
+        trackSerialNumbers: original.trackSerialNumbers,
+        warrantyMonths: original.warrantyMonths,
+        requiresPrescription: original.requiresPrescription,
+        dynamicPricing: original.dynamicPricing,
+        isUnique: original.isUnique,
+      },
+    });
+
+    await this.auditLog.log({
+      tenantId,
+      userId,
+      action: 'CREATE',
+      entity: 'CatalogItem',
+      entityId: copy.id,
+      before: null,
+      after: { duplicatedFrom: id, name: copy.name },
+    });
+
+    return copy;
   }
 
   async deleteItem(id: string, userId: string | null, tenantId: string) {

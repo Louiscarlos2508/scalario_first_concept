@@ -39,12 +39,15 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
           return model.PosCartItem()
             ..productId = e.product.remoteId
             ..catalogItemId = e.product.remoteId
-            ..name = e.product.name
+            ..name = e.variantLabel != null ? '${e.product.name} — ${e.variantLabel}' : e.product.name
             ..quantity = e.quantity
             ..price = effectivePrice / e.quantity // unit price for receipt
             ..unitType = e.product.unitType
             ..unitLabel = isWeighted ? (e.product.weightUnit ?? e.product.unitType) : null
-            ..pricePerUnit = isWeighted ? e.product.pricePerUnit : null;
+            ..pricePerUnit = isWeighted ? e.product.pricePerUnit : null
+            ..variantId = e.variantId
+            ..variantLabel = e.variantLabel
+            ..serialNumber = e.serialNumber;
         }).toList()
         ..createdAt = DateTime.now();
 

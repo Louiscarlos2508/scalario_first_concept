@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/models/tenant_summary.dart';
+import '../widgets/billing_tab.dart';
 import '../widgets/tenant_modules_tab.dart';
 import '../widgets/tenant_users_tab.dart';
 
@@ -17,7 +18,7 @@ class TenantDetailScreen extends StatelessWidget {
     };
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Column(
@@ -55,6 +56,7 @@ class TenantDetailScreen extends StatelessWidget {
               Tab(text: 'Infos'),
               Tab(text: 'Modules'),
               Tab(text: 'Users'),
+              Tab(text: 'Facturation'),
             ],
           ),
         ),
@@ -63,6 +65,7 @@ class TenantDetailScreen extends StatelessWidget {
             _InfosTab(tenant: tenant),
             TenantModulesTab(tenantId: tenant.id),
             TenantUsersTab(tenantId: tenant.id),
+            BillingTab(tenantId: tenant.id),
           ],
         ),
       ),

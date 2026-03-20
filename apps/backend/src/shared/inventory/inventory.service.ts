@@ -21,6 +21,9 @@ export class InventoryService {
     tenantId: string;
     userId?: string | null;
     referenceId?: string | null;
+    variantId?: string | null;
+    // Epic 26 — AC2 (Story 26-4): optional best-before date for DELIVERY batches
+    bestBeforeDate?: string | null;
   }) {
     // AC6 (Story 24-1) — Auto-reason NATURAL_VARIANCE for LOSS within shrinkage tolerance
     let resolvedReason = data.reason ?? null;
@@ -43,6 +46,24 @@ export class InventoryService {
       throw new BadRequestException('reason is required for LOSS movements');
     }
 
+    // AC2 (Story 26-6) — isUnique items: stock cap ≤ 1 for inbound movements
+    const isInbound =
+      data.type === 'DELIVERY' ||
+      data.type === 'TRANSFER_IN' ||
+      (data.type === 'ADJUSTMENT' && data.quantity > 0);
+    if (data.catalogItemId && isInbound) {
+      const catalogItem = await this.prisma.catalogItem.findUnique({
+        where: { id: data.catalogItemId },
+        select: { isUnique: true },
+      });
+      if (catalogItem?.isUnique) {
+        const currentStock = await this.getCurrentStock(data.catalogItemId, data.tenantId);
+        if (currentStock + data.quantity > 1) {
+          throw new BadRequestException('Article unique : le stock ne peut pas dépasser 1');
+        }
+      }
+    }
+
     const movement = await this.prisma.inventoryMovement.create({
       data: {
         catalogItemId: data.catalogItemId ?? null,
@@ -52,6 +73,7 @@ export class InventoryService {
         tenantId: data.tenantId,
         userId: data.userId ?? null,
         referenceId: data.referenceId ?? null,
+        variantId: data.variantId ?? null,
       },
     });
 
@@ -90,6 +112,7 @@ export class InventoryService {
             catalogItemId: data.catalogItemId,
             tenantId: data.tenantId,
             expiresAt,
+            bestBeforeDate: data.bestBeforeDate ? new Date(data.bestBeforeDate) : null,
             initialQty: data.quantity,
             remainingQty: data.quantity,
             batchRef: data.referenceId ?? null,
@@ -218,6 +241,9 @@ export class InventoryService {
         case 'REPACKAGING':
           stock -= qty;
           break;
+        case 'RETURN':
+          stock += qty;
+          break;
         case 'ADJUSTMENT':
           stock += qty; // signed — positive=increase, negative=decrease
           break;
@@ -329,6 +355,25 @@ export class InventoryService {
       const catalogItemId: string | null = item.catalogItemId ?? item.productId ?? null;
       if (!catalogItemId) continue;
 
+      // AC5 (Story 25-1) — If variantId provided, decrement variant stock
+      const variantId: string | null = item.variantId ?? null;
+      if (variantId) {
+        await this.prisma.productVariant.update({
+          where: { id: variantId },
+          data: { stockQuantity: { decrement: qty } },
+        });
+        await this.prisma.inventoryMovement.create({
+          data: {
+            catalogItemId,
+            quantity: qty,
+            type: 'SALE',
+            tenantId: payload.tenantId,
+            variantId,
+          },
+        });
+        continue;
+      }
+
       // Epic 23 — Check if this is a child item (parent-child relationship)
       const catalogItem = await this.prisma.catalogItem.findUnique({
         where: { id: catalogItemId },
@@ -362,6 +407,21 @@ export class InventoryService {
 
         // AC4 (Story 24-1) — FIFO batch depletion
         await this.depletesBatchesFifo(catalogItemId, stockQty, payload.tenantId);
+
+        // AC3 (Story 26-6) — Auto-archive isUnique items when stock reaches 0
+        const soldItem = await this.prisma.catalogItem.findUnique({
+          where: { id: catalogItemId },
+          select: { isUnique: true },
+        });
+        if (soldItem?.isUnique) {
+          const newStock = await this.getCurrentStock(catalogItemId, payload.tenantId);
+          if (newStock <= 0) {
+            await this.prisma.catalogItem.update({
+              where: { id: catalogItemId },
+              data: { isDeleted: true },
+            });
+          }
+        }
       }
     }
   }

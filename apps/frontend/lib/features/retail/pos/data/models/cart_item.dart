@@ -17,6 +17,13 @@ class PosCartItem {
   double? pricePerUnit;
   String? catalogItemId;
 
+  // Epic 25 — Variant
+  String? variantId;
+  String? variantLabel;
+
+  // Epic 26 — Serial number tracking
+  String? serialNumber;
+
   // Calculate total price for this item
   double get subtotal => quantity * price;
 
@@ -39,6 +46,9 @@ class PosCartItem {
       if (unitType != null) 'unitType': unitType,
       if (unitLabel != null) 'unitLabel': unitLabel,
       if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+      if (variantId != null) 'variantId': variantId,
+      if (variantLabel != null) 'variantLabel': variantLabel,
+      if (serialNumber != null) 'serialNumber': serialNumber,
     };
   }
 }

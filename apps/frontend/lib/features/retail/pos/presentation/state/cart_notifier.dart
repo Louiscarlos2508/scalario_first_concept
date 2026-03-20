@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
+import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
+import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
+import 'package:frontend/features/shared/promotions/data/models/promotion.dart';
 import 'cart_state.dart';
 
 class CartNotifier extends StateNotifier<CartState> {
@@ -34,6 +37,33 @@ class CartNotifier extends StateNotifier<CartState> {
     state = state.copyWith(items: newItems);
   }
 
+  /// AC2 (Story 25-3) — Add a product variant to the cart with its own price and label.
+  void addProductWithVariant(Product product, ProductVariant variant, [double quantity = 1.0]) {
+    final label = variant.attributes.entries.map((e) => '${e.key} ${e.value}').join(', ');
+    // Each variant is a distinct line (no aggregation with other variants or the base product)
+    final existingIndex = state.items.indexWhere(
+      (item) => item.product.id == product.id && item.variantId == variant.id,
+    );
+    List<CartItem> newItems;
+    if (existingIndex >= 0) {
+      newItems = List.from(state.items);
+      final existing = newItems[existingIndex];
+      newItems[existingIndex] = existing.copyWith(quantity: existing.quantity + quantity);
+    } else {
+      newItems = [
+        ...state.items,
+        CartItem(
+          product: product,
+          quantity: quantity,
+          variantId: variant.id,
+          variantLabel: label,
+          variantPrice: variant.price,
+        ),
+      ];
+    }
+    state = state.copyWith(items: newItems);
+  }
+
   void removeProduct(Product product) {
      final existingIndex = state.items.indexWhere((item) => item.product.id == product.id);
      if (existingIndex == -1) return;
@@ -60,6 +90,92 @@ class CartNotifier extends StateNotifier<CartState> {
       discountType: type,
     );
 
+    state = state.copyWith(items: newItems);
+  }
+
+  /// AC3/AC4 (Story 25-7) — Add a product with a promotion pre-applied.
+  /// Handles PERCENT, CROSSED_PRICE (discount on item) and BUY_N_GET_M (free item line).
+  void addProductWithPromo(Product product, Promotion promo) {
+    final items = List<CartItem>.from(state.items);
+
+    if (promo.type == 'BUY_N_GET_M') {
+      // Add regular item
+      final existingIndex =
+          items.indexWhere((i) => i.product.id == product.id && !i.isFreeItem);
+      if (existingIndex >= 0) {
+        items[existingIndex] =
+            items[existingIndex].copyWith(quantity: items[existingIndex].quantity + 1);
+      } else {
+        items.add(CartItem(
+          product: product,
+          quantity: 1,
+          appliedPromoId: promo.id,
+          appliedPromoLabel: promo.typeLabel,
+        ));
+      }
+      _recalculateFreeItems(items, product, promo);
+    } else {
+      // PERCENT or CROSSED_PRICE — apply as discount on the line
+      final basePrice = product.price;
+      final disc = promo.discountAmount(basePrice, 1);
+      final discType = promo.type == 'PERCENT' ? 'PERCENTAGE' : 'FIXED';
+      final discValue = promo.type == 'PERCENT'
+          ? (promo.value['percent'] as num?)?.toDouble() ?? 0
+          : disc;
+
+      final existingIndex =
+          items.indexWhere((i) => i.product.id == product.id && !i.isFreeItem);
+      if (existingIndex >= 0) {
+        items[existingIndex] =
+            items[existingIndex].copyWith(quantity: items[existingIndex].quantity + 1);
+      } else {
+        items.add(CartItem(
+          product: product,
+          quantity: 1,
+          discountAmount: discValue,
+          discountType: discType,
+          appliedPromoId: promo.id,
+          appliedPromoLabel: promo.typeLabel,
+        ));
+      }
+    }
+
+    state = state.copyWith(items: items);
+  }
+
+  void _recalculateFreeItems(
+      List<CartItem> items, Product product, Promotion promo) {
+    final buyN = (promo.value['buyN'] as num?)?.toInt() ?? 1;
+    final getM = (promo.value['getM'] as num?)?.toInt() ?? 1;
+
+    final regularQty = items
+        .where((i) => i.product.id == product.id && !i.isFreeItem)
+        .fold(0.0, (sum, i) => sum + i.quantity);
+
+    final freeQty = (regularQty / buyN).floor() * getM;
+
+    // Remove existing free line, then re-add if needed
+    items.removeWhere((i) => i.product.id == product.id && i.isFreeItem);
+    if (freeQty > 0) {
+      items.add(CartItem(
+        product: product,
+        quantity: freeQty.toDouble(),
+        isFreeItem: true,
+        appliedPromoId: promo.id,
+        appliedPromoLabel: promo.typeLabel,
+      ));
+    }
+  }
+
+  /// AC4 (Story 25-5) — Apply a forced price level to a cart line item.
+  void applyPriceLevel(int index, PriceLevel level) {
+    if (index < 0 || index >= state.items.length) return;
+    final newItems = List<CartItem>.from(state.items);
+    newItems[index] = newItems[index].copyWith(
+      forcedPriceLevelCode: level.levelCode,
+      appliedPriceLevelLabel: level.label,
+      overridePrice: level.price,
+    );
     state = state.copyWith(items: newItems);
   }
 

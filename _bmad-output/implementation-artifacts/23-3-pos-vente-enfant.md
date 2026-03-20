@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 23 — Conversion unités vrac → détail
 - **Story ID:** 23-3-pos-vente-enfant
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** 23-1 (décrémentation parent backend), 23-2 (modèle Product enrichi)
 

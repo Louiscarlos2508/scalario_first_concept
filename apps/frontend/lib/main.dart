@@ -7,6 +7,8 @@ import 'features/auth/login_screen.dart';
 import 'features/retail/backoffice/presentation/screens/dashboard_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/admin/presentation/screens/admin_dashboard.dart';
+import 'features/shared/billing/presentation/providers/subscription_provider.dart';
+import 'features/shared/billing/presentation/screens/suspended_screen.dart';
 
 import 'app/sdui_registry_setup.dart';
 import 'features/retail/pos/presentation/screens/pos_screen.dart';
@@ -82,6 +84,13 @@ class _ScalarioAppState extends ConsumerState<ScalarioApp> {
                       if (profile?.role == 'superadmin') {
                         return const AdminDashboard();
                       }
+
+                      // Check billing suspension for tenant users
+                      final isSuspended = ref.watch(isSuspendedProvider);
+                      if (isSuspended.value == true) {
+                        return const SuspendedScreen();
+                      }
+
                       // POS-only roles — no backoffice access
                       if (profile?.role == 'cashier' ||
                           profile?.role == 'commercial') {
@@ -93,7 +102,7 @@ class _ScalarioAppState extends ConsumerState<ScalarioApp> {
                       body: Center(child: CircularProgressIndicator()),
                     ),
                     error: (e, _) => Scaffold(
-                      body: Center(child: Text('Error loading profile: $e')),
+                      body: Center(child: Text('Erreur chargement profil : $e')),
                     ),
                   );
                 }

@@ -129,8 +129,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(capturedRequests, hasLength(1));
-      final body = jsonDecode(capturedRequests.first.body) as Map;
+      final postReqs = capturedRequests.where((r) => r.method == 'POST').toList();
+      expect(postReqs, hasLength(1));
+      final body = jsonDecode(postReqs.first.body) as Map;
       expect(body['name'], equals('Farine'));
       expect(body['price'], equals(500.0));
       expect(body['tenantId'], equals('tenant-1'));
@@ -370,9 +371,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(capturedRequests, hasLength(1));
-      expect(capturedRequests.first.method, equals('PATCH'));
-      expect(capturedRequests.first.url.path, contains('item-001'));
+      final patchReqs = capturedRequests.where((r) => r.method == 'PATCH').toList();
+      expect(patchReqs, hasLength(1));
+      expect(patchReqs.first.method, equals('PATCH'));
+      expect(patchReqs.first.url.path, contains('item-001'));
     });
   });
 }

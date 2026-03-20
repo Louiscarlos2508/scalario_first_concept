@@ -4,6 +4,7 @@ import { TransactionsModule } from '../shared/transactions/transactions.module';
 import { InventoryModule } from '../shared/inventory/inventory.module';
 import { PaymentsModule } from '../shared/payments/payments.module';
 import { ContactsModule } from '../shared/contacts/contacts.module';
+import { ReturnsModule } from '../shared/returns/returns.module';
 import { RetailController } from './retail.controller';
 import { RetailSessionController } from './retail-session.controller';
 import { RetailExpenseController } from './retail-expense.controller';
@@ -23,6 +24,7 @@ export class RetailModule {
         InventoryModule.register(),
         PaymentsModule.register(),
         ContactsModule.register(),
+        ReturnsModule.register(),
       ],
       controllers: [RetailController, RetailSessionController, RetailExpenseController],
       providers: [RetailOrchestrationService, RetailSaleService, PosSessionService, ExpenseService],

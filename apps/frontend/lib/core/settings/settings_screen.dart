@@ -12,6 +12,7 @@ import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/shared/billing/presentation/screens/subscription_screen.dart';
 
 // ── SharedPreferences keys ────────────────────────────────────────────────────
 const _kShopName = 'settings_shop_name';
@@ -432,7 +433,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // ── 6. Application ────────────────────────────────────────────────
+          // ── 6. Abonnement ─────────────────────────────────────────────────
+          _section('Abonnement', [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.workspace_premium_outlined),
+              title: const Text('Mon abonnement'),
+              subtitle: const Text('Plan, facturation, historique'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const SubscriptionScreen()),
+              ),
+            ),
+          ]),
+
+          const SizedBox(height: 16),
+
+          // ── 7. Application ────────────────────────────────────────────────
           _section('Application', [
             _infoRow('Version', 'Scalario v1.0.0'),
             _infoRow('Serveur', ApiConstants.baseUrl),

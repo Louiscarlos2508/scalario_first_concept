@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 24 — Fraîcheur + code couleur priorité vente
 - **Story ID:** 24-2-code-couleur-frontend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** 24-1 (endpoint batches/expiring disponible)
 
@@ -61,27 +61,27 @@
 
 ## Tasks/Subtasks
 
-- [ ] **Task 1 : Widget FreshnessChip**
-  - [ ] Créer `apps/frontend/lib/features/shared/catalog/presentation/widgets/freshness_chip.dart`
-  - [ ] Paramètres : `expiresAt DateTime`, `expiryDays int`, `greenThreshold double`, `orangeThreshold double`
-  - [ ] Couleur calculée : vert / orange / rouge selon `freshnessPercent`
-  - [ ] Afficher jours restants : "3j", "12j"
+- [x] **Task 1 : Widget FreshnessChip**
+  - [x] Créer `apps/frontend/lib/features/shared/catalog/presentation/widgets/freshness_chip.dart`
+  - [x] Paramètres : `expiresAt DateTime`, `expiryDays int`, `greenThreshold double`, `orangeThreshold double`
+  - [x] Couleur calculée : vert / orange / rouge selon `freshnessPercent`
+  - [x] Afficher jours restants : "3j", "12j"
 
-- [ ] **Task 2 : Modèle Product — nearestExpiryDate + expiryDays**
-  - [ ] Ajouter `DateTime? nearestExpiryDate`, `int? expiryDays` dans `product.dart`
-  - [ ] Mettre à jour `fromJson()`
+- [x] **Task 2 : Modèle Product — nearestExpiryDate + expiryDays**
+  - [x] Ajouter `DateTime? nearestExpiryDate`, `int? expiryDays` dans `product.dart`
+  - [x] Mettre à jour `fromJson()`
 
-- [ ] **Task 3 : ProductGrid — afficher FreshnessChip**
-  - [ ] Sur chaque card, si `product.nearestExpiryDate != null`, afficher `FreshnessChip`
-  - [ ] Tri priorité : rouge → orange → vert → sans indicateur (dans chaque catégorie)
-  - [ ] Toggle filtre "Articles urgents" en barre de filtres
+- [x] **Task 3 : ProductGrid — afficher FreshnessChip**
+  - [x] Sur chaque card, si `product.nearestExpiryDate != null`, afficher `FreshnessChip`
+  - [x] Tri priorité : rouge → orange → vert → sans indicateur (dans chaque catégorie)
+  - [x] Toggle filtre "Articles urgents" en barre de filtres
 
-- [ ] **Task 4 : Seuils tenant configurables**
-  - [ ] Provider `freshnessThresholdsProvider` : charger seuils depuis settings tenant (Isar local)
-  - [ ] Endpoint `PATCH /api/v1/tenants/freshness-thresholds` côté backend (peut être inclus ici)
+- [x] **Task 4 : Seuils tenant configurables**
+  - [x] Provider `freshnessThresholdsProvider` : charger seuils depuis settings tenant (Isar local)
+  - [x] Endpoint `PATCH /api/v1/tenants/freshness-thresholds` côté backend (peut être inclus ici)
 
-- [ ] **Task 5 : POS screen — toggle filtre urgent**
-  - [ ] Ajouter chip/toggle "Articles urgents" dans la barre de filtres POS
+- [x] **Task 5 : POS screen — toggle filtre urgent**
+  - [x] Ajouter chip/toggle "Articles urgents" dans la barre de filtres POS
 
 ---
 

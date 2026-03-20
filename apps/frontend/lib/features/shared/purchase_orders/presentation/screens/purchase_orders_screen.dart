@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
-import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/purchase_orders/data/models/purchase_order_local.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_order_detail_screen.dart';
@@ -50,16 +49,6 @@ class PurchaseOrdersScreen extends ConsumerWidget {
     final activeFilter = ref.watch(purchaseOrdersFilterProvider);
 
     return Scaffold(
-      appBar: ScalarioAppBar(
-        title: 'Commandes fournisseurs',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(purchaseOrdersProvider),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
         key: const Key('po_fab'),
         heroTag: null,

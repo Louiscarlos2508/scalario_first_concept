@@ -17,16 +17,16 @@ class BarcodeScannerService {
   BarcodeScannerService(this._productRepository, this._cartNotifier);
 
   void init() {
-    RawKeyboard.instance.addListener(_handleKeyEvent);
+    HardwareKeyboard.instance.addHandler(_handleKeyEvent);
     print('[BarcodeScanner] Global listener initialized');
   }
 
   void dispose() {
-    RawKeyboard.instance.removeListener(_handleKeyEvent);
+    HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
   }
 
-  void _handleKeyEvent(RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return;
+  bool _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
 
     final now = DateTime.now();
     final character = event.character;
@@ -41,7 +41,7 @@ class BarcodeScannerService {
         _processBarcode(_buffer);
       }
       _buffer = '';
-      return;
+      return true;
     }
 
     if (character != null && _isNumeric(character)) {
@@ -52,6 +52,7 @@ class BarcodeScannerService {
         _buffer += character;
       }
     }
+    return false;
   }
 
   bool _isNumeric(String s) {

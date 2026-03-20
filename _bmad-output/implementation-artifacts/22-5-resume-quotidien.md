@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 22 — Alertes stock bas + notifications
 - **Story ID:** 22-5-resume-quotidien
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** Medium
 - **Depends on:** 22-4 (NotificationsService disponible), Epic 21 (PurchaseOrdersService)
 

@@ -207,20 +207,53 @@ development_status:
   epic-23-retrospective: optional
 
   # Epic 24: Fraîcheur + code couleur priorité vente
-  epic-24: in-progress
-  24-1-batch-freshness-backend: ready-for-dev
-  24-2-code-couleur-frontend: ready-for-dev
-  24-3-onglet-fraicheur: ready-for-dev
+  epic-24: done
+  24-1-batch-freshness-backend: done
+  24-2-code-couleur-frontend: done
+  24-3-onglet-fraicheur: done
   epic-24-retrospective: optional
 
   # Epic 25: Variantes, multi-tarifs & promotions
-  epic-25: in-progress
-  25-1-variant-backend: ready-for-dev
-  25-2-variant-frontend: ready-for-dev
-  25-3-pos-variant-selection: ready-for-dev
-  25-4-price-level-backend: ready-for-dev
-  25-5-price-level-frontend: ready-for-dev
-  25-6-promotion-backend: ready-for-dev
-  25-7-promotion-frontend-pos: ready-for-dev
+  epic-25: done
+  25-1-variant-backend: done
+  25-2-variant-frontend: done
+  25-3-pos-variant-selection: done
+  25-4-price-level-backend: done
+  25-5-price-level-frontend: done
+  25-6-promotion-backend: done
+  25-7-promotion-frontend-pos: done
   epic-25-retrospective: optional
+
+  # Epic 26: Traçabilité Articles & Configurations Métier (Phase 2b — after Epic 25)
+  epic-26: done
+  26-1-serial-number-tracking: done
+  26-2-warranty-management: done
+  26-3-prescription-required: done
+  26-4-best-before-date: done
+  26-5-dynamic-pricing: done
+  26-6-unique-articles: done
+  epic-26-retrospective: optional
+
+  # Epic 27: Retours Articles & Réservations (FR98–FR99)
+  # Phase 2a: stories 27-1, 27-2, 27-3 (retours — bloquant pour tout retail)
+  # Phase 2b: stories 27-4, 27-5 (réservations avec acompte)
+  epic-27: done
+  27-1-return-backend: done
+  27-2-return-frontend-pos: done
+  27-3-return-zreport: done
+  27-4-reservation-backend: done
+  27-5-reservation-frontend: done
+  epic-27-retrospective: optional
+
+  # Epic 28: Plans Tarifaires & Facturation (FR100–FR103)
+  # Phase 2a: stories 28-1, 28-2, 28-3, 28-4, 28-5, 28-6 (gestion manuelle par superadmin)
+  # Phase 3: paiement en ligne + auto-provisioning (FR103 — non implémenté dans cet epic)
+  epic-28: done
+  28-1-plan-definition-backend: done
+  28-2-tenant-plan-assignment: done
+  28-3-billing-events-backend: done
+  28-4-admin-panel-plans: done
+  28-5-tenant-plan-view: done
+  28-6-billing-status-enforcement: done
+  epic-28-retrospective: optional
 

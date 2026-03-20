@@ -187,8 +187,8 @@ describe('ReportingService', () => {
   describe('getSalesStats', () => {
     it('returns totalRevenue, saleCount, avgTransactionValue, totalLosses, totalCashVariance (AC1 7.2)', async () => {
       mockPrisma.transaction.findMany.mockResolvedValue([
-        { totalAmount: new Prisma.Decimal(60000), paymentMethod: 'CASH', itemsJson: [] },
-        { totalAmount: new Prisma.Decimal(40000), paymentMethod: 'MOBILE_MONEY', itemsJson: [] },
+        { totalAmount: new Prisma.Decimal(60000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20') },
+        { totalAmount: new Prisma.Decimal(40000), paymentMethod: 'MOBILE_MONEY', itemsJson: [], createdAt: new Date('2026-03-20') },
       ]);
       mockPrisma.inventoryMovement.findMany.mockResolvedValue([
         { type: 'LOSS', quantity: new Prisma.Decimal(3) },
@@ -213,6 +213,7 @@ describe('ReportingService', () => {
         {
           totalAmount: new Prisma.Decimal(10000),
           paymentMethod: 'CASH',
+          createdAt: new Date('2026-03-20'),
           itemsJson: [
             { name: 'Milk', quantity: 10, price: 500 },
             { name: 'Bread', quantity: 5, price: 300 },
@@ -221,6 +222,7 @@ describe('ReportingService', () => {
         {
           totalAmount: new Prisma.Decimal(5000),
           paymentMethod: 'CASH',
+          createdAt: new Date('2026-03-20'),
           itemsJson: [
             { name: 'Milk', quantity: 8, price: 500 },
             { name: 'Sugar', quantity: 20, price: 1000 },
@@ -256,7 +258,7 @@ describe('ReportingService', () => {
 
     it('returns totalExpenses and netProfit in getSalesStats (AC5)', async () => {
       mockPrisma.transaction.findMany.mockResolvedValue([
-        { totalAmount: new Prisma.Decimal(100000), paymentMethod: 'CASH', itemsJson: [] },
+        { totalAmount: new Prisma.Decimal(100000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20') },
       ]);
       mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
       mockPrisma.posSession.findMany.mockResolvedValue([]);
@@ -269,6 +271,35 @@ describe('ReportingService', () => {
 
       expect(result.totalExpenses).toBe(50000);
       expect(result.netProfit).toBe(50000); // 100000 - 50000
+    });
+
+    it('returns dailyStats grouped by day for the line chart (AC1 7.2)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([
+        { totalAmount: new Prisma.Decimal(20000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-18T10:00:00Z') },
+        { totalAmount: new Prisma.Decimal(15000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-18T14:00:00Z') },
+        { totalAmount: new Prisma.Decimal(30000), paymentMethod: 'CASH', itemsJson: [], createdAt: new Date('2026-03-20T09:00:00Z') },
+      ]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      // 2 transactions on the 18th, 1 on the 20th (19th has none — not in array)
+      expect(result.dailyStats).toHaveLength(2);
+      expect(result.dailyStats[0]).toEqual({ day: '2026-03-18', revenue: 35000, orderCount: 2 });
+      expect(result.dailyStats[1]).toEqual({ day: '2026-03-20', revenue: 30000, orderCount: 1 });
+    });
+
+    it('returns empty dailyStats when no transactions (AC1 7.2)', async () => {
+      mockPrisma.transaction.findMany.mockResolvedValue([]);
+      mockPrisma.inventoryMovement.findMany.mockResolvedValue([]);
+      mockPrisma.posSession.findMany.mockResolvedValue([]);
+      mockPrisma.expense.findMany.mockResolvedValue([]);
+
+      const result = await service.getSalesStats({ tenantId: TENANT_ID });
+
+      expect(result.dailyStats).toHaveLength(0);
     });
 
     it('returns netProfit=0 when no sales and no expenses (AC5)', async () => {

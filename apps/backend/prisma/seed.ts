@@ -127,12 +127,76 @@ async function seedModules() {
   console.log(`  ✓ ${MODULES.length} modules seeded`);
 }
 
+const PLANS = [
+  {
+    code: 'free',
+    name: 'Gratuit',
+    monthlyPrice: 0,
+    maxUsers: 1,
+    includedModules: [] as string[],
+    suggestedInstallationFee: null,
+    suggestedTrainingFee: null,
+  },
+  {
+    code: 'standard',
+    name: 'Standard',
+    monthlyPrice: 15000,
+    maxUsers: 4,
+    includedModules: ['catalog', 'inventory', 'retail'],
+    suggestedInstallationFee: 25000,
+    suggestedTrainingFee: 10000,
+  },
+  {
+    code: 'premium',
+    name: 'Premium',
+    monthlyPrice: 30000,
+    maxUsers: 10,
+    includedModules: ['catalog', 'inventory', 'retail', 'reporting', 'purchase_orders'],
+    suggestedInstallationFee: 50000,
+    suggestedTrainingFee: 20000,
+  },
+  {
+    code: 'enterprise',
+    name: 'Enterprise',
+    monthlyPrice: 50000,
+    maxUsers: 25,
+    includedModules: [
+      'catalog', 'inventory', 'retail', 'reporting',
+      'purchase_orders', 'variants', 'pricing', 'promotions',
+    ],
+    suggestedInstallationFee: 100000,
+    suggestedTrainingFee: 50000,
+  },
+];
+
+async function seedPlans() {
+  console.log('Seeding plan definitions...');
+  for (const plan of PLANS) {
+    await (prisma as any).planDefinition.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        monthlyPrice: plan.monthlyPrice,
+        maxUsers: plan.maxUsers,
+        includedModules: plan.includedModules,
+        suggestedInstallationFee: plan.suggestedInstallationFee,
+        suggestedTrainingFee: plan.suggestedTrainingFee,
+      },
+      create: plan,
+    });
+  }
+  console.log(`  ✓ ${PLANS.length} plan definitions seeded`);
+}
+
 async function main() {
   // Seed RBAC first (roles needed before member creation)
   await seedRbac();
 
   // Seed Module Registry (module catalog for feature gating)
   await seedModules();
+
+  // Seed billing plan definitions
+  await seedPlans();
 
   // Create a tenant for development
   let tenant = await prisma.tenant.findFirst();

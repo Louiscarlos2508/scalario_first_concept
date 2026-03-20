@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 24 — Fraîcheur + code couleur priorité vente
 - **Story ID:** 24-1-batch-freshness-backend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** Epics 1–9, Epic 21 (réception fournisseur)
 
@@ -71,32 +71,32 @@
 
 ## Tasks/Subtasks
 
-- [ ] **Task 1 : Migration CatalogItem — expiryDays + shrinkageTolerance**
-  - [ ] Ajouter `expiryDays Int? @map("expiry_days")` sur `CatalogItem`
-  - [ ] Ajouter `shrinkageTolerance Decimal? @map("shrinkage_tolerance") @db.Decimal(5, 2)`
-  - [ ] Générer migration
+- [x] **Task 1 : Migration CatalogItem — expiryDays + shrinkageTolerance**
+  - [x] Ajouter `expiryDays Int? @map("expiry_days")` sur `CatalogItem`
+  - [x] Ajouter `shrinkageTolerance Decimal? @map("shrinkage_tolerance") @db.Decimal(5, 2)`
+  - [x] Générer migration
 
-- [ ] **Task 2 : Migration ProductBatch**
-  - [ ] Créer modèle `ProductBatch` dans `schema.prisma` (schema `shared`)
-  - [ ] Index sur `(tenantId, expiresAt)`
-  - [ ] Générer migration
+- [x] **Task 2 : Migration ProductBatch**
+  - [x] Créer modèle `ProductBatch` dans `schema.prisma` (schema `shared`)
+  - [x] Index sur `(tenantId, expiresAt)`
+  - [x] Générer migration
 
-- [ ] **Task 3 : BatchesModule**
-  - [ ] Créer `batches.module.ts`, `batches.service.ts`, `batches.controller.ts`
-  - [ ] `getBatchesExpiring(tenantId, days)` : query + calcul `freshnessPercent`
-  - [ ] `getExpiringCount(tenantId)` : urgentCount (freshnessPercent < 50%)
+- [x] **Task 3 : BatchesModule**
+  - [x] Créer `batches.module.ts`, `batches.service.ts`, `batches.controller.ts`
+  - [x] `getBatchesExpiring(tenantId, days)` : query + calcul `freshnessPercent`
+  - [x] `getExpiringCount(tenantId)` : urgentCount (freshnessPercent < 50%)
 
-- [ ] **Task 4 : Création batch à la réception**
-  - [ ] Dans `inventory.service.ts` (ou `purchase-orders.service.ts`), après création mouvement `DELIVERY`
-  - [ ] Si `catalogItem.expiryDays != null`, créer `ProductBatch`
+- [x] **Task 4 : Création batch à la réception**
+  - [x] Dans `inventory.service.ts` (ou `purchase-orders.service.ts`), après création mouvement `DELIVERY`
+  - [x] Si `catalogItem.expiryDays != null`, créer `ProductBatch`
 
-- [ ] **Task 5 : Dépletion FIFO à la vente**
-  - [ ] Dans `transactions.service.ts`, pour chaque item vendu avec batches actifs
-  - [ ] Trier batches par `expiresAt` ASC, décrémenter FIFO
-  - [ ] Marquer `isDepleted = true` si `remainingQty <= 0`
+- [x] **Task 5 : Dépletion FIFO à la vente**
+  - [x] Dans `transactions.service.ts`, pour chaque item vendu avec batches actifs
+  - [x] Trier batches par `expiresAt` ASC, décrémenter FIFO
+  - [x] Marquer `isDepleted = true` si `remainingQty <= 0`
 
-- [ ] **Task 6 : Tolérance LOSS**
-  - [ ] Dans `inventory.service.ts`, si type `LOSS` et quantity <= `shrinkageTolerance %` : `reason = "NATURAL_VARIANCE"`
+- [x] **Task 6 : Tolérance LOSS**
+  - [x] Dans `inventory.service.ts`, si type `LOSS` et quantity <= `shrinkageTolerance %` : `reason = "NATURAL_VARIANCE"`
 
 ---
 

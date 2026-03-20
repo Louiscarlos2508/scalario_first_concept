@@ -6,6 +6,8 @@ import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/catalog/presentation/screens/categories_screen.dart';
 import 'package:frontend/features/shared/catalog/presentation/widgets/product_form_dialog.dart';
+import 'package:frontend/features/shared/catalog/presentation/screens/serial_records_screen.dart';
+import 'package:frontend/features/shared/catalog/presentation/widgets/price_history_tab.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/stock_history_screen.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/stock_adjustment_dialog.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
@@ -147,6 +149,54 @@ class CatalogScreen extends ConsumerWidget {
                 _showAdjust(context, ref, item);
               },
             ),
+            if (item['dynamicPricing'] == true)
+              ListTile(
+                key: const Key('catalog_action_price_history'),
+                leading: const Icon(Icons.price_change_outlined),
+                title: const Text('Historique des prix'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => DraggableScrollableSheet(
+                      expand: false,
+                      initialChildSize: 0.7,
+                      builder: (_, sc) => PriceHistoryTab(
+                        catalogItemId: item['id']?.toString() ?? '',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            if (item['isUnique'] == true)
+              ListTile(
+                key: const Key('catalog_action_duplicate'),
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Dupliquer cet article'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _duplicateItem(context, ref, item);
+                },
+              ),
+            if (item['trackSerialNumbers'] == true)
+              ListTile(
+                key: const Key('catalog_action_serials'),
+                leading: const Icon(Icons.qr_code_2),
+                title: const Text('Numéros de série'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SerialRecordsScreen(
+                        catalogItemId: item['id']?.toString() ?? '',
+                        productName: item['name']?.toString(),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ListTile(
               key: const Key('catalog_action_delete'),
               leading: const Icon(Icons.delete_outline, color: AppColors.error),
@@ -241,6 +291,7 @@ class CatalogScreen extends ConsumerWidget {
   ) async {
     final confirmed = await _confirmDismiss(context, item);
     if (confirmed != true) return;
+    if (!context.mounted) return;
     await _doDelete(context, ref, item);
   }
 
@@ -266,6 +317,38 @@ class CatalogScreen extends ConsumerWidget {
       builder: (_) =>
           ProductFormDialog(submitToCatalog: true, product: product),
     );
+  }
+
+  // ── Duplicate item (isUnique) ─────────────────────────────────────────────
+
+  Future<void> _duplicateItem(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) async {
+    final id = item['id']?.toString();
+    if (id == null) return;
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+
+    try {
+      await ref.read(catalogRepositoryProvider).duplicateItem(id: id, tenantId: tenantId);
+      ref.invalidate(catalogProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Article dupliqué')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   // ── Stock adjustment ──────────────────────────────────────────────────────
@@ -390,10 +473,35 @@ class _CatalogItemTile extends StatelessWidget {
               size: 20,
             ),
           ),
-          title: Text(
-            name,
-            style: AppTextStyles.bodyMedium,
-            overflow: TextOverflow.ellipsis,
+          title: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  name,
+                  style: AppTextStyles.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (item['isUnique'] == true) ...[
+                const SizedBox(width: 4),
+                Container(
+                  key: Key('badge_unique_$id'),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'UNIQUE',
+                    style: TextStyle(
+                      color: Colors.purple.shade700,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           subtitle: Text(_fcfa.format(price), style: AppTextStyles.bodySmall),
           trailing: Row(

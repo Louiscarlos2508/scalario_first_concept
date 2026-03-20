@@ -9,6 +9,8 @@ import 'package:frontend/features/shared/inventory/presentation/widgets/loss_dec
 import 'package:frontend/features/shared/inventory/presentation/screens/partial_inventory_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
+import 'package:frontend/features/shared/freshness/presentation/screens/freshness_screen.dart';
+import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 
 class InventoryScreen extends ConsumerWidget {
   final int initialIndex;
@@ -20,9 +22,11 @@ class InventoryScreen extends ConsumerWidget {
     final repo = ref.watch(inventoryRepositoryProvider);
     final statsAsync = ref.watch(purchaseOrderStatsProvider);
     final pendingCount = statsAsync.valueOrNull?['total'] ?? 0;
+    final urgentCountAsync = ref.watch(urgentBatchCountProvider);
+    final urgentCount = urgentCountAsync.valueOrNull ?? 0;
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       initialIndex: initialIndex,
       child: Scaffold(
         appBar: ScalarioAppBar(
@@ -42,6 +46,16 @@ class InventoryScreen extends ConsumerWidget {
                 ),
                 text: 'Commandes',
               ),
+              // AC1 (Story 24-3) — Fraîcheur tab with urgent badge
+              Tab(
+                icon: Badge(
+                  isLabelVisible: urgentCount > 0,
+                  label: Text('$urgentCount'),
+                  backgroundColor: Colors.orange,
+                  child: const Icon(Icons.eco_outlined),
+                ),
+                text: 'Fraîcheur',
+              ),
             ],
           ),
         ),
@@ -52,6 +66,7 @@ class InventoryScreen extends ConsumerWidget {
             _LossTab(repo: repo),
             _InventoryCountTab(repo: repo),
             const PurchaseOrdersScreen(),
+            const FreshnessScreen(),
           ],
         ),
       ),

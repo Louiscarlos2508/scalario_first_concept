@@ -36,6 +36,29 @@ model Tenant {
   notificationChannel   String               @default("in_app") @map("notification_channel")
   lastSummarySentDate   DateTime?            @map("last_summary_sent_date") @db.Timestamptz(6)
 
+  /// Epic 24 — Freshness color-code thresholds (percent)
+  freshnessGreenThreshold  Int               @default(50) @map("freshness_green_threshold")
+  freshnessOrangeThreshold Int               @default(20) @map("freshness_orange_threshold")
+
+  /// Epic 27 — Return policy (FR98)
+  returnPolicyDays         Int               @default(30) @map("return_policy_days")
+  returnRequiresReason     Boolean           @default(true) @map("return_requires_reason")
+  returnRequiresApproval   Boolean           @default(false) @map("return_requires_approval")
+
+  /// Epic 28 — Billing (FR100–FR103)
+  plan                     String            @default("free")
+  maxUsers                 Int               @default(1) @map("max_users")
+  installationFee          Decimal?          @map("installation_fee") @db.Decimal(10, 0)
+  installationPaid         Boolean           @default(false) @map("installation_paid")
+  trainingFee              Decimal?          @map("training_fee") @db.Decimal(10, 0)
+  trainingPaid             Boolean           @default(false) @map("training_paid")
+  billingStartDate         DateTime?         @map("billing_start_date") @db.Timestamptz(6)
+  billingStatus            String            @default("trial") @map("billing_status") // trial | active | overdue | suspended
+  trialEndsAt              DateTime?         @map("trial_ends_at") @db.Timestamptz(6)
+  overdueAt                DateTime?         @map("overdue_at") @db.Timestamptz(6)
+  notes                    String?
+  billingEvents            BillingEvent[]
+
   createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   auditLogs             AuditLog[]
   categories            Category[]
@@ -46,6 +69,43 @@ model Tenant {
   expenses              Expense[]
 
   @@map("tenants")
+  @@schema("kernel")
+}
+
+// ─── Epic 28: FR100 — Plan Definitions ────────────────────────────────────────
+model PlanDefinition {
+  id                       String   @id @default(uuid()) @db.Uuid
+  code                     String   @unique
+  name                     String
+  monthlyPrice             Decimal  @map("monthly_price") @db.Decimal(10, 0)
+  maxUsers                 Int      @map("max_users")
+  includedModules          String[] @map("included_modules")
+  suggestedInstallationFee Decimal? @map("suggested_installation_fee") @db.Decimal(10, 0)
+  suggestedTrainingFee     Decimal? @map("suggested_training_fee") @db.Decimal(10, 0)
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("plan_definitions")
+  @@schema("kernel")
+}
+
+// ─── Epic 28: FR101–FR103 — Billing Events ────────────────────────────────────
+model BillingEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  type          String    // subscription | installation | training | upgrade | downgrade | payment | upgrade_request
+  amount        Decimal   @db.Decimal(10, 0)
+  description   String?
+  paidAt        DateTime? @map("paid_at") @db.Timestamptz(6)
+  dueDate       DateTime? @map("due_date") @db.Timestamptz(6)
+  status        String    @default("pending") // pending | paid | overdue | cancelled
+  paymentMethod String?   @map("payment_method") // cash | mobile_money | card | bank_transfer
+  paymentRef    String?   @map("payment_ref")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("billing_events")
   @@schema("kernel")
 }
 
@@ -184,9 +244,23 @@ model CatalogItem {
   expiryDays          Int?          @map("expiry_days")
   shrinkageTolerance  Decimal?      @map("shrinkage_tolerance") @db.Decimal(5, 2)
 
+  // Epic 25 — Variantes
+  hasVariants         Boolean       @default(false) @map("has_variants")
+
+  // Epic 26 — Traçabilité Articles
+  trackSerialNumbers  Boolean       @default(false) @map("track_serial_numbers")
+  warrantyMonths      Int?          @map("warranty_months")
+  requiresPrescription Boolean      @default(false) @map("requires_prescription")
+  dynamicPricing      Boolean       @default(false) @map("dynamic_pricing")
+  isUnique            Boolean       @default(false) @map("is_unique")
+
   retailProduct       RetailProduct?
   purchaseOrderLines  PurchaseOrderLine[]
   productBatches      ProductBatch[]
+  variants            ProductVariant[]
+  priceLevels         PriceLevel[]
+  serialRecords       SerialRecord[]
+  priceHistory        PriceHistory[]
 
   @@index([tenantId, updatedAt])
   @@index([tenantId, categoryId])
@@ -273,6 +347,53 @@ model PurchaseOrderLine {
   @@schema("shared")
 }
 
+// ── Epic 27 — Retours Articles (FR98) ─────────────────────────────────────
+
+model ReturnRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  originalTxId    String?  @map("original_tx_id") @db.Uuid
+  catalogItemId   String   @map("catalog_item_id") @db.Uuid
+  variantId       String?  @map("variant_id") @db.Uuid
+  quantity        Decimal  @db.Decimal(10, 4)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(10, 2)
+  // resolution: 'cash_refund' | 'credit_note' | 'exchange'
+  resolution      String
+  reason          String?
+  approvedBy      String?  @map("approved_by") @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@index([originalTxId])
+  @@map("return_records")
+  @@schema("shared")
+}
+
+// ── Epic 27 — Réservations avec acompte (FR99) ────────────────────────────
+
+model Reservation {
+  id                     String    @id @default(uuid()) @db.Uuid
+  customerId             String    @map("customer_id") @db.Uuid
+  itemsJson              Json      @map("items_json")
+  totalAmount            Decimal   @map("total_amount") @db.Decimal(10, 2)
+  depositAmount          Decimal   @map("deposit_amount") @db.Decimal(10, 2)
+  remainingAmount        Decimal   @map("remaining_amount") @db.Decimal(10, 2)
+  // status: 'pending' | 'completed' | 'cancelled'
+  status                 String    @default("pending")
+  depositTransactionId   String?   @map("deposit_transaction_id") @db.Uuid
+  completionTransactionId String?  @map("completion_transaction_id") @db.Uuid
+  tenantId               String    @map("tenant_id") @db.Uuid
+  createdBy              String    @map("created_by") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt            DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  @@index([tenantId, status])
+  @@index([customerId])
+  @@map("reservations")
+  @@schema("shared")
+}
+
 model Transaction {
   id              String   @id @default(uuid()) @db.Uuid
   totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
@@ -286,6 +407,7 @@ model Transaction {
   customerId      String?  @map("customer_id") @db.Uuid
   sessionId       String?  @map("session_id") @db.Uuid
   tenantId        String   @map("tenant_id") @db.Uuid
+  metadata        Json?    @map("metadata")
   createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -307,6 +429,7 @@ model InventoryMovement {
   tenantId      String   @map("tenant_id") @db.Uuid
   userId        String?  @map("user_id") @db.Uuid
   referenceId   String?  @map("reference_id") @db.Uuid
+  variantId     String?  @map("variant_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([tenantId, createdAt])
@@ -403,6 +526,65 @@ model Notification {
   @@schema("shared")
 }
 
+// Epic 25 — Variantes produit
+model ProductVariant {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  tenantId      String      @map("tenant_id") @db.Uuid
+  sku           String?
+  barcode       String?
+  price         Decimal     @db.Decimal(10, 2)
+  stockQuantity Decimal     @default(0) @map("stock_quantity") @db.Decimal(12, 3)
+  attributes    Json        @default("{}")
+  isActive      Boolean     @default(true) @map("is_active")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId, catalogItemId])
+  @@index([barcode])
+  @@map("prod_variants")
+  @@schema("shared")
+}
+
+// Epic 25 — Multi-tarifs (niveaux de prix)
+model PriceLevel {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  catalogItemId String    @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  tenantId      String    @map("tenant_id") @db.Uuid
+  levelCode     String    @map("level_code")
+  label         String
+  price         Decimal   @db.Decimal(10, 2)
+  minQty        Int?      @map("min_qty")
+  customerTypes String[]  @map("customer_types")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, catalogItemId])
+  @@map("price_levels")
+  @@schema("shared")
+}
+
+// Epic 25 — Promotions
+model Promotion {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  type         String    // PERCENT | BUY_N_GET_M | CROSSED_PRICE
+  scope        String    // ITEM | CATEGORY
+  scopeId      String    @map("scope_id") @db.Uuid
+  value        Json
+  startDate    DateTime  @map("start_date") @db.Timestamptz(6)
+  endDate      DateTime  @map("end_date") @db.Timestamptz(6)
+  status       String    @default("active") // active | inactive
+  conflictRule String    @default("BEST") @map("conflict_rule") // BEST | FIRST
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, status, startDate, endDate])
+  @@map("promotions")
+  @@schema("shared")
+}
+
 // Epic 24 — Fraîcheur + code couleur priorité vente
 model ProductBatch {
   id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -413,12 +595,47 @@ model ProductBatch {
   expiresAt     DateTime    @map("expires_at") @db.Timestamptz(6)
   initialQty    Decimal     @map("initial_qty") @db.Decimal(12, 3)
   remainingQty  Decimal     @map("remaining_qty") @db.Decimal(12, 3)
-  batchRef      String?     @map("batch_ref")
-  isDepleted    Boolean     @default(false) @map("is_depleted")
-  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  batchRef       String?     @map("batch_ref")
+  isDepleted     Boolean     @default(false) @map("is_depleted")
+  bestBeforeDate DateTime?   @map("best_before_date") @db.Timestamptz(6)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([tenantId, expiresAt])
   @@map("prod_batches")
+  @@schema("shared")
+}
+
+// Epic 26 — Traçabilité : numéros de série
+model SerialRecord {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  serial        String
+  soldAt        DateTime?   @map("sold_at") @db.Timestamptz(6)
+  warrantyUntil DateTime?   @map("warranty_until") @db.Timestamptz(6)
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, serial])
+  @@index([catalogItemId])
+  @@map("serial_records")
+  @@schema("shared")
+}
+
+// Epic 26 — Traçabilité : historique des prix
+model PriceHistory {
+  id            String      @id @default(uuid()) @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  price         Decimal     @db.Decimal(12, 2)
+  effectiveFrom DateTime    @map("effective_from") @db.Timestamptz(6)
+  reason        String?
+  tenantId      String      @map("tenant_id") @db.Uuid
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([catalogItemId, effectiveFrom])
+  @@index([tenantId])
+  @@map("price_history")
   @@schema("shared")
 }
 

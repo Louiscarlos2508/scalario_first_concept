@@ -44,8 +44,12 @@ export class RetailSessionController {
   // AC5 — GET /retail/sessions/reports
   @Get('reports')
   @Roles('owner', 'manager')
-  async getSessionReports(@Query('tenantId') tenantId: string) {
-    return this.posSessionService.getSessionReports(tenantId);
+  async getSessionReports(
+    @Query('tenantId') tenantId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.posSessionService.getSessionReports(tenantId, from, to);
   }
 
   // Backoffice — GET /retail/sessions/active?tenantId=

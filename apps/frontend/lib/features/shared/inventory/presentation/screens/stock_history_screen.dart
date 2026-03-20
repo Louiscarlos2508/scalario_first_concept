@@ -29,9 +29,7 @@ class StockHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: ScalarioAppBar(
-        title: isFiltered
-            ? (productName ?? 'Mouvements produit')
-            : 'Historique des stocks',
+        title: isFiltered ? (productName ?? 'Mouvements produit') : 'Historique des stocks',
         actions: [
           TextButton.icon(
             onPressed: () async {

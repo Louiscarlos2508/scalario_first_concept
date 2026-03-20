@@ -307,6 +307,15 @@ Les articles du catalogue supportent des variantes tenant-configurables (taille,
 
 ---
 
+### Epic 26: Traçabilité Articles & Configurations Métier
+
+Chaque article du catalogue peut être enrichi de configurations métier avancées selon le secteur du tenant : suivi de numéros de série par unité vendue (électronique, hi-fi), durée de garantie avec génération automatique de certificat, exigence d'ordonnance pour la vente (pharmacie), date de garde optimale sur lot (agroalimentaire, cave), prix dynamique avec historique complet (or, carburant), article unique non-réapprovisable avec archivage automatique après vente (dépôt-vente, antiquités). Toutes ces fonctionnalités sont optionnelles et désactivées par défaut.
+**Phase:** 2b
+**FRs covered:** FR92, FR93, FR94, FR95, FR96, FR97
+**Prerequisite:** Epic 2 (catalog), Epic 5 (inventory/stock movements), Epic 16 (réception fournisseur), Epic 24 (fraîcheur/batches), Epic 25 (variants/pricing)
+
+---
+
 ### Epic 24: Fraîcheur + code couleur priorité vente
 Chaque article peut avoir une fenêtre de fraîcheur en jours et un coefficient de tolérance au rétrécissement. À la réception, une date d'expiration est calculée automatiquement par lot (`ProductBatch`). La grille POS et les vues stock affichent un indicateur couleur vert/orange/rouge selon le pourcentage de fenêtre restant. Les articles orange/rouge sont triés en priorité. Un onglet "Fraîcheur" dans l'`InventoryScreen` permet de déclasser les lots.
 **Phase:** 2b
@@ -4233,3 +4242,1168 @@ Le gestionnaire peut créer des commandes fournisseurs (sélection fournisseur, 
 - `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher prix barré + badge PROMO
 - `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — prix barré + total économies
 - `apps/frontend/lib/features/retail/backoffice/presentation/widgets/dashboard_shell.dart` — lien vers PromotionsScreen
+
+---
+
+## Epic 26: Traçabilité Articles & Configurations Métier (FR92–FR97)
+
+### Story 26-1: Suivi numéros de série (FR92)
+
+**As a** owner or manager,
+**I want** to track serial numbers per unit sold for eligible catalog items,
+**So that** I can trace every sold unit back to its serial, customer, and sale date (FR92).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ trackSerialNumbers sur CatalogItem :**
+
+**Given** le modèle `CatalogItem` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `trackSerialNumbers Boolean @default(false)` est présent sur `catalog_items`
+**And** le modèle `SerialRecord` existe dans le schema `shared` avec : `id`, `catalogItemId`, `serial`, `soldAt`, `warrantyUntil`, `tenantId`, `createdAt`
+**And** un index unique `(tenantId, serial)` est appliqué
+
+**AC2 — Endpoints SerialRecord :**
+
+**Given** un article a `trackSerialNumbers = true`
+**When** `POST /api/v1/catalog/:id/serials` est appelé avec `{ serial, soldAt, warrantyUntil? }`
+**Then** un `SerialRecord` est créé lié à l'article et au tenant
+**And** `GET /api/v1/catalog/:id/serials` retourne la liste des séries vendues (paginée)
+**And** `GET /api/v1/serials?q=<serial>` permet la recherche par numéro de série cross-articles
+
+**AC3 — Saisie numéro de série au POS :**
+
+**Given** un article au panier a `trackSerialNumbers = true`
+**When** le caissier valide le panier
+**Then** une bottom sheet demande la saisie du numéro de série avant de finaliser la transaction
+**And** le champ est obligatoire si `trackSerialNumbers = true`, optionnel sinon
+**And** le numéro de série est transmis à la transaction et crée un `SerialRecord` côté backend
+
+**AC4 — Historique des séries dans le backoffice :**
+
+**Given** l'owner navigue sur la fiche d'un article avec `trackSerialNumbers = true`
+**When** il ouvre l'onglet "Séries"
+**Then** la liste des `SerialRecord` est affichée : numéro de série, date de vente, client (si lié)
+**And** une barre de recherche permet de filtrer par numéro de série
+
+**AC5 — Toggle dans le formulaire article :**
+
+**Given** l'owner édite ou crée un article dans `ProductFormDialog`
+**When** il active le toggle "Suivi par numéro de série"
+**Then** `trackSerialNumbers` est mis à `true` sur l'article
+**And** un avertissement s'affiche : "Le caissier devra saisir un numéro de série à chaque vente"
+
+**Notes dev :**
+- La saisie du serial au POS peut être une `AlertDialog` simple avant `CheckoutController.confirmSale()`
+- Le serial est stocké dans les metadata de la transaction (JSON field) et dans `SerialRecord`
+- Offline : le `SerialRecord` est créé côté backend lors de la sync de la transaction outbox
+
+**Files to create:**
+- `apps/backend/src/shared/catalog/serials/serials.service.ts`
+- `apps/backend/src/shared/catalog/serials/serials.controller.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_serial_records/migration.sql`
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/serial_input_dialog.dart`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — ajouter `SerialRecord` + `trackSerialNumbers` sur `CatalogItem`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — créer `SerialRecord` à la vente
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — déclencher saisie serial avant checkout
+- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — onglet Séries sur fiche article
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle trackSerialNumbers
+
+---
+
+### Story 26-2: Gestion des garanties (FR93)
+
+**As a** owner or manager,
+**I want** warranty certificates auto-generated at the point of sale for eligible articles,
+**So that** customers have a traceable warranty and can be looked up by warranty number (FR93).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ warrantyMonths sur CatalogItem :**
+
+**Given** le modèle `CatalogItem` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `warrantyMonths Int?` est présent sur `catalog_items`
+**And** le champ `warrantyUntil DateTime?` est présent sur `SerialRecord` (ajouté en story 26-1)
+
+**AC2 — Génération automatique à la vente :**
+
+**Given** un article vendu a `warrantyMonths > 0` ET un `SerialRecord` est créé (26-1)
+**When** la transaction est finalisée
+**Then** `SerialRecord.warrantyUntil` est calculé : `soldAt + warrantyMonths mois`
+**And** un numéro de certificat de garantie est généré : `WAR-<tenantCode>-<serial>-<YYYYMM>`
+**And** ce numéro est retourné dans la réponse de la transaction
+
+**AC3 — Affichage certificat sur le reçu :**
+
+**Given** la transaction comporte un article avec garantie
+**When** le reçu s'affiche dans `ReceiptDialog`
+**Then** une section "Garantie" apparaît avec : article, numéro de série, date de fin de garantie, numéro de certificat
+
+**AC4 — Recherche client par numéro de garantie :**
+
+**Given** l'owner ouvre la vue contacts ou l'écran de recherche
+**When** il saisit un numéro de garantie dans la barre de recherche globale
+**Then** le `SerialRecord` correspondant est affiché avec : article, client lié, date d'achat, date fin garantie
+
+**AC5 — Toggle warrantyMonths dans le formulaire article :**
+
+**Given** l'owner édite un article dans `ProductFormDialog`
+**When** il active "Durée de garantie" et saisit un nombre de mois
+**Then** `warrantyMonths` est sauvegardé sur l'article
+**And** la valeur `0` ou champ vide désactive la garantie
+
+**Notes dev :**
+- `warrantyUntil` est calculé par le backend (`transactions.service.ts`) lors de la création du `SerialRecord`
+- Le numéro de certificat n'est pas stocké séparément : il est re-généré depuis `(serial + soldAt)`
+- Story 26-1 est un prérequis strict (SerialRecord doit exister)
+
+**Files to create:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/warranty_receipt_section.dart`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — `warrantyMonths` sur `CatalogItem`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — calculer `warrantyUntil` sur `SerialRecord`
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — section garantie
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — champ warrantyMonths
+- `apps/frontend/lib/features/shared/contacts/presentation/screens/contacts_screen.dart` — recherche par n° garantie
+
+---
+
+### Story 26-3: Prescription obligatoire (FR94)
+
+**As a** pharmacist or regulated-goods retailer,
+**I want** certain articles to require a prescription number before sale,
+**So that** I can comply with regulatory requirements and audit prescription-linked sales (FR94).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ requiresPrescription sur CatalogItem :**
+
+**Given** le modèle `CatalogItem` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `requiresPrescription Boolean @default(false)` est présent sur `catalog_items`
+**And** la fonctionnalité est désactivée par défaut sur tous les tenants
+
+**AC2 — Saisie ordonnance obligatoire au POS :**
+
+**Given** un article au panier a `requiresPrescription = true`
+**When** le caissier tente de valider le panier
+**Then** une bottom sheet s'ouvre avec deux champs obligatoires : "Numéro d'ordonnance" et "Nom du prescripteur"
+**And** la validation du panier est bloquée tant que ces champs ne sont pas remplis
+**And** les valeurs saisies sont transmises à la transaction
+
+**AC3 — Enregistrement sur la transaction :**
+
+**Given** la transaction est finalisée avec une ordonnance
+**When** `POST /api/v1/transactions` est appelé
+**Then** les champs `prescriptionNumber` et `prescriberName` sont stockés dans les metadata JSON de la transaction
+**And** `GET /api/v1/transactions/:id` retourne ces champs dans la réponse
+
+**AC4 — Recherche par numéro d'ordonnance :**
+
+**Given** l'owner accède à l'historique des transactions
+**When** il recherche par numéro d'ordonnance
+**Then** les transactions liées à cette ordonnance sont affichées
+
+**AC5 — Toggle dans le formulaire article :**
+
+**Given** l'owner édite un article dans `ProductFormDialog`
+**When** il active "Requiert une ordonnance"
+**Then** `requiresPrescription` est mis à `true` sur l'article
+**And** un avertissement s'affiche : "Le caissier devra saisir un numéro d'ordonnance à chaque vente"
+
+**Notes dev :**
+- Les données ordonnance sont stockées en JSON (champ `metadata` sur transaction) — pas de table dédiée
+- Le module "prescription" est désactivé par défaut et doit être activé explicitement dans les paramètres tenant
+- Pas d'intégration avec un système externe d'ordonnances pour cette phase
+
+**Files to create:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/prescription_input_dialog.dart`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — `requiresPrescription` sur `CatalogItem`
+- `apps/backend/src/shared/transactions/transactions.service.ts` — stocker ordonnance dans metadata
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — déclencher saisie ordonnance avant checkout
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle requiresPrescription
+- `apps/frontend/lib/features/shared/reports/presentation/screens/reports_screen.dart` ou historique transactions — filtre par n° ordonnance
+
+---
+
+### Story 26-4: Date de garde optimale sur lot (FR95)
+
+**As a** retailer handling perishable goods with a best-before window (wine, cheese),
+**I want** each product batch to optionally carry a best-before date distinct from the expiry date,
+**So that** the freshness color code prioritises sale before the optimal consumption date (FR95).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ bestBeforeDate sur ProductBatch :**
+
+**Given** le modèle `ProductBatch` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `bestBeforeDate DateTime? @map("best_before_date")` est présent sur `product_batches`
+**And** le champ est nullable — les lots existants sans garde ne sont pas affectés
+
+**AC2 — Saisie bestBeforeDate à la réception :**
+
+**Given** l'utilisateur enregistre une réception fournisseur
+**When** il renseigne les détails du lot
+**Then** un champ optionnel "Date de garde optimale" apparaît si l'article a des lots avec expiry
+**And** ce champ accepte une date et la sauvegarde comme `bestBeforeDate` sur le `ProductBatch`
+**And** la date de garde est indépendante de `expiresAt` (les deux peuvent coexister)
+
+**AC3 — Priorité bestBeforeDate dans le code couleur fraîcheur :**
+
+**Given** un lot a `bestBeforeDate` renseigné
+**When** le code couleur fraîcheur est calculé (Epic 24)
+**Then** le calcul utilise `bestBeforeDate` au lieu de `expiresAt`
+**And** si `bestBeforeDate` est null mais `expiresAt` est renseigné, `expiresAt` est utilisé comme fallback
+**And** si les deux sont null, aucun code couleur fraîcheur n'est affiché
+
+**AC4 — Affichage bestBeforeDate dans l'onglet Fraîcheur :**
+
+**Given** l'utilisateur ouvre l'onglet Fraîcheur dans `InventoryScreen`
+**When** un lot a une `bestBeforeDate`
+**Then** la carte du lot affiche "Garde optimale : <date>" distinct de "Expire : <expiresAt>"
+
+**Notes dev :**
+- La logique de code couleur est dans `FreshnessHelper` (Epic 24) — modifier la sélection de date de référence
+- `bestBeforeDate` est inclus dans la réponse de `GET /api/v1/inventory/batches` et `GET /api/v1/inventory/batches/expiring`
+- Story 24 (Fraîcheur) est un prérequis
+
+**Files to create:**
+- `apps/backend/prisma/migrations/YYYYMMDD_add_best_before_date/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — `bestBeforeDate` sur `ProductBatch`
+- `apps/backend/src/shared/inventory/inventory.service.ts` — inclure `bestBeforeDate` dans les réponses batch
+- `apps/frontend/lib/features/shared/inventory/data/models/product_batch.dart` — ajouter `bestBeforeDate`
+- `apps/frontend/lib/core/utils/freshness_helper.dart` (ou équivalent) — logique de sélection `bestBeforeDate` vs `expiresAt`
+- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — afficher "Garde optimale" dans l'onglet Fraîcheur
+- `apps/frontend/lib/features/shared/inventory/presentation/widgets/reception_form.dart` — champ bestBeforeDate
+
+---
+
+### Story 26-5: Prix dynamique avec historique (FR96)
+
+**As a** retailer selling commodities with fluctuating prices (gold, fuel, raw materials),
+**I want** articles flagged as dynamic-priced to maintain a full price history,
+**So that** the POS always uses the current price and I can audit past pricing decisions (FR96).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ dynamicPricing + modèle PriceHistory :**
+
+**Given** le modèle `CatalogItem` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `dynamicPricing Boolean @default(false)` est présent sur `catalog_items`
+**And** le modèle `PriceHistory` existe dans le schema `shared` avec : `id`, `catalogItemId`, `price`, `effectiveFrom`, `reason`, `tenantId`, `createdAt`
+**And** un index sur `(catalogItemId, effectiveFrom)` est appliqué
+
+**AC2 — Enregistrement automatique dans PriceHistory :**
+
+**Given** un article a `dynamicPricing = true`
+**When** son prix est modifié via `PATCH /api/v1/catalog/:id` (champ `price`)
+**Then** un `PriceHistory` est créé automatiquement avec `effectiveFrom = now()` et le motif optionnel (`reason`)
+**And** le prix actuel de l'article (`CatalogItem.price`) est mis à jour normalement
+**And** les articles sans `dynamicPricing` ne génèrent pas d'entrée dans `PriceHistory`
+
+**AC3 — Endpoint historique des prix :**
+
+**Given** `GET /api/v1/catalog/:id/price-history` est appelé
+**When** l'article a des entrées dans `PriceHistory`
+**Then** la liste est retournée triée par `effectiveFrom DESC` avec : prix, date effective, motif
+
+**AC4 — POS utilise toujours le dernier prix :**
+
+**Given** un article dynamicPricing a un prix mis à jour
+**When** il est ajouté au panier POS
+**Then** le prix utilisé est `CatalogItem.price` (le plus récent) — pas de calcul supplémentaire requis au POS
+
+**AC5 — Vue historique des prix dans le backoffice :**
+
+**Given** l'owner ouvre la fiche d'un article avec `dynamicPricing = true`
+**When** il ouvre l'onglet "Historique des prix"
+**Then** la liste des `PriceHistory` est affichée : date, prix, motif
+**And** un graphique linéaire simple montre l'évolution du prix dans le temps
+
+**AC6 — Toggle + champ reason dans le formulaire article :**
+
+**Given** l'owner édite un article
+**When** il active "Prix dynamique"
+**Then** `dynamicPricing` est mis à `true`
+**And** lors de chaque modification de prix, un champ optionnel "Motif de la modification" est disponible
+
+**Notes dev :**
+- Le hook de création `PriceHistory` est dans `catalog.service.ts` — intercepter `updateCatalogItem` quand `price` change et `dynamicPricing = true`
+- Le graphique peut être un simple `LineChart` du package `fl_chart` (déjà utilisé pour le dashboard)
+- Offline : la mise à jour de prix est une opération backoffice — pas de contrainte offline spécifique
+
+**Files to create:**
+- `apps/backend/src/shared/catalog/price-history/price-history.service.ts`
+- `apps/backend/prisma/migrations/YYYYMMDD_add_price_history/migration.sql`
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/price_history_tab.dart`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — `PriceHistory` + `dynamicPricing` sur `CatalogItem`
+- `apps/backend/src/shared/catalog/catalog.service.ts` — hook création `PriceHistory` sur update prix
+- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — onglet Historique des prix
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle dynamicPricing + champ reason
+
+---
+
+### Story 26-6: Articles uniques (dépôt-vente) (FR97)
+
+**As a** retailer handling consignment goods, antiques, or one-off items,
+**I want** certain articles to be marked as unique with a stock cap of 1,
+**So that** they disappear from the active catalog after sale and I can duplicate them to create similar listings (FR97).
+
+**Acceptance Criteria:**
+
+**AC1 — Champ isUnique sur CatalogItem :**
+
+**Given** le modèle `CatalogItem` existe dans schema.prisma
+**When** la migration est appliquée
+**Then** le champ `isUnique Boolean @default(false)` est présent sur `catalog_items`
+
+**AC2 — Stock plafonné à 1 :**
+
+**Given** un article a `isUnique = true`
+**When** une réception fournisseur ou un ajustement de stock tente de mettre `stockQuantity > 1`
+**Then** le backend rejette la requête avec `400 Bad Request` : `"Un article unique ne peut avoir un stock supérieur à 1"`
+**And** l'UI affiche ce message d'erreur clairement
+
+**AC3 — Disparition après vente :**
+
+**Given** un article unique est vendu (stock passe à 0)
+**When** la transaction est finalisée
+**Then** `CatalogItem.isActive` est mis à `false` automatiquement
+**And** l'article n'apparaît plus dans la grille POS ni dans le catalogue actif
+**And** il reste accessible dans les transactions historiques et via recherche "articles archivés"
+
+**AC4 — Duplication depuis le backoffice :**
+
+**Given** l'owner consulte un article unique (actif ou archivé)
+**When** il clique "Dupliquer cet article"
+**Then** un nouvel article est créé avec les mêmes données (nom, prix, catégorie) mais `isUnique = true`, `stockQuantity = 0`, et un nouveau `id`
+**And** l'owner est redirigé vers la fiche du nouvel article pour compléter les détails (photos, description spécifique)
+
+**AC5 — Indicateur visuel "Article unique" :**
+
+**Given** un article a `isUnique = true` et `isActive = true`
+**When** il s'affiche dans la grille POS ou dans le catalogue backoffice
+**Then** un badge "UNIQUE" ou une icône distinctive apparaît sur la carte de l'article
+
+**AC6 — Toggle isUnique dans le formulaire article :**
+
+**Given** l'owner crée ou édite un article dans `ProductFormDialog`
+**When** il active "Article unique (dépôt-vente)"
+**Then** `isUnique` est mis à `true` et le stock est automatiquement plafonné à 1 dans l'UI
+**And** un avertissement s'affiche : "Cet article sera automatiquement archivé après la vente"
+
+**Notes dev :**
+- L'archivage automatique (`isActive = false`) est déclenché dans `transactions.service.ts` après décrémentation du stock
+- La duplication utilise un endpoint `POST /api/v1/catalog/:id/duplicate` (retourne le nouvel article)
+- La contrainte stock ≤ 1 est validée dans `inventory.service.ts` avant tout mouvement entrant
+
+**Files to create:**
+- `apps/backend/prisma/migrations/YYYYMMDD_add_is_unique/migration.sql`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — `isUnique` sur `CatalogItem`
+- `apps/backend/src/shared/catalog/catalog.service.ts` — endpoint duplication + contrainte stock
+- `apps/backend/src/shared/inventory/inventory.service.ts` — validation stock ≤ 1 pour articles uniques
+- `apps/backend/src/shared/transactions/transactions.service.ts` — archivage auto après vente
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/product_grid.dart` — badge UNIQUE
+- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — bouton Dupliquer + badge UNIQUE
+- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle isUnique
+
+---
+
+## Epic 27: Retours Articles & Réservations (FR98–FR99)
+
+Le commercial peut enregistrer un retour article au POS lié à la vente originale, avec choix de résolution (remboursement cash, avoir client, échange) et réintégration automatique du stock (FR98, Phase 2a). Le Z-report de session distingue ventes brutes et retours. Le propriétaire configure la politique de retour par tenant (délai, motif obligatoire, approbation manager). Séparément, le commercial peut créer une réservation avec acompte partiel (10–50 % configurable) ; le solde est visible sur la fiche client, le dashboard affiche un KPI "Réservations en cours" (FR99, Phase 2b).
+
+---
+
+### Story 27-1: Backend — ReturnRecord + endpoints POST/GET + stock réintégré (FR98)
+
+**As a** backend developer,
+**I want** a `ReturnRecord` model, REST endpoints to create and query returns, automatic stock reinstatement, and tenant return-policy enforcement,
+**So that** the POS can process article returns with full audit trail and configurable business rules (FR98).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma ReturnRecord :**
+
+**Given** le fichier `schema.prisma` est mis à jour
+**When** la migration est appliquée
+**Then** la table `return_records` existe dans le schéma `shared` avec les colonnes : `id`, `transaction_id`, `catalog_item_id`, `variant_id` (nullable), `quantity`, `reason` (nullable), `resolution`, `approved_by` (nullable), `tenant_id`, `created_by`, `created_at`
+**And** les index `(tenant_id, transaction_id)` sont présents
+
+**AC2 — Champs politique retour sur Tenant :**
+
+**Given** la migration est appliquée
+**When** on inspecte la table `tenants`
+**Then** les colonnes `return_policy_days` (int, default 30), `return_requires_reason` (bool, default true), `return_requires_approval` (bool, default false) sont présentes
+
+**AC3 — POST /api/v1/returns — création retour :**
+
+**Given** un commercial authentifié envoie `POST /api/v1/returns` avec `{ transactionId, catalogItemId, quantity, reason?, resolution }`
+**When** la transaction originale existe et appartient au même tenant
+**And** la date de la transaction est dans la fenêtre `returnPolicyDays` du tenant
+**And** `reason` est fourni si `returnRequiresReason = true`
+**Then** un `ReturnRecord` est créé en base avec `createdBy = userId`
+**And** un `StockMovement` de type `RETURN` est créé pour réintégrer la quantité dans le stock
+**And** la réponse est `201 Created` avec le `ReturnRecord` complet
+
+**AC4 — Validation politique retour :**
+
+**Given** un commercial envoie `POST /api/v1/returns`
+**When** la date de vente originale dépasse `returnPolicyDays` du tenant
+**Then** le backend répond `400 Bad Request` : `"La période de retour autorisée est expirée"`
+
+**When** `returnRequiresReason = true` et `reason` est absent ou vide
+**Then** le backend répond `400 Bad Request` : `"Un motif est obligatoire pour les retours"`
+
+**When** `returnRequiresApproval = true` et `approvedBy` est absent
+**Then** le backend répond `403 Forbidden` : `"L'approbation d'un manager est requise"`
+
+**AC5 — GET /api/v1/returns — liste des retours :**
+
+**Given** un manager ou owner authentifié appelle `GET /api/v1/returns`
+**When** la requête est valide
+**Then** la réponse est `200 OK` avec la liste paginée des `ReturnRecord` du tenant
+**And** le filtre optionnel `?transactionId=:id` retourne uniquement les retours de cette transaction
+
+**AC6 — Isolation tenant :**
+
+**Given** un utilisateur appelle `GET /api/v1/returns` ou `POST /api/v1/returns`
+**When** la requête est traitée
+**Then** seuls les enregistrements du tenant de l'utilisateur sont accessibles ou créés
+
+**Notes dev :**
+- `ReturnModule` dans `apps/backend/src/shared/returns/` (controller, service, DTO, module)
+- La réintégration stock appelle `InventoryService.recordMovement({ type: 'RETURN', ... })` — réutiliser le pattern existant
+- `resolution` : enum `cash_refund | credit_note | exchange` — validé au niveau DTO (class-validator `@IsIn`)
+- Pour `credit_note`, un champ `creditBalance` sera incrémenté sur le `Contact` du client (prévu en FR99, pas implémenté ici — logger un TODO)
+- Le `TenantGuard` et `JwtAuthGuard` sur toutes les routes
+- Ajouter `ReturnsModule` au `AppModule`
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260319100000_add_return_records/migration.sql`
+- `apps/backend/src/shared/returns/returns.module.ts`
+- `apps/backend/src/shared/returns/returns.controller.ts`
+- `apps/backend/src/shared/returns/returns.service.ts`
+- `apps/backend/src/shared/returns/dto/create-return.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — modèles `ReturnRecord` + champs `returnPolicy*` sur `Tenant`
+- `apps/backend/src/app.module.ts` — importer `ReturnsModule`
+- `apps/backend/src/shared/inventory/inventory.service.ts` — exposer `recordMovement` si pas déjà public
+
+---
+
+### Story 27-2: Frontend POS — Bouton retour, recherche vente originale, choix résolution (FR98)
+
+**As a** commercial (Fatou),
+**I want** a "Retour" button in the POS that lets me find the original sale by receipt number or barcode and choose how to resolve the return,
+**So that** I can process article returns quickly without leaving the POS screen (FR98).
+
+**Acceptance Criteria:**
+
+**AC1 — Bouton "Retour" dans le POS :**
+
+**Given** le commercial est sur l'écran POS
+**When** il appuie sur le bouton "Retour" (icône undo, placement : panel actions)
+**Then** une bottom sheet `ReturnSearchSheet` s'ouvre
+**And** le champ de recherche par numéro de reçu est focalisé automatiquement
+
+**AC2 — Recherche de la vente originale :**
+
+**Given** la `ReturnSearchSheet` est ouverte
+**When** le commercial saisit un numéro de reçu ou scanne un code-barres
+**And** la transaction existe dans le tenant
+**Then** la liste des articles de la vente s'affiche (nom, quantité vendue, prix unitaire)
+**And** chaque article affiche un sélecteur de quantité à retourner (défaut : 0, max : quantité achetée)
+
+**When** le numéro de reçu n'est pas trouvé
+**Then** un message "Vente introuvable — vérifiez le numéro de reçu" s'affiche
+
+**AC3 — Choix de résolution :**
+
+**Given** le commercial a sélectionné au moins un article à retourner
+**When** il appuie sur "Confirmer le retour"
+**Then** un dialogue `ReturnResolutionDialog` s'affiche avec trois options :
+- Remboursement cash (icône monnaie)
+- Avoir client — crédité sur le compte (icône portefeuille)
+- Échange article (icône refresh)
+
+**AC4 — Motif obligatoire (si configuré) :**
+
+**Given** `returnRequiresReason = true` pour le tenant
+**When** le commercial appuie sur "Confirmer" dans `ReturnResolutionDialog`
+**And** le champ "Motif du retour" est vide
+**Then** un message d'erreur inline s'affiche : "Le motif est obligatoire"
+**And** la confirmation est bloquée
+
+**AC5 — Confirmation et feedback :**
+
+**Given** le commercial a rempli tous les champs requis
+**When** il valide le retour
+**Then** l'appel `POST /api/v1/returns` est effectué
+**And** en cas de succès, un `SnackBar` affiche "Retour enregistré — [résolution]"
+**And** la `ReturnSearchSheet` se ferme et le POS revient à l'état initial (panier vide)
+
+**When** le backend répond avec une erreur (délai expiré, motif manquant)
+**Then** le message d'erreur du backend s'affiche dans le dialogue
+
+**AC6 — Mode offline :**
+
+**Given** le POS est hors ligne
+**When** le commercial tente d'ouvrir la `ReturnSearchSheet`
+**Then** un message s'affiche : "La recherche de reçu nécessite une connexion Internet"
+**And** le bouton "Retour" est visuellement désactivé (avec tooltip explicatif)
+
+**Notes dev :**
+- `ReturnSearchSheet` : `apps/frontend/lib/features/retail/pos/presentation/widgets/return_search_sheet.dart`
+- `ReturnResolutionDialog` : `apps/frontend/lib/features/retail/pos/presentation/widgets/return_resolution_dialog.dart`
+- Utiliser `ref.read(returnsRepositoryProvider)` pour `POST /api/v1/returns`
+- Le mode offline est détecté via `ConnectivityService` existant
+- Pas de persistence locale des retours (online-only pour MVP)
+
+**Files to create:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/return_search_sheet.dart`
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/return_resolution_dialog.dart`
+- `apps/frontend/lib/features/shared/returns/data/repositories/returns_repository.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — bouton "Retour" dans la barre d'actions
+- `apps/frontend/lib/features/retail/pos/presentation/providers/pos_providers.dart` — `returnsRepositoryProvider`
+
+---
+
+### Story 27-3: Z-report — Distinction ventes brutes vs retours (FR98)
+
+**As a** manager or owner,
+**I want** the session Z-report to show gross sales, returns, and net sales as separate lines,
+**So that** I can reconcile cash accurately and track return volume per session (FR98).
+
+**Acceptance Criteria:**
+
+**AC1 — Données retours dans le Z-report backend :**
+
+**Given** une session POS est clôturée et a des retours enregistrés dans la même session
+**When** `GET /api/v1/sessions/:id/zreport` est appelé
+**Then** la réponse inclut :
+```json
+{
+  "grossSales": { "count": N, "amount": X },
+  "returns":    { "count": M, "amount": Y },
+  "netSales":   { "amount": X - Y },
+  ...
+}
+```
+**And** `returns.amount` est la somme des montants des `ReturnRecord` créés pendant la session (via `created_at` dans la plage `session.openedAt → session.closedAt`)
+
+**AC2 — Zéro retour :**
+
+**Given** une session n'a aucun retour
+**When** le Z-report est demandé
+**Then** `returns` est présent avec `{ count: 0, amount: 0 }` (pas d'erreur, pas de champ absent)
+
+**AC3 — Affichage Z-report frontend :**
+
+**Given** le Z-report est affiché dans `SessionReportScreen` (ou le dialogue de clôture)
+**When** la session a des retours
+**Then** trois lignes distinctes s'affichent :
+- "Ventes brutes : X FCFA (N transactions)"
+- "Retours : − Y FCFA (M retours)" — en rouge
+- "Ventes nettes : Z FCFA" — en gras
+
+**When** la session n'a pas de retours
+**Then** seule la ligne "Ventes nettes" s'affiche (identique aux ventes brutes) — pas de ligne "Retours : 0"
+
+**AC4 — Cohérence avec le cash théorique :**
+
+**Given** le Z-report calcule le montant cash théorique attendu
+**When** des retours cash (`resolution = cash_refund`) ont été effectués
+**Then** le cash théorique est ajusté : `float_ouverture + ventes_cash - remboursements_cash`
+**And** la variance = cash_compté − cash_théorique reste correcte
+
+**Notes dev :**
+- Modifier `PosSessionService.getZReport()` pour joindre les `ReturnRecord` par plage de dates de session
+- La jointure se fait via `created_at` des retours, pas via un `sessionId` sur `ReturnRecord` (les retours ne sont pas liés à une session, mais à une transaction)
+- `netSales = grossSales - returns` côté backend, pas côté frontend
+- Uniquement les retours de type `cash_refund` impactent le cash théorique
+
+**Files to modify:**
+- `apps/backend/src/shared/returns/returns.service.ts` — méthode `getReturnsSummaryForSession(sessionId, openedAt, closedAt)`
+- `apps/backend/src/retail/retail-orchestration.service.ts` (ou équivalent POS session service) — intégrer `returnsSummary` dans le Z-report
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` ou `SessionReportScreen` — afficher les 3 lignes
+
+---
+
+### Story 27-4: Backend — Reservation model + endpoints acompte + completion (FR99)
+
+**As a** backend developer,
+**I want** a `Reservation` model with REST endpoints to create, complete, and cancel reservations with partial deposit logic,
+**So that** the POS can offer deposit-based reservations with full lifecycle management (FR99).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma Reservation :**
+
+**Given** le fichier `schema.prisma` est mis à jour
+**When** la migration est appliquée
+**Then** la table `reservations` existe dans le schéma `shared` avec les colonnes : `id`, `customer_id`, `items_json`, `total_amount`, `deposit_amount`, `remaining_amount`, `status` (default `pending`), `deposit_transaction_id` (nullable), `completion_transaction_id` (nullable), `tenant_id`, `created_by`, `created_at`, `completed_at` (nullable)
+**And** les index `(tenant_id, status)` et `(customer_id)` sont présents
+
+**AC2 — POST /api/v1/reservations — création avec acompte :**
+
+**Given** un commercial authentifié envoie `POST /api/v1/reservations` avec `{ customerId, items: [...], totalAmount, depositAmount }`
+**When** `depositAmount` est compris entre 10 % et 50 % de `totalAmount` (bornes configurables — défaut tenant)
+**Then** une `Reservation` est créée avec `status = "pending"`, `remainingAmount = totalAmount - depositAmount`
+**And** une transaction de type `"reservation_deposit"` est créée pour l'acompte encaissé
+**And** `depositTransactionId` pointe vers cette transaction
+**And** la réponse est `201 Created` avec la réservation complète
+
+**When** `depositAmount < 10 %` ou `> 50 %` de `totalAmount`
+**Then** le backend répond `400 Bad Request` : `"L'acompte doit être compris entre 10 % et 50 % du total"`
+
+**AC3 — PATCH /api/v1/reservations/:id/complete — finalisation paiement :**
+
+**Given** une réservation est en statut `pending`
+**When** un commercial envoie `PATCH /api/v1/reservations/:id/complete` avec `{ paymentMethod, amount }`
+**And** `amount >= remainingAmount`
+**Then** `status` passe à `"completed"`, `completedAt` est renseigné
+**And** une transaction de type `"reservation_completion"` est créée
+**And** `completionTransactionId` est mis à jour
+**And** le stock des articles est décrémenté (via `InventoryService`)
+
+**AC4 — PATCH /api/v1/reservations/:id/cancel — annulation :**
+
+**Given** une réservation est en statut `pending`
+**When** un owner ou manager envoie `PATCH /api/v1/reservations/:id/cancel` avec `{ depositResolution: "credit_note" | "cash_refund" }`
+**Then** `status` passe à `"cancelled"`
+**And** si `depositResolution = "credit_note"` : `Contact.creditBalance` du client est incrémenté du montant `depositAmount`
+**And** si `depositResolution = "cash_refund"` : une transaction `"reservation_refund"` est créée pour trace audit
+**And** la réponse est `200 OK` avec la réservation mise à jour
+
+**AC5 — GET /api/v1/reservations — liste paginée :**
+
+**Given** un manager ou owner appelle `GET /api/v1/reservations`
+**When** la requête est valide
+**Then** la réponse retourne les réservations paginées du tenant
+**And** le filtre optionnel `?status=pending|completed|cancelled` fonctionne
+**And** le filtre `?customerId=:id` retourne les réservations d'un client spécifique
+
+**AC6 — GET /api/v1/reservations/kpi — KPI dashboard :**
+
+**Given** un owner ou manager appelle `GET /api/v1/reservations/kpi`
+**When** la requête est valide
+**Then** la réponse retourne `{ pendingCount: N, totalDepositAmount: X }` pour les réservations `pending` du tenant
+
+**Notes dev :**
+- `ReservationsModule` dans `apps/backend/src/shared/reservations/`
+- `items_json` est un tableau JSON : `[{ catalogItemId, variantId?, quantity, unitPrice }]`
+- Le décrémentement stock à la completion utilise `InventoryService.recordMovement({ type: 'SALE', ... })` pour chaque article
+- `Contact.creditBalance` : si le champ n'existe pas encore sur le modèle `Contact`, l'ajouter dans cette migration
+- Ajouter `ReservationsModule` au `AppModule`
+- Les transactions `reservation_deposit / reservation_completion / reservation_refund` utilisent le modèle `Transaction` existant avec un champ `type` étendu
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260319110000_add_reservations/migration.sql`
+- `apps/backend/src/shared/reservations/reservations.module.ts`
+- `apps/backend/src/shared/reservations/reservations.controller.ts`
+- `apps/backend/src/shared/reservations/reservations.service.ts`
+- `apps/backend/src/shared/reservations/dto/create-reservation.dto.ts`
+- `apps/backend/src/shared/reservations/dto/complete-reservation.dto.ts`
+- `apps/backend/src/shared/reservations/dto/cancel-reservation.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — modèle `Reservation` + `creditBalance` sur `Contact` si absent
+- `apps/backend/src/app.module.ts` — importer `ReservationsModule`
+- `apps/backend/src/shared/inventory/inventory.service.ts` — appelé à la completion
+
+---
+
+### Story 27-5: Frontend — Écran réservations, formulaire acompte POS, KPI dashboard (FR99)
+
+**As a** commercial or owner,
+**I want** to create a reservation with deposit from the POS, view active reservations from the backoffice, complete or cancel them, and see a live KPI on the dashboard,
+**So that** reservation workflows are fully managed without paper or external tools (FR99).
+
+**Acceptance Criteria:**
+
+**AC1 — Bouton "Réservation" dans le POS :**
+
+**Given** le commercial a des articles dans le panier POS
+**When** il appuie sur "Réservation" (bouton alternatif à "Encaisser")
+**Then** un dialogue `ReservationDepositDialog` s'ouvre avec :
+- Sélecteur client (autocomplete sur `Contact`)
+- Montant total pré-rempli depuis le panier
+- Champ acompte (défaut : 30 % du total, modifiable)
+- Indicateur en temps réel : "Acompte : X FCFA — Solde restant : Y FCFA"
+- Bouton "Confirmer la réservation"
+
+**AC2 — Validation acompte côté UI :**
+
+**Given** le commercial saisit un acompte dans `ReservationDepositDialog`
+**When** la valeur est < 10 % ou > 50 % du total
+**Then** un texte d'erreur rouge s'affiche sous le champ : "L'acompte doit être entre 10 % et 50 % du total"
+**And** le bouton "Confirmer" est désactivé
+
+**AC3 — Confirmation et reçu d'acompte :**
+
+**Given** le commercial valide la réservation
+**When** `POST /api/v1/reservations` répond `201 Created`
+**Then** le panier POS est vidé
+**And** un `ReceiptDialog` adapté s'affiche avec le type "RÉSERVATION — ACOMPTE" et le numéro de réservation
+**And** un `SnackBar` confirme : "Réservation créée — Solde restant : Y FCFA"
+
+**AC4 — Écran liste des réservations (backoffice) :**
+
+**Given** le manager ou owner navigue vers "Réservations" dans le backoffice
+**When** l'écran `ReservationsScreen` s'affiche
+**Then** la liste des réservations `pending` s'affiche avec : nom client, date, montant total, acompte versé, solde restant
+**And** un onglet "Complétées" et "Annulées" permettent de consulter l'historique
+**And** chaque réservation `pending` a deux actions : "Compléter le paiement" et "Annuler"
+
+**AC5 — Compléter le paiement :**
+
+**Given** le manager appuie sur "Compléter le paiement" d'une réservation `pending`
+**When** un dialogue de paiement s'affiche avec le solde restant pré-rempli
+**And** le manager confirme le mode de paiement
+**Then** `PATCH /api/v1/reservations/:id/complete` est appelé
+**And** la réservation passe dans l'onglet "Complétées"
+**And** un reçu final est affiché
+
+**AC6 — Annuler une réservation :**
+
+**Given** le manager appuie sur "Annuler" d'une réservation `pending`
+**When** un dialogue de confirmation s'affiche avec deux options : "Rembourser l'acompte (cash)" / "Convertir en avoir client"
+**And** le manager confirme
+**Then** `PATCH /api/v1/reservations/:id/cancel` est appelé avec `depositResolution`
+**And** la réservation passe dans l'onglet "Annulées"
+**And** un `SnackBar` confirme l'action choisie
+
+**AC7 — Solde restant sur la fiche client :**
+
+**Given** un client a une ou plusieurs réservations `pending`
+**When** l'owner ou manager consulte la fiche du contact
+**Then** une section "Réservations en cours" affiche la liste avec le solde restant total
+
+**AC8 — KPI "Réservations en cours" sur le dashboard :**
+
+**Given** le dashboard est chargé
+**When** `GET /api/v1/reservations/kpi` répond avec `{ pendingCount, totalDepositAmount }`
+**Then** une `KpiCard` "Réservations en cours" s'affiche avec `pendingCount` et le sous-texte "Acomptes : X FCFA"
+**And** un tap sur la carte navigue vers `ReservationsScreen` filtré sur `pending`
+
+**Notes dev :**
+- `ReservationDepositDialog` : `apps/frontend/lib/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart`
+- `ReservationsScreen` : `apps/frontend/lib/features/shared/reservations/presentation/screens/reservations_screen.dart`
+- `ReservationsRepository` : `apps/frontend/lib/features/shared/reservations/data/repositories/reservations_repository.dart`
+- `reservationsKpiProvider` : Riverpod `FutureProvider` — appelé dans `DashboardScreen`
+- Le KPI se rafraîchit via `ref.invalidate(reservationsKpiProvider)` après tout create/complete/cancel
+- Pas de mode offline pour les réservations (online-only, cohérent avec FR99)
+
+**Files to create:**
+- `apps/frontend/lib/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart`
+- `apps/frontend/lib/features/shared/reservations/data/repositories/reservations_repository.dart`
+- `apps/frontend/lib/features/shared/reservations/presentation/screens/reservations_screen.dart`
+- `apps/frontend/lib/features/shared/reservations/presentation/providers/reservations_provider.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — bouton "Réservation" dans les actions panier
+- `apps/frontend/lib/features/retail/pos/presentation/providers/pos_providers.dart` — `reservationsRepositoryProvider`
+- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — KPI card réservations
+- `apps/frontend/lib/features/shared/reports/presentation/widgets/kpi_card_grid.dart` — nouveau type KPI si nécessaire
+
+---
+
+## Epic 28: Plans Tarifaires & Facturation (FR100–FR103)
+
+Le superadmin peut assigner un plan tarifaire par tenant (free, standard, premium, enterprise) défini dans une table `PlanDefinition` — le changement de plan active/désactive automatiquement les modules et ajuste `maxUsers` (FR100, Phase 2a). Il peut enregistrer des frais d'installation et de formation par tenant, et gérer le cycle de vie de facturation (trial → active → overdue → suspended) avec suspension automatique configurable (FR101, Phase 2a). Le propriétaire du tenant peut consulter son plan, ses modules inclus, son statut de facturation et l'historique des paiements depuis son backoffice, et demander un upgrade (FR102, Phase 2a — self-service préparé pour Phase 3). En Phase 3, un onboarding en ligne permettra au client de choisir son plan, payer via Mobile Money ou carte, et obtenir son tenant créé et activé automatiquement (FR103).
+
+---
+
+### Story 28-1: Backend — PlanDefinition model, seed 4 plans, endpoints CRUD (FR100)
+
+**As a** superadmin,
+**I want** a `PlanDefinition` model with seed data for the 4 standard plans and full CRUD REST endpoints,
+**So that** plans are configurable without deployment and serve as the source of truth for module activation and fee suggestions (FR100).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma PlanDefinition :**
+
+**Given** le fichier `schema.prisma` est mis à jour avec le modèle `PlanDefinition`
+**When** la migration est appliquée
+**Then** la table `plan_definitions` existe dans le schéma `kernel` avec les colonnes : `id`, `code` (unique), `name`, `monthly_price`, `max_users`, `included_modules` (String[]), `suggested_installation_fee` (nullable), `suggested_training_fee` (nullable), `is_active` (default true), `created_at`
+
+**AC2 — Seed 4 plans :**
+
+**Given** la commande `prisma db seed` est exécutée
+**When** la base est vide ou les plans sont absents
+**Then** 4 plans sont créés : `free` (0 FCFA, 1 user, modules: []), `standard` (15 000 FCFA, 4 users, modules: ["catalog","inventory","retail"]), `premium` (30 000 FCFA, 10 users, modules: ["catalog","inventory","retail","reporting","purchase_orders"]), `enterprise` (50 000 FCFA, 25 users, modules: ["catalog","inventory","retail","reporting","purchase_orders","variants","pricing","promotions"])
+**And** le seed est idempotent (upsert par `code`)
+
+**AC3 — GET /admin/plans — liste des plans :**
+
+**Given** un superadmin authentifié appelle `GET /api/v1/admin/plans`
+**When** la requête est valide
+**Then** la réponse est `200 OK` avec la liste de tous les `PlanDefinition` triés par `monthly_price` ASC
+**And** les plans inactifs (`isActive = false`) sont inclus (superadmin voit tout)
+
+**AC4 — POST /admin/plans — création plan :**
+
+**Given** un superadmin envoie `POST /api/v1/admin/plans` avec `{ code, name, monthlyPrice, maxUsers, includedModules, suggestedInstallationFee?, suggestedTrainingFee? }`
+**When** le `code` n'existe pas encore
+**Then** un `PlanDefinition` est créé et retourné en `201 Created`
+**When** le `code` existe déjà
+**Then** la réponse est `409 Conflict` : `"Un plan avec ce code existe déjà"`
+
+**AC5 — PATCH /admin/plans/:code — mise à jour plan :**
+
+**Given** un superadmin envoie `PATCH /api/v1/admin/plans/:code` avec les champs à modifier
+**When** le plan existe
+**Then** les champs sont mis à jour et le plan modifié est retourné en `200 OK`
+**And** les tenants déjà sur ce plan ne sont PAS rétroactivement affectés (la modification n'est effective que pour les prochaines assignations)
+
+**AC6 — DELETE /admin/plans/:code — désactivation plan :**
+
+**Given** un superadmin appelle `DELETE /api/v1/admin/plans/:code`
+**When** le plan existe
+**Then** `isActive` est passé à `false` (soft delete) et la réponse est `200 OK`
+**And** les tenants actuellement sur ce plan conservent leur assignation
+
+**Notes dev :**
+- `PlanDefinitionModule` dans `apps/backend/src/kernel/billing/`
+- `SuperadminGuard` sur toutes les routes (vérifier que le guard existe ou le créer)
+- Les `includedModules` sont des codes correspondant aux `Module.code` de la table `modules` — pas de FK (liste flexible)
+- Le seed Prisma est dans `apps/backend/prisma/seed.ts` — ajouter les plans dans la section kernel
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260320000000_add_plan_definitions/migration.sql`
+- `apps/backend/src/kernel/billing/billing.module.ts`
+- `apps/backend/src/kernel/billing/plan-definition/plan-definition.controller.ts`
+- `apps/backend/src/kernel/billing/plan-definition/plan-definition.service.ts`
+- `apps/backend/src/kernel/billing/plan-definition/dto/create-plan-definition.dto.ts`
+- `apps/backend/src/kernel/billing/plan-definition/dto/update-plan-definition.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — modèle `PlanDefinition`
+- `apps/backend/prisma/seed.ts` — seed 4 plans
+- `apps/backend/src/app.module.ts` — importer `BillingModule`
+
+---
+
+### Story 28-2: Backend — PATCH /admin/tenants/:id/plan + activation modules auto (FR100)
+
+**As a** superadmin,
+**I want** a `PATCH /admin/tenants/:id/plan` endpoint that changes a tenant's plan, auto-applies module activation, validates user limits, and records a billing event,
+**So that** plan changes are fully automated without manual module toggling (FR100).
+
+**Acceptance Criteria:**
+
+**AC1 — Champs billing sur Tenant :**
+
+**Given** la migration est appliquée
+**When** on inspecte la table `tenants`
+**Then** les colonnes suivantes existent : `plan` (String, default "free"), `max_users` (Int, default 1), `installation_fee` (Decimal nullable), `installation_paid` (Boolean, default false), `training_fee` (Decimal nullable), `training_paid` (Boolean, default false), `billing_start_date` (DateTime nullable), `billing_status` (String, default "trial"), `trial_ends_at` (DateTime nullable), `notes` (String nullable)
+
+**AC2 — PATCH /admin/tenants/:id/plan — changement de plan :**
+
+**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/plan` avec `{ planCode, confirmDowngrade? }`
+**When** le plan cible existe et est actif
+**Then** `tenant.plan` est mis à jour avec le nouveau `planCode`
+**And** `tenant.maxUsers` est synchronisé avec `PlanDefinition.maxUsers`
+**And** les modules listés dans `PlanDefinition.includedModules` sont activés dans `TenantModule` s'ils ne l'étaient pas
+**And** un `BillingEvent` de type `"upgrade"` ou `"downgrade"` est créé selon l'écart de prix
+**And** la réponse est `200 OK` avec le tenant mis à jour
+
+**AC3 — Validation maxUsers :**
+
+**Given** le nouveau plan a un `maxUsers` inférieur au nombre d'utilisateurs actifs du tenant
+**When** le superadmin envoie la requête sans flag de force
+**Then** la réponse est `403 Forbidden` : `"Le tenant a N utilisateurs actifs, le plan cible en autorise M. Désactivez des comptes avant de downgrader."`
+
+**AC4 — Confirmation downgrade avec désactivation modules :**
+
+**Given** le nouveau plan a moins de modules que le plan actuel
+**When** le superadmin envoie la requête sans `confirmDowngrade: true`
+**Then** la réponse est `409 Conflict` avec la liste des modules qui seront désactivés : `{ modulesToDeactivate: ["promotions", "variants"] }`
+**When** le superadmin renvoie avec `confirmDowngrade: true`
+**Then** les modules hors-plan sont désactivés dans `TenantModule` et l'assignation est appliquée
+
+**AC5 — Plan "free" à la création tenant :**
+
+**Given** un nouveau tenant est créé via `POST /api/v1/admin/tenants`
+**When** aucun `planCode` n'est précisé
+**Then** `tenant.plan` vaut `"free"`, `tenant.maxUsers` vaut `1`, `tenant.billingStatus` vaut `"trial"`, `tenant.trialEndsAt` vaut `createdAt + 30 jours`
+
+**Notes dev :**
+- Étendre `TenantService` existant (ne pas créer un service dupliqué)
+- L'activation/désactivation modules appelle `ModuleRegistryService.setModuleStatus(tenantId, moduleCode, status)` — créer ou étendre cette méthode
+- Le `BillingEvent` est créé via `BillingService.recordEvent(...)` — introduit dans la Story 28-3
+- Logger un TODO si `BillingService` n'est pas encore disponible (injectable ultérieurement)
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260320010000_add_billing_fields_to_tenant/migration.sql`
+- `apps/backend/src/kernel/billing/tenant-plan/tenant-plan.controller.ts`
+- `apps/backend/src/kernel/billing/tenant-plan/tenant-plan.service.ts`
+- `apps/backend/src/kernel/billing/tenant-plan/dto/assign-plan.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — champs billing + `billingEvents` relation sur `Tenant`
+- `apps/backend/src/organization/organization.service.ts` — `plan: "free"`, `trialEndsAt` à la création
+- `apps/backend/src/kernel/billing/billing.module.ts` — exporter `TenantPlanService`
+
+---
+
+### Story 28-3: Backend — BillingEvent model + endpoints + cron suspension auto (FR101)
+
+**As a** superadmin,
+**I want** a `BillingEvent` ledger with REST endpoints to record and query payments, automatic billing status transitions, and a daily cron job that suspends overdue tenants,
+**So that** billing is tracked exhaustively and suspended tenants are blocked automatically (FR101).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma BillingEvent :**
+
+**Given** le fichier `schema.prisma` est mis à jour avec le modèle `BillingEvent`
+**When** la migration est appliquée
+**Then** la table `billing_events` existe dans le schéma `kernel` avec les colonnes : `id`, `tenant_id` (FK tenants), `type`, `amount`, `description` (nullable), `paid_at` (nullable), `due_date` (nullable), `status` (default "pending"), `payment_method` (nullable), `payment_ref` (nullable), `created_at`
+**And** l'index `(tenant_id, status)` est présent
+
+**AC2 — POST /admin/tenants/:id/billing/events — enregistrement paiement :**
+
+**Given** un superadmin envoie `POST /api/v1/admin/tenants/:id/billing/events` avec `{ type, amount, description?, paidAt?, dueDate?, paymentMethod?, paymentRef? }`
+**When** le tenant existe
+**Then** un `BillingEvent` est créé et retourné en `201 Created`
+**When** `type` est `"subscription"` et `paidAt` est fourni
+**Then** `tenant.billingStatus` passe automatiquement à `"active"` et `tenant.billingStartDate` est défini si null
+
+**AC3 — GET /admin/tenants/:id/billing — historique facturation :**
+
+**Given** un superadmin appelle `GET /api/v1/admin/tenants/:id/billing`
+**When** le tenant existe
+**Then** la réponse est `200 OK` avec `{ tenant: { plan, billingStatus, trialEndsAt, billingStartDate, installationFee, installationPaid, trainingFee, trainingPaid, notes }, events: BillingEvent[] }` trié par `createdAt` DESC
+
+**AC4 — PATCH /admin/tenants/:id/billing — mise à jour frais et notes :**
+
+**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/billing` avec `{ installationFee?, installationPaid?, trainingFee?, trainingPaid?, notes?, billingStatus? }`
+**When** le tenant existe
+**Then** les champs sont mis à jour sur le `Tenant` et la réponse est `200 OK`
+
+**AC5 — Cron job suspension automatique :**
+
+**Given** le cron job tourne chaque jour à 02:00 UTC
+**When** un tenant a `billingStatus = "overdue"` depuis plus de 30 jours (configurable via variable d'environnement `BILLING_SUSPENSION_DAYS`, default 30)
+**Then** `tenant.billingStatus` passe à `"suspended"`
+**And** un `BillingEvent` de type `"payment"` avec `description: "Suspension automatique — impayé > 30j"` et `status: "overdue"` est créé pour traçabilité
+
+**AC6 — Transition trial → overdue :**
+
+**Given** le cron job tourne
+**When** un tenant a `billingStatus = "trial"` et `trialEndsAt < now()`
+**Then** `tenant.billingStatus` passe à `"overdue"`
+
+**Notes dev :**
+- Utiliser `@nestjs/schedule` (`@Cron(CronExpression.EVERY_DAY_AT_2AM)`) dans un `BillingSchedulerService`
+- La variable `BILLING_SUSPENSION_DAYS` est lue via `ConfigService` (valeur par défaut 30)
+- `BillingService.recordEvent(tenantId, eventDto)` est la méthode partagée appelée depuis 28-2 et 28-3
+- Ne pas réutiliser `status` de `Tenant` directement depuis le frontend — toujours passer par l'API billing
+
+**Files to create:**
+- `apps/backend/prisma/migrations/20260320020000_add_billing_events/migration.sql`
+- `apps/backend/src/kernel/billing/billing-events/billing-events.controller.ts`
+- `apps/backend/src/kernel/billing/billing-events/billing-events.service.ts`
+- `apps/backend/src/kernel/billing/billing-events/billing-scheduler.service.ts`
+- `apps/backend/src/kernel/billing/billing-events/dto/create-billing-event.dto.ts`
+- `apps/backend/src/kernel/billing/billing-events/dto/update-billing.dto.ts`
+
+**Files to modify:**
+- `apps/backend/prisma/schema.prisma` — modèle `BillingEvent` + relation `Tenant.billingEvents`
+- `apps/backend/src/kernel/billing/billing.module.ts` — déclarer `BillingSchedulerService`, importer `ScheduleModule`
+- `apps/backend/src/app.module.ts` — importer `ScheduleModule.forRoot()` si non présent
+
+---
+
+### Story 28-4: Frontend admin — Dropdown plan, onglet Facturation, badge statut (FR100–FR101)
+
+**As a** superadmin,
+**I want** the admin panel to show a plan dropdown when creating a tenant, a "Facturation" tab in tenant detail, and a billing status badge in the tenant list,
+**So that** I can manage plans and billing without leaving the admin interface (FR100, FR101).
+
+**Acceptance Criteria:**
+
+**AC1 — Dropdown plan dans NewTenantForm :**
+
+**Given** le superadmin ouvre le formulaire de création de tenant
+**When** il sélectionne un plan dans le dropdown
+**Then** les champs `maxUsers`, `suggestedInstallationFee`, `suggestedTrainingFee` sont pré-remplis avec les valeurs du `PlanDefinition`
+**And** ces valeurs restent modifiables avant soumission
+**And** le plan `"free"` est sélectionné par défaut
+
+**AC2 — Onglet "Facturation" dans TenantDetailScreen :**
+
+**Given** le superadmin ouvre le détail d'un tenant
+**When** il clique sur l'onglet "Facturation"
+**Then** il voit : plan actuel (badge coloré), `billingStatus`, `trialEndsAt` (si trial), `billingStartDate`, frais d'installation (montant + statut payé/non payé), frais de formation (montant + statut), notes libres
+**And** la liste des `BillingEvent` du tenant est affichée en ordre chronologique inverse avec : date, type, montant, statut
+**And** chaque événement `pending` ou `overdue` a un bouton "Marquer payé" qui appelle `PATCH /admin/tenants/:id/billing/events/:eventId` avec `{ status: "paid", paidAt: now() }`
+
+**AC3 — Badge billing status dans la liste tenants :**
+
+**Given** le superadmin est sur l'écran liste des tenants
+**When** la liste est chargée
+**Then** chaque ligne affiche un badge coloré selon `billingStatus` : `trial` (bleu), `active` (vert), `overdue` (orange), `suspended` (rouge)
+**And** un filtre rapide permet d'afficher uniquement les tenants `overdue` ou `suspended`
+
+**AC4 — Bouton "Réactiver" pour tenants suspendus :**
+
+**Given** le superadmin est sur l'onglet Facturation d'un tenant suspendu
+**When** il clique sur "Réactiver"
+**Then** un dialog de confirmation s'affiche : "Réactiver ce tenant ? Le statut passera à 'active'."
+**When** il confirme
+**Then** `PATCH /admin/tenants/:id/billing` est appelé avec `{ billingStatus: "active" }` et le badge se met à jour
+
+**Notes dev :**
+- Le panel admin est dans `apps/frontend/lib/features/admin/` (vérifier le chemin exact du panel)
+- Utiliser `FutureProvider` Riverpod pour `planDefinitionsProvider` (chargé une fois, mis en cache)
+- Le dropdown plan appelle `GET /api/v1/admin/plans` au chargement du formulaire
+
+**Files to create:**
+- `apps/frontend/lib/features/admin/billing/data/repositories/billing_repository.dart`
+- `apps/frontend/lib/features/admin/billing/presentation/providers/billing_providers.dart`
+- `apps/frontend/lib/features/admin/billing/presentation/widgets/billing_tab.dart`
+- `apps/frontend/lib/features/admin/billing/presentation/widgets/billing_event_tile.dart`
+- `apps/frontend/lib/features/admin/billing/presentation/widgets/plan_dropdown.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/admin/presentation/screens/tenant_detail_screen.dart` — ajouter onglet "Facturation"
+- `apps/frontend/lib/features/admin/presentation/screens/tenants_list_screen.dart` — badge billingStatus + filtre
+- `apps/frontend/lib/features/admin/presentation/widgets/new_tenant_form.dart` — dropdown plan + pré-remplissage
+
+---
+
+### Story 28-5: Frontend backoffice — Écran "Mon abonnement" dans Paramètres (FR102)
+
+**As a** tenant owner,
+**I want** an "Mon abonnement" screen in my backoffice Settings that shows my current plan, included modules, billing status, and payment history, with a button to request an upgrade,
+**So that** I can understand what I'm paying for and escalate upgrades without contacting Carlos directly (FR102).
+
+**Acceptance Criteria:**
+
+**AC1 — Écran "Mon abonnement" accessible depuis les Paramètres :**
+
+**Given** le propriétaire est sur l'écran Paramètres du backoffice
+**When** il tape sur "Mon abonnement"
+**Then** l'écran `SubscriptionScreen` s'ouvre avec : nom du plan actuel (badge coloré), prix mensuel, `maxUsers`, liste des modules inclus (icône + nom lisible), statut de facturation, prochaine échéance estimée (si `billingStartDate` défini : date + 30 jours)
+
+**AC2 — Historique des paiements :**
+
+**Given** le propriétaire est sur l'écran "Mon abonnement"
+**When** la section "Historique" est chargée
+**Then** la liste des `BillingEvent` du tenant est affichée (type, montant, date, statut)
+**And** les événements `pending` affichent le label "En attente de paiement"
+**And** les événements `paid` affichent la date de paiement
+
+**AC3 — Bouton "Demander un upgrade" :**
+
+**Given** le propriétaire tape sur "Demander un upgrade"
+**When** un dialog de confirmation s'affiche avec un champ texte optionnel (message libre)
+**And** il confirme
+**Then** `POST /api/v1/settings/billing/upgrade-request` est appelé avec `{ message? }`
+**And** une notification in-app est envoyée au superadmin : "Tenant [name] demande un upgrade de plan [current] → ?"
+**And** le propriétaire voit un toast : "Votre demande a été envoyée. Carlos vous contactera sous 24h."
+
+**AC4 — Message bloquant si tenant suspendu :**
+
+**Given** le tenant a `billingStatus = "suspended"`
+**When** le propriétaire ouvre n'importe quel écran du backoffice ou du POS
+**Then** un écran bloquant remplace le contenu normal : titre "Abonnement expiré", message "Votre abonnement Scalario est suspendu. Contactez votre administrateur pour régulariser votre situation.", bouton "Contacter" (ouvre WhatsApp ou appel selon `notificationPhone` du tenant)
+**And** aucun autre écran n'est accessible (navigation bloquée)
+
+**Notes dev :**
+- `GET /api/v1/settings/billing` retourne `{ plan: PlanDefinition, billingStatus, events: BillingEvent[] }` — protégé par `JwtAuthGuard` + `TenantGuard`, rôle `Owner` uniquement
+- `POST /api/v1/settings/billing/upgrade-request` crée une notification interne (pas de paiement en Phase 2a)
+- Le blocage "suspendu" est géré côté frontend dans le router guard principal (vérifier `billingStatus` au démarrage de session)
+- Le blocage backend (403) est implémenté en Story 28-6
+
+**Files to create:**
+- `apps/frontend/lib/features/shared/billing/data/repositories/subscription_repository.dart`
+- `apps/frontend/lib/features/shared/billing/presentation/providers/subscription_provider.dart`
+- `apps/frontend/lib/features/shared/billing/presentation/screens/subscription_screen.dart`
+- `apps/frontend/lib/features/shared/billing/presentation/widgets/plan_info_card.dart`
+- `apps/frontend/lib/features/shared/billing/presentation/widgets/billing_history_list.dart`
+- `apps/frontend/lib/features/shared/billing/presentation/screens/suspended_screen.dart`
+
+**Files to modify:**
+- `apps/frontend/lib/features/retail/backoffice/presentation/screens/settings_screen.dart` — lien "Mon abonnement"
+- `apps/backend/src/kernel/billing/billing-events/billing-events.controller.ts` — ajouter routes settings (`GET /settings/billing`, `POST /settings/billing/upgrade-request`)
+
+---
+
+### Story 28-6: Backend + Frontend — Enforcement statut suspendu (FR101)
+
+**As a** system,
+**I want** that all API endpoints return 403 when a tenant is suspended, and the Flutter client intercepts this code to display a blocking expiry screen,
+**So that** suspended tenants cannot use the app until their subscription is regularised (FR101).
+
+**Acceptance Criteria:**
+
+**AC1 — BillingGuard backend — blocage global sur tenants suspendus :**
+
+**Given** un utilisateur d'un tenant avec `billingStatus = "suspended"` envoie une requête authentifiée
+**When** la requête atteint n'importe quel endpoint (sauf `POST /auth/login`, `POST /auth/refresh`, `GET /settings/billing`)
+**Then** le backend répond `403 Forbidden` avec le body `{ error: "TENANT_SUSPENDED", message: "Abonnement expiré — contactez votre administrateur" }`
+
+**AC2 — BillingGuard — tenants non suspendus non affectés :**
+
+**Given** un utilisateur d'un tenant avec `billingStatus ≠ "suspended"`
+**When** il envoie une requête normale
+**Then** le `BillingGuard` laisse passer sans overhead perceptible
+**And** le statut `trial` ou `overdue` ne bloque PAS l'accès (uniquement `suspended` bloque)
+
+**AC3 — Flutter — interception globale 403 TENANT_SUSPENDED :**
+
+**Given** le client Flutter reçoit une réponse `403` avec `error: "TENANT_SUSPENDED"`
+**When** l'intercepteur HTTP détecte ce code d'erreur
+**Then** la navigation est redirigée vers `SuspendedScreen` indépendamment de l'écran courant
+**And** tous les appels API suivants sont annulés tant que la session n'est pas rechargée
+
+**AC4 — Réactivation par le superadmin :**
+
+**Given** le superadmin appelle `PATCH /api/v1/admin/tenants/:id/billing` avec `{ billingStatus: "active" }`
+**When** le tenant était `"suspended"`
+**Then** `tenant.billingStatus` passe à `"active"`
+**And** un `BillingEvent` de type `"payment"` avec `description: "Réactivation manuelle par superadmin"` et `status: "paid"` est créé
+**And** les prochaines requêtes de ce tenant ne sont plus bloquées par le `BillingGuard`
+
+**AC5 — Whitelist routes exclues du guard :**
+
+**Given** un utilisateur d'un tenant suspendu
+**When** il appelle `POST /auth/login`, `POST /auth/refresh`, ou `GET /settings/billing`
+**Then** le `BillingGuard` laisse passer (whitelist hardcodée dans le guard)
+**And** l'utilisateur peut consulter son statut de facturation même si suspendu
+
+**Notes dev :**
+- `BillingGuard` est un `CanActivate` NestJS global (`APP_GUARD`) enregistré après `JwtAuthGuard` dans `AppModule` — il lit `tenant.billingStatus` depuis le contexte de requête déjà peuplé par `TenantGuard`
+- Cache en mémoire du `billingStatus` par `tenantId` (TTL 60s) pour éviter une requête DB par appel — invalider le cache sur `PATCH /admin/tenants/:id/billing`
+- Flutter : l'intercepteur est ajouté dans le `Dio` global (`apps/frontend/lib/core/network/api_client.dart`)
+- Le `SuspendedScreen` est introduit en Story 28-5 — le réutiliser ici
+
+**Files to create:**
+- `apps/backend/src/kernel/billing/guards/billing.guard.ts`
+
+**Files to modify:**
+- `apps/backend/src/app.module.ts` — enregistrer `BillingGuard` comme `APP_GUARD` global
+- `apps/frontend/lib/core/network/api_client.dart` — intercepteur `403 TENANT_SUSPENDED`
+- `apps/backend/src/kernel/billing/billing-events/billing-events.service.ts` — `reactivateTenant()` crée le `BillingEvent` de réactivation

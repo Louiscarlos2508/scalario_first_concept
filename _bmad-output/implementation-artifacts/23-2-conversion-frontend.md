@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 23 — Conversion unités vrac → détail
 - **Story ID:** 23-2-conversion-frontend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** 23-1 (endpoints parentItemId + PATCH disponibles)
 

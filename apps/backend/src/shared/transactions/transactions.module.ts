@@ -3,6 +3,7 @@ import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
 import { ContactsModule } from '../contacts/contacts.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { SerialsService } from '../catalog/serials/serials.service';
 
 @Module({})
 export class TransactionsModule {
@@ -10,7 +11,7 @@ export class TransactionsModule {
     return {
       module: TransactionsModule,
       imports: [ContactsModule.register(), PaymentsModule.register()],
-      providers: [TransactionsService],
+      providers: [TransactionsService, SerialsService],
       controllers: [TransactionsController],
       exports: [TransactionsService],
     };

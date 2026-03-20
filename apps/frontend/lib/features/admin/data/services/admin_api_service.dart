@@ -208,6 +208,79 @@ class AdminApiService {
     throw Exception('Failed to remove user: HTTP ${response.statusCode}');
   }
 
+  // ── Billing ───────────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> fetchPlans({required String token}) async {
+    final response = await _client.get(
+      Uri.parse('${ApiConstants.baseUrl}/admin/plans'),
+      headers: ApiConstants.headers(token: token),
+    );
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List;
+      return list.cast<Map<String, dynamic>>();
+    }
+    throw Exception('Failed to fetch plans: HTTP ${response.statusCode}');
+  }
+
+  Future<void> assignPlan(
+    String tenantId,
+    String planCode, {
+    bool confirmDowngrade = false,
+    required String token,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/plan'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode({'planCode': planCode, 'confirmDowngrade': confirmDowngrade}),
+    );
+    if (response.statusCode == 200) return;
+    throw Exception('Failed to assign plan: HTTP ${response.statusCode} — ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> getTenantBilling(
+    String tenantId, {
+    required String token,
+  }) async {
+    final response = await _client.get(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/billing'),
+      headers: ApiConstants.headers(token: token),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to fetch billing: HTTP ${response.statusCode}');
+  }
+
+  Future<void> updateTenantBilling(
+    String tenantId,
+    Map<String, dynamic> payload, {
+    required String token,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/billing'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode == 200) return;
+    throw Exception('Failed to update billing: HTTP ${response.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> recordBillingEvent(
+    String tenantId,
+    Map<String, dynamic> payload, {
+    required String token,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/billing/events'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(payload),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to record billing event: HTTP ${response.statusCode}');
+  }
+
   // ── Monitoring ────────────────────────────────────────────────────────────
 
   Future<MonitoringHealth> getMonitoringHealth({required String token}) async {

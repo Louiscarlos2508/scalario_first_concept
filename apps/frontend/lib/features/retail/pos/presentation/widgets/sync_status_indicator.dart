@@ -33,12 +33,10 @@ class SyncStatusIndicator extends ConsumerWidget {
             tooltip = 'Erreur de sync';
             break;
           case SyncUiStatus.disconnected:
-          default:
             color = Colors.grey;
             icon = Icons.cloud_off;
             tooltip = 'Hors ligne';
             break;
-
         }
 
         return IconButton(

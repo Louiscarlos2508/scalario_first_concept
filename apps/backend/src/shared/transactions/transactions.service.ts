@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../kernel/audit/audit-log.service';
 import { EventBusService } from '../../kernel/events/event-bus.service';
 import { ContactsService } from '../contacts/contacts.service';
 import { PaymentsService } from '../payments/payments.service';
+import { SerialsService } from '../catalog/serials/serials.service';
 
 @Injectable()
 export class TransactionsService {
@@ -13,6 +15,7 @@ export class TransactionsService {
     private readonly eventBus: EventBusService,
     private readonly contactsService: ContactsService,
     private readonly paymentsService: PaymentsService,
+    private readonly serialsService: SerialsService,
   ) {}
 
   async createTransaction(data: {
@@ -26,12 +29,21 @@ export class TransactionsService {
     customerId?: string | null;
     sessionId?: string | null;
     tenantId: string;
+    // Epic 26 — Serial number tracking
+    serialNumbers?: Array<{ catalogItemId: string; serial: string }>;
+    // Epic 26 — Prescription
+    prescriptionNumber?: string | null;
+    prescriberName?: string | null;
   }, userId: string | null) {
     // Idempotent: return existing if UUID already in use
     const existing = await this.prisma.transaction.findUnique({ where: { id: data.id } });
     if (existing) return existing;
 
     const roundedTotal = this.paymentsService.roundTotal(Number(data.totalAmount));
+
+    const prescriptionMeta = data.prescriptionNumber
+      ? { prescription: { number: data.prescriptionNumber, prescriber: data.prescriberName ?? '' } }
+      : undefined;
 
     const newTx = await this.prisma.transaction.create({
       data: {
@@ -45,8 +57,25 @@ export class TransactionsService {
         customerId: data.customerId ?? null,
         sessionId: data.sessionId ?? null,
         tenantId: data.tenantId,
+        metadata: prescriptionMeta ?? Prisma.JsonNull,
       },
     });
+
+    // Epic 26 — Create SerialRecord for each item with a serial number
+    if (data.serialNumbers && data.serialNumbers.length > 0) {
+      for (const sn of data.serialNumbers) {
+        const catalogItem = await this.prisma.catalogItem.findFirst({
+          where: { id: sn.catalogItemId, tenantId: data.tenantId },
+          select: { warrantyMonths: true },
+        });
+        await this.serialsService.createSerialForSale(
+          data.tenantId,
+          sn.catalogItemId,
+          sn.serial,
+          catalogItem?.warrantyMonths,
+        );
+      }
+    }
 
     // Credit balance update
     if (data.paymentMethod === 'CREDIT' && data.customerId) {

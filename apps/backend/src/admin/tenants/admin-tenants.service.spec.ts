@@ -63,7 +63,7 @@ describe('AdminTenantsService', () => {
         id: mockTenantId,
         name: 'Boutique Koné',
         currency: 'XOF',
-        timezone: 'Africa/Abidjan',
+        timezone: 'Africa/Ouagadougou',
         status: 'active',
       });
       mockPrismaService.role.findUnique.mockResolvedValue({
@@ -81,12 +81,14 @@ describe('AdminTenantsService', () => {
         createDto.ownerPassword,
       );
       expect(mockPrismaService.tenant.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           name: createDto.name,
           currency: 'XOF',
-          timezone: 'Africa/Abidjan',
+          timezone: 'Africa/Ouagadougou',
           status: 'active',
-        },
+          plan: 'free',
+          billingStatus: 'trial',
+        }),
       });
       expect(mockPrismaService.role.findUnique).toHaveBeenCalledWith({
         where: { name_vertical: { name: 'owner', vertical: 'retail' } },
@@ -98,7 +100,7 @@ describe('AdminTenantsService', () => {
           roleId: mockRoleId,
         },
       });
-      expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(mockTenantId);
+      expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(mockTenantId, 'free');
       expect(result.tenantId).toBe(mockTenantId);
       expect(result.userId).toBe(mockUserId);
       expect(result.name).toBe('Boutique Koné');
@@ -126,12 +128,13 @@ describe('AdminTenantsService', () => {
       });
 
       expect(mockPrismaService.tenant.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           name: 'Test',
           currency: 'EUR',
           timezone: 'Europe/Paris',
           status: 'active',
-        },
+          plan: 'free',
+        }),
       });
     });
 
@@ -174,7 +177,7 @@ describe('AdminTenantsService', () => {
           name: 'Boutique Koné',
           status: 'active',
           currency: 'XOF',
-          timezone: 'Africa/Abidjan',
+          timezone: 'Africa/Ouagadougou',
           createdAt: new Date('2026-01-01'),
           _count: { members: 3 },
           tenantModules: [
@@ -204,7 +207,7 @@ describe('AdminTenantsService', () => {
         id: mockTenantId,
         name: 'New Name',
         currency: 'XOF',
-        timezone: 'Africa/Abidjan',
+        timezone: 'Africa/Ouagadougou',
         status: 'active',
         createdAt: new Date(),
       });
@@ -233,7 +236,7 @@ describe('AdminTenantsService', () => {
           name: 'Test',
           status,
           currency: 'XOF',
-          timezone: 'Africa/Abidjan',
+          timezone: 'Africa/Ouagadougou',
           createdAt: new Date(),
         });
 

@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 25 — Variantes, multi-tarifs & promotions
 - **Story ID:** 25-4-price-level-backend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** Epics 1–9, Epic 3 (contacts/contactType)
 

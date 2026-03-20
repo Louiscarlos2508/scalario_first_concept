@@ -4,13 +4,15 @@ class CreateTenantDto {
   final String ownerPassword;
   final String currency;
   final String timezone;
+  final String billingStatus;
 
   const CreateTenantDto({
     required this.name,
     required this.ownerEmail,
     required this.ownerPassword,
     this.currency = 'XOF',
-    this.timezone = 'Africa/Abidjan',
+    this.timezone = 'Africa/Ouagadougou',
+    this.billingStatus = 'trial',
   });
 
   Map<String, dynamic> toJson() => {
@@ -19,5 +21,6 @@ class CreateTenantDto {
         'ownerPassword': ownerPassword,
         'currency': currency,
         'timezone': timezone,
+        'billingStatus': billingStatus,
       };
 }

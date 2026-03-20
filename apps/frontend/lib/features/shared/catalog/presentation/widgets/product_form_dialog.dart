@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
+import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
+import 'package:frontend/features/shared/catalog/presentation/widgets/variant_form_sheet.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 
@@ -33,6 +36,21 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   late TextEditingController _minStockController;
   String _selectedUnitType = 'piece';
   bool _isSubmitting = false;
+
+  // Epic 25 — Variantes
+  bool _hasVariants = false;
+  List<ProductVariant> _variants = [];
+  // Epic 25 — Niveaux de prix
+  List<PriceLevel> _priceLevels = [];
+
+  // Epic 26 — Traçabilité
+  bool _trackSerialNumbers = false;
+  bool _hasWarranty = false;
+  late TextEditingController _warrantyMonthsController;
+  bool _requiresPrescription = false;
+  bool _dynamicPricing = false;
+  late TextEditingController _priceReasonController;
+  bool _isUnique = false;
 
   // Epic 23 — Reconditionnement (parent-child)
   bool _isChildItem = false;
@@ -67,6 +85,16 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     );
     _isChildItem = widget.product?.parentItemId != null;
     _selectedParentItemId = widget.product?.parentItemId;
+    _hasVariants = widget.product?.hasVariants ?? false;
+    _variants = List.from(widget.product?.variants ?? []);
+    _trackSerialNumbers = widget.product?.trackSerialNumbers ?? false;
+    _requiresPrescription = widget.product?.requiresPrescription ?? false;
+    _dynamicPricing = widget.product?.dynamicPricing ?? false;
+    _isUnique = widget.product?.isUnique ?? false;
+    _priceReasonController = TextEditingController();
+    final wm = widget.product?.warrantyMonths;
+    _hasWarranty = wm != null && wm > 0;
+    _warrantyMonthsController = TextEditingController(text: wm != null && wm > 0 ? wm.toString() : '');
     if (widget.submitToCatalog) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadCatalogItems());
     }
@@ -89,6 +117,30 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
         if (mounted) setState(() => _childItems = children);
       }
 
+      // Load price levels if editing an existing item
+      if (widget.product?.remoteId != null) {
+        final rawPriceLevels = await repo.getPriceLevels(
+          itemId: widget.product!.remoteId!,
+          tenantId: tenantId,
+        );
+        if (mounted) {
+          setState(() => _priceLevels = rawPriceLevels.map(PriceLevel.fromJson).toList());
+        }
+      }
+
+      // Load variants if editing an item with hasVariants
+      if (widget.product?.hasVariants == true && widget.product?.remoteId != null) {
+        final rawVariants = await repo.getVariants(
+          itemId: widget.product!.remoteId!,
+          tenantId: tenantId,
+        );
+        if (mounted) {
+          setState(() {
+            _variants = rawVariants.map(ProductVariant.fromJson).toList();
+          });
+        }
+      }
+
       // Resolve parent name for display
       if (_selectedParentItemId != null) {
         final parent = items.firstWhere(
@@ -102,6 +154,87 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     } catch (_) {}
   }
 
+  Future<void> _openVariantSheet({ProductVariant? existing}) async {
+    final itemId = widget.product?.remoteId;
+    if (itemId == null) return;
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => VariantFormSheet(
+        catalogItemId: itemId,
+        existingVariant: existing,
+      ),
+    );
+    if (result == true) {
+      // Reload variants
+      final tenantId = ref.read(activeTenantProvider);
+      if (tenantId == null) return;
+      try {
+        final rawVariants = await ref.read(catalogRepositoryProvider).getVariants(
+          itemId: itemId,
+          tenantId: tenantId,
+        );
+        if (mounted) setState(() => _variants = rawVariants.map(ProductVariant.fromJson).toList());
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _openAddPriceLevelDialog() async {
+    final itemId = widget.product?.remoteId;
+    final tenantId = ref.read(activeTenantProvider);
+    if (itemId == null || tenantId == null) return;
+
+    final codeCtrl = TextEditingController();
+    final labelCtrl = TextEditingController();
+    final priceCtrl = TextEditingController();
+    final minQtyCtrl = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajouter un niveau de prix'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: codeCtrl, decoration: const InputDecoration(labelText: 'Code (ex: GROS)')),
+            TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label (ex: Prix gros)')),
+            TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Prix *'), keyboardType: TextInputType.number),
+            TextField(controller: minQtyCtrl, decoration: const InputDecoration(labelText: 'Qté min (optionnel)'), keyboardType: TextInputType.number),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Créer')),
+        ],
+      ),
+    );
+
+    if (confirmed == true && priceCtrl.text.trim().isNotEmpty) {
+      try {
+        await ref.read(catalogRepositoryProvider).createPriceLevel(
+          itemId: itemId,
+          tenantId: tenantId,
+          body: {
+            'levelCode': codeCtrl.text.trim().toUpperCase(),
+            'label': labelCtrl.text.trim(),
+            'price': double.tryParse(priceCtrl.text.trim()) ?? 0,
+            if (minQtyCtrl.text.trim().isNotEmpty) 'minQty': int.tryParse(minQtyCtrl.text.trim()),
+          },
+        );
+        // Reload price levels
+        final raw = await ref.read(catalogRepositoryProvider).getPriceLevels(
+          itemId: itemId,
+          tenantId: tenantId,
+        );
+        if (mounted) setState(() => _priceLevels = raw.map(PriceLevel.fromJson).toList());
+      } catch (_) {}
+    }
+    codeCtrl.dispose();
+    labelCtrl.dispose();
+    priceCtrl.dispose();
+    minQtyCtrl.dispose();
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -111,6 +244,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _unitLabelController.dispose();
     _conversionRateController.dispose();
     _minStockController.dispose();
+    _warrantyMonthsController.dispose();
+    _priceReasonController.dispose();
     super.dispose();
   }
 
@@ -204,6 +339,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                               value.isNotEmpty &&
                               double.tryParse(value) == null) {
                             return 'Nombre invalide';
+                          }
+                          if (_isUnique) {
+                            final qty = double.tryParse(value ?? '') ?? 0;
+                            if (qty > 1) return 'Article unique : stock limité à 1';
                           }
                           return null;
                         },
@@ -380,6 +519,185 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ],
                 ),
               ],
+              // Epic 26 — Traçabilité (serial number tracking toggle)
+              if (widget.submitToCatalog) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                SwitchListTile(
+                  key: const Key('track_serial_numbers_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Traçabilité par numéro de série'),
+                  subtitle: const Text('Demande un n° de série à la vente', style: TextStyle(fontSize: 12)),
+                  value: _trackSerialNumbers,
+                  onChanged: (v) => setState(() => _trackSerialNumbers = v),
+                ),
+                SwitchListTile(
+                  key: const Key('dynamic_pricing_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Prix dynamique'),
+                  subtitle: const Text('Historique des prix enregistré à chaque modification', style: TextStyle(fontSize: 12)),
+                  value: _dynamicPricing,
+                  onChanged: (v) => setState(() => _dynamicPricing = v),
+                ),
+                if (_dynamicPricing && widget.product != null) ...[
+                  TextFormField(
+                    key: const Key('price_reason_field'),
+                    controller: _priceReasonController,
+                    decoration: const InputDecoration(
+                      labelText: 'Motif de la modification (optionnel)',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SwitchListTile(
+                  key: const Key('requires_prescription_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Requiert une ordonnance'),
+                  subtitle: const Text('Le caissier devra saisir un n° d\'ordonnance à chaque vente', style: TextStyle(fontSize: 12)),
+                  value: _requiresPrescription,
+                  onChanged: (v) => setState(() => _requiresPrescription = v),
+                ),
+                SwitchListTile(
+                  key: const Key('has_warranty_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Durée de garantie'),
+                  subtitle: const Text('Un certificat sera généré automatiquement à chaque vente', style: TextStyle(fontSize: 12)),
+                  value: _hasWarranty,
+                  onChanged: (v) => setState(() {
+                    _hasWarranty = v;
+                    if (!v) _warrantyMonthsController.clear();
+                  }),
+                ),
+                if (_hasWarranty) ...[
+                  TextFormField(
+                    key: const Key('warranty_months_field'),
+                    controller: _warrantyMonthsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Durée de garantie (mois) *',
+                      hintText: 'Ex: 12',
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      if (!_hasWarranty) return null;
+                      final n = int.tryParse(v ?? '');
+                      if (n == null || n <= 0) return 'Nombre de mois invalide (> 0)';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SwitchListTile(
+                  key: const Key('is_unique_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Article unique'),
+                  subtitle: const Text('Stock limité à 1 — archivé automatiquement après vente', style: TextStyle(fontSize: 12)),
+                  value: _isUnique,
+                  onChanged: (v) => setState(() => _isUnique = v),
+                ),
+                // Dupliquer button (edit mode only)
+                if (widget.product?.remoteId != null)
+                  TextButton.icon(
+                    key: const Key('duplicate_item_button'),
+                    onPressed: _isSubmitting ? null : _duplicateItem,
+                    icon: const Icon(Icons.copy_outlined),
+                    label: const Text('Dupliquer cet article'),
+                  ),
+              ],
+              // AC1 (Story 25-2) — Variants toggle + section
+              if (widget.submitToCatalog) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                SwitchListTile(
+                  key: const Key('has_variants_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Cet article a des variantes'),
+                  value: _hasVariants,
+                  onChanged: (v) => setState(() => _hasVariants = v),
+                ),
+                if (_hasVariants) ...[
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withAlpha(30),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.orange),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Le prix et le stock de l\'article seront gérés par variante',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // AC3 — Variants table with total stock header
+                  if (_variants.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Text('Variantes', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        Text(
+                          'Stock total : ${_variants.fold<double>(0, (s, v) => s + v.stockQuantity).toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ..._variants.map(
+                      (v) => ListTile(
+                        key: Key('variant_${v.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          v.attributes.entries.map((e) => '${e.key}: ${e.value}').join(' · '),
+                        ),
+                        subtitle: Text('${v.price.toStringAsFixed(0)} FCFA · Stock: ${v.stockQuantity.toStringAsFixed(0)}'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _openVariantSheet(existing: v),
+                      ),
+                    ),
+                  ],
+                  TextButton.icon(
+                    key: const Key('add_variant_button'),
+                    onPressed: widget.product?.remoteId != null ? () => _openVariantSheet() : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Ajouter une variante'),
+                  ),
+                ],
+              ],
+              // AC1 (Story 25-5) — Tarification (price levels) section
+              if (widget.submitToCatalog && widget.product?.remoteId != null) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                Row(
+                  children: [
+                    const Text('Tarification', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    TextButton.icon(
+                      key: const Key('add_price_level_button'),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Ajouter'),
+                      onPressed: () => _openAddPriceLevelDialog(),
+                    ),
+                  ],
+                ),
+                if (_priceLevels.isEmpty)
+                  const Text('Aucun niveau configuré.', style: TextStyle(fontSize: 12)),
+                ..._priceLevels.map(
+                  (pl) => ListTile(
+                    key: Key('price_level_${pl.id}'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('${pl.label} (${pl.levelCode})'),
+                    subtitle: Text(
+                      '${pl.price.toStringAsFixed(0)} FCFA${pl.minQty != null ? ' · min ${pl.minQty}' : ''}',
+                    ),
+                  ),
+                ),
+              ],
               // AC5 — Children list when editing a parent item
               if (widget.product != null && _childItems.isNotEmpty) ...[
                 const SizedBox(height: 16),
@@ -435,6 +753,36 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     );
   }
 
+  Future<void> _duplicateItem() async {
+    final id = widget.product?.remoteId;
+    final tenantId = ref.read(activeTenantProvider);
+    if (id == null || tenantId == null) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await ref.read(catalogRepositoryProvider).duplicateItem(id: id, tenantId: tenantId);
+      ref.invalidate(catalogProvider);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.of(context).pop();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Article dupliqué')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -480,8 +828,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           conversionRate: conversionRate,
           minStockLevel: minStockLevel,
           parentItemId: _isChildItem ? _selectedParentItemId : null,
-          clearParent: !_isChildItem &&
-              widget.product!.parentItemId != null,
+          clearParent: !_isChildItem && widget.product!.parentItemId != null,
+          trackSerialNumbers: _trackSerialNumbers,
+          warrantyMonths: _hasWarranty
+              ? int.tryParse(_warrantyMonthsController.text.trim())
+              : null,
+          requiresPrescription: _requiresPrescription,
+          dynamicPricing: _dynamicPricing,
+          priceReason: _priceReasonController.text.trim().isNotEmpty
+              ? _priceReasonController.text.trim()
+              : null,
+          isUnique: _isUnique,
         );
       } else {
         // Create new product
@@ -493,6 +850,12 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           barcode: barcode,
           unitType: _selectedUnitType,
           conversionRate: conversionRate,
+          trackSerialNumbers: _trackSerialNumbers,
+          warrantyMonths: _hasWarranty
+              ? int.tryParse(_warrantyMonthsController.text.trim())
+              : null,
+          requiresPrescription: _requiresPrescription,
+          isUnique: _isUnique,
         );
         final initialStock = double.tryParse(_stockController.text.trim()) ?? 0;
         if (initialStock > 0) {

@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 25 — Variantes, multi-tarifs & promotions
 - **Story ID:** 25-7-promotion-frontend-pos
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** 25-6 (endpoints promotions disponibles)
 

@@ -38,13 +38,13 @@ class _BarcodeScannerListenerState extends State<BarcodeScannerListener> {
 
   @override
   Widget build(BuildContext context) {
-    return RawKeyboardListener(
+    return KeyboardListener(
       focusNode: _focusNode,
       autofocus: true,
-      onKey: (RawKeyEvent event) {
-        if (event is RawKeyDownEvent) {
+      onKeyEvent: (KeyEvent event) {
+        if (event is KeyDownEvent) {
           final now = DateTime.now();
-          
+
           // Clear buffer if current key is too far from last (reset)
           // Scanners typically send keys < 20ms apart
           if (_lastKeyPressTime != null && now.difference(_lastKeyPressTime!).inMilliseconds > 100) {

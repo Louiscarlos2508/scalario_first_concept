@@ -4,6 +4,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const TENANT_ID = 'tenant-uuid';
 
+const BATCH_ID = 'batch-uuid-1';
+
 const makeBatch = (overrides: Partial<any> = {}) => ({
   id: 'batch-1',
   catalogItemId: 'item-1',
@@ -27,6 +29,7 @@ describe('BatchesService', () => {
     prisma = {
       productBatch: {
         findMany: jest.fn(),
+        update: jest.fn(),
       },
     };
 
@@ -114,6 +117,21 @@ describe('BatchesService', () => {
       (prisma.productBatch.findMany as jest.Mock).mockResolvedValue([]);
       const result = await service.getExpiringCount(TENANT_ID);
       expect(result.urgentCount).toBe(0);
+    });
+  });
+
+  describe('depleteBatch', () => {
+    it('marks batch isDepleted=true and remainingQty=0', async () => {
+      const updated = { id: BATCH_ID, isDepleted: true, remainingQty: 0 };
+      (prisma.productBatch.update as jest.Mock).mockResolvedValue(updated);
+
+      const result = await service.depleteBatch(BATCH_ID, TENANT_ID);
+
+      expect(prisma.productBatch.update).toHaveBeenCalledWith({
+        where: { id: BATCH_ID, tenantId: TENANT_ID },
+        data: { isDepleted: true, remainingQty: 0 },
+      });
+      expect(result).toEqual(updated);
     });
   });
 });

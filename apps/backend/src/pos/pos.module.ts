@@ -10,9 +10,10 @@ import { CatalogModule } from '../shared/catalog/catalog.module';
 import { ContactsModule } from '../shared/contacts/contacts.module';
 import { TransactionsModule } from '../shared/transactions/transactions.module';
 import { InventoryModule } from '../shared/inventory/inventory.module';
+import { ReturnsModule } from '../shared/returns/returns.module';
 
 @Module({
-    imports: [CatalogModule.register(), ContactsModule.register(), TransactionsModule.register(), InventoryModule.register()],
+    imports: [CatalogModule.register(), ContactsModule.register(), TransactionsModule.register(), InventoryModule.register(), ReturnsModule.register()],
     providers: [PosService, PosSessionService, CustomerService],
     controllers: [PosController, PosSessionController, CustomerController],
 })

@@ -82,12 +82,12 @@ class CategoriesScreen extends ConsumerWidget {
                 if (tenantId != null) {
                   try {
                     await ref.read(categoryRepositoryProvider).createCategory(name, tenantId);
-                    ref.refresh(categoriesProvider);
-                    Navigator.pop(context);
+                    ref.invalidate(categoriesProvider);
+                    if (context.mounted) { Navigator.pop(context); }
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Erreur : $e')),
-                    );
+                    ); }
                   }
                 }
               }
@@ -114,12 +114,12 @@ class CategoriesScreen extends ConsumerWidget {
             onPressed: () async {
               try {
                 await ref.read(categoryRepositoryProvider).deleteCategory(category.remoteId);
-                ref.refresh(categoriesProvider);
-                Navigator.pop(context);
+                ref.invalidate(categoriesProvider);
+                if (context.mounted) { Navigator.pop(context); }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Erreur : $e')),
-                );
+                ); }
               }
             },
             child: const Text('Supprimer', style: TextStyle(color: AppColors.error)),

@@ -28,7 +28,7 @@ class _SettleDebtDialogState extends ConsumerState<SettleDebtDialog> {
     final amount = double.tryParse(_amountController.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(content: Text('Veuillez saisir un montant valide')),
       );
       return;
     }
@@ -40,7 +40,7 @@ class _SettleDebtDialogState extends ConsumerState<SettleDebtDialog> {
       await repo.settleDebt(widget.customer.remoteId!, amount);
 
       if (mounted) {
-        ref.refresh(customersProvider);
+        ref.invalidate(customersProvider);
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -54,7 +54,7 @@ class _SettleDebtDialogState extends ConsumerState<SettleDebtDialog> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

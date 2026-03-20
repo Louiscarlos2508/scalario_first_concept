@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 22 — Alertes stock bas + notifications
 - **Story ID:** 22-3-ecran-alertes-kpi
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** 22-1 (endpoint `/stock-alerts` disponible), 22-2 (badge catalogue)
 

@@ -51,7 +51,7 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     final count = countAsync.when(
       data: (n) => n,
       loading: () => 0,
-      error: (_, __) => 0,
+      error: (_, _) => 0,
     );
     if (count == 0) return Icon(icon);
     return Badge(
@@ -136,14 +136,15 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                     );
                   },
                   loading: () => const CircularProgressIndicator(),
-                  error: (_, __) => const Icon(Icons.error),
+                  error: (_, _) => const Icon(Icons.error),
                 ),
                 const SizedBox(height: 16),
                 if (activeTenantId != null)
                   userProfileAsync.when(
                     data: (profile) {
                       final active = profile?.memberships
-                          .firstWhere((m) => m.tenantId == activeTenantId);
+                          .firstWhere((m) => m.tenantId == activeTenantId,
+                              orElse: () => profile.memberships.first);
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
@@ -159,7 +160,7 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                       );
                     },
                     loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
+                    error: (_, _) => const SizedBox(),
                   ),
                 const SizedBox(height: 16),
               ],

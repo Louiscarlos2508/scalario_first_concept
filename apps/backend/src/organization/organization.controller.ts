@@ -27,6 +27,15 @@ export class OrganizationController {
     return this.organizationService.updateNotificationSettings(tenantId, dto);
   }
 
+  @Patch('freshness-thresholds')
+  @Roles('owner')
+  async updateFreshnessThresholds(
+    @Body() dto: { greenThreshold?: number; orangeThreshold?: number },
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.organizationService.updateFreshnessThresholds(tenantId, dto);
+  }
+
   @Post(':id/members')
   @Roles('owner')
   async addMember(

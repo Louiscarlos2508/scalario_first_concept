@@ -18,7 +18,7 @@ export class DailySummaryJob {
    * Runs every minute. Evaluates which tenants are due for their daily summary
    * and sends an in-app notification to all owners.
    */
-  @Cron('* * * * *')
+  @Cron('* * * * *', { name: 'daily-summary-job' })
   async run() {
     const now = new Date();
     const todayDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -76,13 +76,13 @@ export class DailySummaryJob {
       this.prisma.transaction.count({ where: { tenantId, createdAt: { gte: today } } }),
       this.prisma.transaction.aggregate({
         where: { tenantId, createdAt: { gte: today } },
-        _sum: { amount: true },
+        _sum: { totalAmount: true },
       }),
       this.stockAlerts.getAlertsCount(tenantId),
       this.prisma.purchaseOrder.count({ where: { tenantId, status: { in: ['draft', 'confirmed', 'partially_received'] } } }),
     ]);
 
-    const totalRevenue = Number(totalRevenueRows._sum.amount ?? 0);
+    const totalRevenue = Number(totalRevenueRows._sum?.totalAmount ?? 0);
     const body =
       `Ventes : ${transactionCount} — CA : ${totalRevenue.toFixed(0)} FCFA` +
       ` | Stock critique : ${alertCount}` +

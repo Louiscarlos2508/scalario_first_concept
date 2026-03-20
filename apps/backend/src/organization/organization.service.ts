@@ -61,7 +61,7 @@ export class OrganizationService {
     });
 
     // 5. Auto-activate shared + retail modules for the new tenant
-    await this.moduleRegistryService.activateDefaultModulesForTenant(tenant.id);
+    await this.moduleRegistryService.activateDefaultModulesForTenant(tenant.id, tenant.plan ?? 'free');
 
     return tenant;
   }
@@ -86,6 +86,24 @@ export class OrganizationService {
         dailySummaryEnabled: true,
         dailySummaryTime: true,
         notificationChannel: true,
+      },
+    });
+  }
+
+  async updateFreshnessThresholds(
+    tenantId: string,
+    data: { greenThreshold?: number; orangeThreshold?: number },
+  ) {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(data.greenThreshold !== undefined && { freshnessGreenThreshold: data.greenThreshold }),
+        ...(data.orangeThreshold !== undefined && { freshnessOrangeThreshold: data.orangeThreshold }),
+      },
+      select: {
+        id: true,
+        freshnessGreenThreshold: true,
+        freshnessOrangeThreshold: true,
       },
     });
   }

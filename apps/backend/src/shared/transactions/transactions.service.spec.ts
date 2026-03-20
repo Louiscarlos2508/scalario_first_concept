@@ -5,6 +5,7 @@ import { AuditLogService } from '../../kernel/audit/audit-log.service';
 import { EventBusService } from '../../kernel/events/event-bus.service';
 import { ContactsService } from '../contacts/contacts.service';
 import { PaymentsService } from '../payments/payments.service';
+import { SerialsService } from '../catalog/serials/serials.service';
 
 const TENANT_ID = 'tenant-uuid-001';
 const TX_ID = 'tx-uuid-001';
@@ -58,6 +59,7 @@ describe('TransactionsService', () => {
           provide: PaymentsService,
           useValue: { roundTotal: jest.fn() },
         },
+        { provide: SerialsService, useValue: {} },
       ],
     }).compile();
 

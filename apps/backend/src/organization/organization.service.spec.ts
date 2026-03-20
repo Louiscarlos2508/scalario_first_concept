@@ -119,6 +119,7 @@ describe('OrganizationService', () => {
 
       expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(
         mockTenantId,
+        'free',
       );
     });
 

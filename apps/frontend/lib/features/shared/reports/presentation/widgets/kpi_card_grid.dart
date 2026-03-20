@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
+    show dashboardNavigationProvider;
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
-import 'package:frontend/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart';
+import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
+import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 
 /// Dashboard KPI card grid panel.
 /// Registered as SDUI type `kpi_card_grid`.
@@ -22,6 +25,10 @@ class KpiCardGrid extends ConsumerWidget {
     final expensesAsync = ref.watch(expensesProvider);
     final poStatsAsync = ref.watch(purchaseOrderStatsProvider);
     final stockAlertCountAsync = ref.watch(stockAlertCountProvider);
+    final urgentBatchAsync = ref.watch(urgentBatchCountProvider);
+    final reservationsKpiAsync = ref.watch(reservationsKpiProvider);
+    final activeClientCountAsync = ref.watch(activeClientCountProvider);
+    final lowStockCountAsync = ref.watch(lowStockCountProvider);
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
     final canSeeStockAlerts = role == 'owner' || role == 'manager';
 
@@ -63,21 +70,27 @@ class KpiCardGrid extends ConsumerWidget {
                 key: const Key('kpi_clients'),
                 icon: Icons.people,
                 label: 'Clients actifs',
-                value: '--',
+                value: activeClientCountAsync.when(
+                  data: (n) => '$n',
+                  loading: () => '…',
+                  error: (_, _) => '--',
+                ),
                 iconColor: AppColors.primary,
               ),
               _KpiCard(
                 key: const Key('kpi_stock'),
                 icon: Icons.inventory_2,
                 label: 'Stock faible',
-                value: '--',
-                iconColor: AppColors.warning,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const InventoryScreen(initialIndex: 1),
-                  ),
+                value: lowStockCountAsync.when(
+                  data: (n) => n == 0 ? '0 — OK' : '$n',
+                  loading: () => '…',
+                  error: (_, _) => '--',
                 ),
+                iconColor: lowStockCountAsync.valueOrNull != null &&
+                        lowStockCountAsync.valueOrNull! > 0
+                    ? AppColors.error
+                    : AppColors.warning,
+                onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'inventory',
               ),
               _KpiCard(
                 key: const Key('kpi_depenses'),
@@ -101,13 +114,31 @@ class KpiCardGrid extends ConsumerWidget {
                 label: 'Commandes en attente',
                 value: '$pendingOrders',
                 iconColor: pendingOrders > 0 ? AppColors.warning : AppColors.textSecondary,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const InventoryScreen(initialIndex: 4),
-                  ),
-                ),
+                onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'inventory',
               ),
+              // Story 27-5 — Réservations en cours KPI
+              if (canSeeStockAlerts)
+                _KpiCard(
+                  key: const Key('kpi_reservations'),
+                  icon: Icons.bookmark_outlined,
+                  label: 'Réservations en cours',
+                  value: reservationsKpiAsync.when(
+                    data: (kpi) => '${kpi['pendingCount'] ?? 0}',
+                    loading: () => '…',
+                    error: (_, _) => '--',
+                  ),
+                  subtitle: reservationsKpiAsync.when(
+                    data: (kpi) {
+                      final fcfa = NumberFormat.currency(
+                          locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0);
+                      return 'Acomptes : ${fcfa.format(kpi['totalDepositAmount'] ?? 0)}';
+                    },
+                    loading: () => null,
+                    error: (_, _) => null,
+                  ),
+                  iconColor: AppColors.primary,
+                  onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'reservations',
+                ),
               if (canSeeStockAlerts)
                 _KpiCard(
                   key: const Key('kpi_stock_critique'),
@@ -116,19 +147,31 @@ class KpiCardGrid extends ConsumerWidget {
                   value: stockAlertCountAsync.when(
                     data: (n) => n == 0 ? '0 — Tout va bien' : '$n',
                     loading: () => '…',
-                    error: (_, __) => '--',
+                    error: (_, _) => '--',
                   ),
                   iconColor: stockAlertCountAsync.valueOrNull != null &&
                           stockAlertCountAsync.valueOrNull! > 0
                       ? AppColors.error
                       : AppColors.success,
                   showWarning: (stockAlertCountAsync.valueOrNull ?? 0) > 0,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const StockAlertsScreen(),
-                    ),
+                  onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'inventory',
+                ),
+              // AC4 (Story 24-3) — Lots urgents KPI card
+              if (canSeeStockAlerts)
+                _KpiCard(
+                  key: const Key('kpi_lots_urgents'),
+                  icon: Icons.eco_outlined,
+                  label: 'Lots urgents',
+                  value: urgentBatchAsync.when(
+                    data: (n) => n == 0 ? '0 — Tout frais' : '$n',
+                    loading: () => '…',
+                    error: (_, _) => '--',
                   ),
+                  iconColor: (urgentBatchAsync.valueOrNull ?? 0) > 0
+                      ? AppColors.warning
+                      : AppColors.success,
+                  showWarning: (urgentBatchAsync.valueOrNull ?? 0) > 0,
+                  onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'inventory',
                 ),
             ],
           ),
@@ -147,6 +190,7 @@ class _KpiCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final String? subtitle;
   final Color iconColor;
   final VoidCallback? onTap;
   final Color? valueColor;
@@ -158,6 +202,7 @@ class _KpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.iconColor,
+    this.subtitle,
     this.onTap,
     this.valueColor,
     this.showWarning = false,
@@ -192,6 +237,11 @@ class _KpiCard extends StatelessWidget {
                   value,
                   style: AppTextStyles.titleMedium.copyWith(color: valueColor),
                 ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(subtitle!, style: AppTextStyles.bodySmall),
+                  ),
               ],
             ),
           ),

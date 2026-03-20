@@ -2,12 +2,14 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../kernel/events/event-bus.service';
 import { Prisma } from '@prisma/client';
+import { ReturnsService } from '../shared/returns/returns.service';
 
 @Injectable()
 export class PosSessionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly returnsService: ReturnsService,
   ) {}
 
   // AC2 — open session; reject if user already has OPEN session
@@ -113,11 +115,27 @@ export class PosSessionService {
 
     const openingBalance = Number(session.openingBalance);
 
+    // Story 27-3 — Returns summary for session window
+    const closedAt = session.closedAt ?? new Date();
+    const returnsSummary = await this.returnsService.getReturnsSummaryForSession(
+      session.tenantId,
+      session.openedAt,
+      closedAt,
+    );
+    const returnsAmount = Number(returnsSummary.amount);
+    const cashRefundAmount = Number(returnsSummary.cashRefundAmount);
+
+    const grossSalesAmount = totalSales;
+    const netSalesAmount = grossSalesAmount - returnsAmount;
+
     return {
       session,
       totalsByMethod,
       totalSales,
-      theoreticalCash: openingBalance + (totalsByMethod['CASH'] || 0),
+      grossSales: { count: transactions.length, amount: grossSalesAmount },
+      returns: { count: returnsSummary.count, amount: returnsAmount },
+      netSales: { amount: netSalesAmount },
+      theoreticalCash: openingBalance + (totalsByMethod['CASH'] || 0) - cashRefundAmount,
       openingBalance,
       closingBalance: session.closingBalance !== null ? Number(session.closingBalance) : null,
       theoreticalBalance: session.theoreticalBalance !== null ? Number(session.theoreticalBalance) : null,
@@ -126,10 +144,16 @@ export class PosSessionService {
     };
   }
 
-  // AC5 — session reports: all CLOSED sessions for tenant
-  async getSessionReports(tenantId: string) {
+  // AC5 — session reports: all CLOSED sessions for tenant, optional date range
+  async getSessionReports(tenantId: string, from?: string, to?: string) {
+    const where: any = { tenantId, status: 'CLOSED' };
+    if (from || to) {
+      where.closedAt = {};
+      if (from) where.closedAt.gte = new Date(from);
+      if (to) where.closedAt.lte = new Date(to + 'T23:59:59.999Z');
+    }
     return this.prisma.posSession.findMany({
-      where: { tenantId, status: 'CLOSED' },
+      where,
       orderBy: { closedAt: 'desc' },
     });
   }

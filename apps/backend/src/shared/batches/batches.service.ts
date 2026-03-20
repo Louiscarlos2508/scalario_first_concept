@@ -34,6 +34,13 @@ export class BatchesService {
     });
   }
 
+  async depleteBatch(batchId: string, tenantId: string) {
+    return this.prisma.productBatch.update({
+      where: { id: batchId, tenantId },
+      data: { isDepleted: true, remainingQty: 0 },
+    });
+  }
+
   async getExpiringCount(tenantId: string) {
     // Fetch all non-depleted batches (large window) then filter by urgency
     const all = await this.getBatchesExpiring(tenantId, 365);

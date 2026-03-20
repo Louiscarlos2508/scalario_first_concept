@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 23 — Conversion unités vrac → détail
 - **Story ID:** 23-1-conversion-backend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** Epic 20 (unitType + conversionRate sur CatalogItem), Epic 5 (mouvements de stock)
 

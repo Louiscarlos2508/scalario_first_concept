@@ -94,7 +94,7 @@ class LineChartWidget extends ConsumerWidget {
                         dotData: const FlDotData(show: true),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                         ),
                       ),
                     ],

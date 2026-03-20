@@ -5,24 +5,57 @@ import '../../data/models/tenant_summary.dart';
 import 'new_tenant_form.dart';
 import 'tenant_detail_screen.dart';
 
-class AdminTenantsScreen extends ConsumerWidget {
+class AdminTenantsScreen extends ConsumerStatefulWidget {
   const AdminTenantsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminTenantsScreen> createState() => _AdminTenantsScreenState();
+}
+
+class _AdminTenantsScreenState extends ConsumerState<AdminTenantsScreen> {
+  String? _billingFilter; // null = all, 'overdue', 'suspended'
+
+  @override
+  Widget build(BuildContext context) {
     final tenantsAsync = ref.watch(adminTenantsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tenants')),
+      appBar: AppBar(
+        title: const Text('Tenants'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: DropdownButton<String?>(
+              value: _billingFilter,
+              underline: const SizedBox.shrink(),
+              hint: const Text('Tous'),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Tous')),
+                DropdownMenuItem(value: 'overdue', child: Text('En retard')),
+                DropdownMenuItem(
+                    value: 'suspended', child: Text('Suspendus')),
+              ],
+              onChanged: (v) => setState(() => _billingFilter = v),
+            ),
+          ),
+        ],
+      ),
       body: tenantsAsync.when(
-        data: (tenants) => tenants.isEmpty
-            ? const Center(child: Text('Aucun tenant trouvé'))
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: tenants.length,
-                itemBuilder: (context, index) =>
-                    _TenantCard(tenant: tenants[index]),
-              ),
+        data: (allTenants) {
+          final tenants = _billingFilter == null
+              ? allTenants
+              : allTenants
+                  .where((t) => t.billingStatus == _billingFilter)
+                  .toList();
+          return tenants.isEmpty
+              ? const Center(child: Text('Aucun tenant trouvé'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: tenants.length,
+                  itemBuilder: (context, index) =>
+                      _TenantCard(tenant: tenants[index]),
+                );
+        },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Column(
           children: [
@@ -84,11 +117,13 @@ class _TenantCard extends StatelessWidget {
                     ),
                   ),
                   _StatusChip(status: tenant.status),
+                  const SizedBox(width: 6),
+                  _BillingStatusChip(status: tenant.billingStatus),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '${tenant.membersCount} membres',
+                '${tenant.membersCount} membres • plan: ${tenant.plan}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (tenant.activeModules.isNotEmpty) ...[
@@ -130,6 +165,31 @@ class _StatusChip extends StatelessWidget {
       backgroundColor: color.withValues(alpha: 0.15),
       label: Text(label, style: TextStyle(color: color, fontSize: 12)),
       side: BorderSide(color: color, width: 1),
+    );
+  }
+}
+
+class _BillingStatusChip extends StatelessWidget {
+  final String status;
+
+  const _BillingStatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, label) = switch (status) {
+      'trial' => (Colors.blue.shade300, 'Essai'),
+      'active' => (const Color(0xFF4CAF50), 'Actif'),
+      'overdue' => (const Color(0xFFFF9800), 'En retard'),
+      'suspended' => (const Color(0xFFF44336), 'Suspendu'),
+      _ => (const Color(0xFF9E9E9E), status),
+    };
+
+    return Chip(
+      backgroundColor: color.withValues(alpha: 0.15),
+      label: Text(label, style: TextStyle(color: color, fontSize: 11)),
+      side: BorderSide(color: color, width: 1),
+      padding: EdgeInsets.zero,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

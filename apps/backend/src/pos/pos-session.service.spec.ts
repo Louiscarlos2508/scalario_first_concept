@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { PosSessionService } from './pos-session.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../kernel/events/event-bus.service';
+import { ReturnsService } from '../shared/returns/returns.service';
 import { Prisma } from '@prisma/client';
 
 const TENANT_ID = 'tenant-uuid-001';
@@ -53,6 +54,7 @@ describe('PosSessionService', () => {
         PosSessionService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventBusService, useValue: mockEventBus },
+        { provide: ReturnsService, useValue: { getReturnsSummaryForSession: jest.fn().mockResolvedValue({ count: 0, amount: 0, cashRefundAmount: 0 }) } },
       ],
     }).compile();
 

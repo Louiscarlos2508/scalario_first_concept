@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 22 — Alertes stock bas + notifications
 - **Story ID:** 22-1-min-stock-level-backend
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** High
 - **Depends on:** Epics 1–9, Epic 5 (mouvements de stock)
 

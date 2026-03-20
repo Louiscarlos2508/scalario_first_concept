@@ -151,8 +151,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    // Verify Quantity update — subtitle shows "2 x 100 FCFA"
-    expect(find.textContaining('2 x'), findsOneWidget);
+    // Verify Quantity update — subtitle shows "2 × 100 FCFA"
+    expect(find.textContaining('2 ×'), findsOneWidget);
 
     // Verify Total is 200 FCFA
     // "Test Burger" in grid (200 FCFA).

@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../kernel/events/event-bus.service';
+import { SerialsService } from '../shared/catalog/serials/serials.service';
 
 @Injectable()
 export class RetailOrchestrationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventBus: EventBusService,
+    private readonly serialsService: SerialsService,
   ) {}
 
   /**
@@ -27,6 +29,7 @@ export class RetailOrchestrationService {
     cashierId?: string;
     tenantId: string;
     userId?: string | null;
+    // Epic 26 — Serial number tracking (extracted from items[].serialNumber)
   }) {
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const toUuid = (v?: string | null) => (v && UUID_RE.test(v) ? v : null);
@@ -68,6 +71,28 @@ export class RetailOrchestrationService {
 
       return { transaction, retailSale };
     });
+
+    // Epic 26 — Create SerialRecord for items carrying a serialNumber
+    if (data.items && data.items.length > 0) {
+      for (const item of data.items) {
+        if (!item.serialNumber || !item.catalogItemId) continue;
+        try {
+          const catalogItem = await this.prisma.catalogItem.findFirst({
+            where: { id: item.catalogItemId, tenantId: data.tenantId },
+            select: { warrantyMonths: true },
+          });
+          await this.serialsService.createSerialForSale(
+            data.tenantId,
+            item.catalogItemId,
+            item.serialNumber,
+            catalogItem?.warrantyMonths,
+          );
+        } catch {
+          // Duplicate serial — log but don't fail the sale (already committed)
+          console.warn(`[SerialRecord] Duplicate serial ${item.serialNumber} for tenant ${data.tenantId}`);
+        }
+      }
+    }
 
     // Post-commit: stock update via event (InventoryService @OnEvent('transaction.created'))
     this.eventBus.publish('transaction.created', {

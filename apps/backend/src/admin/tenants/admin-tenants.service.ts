@@ -17,6 +17,7 @@ export class CreateTenantDto {
   ownerPassword: string;
   currency?: string;
   timezone?: string;
+  billingStatus?: 'trial' | 'active';
 }
 
 export class UpdateTenantDto {
@@ -56,12 +57,20 @@ export class AdminTenantsService {
     // Step 2 — Create tenant in Prisma (with compensation on failure)
     let tenant: { id: string; name: string; currency: string; timezone: string; status: string };
     try {
+      const billingStatus = dto.billingStatus ?? 'trial';
+      const trialEndsAt = billingStatus === 'trial'
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        : null;
       tenant = await this.prisma.tenant.create({
         data: {
           name: dto.name.trim(),
           currency: dto.currency ?? 'XOF',
-          timezone: dto.timezone ?? 'Africa/Abidjan',
+          timezone: dto.timezone ?? 'Africa/Ouagadougou',
           status: 'active',
+          plan: 'free',
+          maxUsers: 1,
+          billingStatus,
+          trialEndsAt,
         },
       });
     } catch (err) {
@@ -88,8 +97,8 @@ export class AdminTenantsService {
         },
       });
 
-      // Step 4 — Activate default modules
-      await this.moduleRegistry.activateDefaultModulesForTenant(tenant.id);
+      // Step 4 — Activate default modules for the plan (free on creation)
+      await this.moduleRegistry.activateDefaultModulesForTenant(tenant.id, 'free');
     } catch (err) {
       // Compensate: delete tenant and Supabase user
       await this.prisma.tenant
@@ -134,6 +143,8 @@ export class AdminTenantsService {
       activeModules: t.tenantModules
         .filter((tm) => tm.status === 'active')
         .map((tm) => tm.module.code),
+      plan: t.plan,
+      billingStatus: t.billingStatus,
     }));
   }
 

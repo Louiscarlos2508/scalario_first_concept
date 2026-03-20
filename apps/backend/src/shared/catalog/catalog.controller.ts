@@ -8,15 +8,20 @@ import {
   Query,
   Param,
   Req,
+  HttpCode,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
+import { PriceHistoryService } from './price-history/price-history.service';
 import { RequiresModule } from '../../kernel/modules/module.decorator';
 import { Roles } from '../../kernel/rbac/roles.decorator';
 
 @Controller('catalog')
 @RequiresModule('catalog')
 export class CatalogController {
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly priceHistoryService: PriceHistoryService,
+  ) {}
 
   @Get('categories')
   async getCategories(@Query('tenantId') tenantId: string) {
@@ -36,6 +41,14 @@ export class CatalogController {
   @Roles('owner')
   async deleteCategory(@Param('id') id: string) {
     return this.catalogService.deleteCategory(id);
+  }
+
+  @Get('barcode/:barcode')
+  async getByBarcode(
+    @Param('barcode') barcode: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    return this.catalogService.getByBarcode(barcode, tenantId);
   }
 
   @Get('items')
@@ -80,12 +93,34 @@ export class CatalogController {
     return this.catalogService.updateItem(id, body, userId, tenantId);
   }
 
+  // AC3 (Story 26-5) — Price history for a catalog item
+  @Get('items/:id/price-history')
+  async getPriceHistory(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+  ) {
+    return this.priceHistoryService.getPriceHistory(tenantId, id);
+  }
+
   @Get('items/:id/children')
   async getChildren(
     @Param('id') id: string,
     @Query('tenantId') tenantId: string,
   ) {
     return this.catalogService.getChildren(id, tenantId);
+  }
+
+  // AC4 (Story 26-6) — Duplicate a catalog item
+  @Post('items/:id/duplicate')
+  @Roles('owner')
+  @HttpCode(201)
+  async duplicateItem(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.sub ?? null;
+    return this.catalogService.duplicateCatalogItem(id, tenantId, userId);
   }
 
   @Delete('items/:id')

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogService } from './catalog.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditLogService } from '../../kernel/audit/audit-log.service';
+import { PriceHistoryService } from './price-history/price-history.service';
 
 const mockPrisma = {
   category: {
@@ -33,6 +34,7 @@ describe('CatalogService', () => {
         CatalogService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: AuditLogService, useValue: mockAuditLog },
+        { provide: PriceHistoryService, useValue: {} },
       ],
     }).compile();
 
@@ -100,7 +102,7 @@ describe('CatalogService', () => {
           orderBy: { updatedAt: 'asc' },
           skip: 0,
           take: 100,
-          include: { retailProduct: true },
+          include: expect.objectContaining({ retailProduct: true }),
         }),
       );
       expect(result.items).toEqual([

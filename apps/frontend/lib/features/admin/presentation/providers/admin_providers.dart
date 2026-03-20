@@ -46,3 +46,20 @@ final adminMonitoringProvider =
       .read(adminApiServiceProvider)
       .getMonitoringHealth(token: token);
 });
+
+final planDefinitionsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final token = _token();
+  if (token.isEmpty) throw Exception('Not authenticated');
+  return ref.read(adminApiServiceProvider).fetchPlans(token: token);
+});
+
+final tenantBillingProvider =
+    FutureProvider.family<Map<String, dynamic>, String>(
+        (ref, tenantId) async {
+  final token = _token();
+  if (token.isEmpty) throw Exception('Not authenticated');
+  return ref
+      .read(adminApiServiceProvider)
+      .getTenantBilling(tenantId, token: token);
+});

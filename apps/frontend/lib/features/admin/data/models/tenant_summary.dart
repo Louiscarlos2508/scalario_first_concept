@@ -5,6 +5,8 @@ class TenantSummary {
   final String currency;
   final int membersCount;
   final List<String> activeModules;
+  final String plan;
+  final String billingStatus;
 
   const TenantSummary({
     required this.id,
@@ -13,6 +15,8 @@ class TenantSummary {
     required this.currency,
     required this.membersCount,
     required this.activeModules,
+    this.plan = 'free',
+    this.billingStatus = 'trial',
   });
 
   factory TenantSummary.fromJson(Map<String, dynamic> json) {
@@ -23,6 +27,8 @@ class TenantSummary {
       currency: json['currency'] as String? ?? 'XOF',
       membersCount: json['membersCount'] as int? ?? 0,
       activeModules: List<String>.from(json['activeModules'] as List? ?? []),
+      plan: json['plan'] as String? ?? 'free',
+      billingStatus: json['billingStatus'] as String? ?? 'trial',
     );
   }
 }

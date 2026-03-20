@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { RetailOrchestrationService } from './retail-orchestration.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventBusService } from '../kernel/events/event-bus.service';
+import { SerialsService } from '../shared/catalog/serials/serials.service';
 
 const TENANT_ID = 'tenant-uuid-001';
 const USER_ID = 'user-uuid-001';
@@ -32,6 +33,7 @@ describe('RetailOrchestrationService', () => {
         RetailOrchestrationService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventBusService, useValue: mockEventBus },
+        { provide: SerialsService, useValue: {} },
       ],
     }).compile();
 

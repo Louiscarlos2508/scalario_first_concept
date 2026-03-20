@@ -17,3 +17,16 @@ final catalogProvider =
   final repo = ref.watch(catalogRepositoryProvider);
   return repo.getProducts(tenantId: tenantId);
 });
+
+/// Count of products whose stockQuantity < minStockLevel (Epic 22).
+/// Products with no minStockLevel are excluded.
+final lowStockCountProvider = FutureProvider<int>((ref) async {
+  final products = await ref.watch(catalogProvider.future);
+  return products.where((p) {
+    final minStock = p['minStockLevel'];
+    if (minStock == null) return false;
+    final stock = (p['stockQuantity'] as num?)?.toDouble() ?? 0.0;
+    final min = (minStock as num).toDouble();
+    return stock < min;
+  }).length;
+});

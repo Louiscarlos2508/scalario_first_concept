@@ -10,9 +10,10 @@ import { AdminUsersService } from './users/admin-users.service';
 import { AdminMonitoringController } from './monitoring/admin-monitoring.controller';
 import { AdminMonitoringService } from './monitoring/admin-monitoring.service';
 import { ModulesModule } from '../kernel/modules/modules.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
-  imports: [ModulesModule],
+  imports: [ModulesModule, BillingModule],
   controllers: [AdminTenantsController, AdminModulesController, AdminUsersController, AdminMonitoringController],
   providers: [SuperAdminGuard, SupabaseAdminService, AdminTenantsService, AdminModulesService, AdminUsersService, AdminMonitoringService],
 })

@@ -27,6 +27,8 @@ class _DeliveryFormState extends ConsumerState<DeliveryForm> {
 
   Product? _selectedProduct;
   bool _isSubmitting = false;
+  // Epic 26 — AC2 (Story 26-4)
+  DateTime? _bestBeforeDate;
 
   @override
   void dispose() {
@@ -79,6 +81,7 @@ class _DeliveryFormState extends ConsumerState<DeliveryForm> {
         quantity: quantity,
         reason: notes.isEmpty ? null : notes,
         tenantId: tenantId,
+        bestBeforeDate: _bestBeforeDate,
       );
       await widget.repository.markSynced(movement.id, result['id'] as String);
 
@@ -164,6 +167,42 @@ class _DeliveryFormState extends ConsumerState<DeliveryForm> {
                 return null;
               },
               onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+
+            // Epic 26 — AC2: Best-before date (optional)
+            const SizedBox(height: 12),
+            ListTile(
+              key: const Key('delivery_best_before_field'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                _bestBeforeDate == null
+                    ? 'Date de garde optimale (optionnel)'
+                    : 'Garde optimale : ${_bestBeforeDate!.day.toString().padLeft(2, '0')}/${_bestBeforeDate!.month.toString().padLeft(2, '0')}/${_bestBeforeDate!.year}',
+                style: TextStyle(
+                  color: _bestBeforeDate == null ? Colors.grey : null,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_bestBeforeDate != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() => _bestBeforeDate = null),
+                    ),
+                  const Icon(Icons.calendar_today_outlined, size: 18),
+                ],
+              ),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now().add(const Duration(days: 30)),
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 3650)),
+                );
+                if (picked != null) setState(() => _bestBeforeDate = picked);
+              },
             ),
             const SizedBox(height: 12),
 

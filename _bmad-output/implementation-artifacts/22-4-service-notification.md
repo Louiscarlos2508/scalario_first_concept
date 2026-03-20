@@ -4,7 +4,7 @@
 
 - **Epic:** Epic 22 — Alertes stock bas + notifications
 - **Story ID:** 22-4-service-notification
-- **Status:** ready-for-dev
+- **Status:** done
 - **Priority:** Medium
 - **Depends on:** 22-1 (LowStockDetected event émis)
 
