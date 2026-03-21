@@ -198,9 +198,8 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'standard',   child: Text('Standard — 15 000 FCFA/mois')),
-                  DropdownMenuItem(value: 'premium',    child: Text('Premium — 25 000 FCFA/mois')),
-                  DropdownMenuItem(value: 'enterprise', child: Text('Enterprise — sur devis')),
+                  DropdownMenuItem(value: 'standard', child: Text('Standard — 15 000 FCFA/mois')),
+                  DropdownMenuItem(value: 'premium',  child: Text('Premium — 25 000 FCFA/mois')),
                 ],
                 onChanged: (v) => setState(() => _plan = v ?? _plan),
               ),

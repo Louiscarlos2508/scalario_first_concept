@@ -1,6 +1,6 @@
 import { IsDateString, IsDecimal, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
-const BILLING_EVENT_TYPES = ['subscription', 'installation', 'training', 'upgrade', 'downgrade', 'payment', 'activation', 'invoice'];
+const BILLING_EVENT_TYPES = ['subscription', 'installation', 'training', 'plan_change', 'activation', 'invoice'];
 const PAYMENT_METHODS = ['cash', 'mobile_money', 'card', 'bank_transfer'];
 
 export class CreateBillingEventDto {

@@ -116,8 +116,6 @@ class _TenantCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
-                  _StatusChip(status: tenant.status),
-                  const SizedBox(width: 6),
                   _BillingStatusChip(status: tenant.billingStatus),
                 ],
               ),
@@ -155,26 +153,6 @@ class _TenantCard extends StatelessWidget {
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  final String status;
-
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final (color, label) = switch (status) {
-      'active' => (const Color(0xFF4CAF50), 'Actif'),
-      'suspended' => (const Color(0xFFFF9800), 'Suspendu'),
-      _ => (const Color(0xFF9E9E9E), 'Archivé'),
-    };
-
-    return Chip(
-      backgroundColor: color.withValues(alpha: 0.15),
-      label: Text(label, style: TextStyle(color: color, fontSize: 12)),
-      side: BorderSide(color: color, width: 1),
-    );
-  }
-}
 
 class _BillingStatusChip extends StatelessWidget {
   final String status;

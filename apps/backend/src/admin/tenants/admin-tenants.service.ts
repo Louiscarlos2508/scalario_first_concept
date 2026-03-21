@@ -159,6 +159,7 @@ export class AdminTenantsService {
 
   async listTenants() {
     const tenants = await this.prisma.tenant.findMany({
+      where: { plan: { not: 'free' } }, // exclut les tenants internes (Scalario Platform)
       include: {
         _count: { select: { members: true } },
         tenantModules: {

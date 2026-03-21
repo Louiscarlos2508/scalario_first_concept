@@ -7,16 +7,15 @@ class ReturnsRepository {
   final http.Client _httpClient;
   final String? Function()? _tokenGetter;
 
-  ReturnsRepository({
-    http.Client? httpClient,
-    String? Function()? tokenGetter,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _tokenGetter = tokenGetter;
+  ReturnsRepository({http.Client? httpClient, String? Function()? tokenGetter})
+    : _httpClient = httpClient ?? http.Client(),
+      _tokenGetter = tokenGetter;
 
   Map<String, String> _headers({String? tenantId}) {
     String? token;
     try {
-      token = _tokenGetter?.call() ??
+      token =
+          _tokenGetter?.call() ??
           Supabase.instance.client.auth.currentSession?.accessToken;
     } catch (_) {}
     return ApiConstants.headers(tenantId: tenantId, token: token);
@@ -28,12 +27,12 @@ class ReturnsRepository {
     required String tenantId,
   }) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/transactions').replace(
-      queryParameters: {
-        'receiptNumber': receiptNumber,
-        'tenantId': tenantId,
-      },
+      queryParameters: {'receiptNumber': receiptNumber, 'tenantId': tenantId},
     );
-    final response = await _httpClient.get(uri, headers: _headers(tenantId: tenantId));
+    final response = await _httpClient.get(
+      uri,
+      headers: _headers(tenantId: tenantId),
+    );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final items = data['items'] as List<dynamic>?;
@@ -58,16 +57,16 @@ class ReturnsRepository {
     required String resolution,
     String? reason,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/returns').replace(
-      queryParameters: {'tenantId': tenantId, 'userId': userId},
-    );
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/returns',
+    ).replace(queryParameters: {'tenantId': tenantId, 'userId': userId});
     final body = <String, dynamic>{
       'catalogItemId': catalogItemId,
       'quantity': quantity,
       'unitPrice': unitPrice,
       'resolution': resolution,
-      if (originalTxId != null) 'originalTxId': originalTxId,
-      if (variantId != null) 'variantId': variantId,
+      'originalTxId': ?originalTxId,
+      'variantId': ?variantId,
       if (reason?.isNotEmpty ?? false) 'reason': reason,
     };
     final response = await _httpClient.post(
@@ -79,6 +78,8 @@ class ReturnsRepository {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     final err = jsonDecode(response.body);
-    throw Exception(err['message'] ?? 'Erreur lors du retour : ${response.statusCode}');
+    throw Exception(
+      err['message'] ?? 'Erreur lors du retour : ${response.statusCode}',
+    );
   }
 }

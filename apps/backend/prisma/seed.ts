@@ -239,7 +239,7 @@ const BUSINESS_TYPES = [
   },
   {
     code: 'textile',
-    name: 'Textile & Habillement',
+    name: 'Textile & Prêt-à-porter',
     description: 'Vente de vêtements et tissus avec variantes taille/couleur',
     defaultFlags: { hasVariants: true },
     visibleSections: ['variants'] as string[],
@@ -287,7 +287,7 @@ const BUSINESS_TYPES = [
   },
   {
     code: 'cave_vin',
-    name: 'Cave à Vins & Spiritueux',
+    name: 'Cave à Vin & Boissons',
     description: 'Vente de vins, champagnes et spiritueux avec millésime et gestion de cave',
     defaultFlags: { hasVariants: true },
     visibleSections: ['variants'] as string[],
@@ -311,7 +311,7 @@ const BUSINESS_TYPES = [
   },
   {
     code: 'depot_vente',
-    name: 'Dépôt-Vente',
+    name: 'Dépôt-Vente & Occasion',
     description: 'Vente d\'articles uniques d\'occasion déposés par des tiers',
     defaultFlags: { uniqueArticles: true },
     visibleSections: ['unique'] as string[],
@@ -335,7 +335,7 @@ const BUSINESS_TYPES = [
   },
   {
     code: 'station_service',
-    name: 'Station-Service & Carburant',
+    name: 'Station Service',
     description: 'Vente de carburant au litre et produits pétroliers avec compteur pompe',
     defaultFlags: { unitType: 'volume' },
     visibleSections: ['weight'] as string[],

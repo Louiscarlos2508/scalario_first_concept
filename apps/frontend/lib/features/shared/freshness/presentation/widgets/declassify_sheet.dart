@@ -45,9 +45,9 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
   Future<void> _submit() async {
     final qty = double.tryParse(_qtyController.text.trim());
     if (qty == null || qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Quantité invalide')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Quantité invalide')));
       return;
     }
 
@@ -61,7 +61,7 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
 
     final headers = {
       'Content-Type': 'application/json',
-      if (tenantId != null) 'x-tenant-id': tenantId,
+      'x-tenant-id': ?tenantId,
       if (token != null) 'Authorization': 'Bearer $token',
     };
 
@@ -75,7 +75,7 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
           'quantity': qty,
           'type': 'LOSS',
           'reason': backendReason,
-          if (tenantId != null) 'tenantId': tenantId,
+          'tenantId': ?tenantId,
         }),
       );
 
@@ -89,7 +89,7 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
         await http.patch(
           Uri.parse(
             '${ApiConstants.baseUrl}/batches/$batchId/deplete',
-          ).replace(queryParameters: {if (tenantId != null) 'tenantId': tenantId}),
+          ).replace(queryParameters: {'tenantId': ?tenantId}),
           headers: headers,
         );
       }
@@ -102,8 +102,9 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Erreur : $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -132,14 +133,14 @@ class _DeclassifySheetState extends ConsumerState<DeclassifySheet> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _qtyController,
-            decoration:
-                const InputDecoration(labelText: 'Quantité à déclasser'),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Quantité à déclasser',
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _reason,
+            initialValue: _reason,
             decoration: const InputDecoration(labelText: 'Motif'),
             items: _reasons
                 .map((r) => DropdownMenuItem(value: r, child: Text(r)))

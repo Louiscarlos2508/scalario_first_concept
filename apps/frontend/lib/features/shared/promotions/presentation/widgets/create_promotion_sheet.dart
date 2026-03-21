@@ -5,9 +5,11 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/promotions/presentation/providers/promotions_providers.dart';
 
-String _fcfa(double amount) =>
-    NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
-        .format(amount);
+String _fcfa(double amount) => NumberFormat.currency(
+  locale: 'fr_FR',
+  symbol: 'FCFA',
+  decimalDigits: 0,
+).format(amount);
 
 class CreatePromotionSheet extends ConsumerStatefulWidget {
   const CreatePromotionSheet({super.key});
@@ -21,7 +23,7 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
   final _formKey = GlobalKey<FormState>();
 
   String _type = 'PERCENT';
-  String _scope = 'ITEM';
+  final String _scope = 'ITEM';
   String? _scopeId;
   String? _scopeLabel;
 
@@ -89,12 +91,16 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
     try {
       final tenantId = ref.read(activeTenantProvider);
       if (tenantId == null) return;
-      final results =
-          await ref.read(catalogRepositoryProvider).getProducts(tenantId: tenantId);
+      final results = await ref
+          .read(catalogRepositoryProvider)
+          .getProducts(tenantId: tenantId);
       setState(() {
         _searchResults = results
-            .where((p) =>
-                p['name'].toString().toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (p) => p['name'].toString().toLowerCase().contains(
+                query.toLowerCase(),
+              ),
+            )
             .take(8)
             .toList();
       });
@@ -162,7 +168,9 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
 
     setState(() => _saving = true);
     try {
-      await ref.read(promotionsRepositoryProvider).createPromotion(tenantId, dto);
+      await ref
+          .read(promotionsRepositoryProvider)
+          .createPromotion(tenantId, dto);
       ref.invalidate(promotionsProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -194,20 +202,28 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Nouvelle promotion',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                'Nouvelle promotion',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
 
               // Type dropdown
               DropdownButtonFormField<String>(
-                value: _type,
-                decoration: const InputDecoration(labelText: 'Type de promotion'),
+                initialValue: _type,
+                decoration: const InputDecoration(
+                  labelText: 'Type de promotion',
+                ),
                 items: const [
                   DropdownMenuItem(value: 'PERCENT', child: Text('Remise %')),
                   DropdownMenuItem(
-                      value: 'BUY_N_GET_M', child: Text('Offre quantitative (3+1)')),
+                    value: 'BUY_N_GET_M',
+                    child: Text('Offre quantitative (3+1)'),
+                  ),
                   DropdownMenuItem(
-                      value: 'CROSSED_PRICE', child: Text('Prix barré')),
+                    value: 'CROSSED_PRICE',
+                    child: Text('Prix barré'),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _type = v ?? 'PERCENT'),
               ),
@@ -245,17 +261,17 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                         dense: true,
                         title: Text(p['name'] as String? ?? ''),
                         trailing: Text(
-                            '${(p['price'] as num?)?.toStringAsFixed(0) ?? ''} FCFA'),
+                          '${(p['price'] as num?)?.toStringAsFixed(0) ?? ''} FCFA',
+                        ),
                         onTap: () {
                           setState(() {
                             _scopeId = p['id'] as String?;
                             _scopeLabel = p['name'] as String?;
-                            _originalPrice =
-                                (p['price'] as num?)?.toDouble();
+                            _originalPrice = (p['price'] as num?)?.toDouble();
                             if (_type == 'CROSSED_PRICE' &&
                                 _originalPrice != null) {
-                              _newPriceCtrl.text =
-                                  _originalPrice!.toStringAsFixed(0);
+                              _newPriceCtrl.text = _originalPrice!
+                                  .toStringAsFixed(0);
                             }
                             _searchResults = [];
                             _searchCtrl.text = _scopeLabel ?? '';
@@ -283,10 +299,12 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                 TextFormField(
                   controller: _percentCtrl,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Pourcentage de remise (%)'),
-                  validator: (v) =>
-                      (double.tryParse(v ?? '') == null) ? 'Valeur invalide' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Pourcentage de remise (%)',
+                  ),
+                  validator: (v) => (double.tryParse(v ?? '') == null)
+                      ? 'Valeur invalide'
+                      : null,
                   onChanged: (_) => setState(() {}),
                 ),
               ],
@@ -297,7 +315,9 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                       child: TextFormField(
                         controller: _buyNCtrl,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Acheter N'),
+                        decoration: const InputDecoration(
+                          labelText: 'Acheter N',
+                        ),
                         validator: (v) =>
                             (int.tryParse(v ?? '') == null) ? 'Invalide' : null,
                         onChanged: (_) => setState(() {}),
@@ -308,8 +328,9 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                       child: TextFormField(
                         controller: _getMCtrl,
                         keyboardType: TextInputType.number,
-                        decoration:
-                            const InputDecoration(labelText: 'Offrir M'),
+                        decoration: const InputDecoration(
+                          labelText: 'Offrir M',
+                        ),
                         validator: (v) =>
                             (int.tryParse(v ?? '') == null) ? 'Invalide' : null,
                         onChanged: (_) => setState(() {}),
@@ -322,10 +343,12 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                 TextFormField(
                   controller: _newPriceCtrl,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Nouveau prix (FCFA)'),
-                  validator: (v) =>
-                      (double.tryParse(v ?? '') == null) ? 'Valeur invalide' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Nouveau prix (FCFA)',
+                  ),
+                  validator: (v) => (double.tryParse(v ?? '') == null)
+                      ? 'Valeur invalide'
+                      : null,
                   onChanged: (_) => setState(() {}),
                 ),
               ],
@@ -339,7 +362,8 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                       onPressed: _pickStartDate,
                       icon: const Icon(Icons.calendar_today, size: 16),
                       label: Text(
-                          'Début : ${DateFormat('dd/MM/yy').format(_startDate)}'),
+                        'Début : ${DateFormat('dd/MM/yy').format(_startDate)}',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -348,7 +372,8 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                       onPressed: _pickEndDate,
                       icon: const Icon(Icons.event, size: 16),
                       label: Text(
-                          'Fin : ${DateFormat('dd/MM/yy').format(_endDate)}'),
+                        'Fin : ${DateFormat('dd/MM/yy').format(_endDate)}',
+                      ),
                     ),
                   ),
                 ],
@@ -365,14 +390,20 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.visibility_outlined,
-                          size: 16, color: Colors.teal),
+                      const Icon(
+                        Icons.visibility_outlined,
+                        size: 16,
+                        color: Colors.teal,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(preview,
-                            style: const TextStyle(
-                                color: Colors.teal,
-                                fontWeight: FontWeight.bold)),
+                        child: Text(
+                          preview,
+                          style: const TextStyle(
+                            color: Colors.teal,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -386,7 +417,10 @@ class _CreatePromotionSheetState extends ConsumerState<CreatePromotionSheet> {
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
                     : const Text('Créer la promotion'),
               ),
             ],

@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import '../../data/services/invoice_service.dart';
 import '../providers/admin_providers.dart';
 
+// ── Main widget ───────────────────────────────────────────────────────────────
+
 class BillingTab extends ConsumerWidget {
   final String tenantId;
 
@@ -25,21 +27,17 @@ class BillingTab extends ConsumerWidget {
         final tenant = data['tenant'] as Map<String, dynamic>;
         final events = (data['events'] as List? ?? [])
             .cast<Map<String, dynamic>>();
-
-        final billingStatus = tenant['billingStatus'] as String? ?? 'trial';
-        final currentPlan = tenant['plan'] as String? ?? 'free';
-
         final plans = plansAsync.valueOrNull ?? [];
 
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // ── Section Plan actuel ──────────────────────────────────────────
+            // ── Section 1: Plan & Abonnement ─────────────────────────────────
             _SectionCard(
-              title: 'Plan actuel',
-              child: _PlanSection(
+              title: 'Plan & Abonnement',
+              child: _PlanSubscriptionSection(
                 tenantId: tenantId,
-                currentPlan: currentPlan,
+                tenant: tenant,
                 plans: plans,
                 token: _token,
                 ref: ref,
@@ -47,55 +45,31 @@ class BillingTab extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // ── Section Période d'essai ──────────────────────────────────────
+            // ── Section 2: Frais ponctuels ────────────────────────────────────
             _SectionCard(
-              title: "Période d'essai",
-              child: _TrialSection(
-                tenantId: tenantId,
-                billingStatus: billingStatus,
-                trialEndsAt: tenant['trialEndsAt'] as String?,
-                currentPlan: currentPlan,
-                plans: plans,
-                token: _token,
-                ref: ref,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── Section paidUntil ────────────────────────────────────────────
-            if (tenant['billingStatus'] == 'active' && tenant['paidUntil'] != null)
-              _PaidUntilCard(
-                paidUntil: tenant['paidUntil'] as String,
-                tenantId: tenantId,
-                plans: plans,
-                token: _token,
-                ref: ref,
-              ),
-            if (tenant['billingStatus'] == 'active' && tenant['paidUntil'] != null)
-              const SizedBox(height: 12),
-
-            // ── Section Frais ────────────────────────────────────────────────
-            _SectionCard(
-              title: 'Frais',
+              title: 'Frais ponctuels',
               child: _FeesSection(
                 tenantId: tenantId,
                 tenant: tenant,
+                events: events,
                 token: _token,
                 ref: ref,
               ),
             ),
             const SizedBox(height: 12),
 
-            // ── Section Historique paiements ─────────────────────────────────
+            // ── Section 3: Historique ─────────────────────────────────────────
             _SectionCard(
-              title: 'Historique paiements',
-              action: FilledButton.icon(
-                onPressed: () => _showAddPaymentDialog(context, ref),
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('Ajouter'),
-                style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6)),
+              title: 'Historique',
+              action: OutlinedButton.icon(
+                onPressed: () => _generateInvoice(context, ref),
+                icon: const Icon(Icons.description, size: 14),
+                label: const Text('Facture'),
+                style: OutlinedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
               ),
               child: events.isEmpty
                   ? const Padding(
@@ -113,54 +87,10 @@ class BillingTab extends ConsumerWidget {
                           .toList(),
                     ),
             ),
-            const SizedBox(height: 12),
-
-            // ── Section Générer facture ───────────────────────────────────────
-            _SectionCard(
-              title: 'Facturation',
-              child: Row(
-                children: [
-                  FilledButton.icon(
-                    onPressed: () => _generateInvoice(context, ref),
-                    icon: const Icon(Icons.description, size: 16),
-                    label: const Text('Générer facture du mois'),
-                  ),
-                ],
-              ),
-            ),
           ],
         );
       },
     );
-  }
-
-  Future<void> _showAddPaymentDialog(
-      BuildContext context, WidgetRef ref) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => const _AddPaymentDialog(),
-    );
-    if (result == null || !context.mounted) return;
-
-    try {
-      await ref.read(adminApiServiceProvider).recordBillingEvent(
-            tenantId,
-            result,
-            token: _token,
-          );
-      ref.invalidate(tenantBillingProvider(tenantId));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Paiement enregistré')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 
   Future<void> _generateInvoice(BuildContext context, WidgetRef ref) async {
@@ -169,6 +99,7 @@ class BillingTab extends ConsumerWidget {
           .read(adminApiServiceProvider)
           .generateInvoice(tenantId, token: _token);
       ref.invalidate(tenantBillingProvider(tenantId));
+      ref.invalidate(allBillingEventsProvider);
       await InvoiceService.generateAndDownloadInvoice(invoiceData);
     } catch (e) {
       if (context.mounted) {
@@ -180,16 +111,629 @@ class BillingTab extends ConsumerWidget {
   }
 }
 
-// ── Section Plan actuel ────────────────────────────────────────────────────────
+// ── Section 1: Plan & Abonnement ──────────────────────────────────────────────
 
-class _PlanSection extends StatefulWidget {
+class _PlanSubscriptionSection extends StatelessWidget {
+  final String tenantId;
+  final Map<String, dynamic> tenant;
+  final List<Map<String, dynamic>> plans;
+  final String token;
+  final WidgetRef ref;
+
+  const _PlanSubscriptionSection({
+    required this.tenantId,
+    required this.tenant,
+    required this.plans,
+    required this.token,
+    required this.ref,
+  });
+
+  Map<String, dynamic>? get _planDef {
+    final code = tenant['plan'] as String? ?? '';
+    return plans.where((p) => p['code'] == code).firstOrNull;
+  }
+
+  String _fmt(dynamic v) {
+    final n = double.tryParse(v?.toString() ?? '0') ?? 0;
+    return NumberFormat('#,###', 'fr_FR').format(n);
+  }
+
+  String _fmtDate(String? iso) {
+    if (iso == null) return '—';
+    final dt = DateTime.tryParse(iso);
+    return dt != null ? DateFormat('dd/MM/yyyy').format(dt) : iso;
+  }
+
+  Widget _statusBadge(String status) {
+    final (color, label) = switch (status) {
+      'trial' => (Colors.blue, 'Essai'),
+      'active' => (Colors.green, 'Actif'),
+      'overdue' => (Colors.orange, 'En retard'),
+      'suspended' => (Colors.red, 'Suspendu'),
+      _ => (Colors.grey, status),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _dateInfo(String status) {
+    final trialEndsAt = tenant['trialEndsAt'] as String?;
+    final paidUntil = tenant['paidUntil'] as String?;
+    final now = DateTime.now();
+
+    switch (status) {
+      case 'trial':
+        if (trialEndsAt != null) {
+          final dt = DateTime.tryParse(trialEndsAt);
+          if (dt != null) {
+            final days = dt.difference(now).inDays;
+            final color = days <= 3 ? Colors.red : Colors.blue;
+            return Text(
+              'Essai jusqu\'au ${_fmtDate(trialEndsAt)} ($days j restants)',
+              style: TextStyle(color: color, fontSize: 13),
+            );
+          }
+        }
+        return const Text('Essai en cours',
+            style: TextStyle(color: Colors.blue, fontSize: 13));
+
+      case 'active':
+        if (paidUntil != null) {
+          final dt = DateTime.tryParse(paidUntil);
+          if (dt != null) {
+            final days = dt.difference(now).inDays;
+            final color = days <= 3
+                ? Colors.red
+                : (days <= 7 ? Colors.orange : Colors.green);
+            return Text(
+              'Payé jusqu\'au ${_fmtDate(paidUntil)} ($days j)',
+              style: TextStyle(color: color, fontSize: 13),
+            );
+          }
+        }
+        return const Text('Actif',
+            style: TextStyle(color: Colors.green, fontSize: 13));
+
+      case 'overdue':
+        if (paidUntil != null) {
+          final dt = DateTime.tryParse(paidUntil);
+          if (dt != null) {
+            final days = now.difference(dt).inDays;
+            return Text(
+              'Impayé depuis $days j (dû depuis ${_fmtDate(paidUntil)})',
+              style: const TextStyle(color: Colors.orange, fontSize: 13),
+            );
+          }
+        }
+        return const Text('Impayé',
+            style: TextStyle(color: Colors.orange, fontSize: 13));
+
+      case 'suspended':
+        return const Text('Compte suspendu',
+            style: TextStyle(color: Colors.red, fontSize: 13));
+
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Future<void> _openPaymentDialog(BuildContext context) async {
+    final receiptData = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _PaymentDialog(
+        tenantId: tenantId,
+        tenant: tenant,
+        plans: plans,
+        token: token,
+        ref: ref,
+      ),
+    );
+    if (receiptData == null || !context.mounted) return;
+
+    ref.invalidate(tenantBillingProvider(tenantId));
+    ref.invalidate(adminTenantsProvider);
+    ref.invalidate(billingSummaryProvider);
+    ref.invalidate(adminMonitoringProvider);
+    ref.invalidate(allBillingEventsProvider);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Paiement enregistré — Génération du reçu...'),
+          action: SnackBarAction(
+            label: 'Reçu',
+            onPressed: () =>
+                InvoiceService.generateAndDownloadReceipt(receiptData),
+          ),
+        ),
+      );
+      await InvoiceService.generateAndDownloadReceipt(receiptData);
+    }
+  }
+
+  Future<void> _openPlanChangeDialog(BuildContext context) async {
+    final currentPlan = tenant['plan'] as String? ?? '';
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _PlanChangeDialog(
+        tenantId: tenantId,
+        currentPlan: currentPlan,
+        plans: plans,
+        token: token,
+        ref: ref,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = tenant['billingStatus'] as String? ?? 'trial';
+    final planCode = tenant['plan'] as String? ?? 'free';
+    final plan = _planDef;
+    final planName = plan?['name'] as String? ?? planCode;
+    final planPrice = double.tryParse(
+            (plan?['monthlyPrice'] ?? plan?['monthly_price'] ?? 0).toString()) ??
+        0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(planName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15)),
+                  if (planPrice > 0)
+                    Text('${_fmt(planPrice)} FCFA/mois',
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+            _statusBadge(status),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _dateInfo(status),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _openPlanChangeDialog(context),
+              icon: const Icon(Icons.swap_horiz, size: 16),
+              label: const Text('Changer de plan'),
+              style: OutlinedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: () => _openPaymentDialog(context),
+              icon: const Icon(Icons.payment, size: 16),
+              label: const Text('Enregistrer paiement'),
+              style: FilledButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                backgroundColor: Colors.green,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Payment Dialog ────────────────────────────────────────────────────────────
+
+class _PaymentDialog extends StatefulWidget {
+  final String tenantId;
+  final Map<String, dynamic> tenant;
+  final List<Map<String, dynamic>> plans;
+  final String token;
+  final WidgetRef ref;
+
+  const _PaymentDialog({
+    required this.tenantId,
+    required this.tenant,
+    required this.plans,
+    required this.token,
+    required this.ref,
+  });
+
+  @override
+  State<_PaymentDialog> createState() => _PaymentDialogState();
+}
+
+class _PaymentDialogState extends State<_PaymentDialog> {
+  int _months = 1;
+  bool _libre = false;
+  final _libreCtrl = TextEditingController(text: '1');
+  final _amountCtrl = TextEditingController();
+  String _method = 'cash';
+  final _refCtrl = TextEditingController();
+  DateTime _date = DateTime.now();
+  bool _includeInstallation = false;
+  bool _includeTraining = false;
+  bool _loading = false;
+
+  double get _planPrice {
+    final planCode = widget.tenant['plan'] as String? ?? '';
+    final plan = widget.plans.where((p) => p['code'] == planCode).firstOrNull;
+    if (plan == null) return 0;
+    return double.tryParse(
+            (plan['monthlyPrice'] ?? plan['monthly_price'] ?? 0).toString()) ??
+        0;
+  }
+
+  int get _effectiveMonths {
+    if (_libre) return int.tryParse(_libreCtrl.text) ?? 1;
+    return _months;
+  }
+
+  double get _subscriptionAmount =>
+      double.tryParse(_amountCtrl.text.replaceAll('\u202f', '').replaceAll(' ', '')) ?? 0;
+
+  double get _installationFee =>
+      double.tryParse(
+          (widget.tenant['installationFee'] ?? '0').toString()) ??
+          0;
+
+  double get _trainingFee =>
+      double.tryParse(
+          (widget.tenant['trainingFee'] ?? '0').toString()) ??
+          0;
+
+  bool get _installationPaid =>
+      widget.tenant['installationPaid'] as bool? ?? false;
+
+  bool get _trainingPaid =>
+      widget.tenant['trainingPaid'] as bool? ?? false;
+
+  bool get _showInstallCheckbox => _installationFee > 0 && !_installationPaid;
+
+  bool get _showTrainingCheckbox => _trainingFee > 0 && !_trainingPaid;
+
+  double get _total {
+    double t = _subscriptionAmount;
+    if (_includeInstallation) t += _installationFee;
+    if (_includeTraining) t += _trainingFee;
+    return t;
+  }
+
+  void _updateAmount() {
+    _amountCtrl.text = (_planPrice * _effectiveMonths).toStringAsFixed(0);
+  }
+
+  (DateTime, DateTime) _calcPeriod() {
+    final status = widget.tenant['billingStatus'] as String? ?? 'trial';
+    final trialEndsAtStr = widget.tenant['trialEndsAt'] as String?;
+    final paidUntilStr = widget.tenant['paidUntil'] as String?;
+    final now = DateTime.now();
+
+    DateTime start;
+    if (status == 'trial' && trialEndsAtStr != null) {
+      final trialEndsAt = DateTime.tryParse(trialEndsAtStr);
+      if (trialEndsAt != null && trialEndsAt.isAfter(now)) {
+        start = trialEndsAt.add(const Duration(days: 1));
+      } else {
+        start = now;
+      }
+    } else if (paidUntilStr != null) {
+      final paidUntil = DateTime.tryParse(paidUntilStr);
+      start = (paidUntil != null && paidUntil.isAfter(now)) ? paidUntil : now;
+    } else {
+      start = now;
+    }
+
+    return (start, start.add(Duration(days: _effectiveMonths * 30)));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _updateAmount();
+    _libreCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _libreCtrl.dispose();
+    _amountCtrl.dispose();
+    _refCtrl.dispose();
+    super.dispose();
+  }
+
+  String _fmtDate(DateTime dt) => DateFormat('dd/MM/yyyy').format(dt);
+
+  String _fmtAmount(double v) =>
+      '${NumberFormat('#,###', 'fr_FR').format(v)} FCFA';
+
+  Future<void> _submit() async {
+    setState(() => _loading = true);
+    final (start, end) = _calcPeriod();
+    final description =
+        'Abonnement — $_effectiveMonths mois — du ${_fmtDate(start)} au ${_fmtDate(end)}';
+
+    try {
+      final receiptData =
+          await widget.ref.read(adminApiServiceProvider).recordPayment(
+                widget.tenantId,
+                months: _effectiveMonths,
+                amount: _subscriptionAmount.toStringAsFixed(0),
+                description: description,
+                paymentMethod: _method,
+                paymentRef: _refCtrl.text.isNotEmpty ? _refCtrl.text : null,
+                paymentDate: _date.toIso8601String(),
+                includeInstallation: _includeInstallation,
+                includeTraining: _includeTraining,
+                token: widget.token,
+              );
+      if (mounted) Navigator.pop(context, receiptData);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (start, end) = _calcPeriod();
+
+    return AlertDialog(
+      title: const Text('Enregistrer un paiement'),
+      content: SizedBox(
+        width: 380,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Months selector
+              const Text('Durée :',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: [
+                  ...[1, 3, 6, 12].map((m) => ChoiceChip(
+                        label: Text('$m mois'),
+                        selected: !_libre && _months == m,
+                        onSelected: (_) => setState(() {
+                          _libre = false;
+                          _months = m;
+                          _updateAmount();
+                        }),
+                      )),
+                  ChoiceChip(
+                    label: const Text('Libre'),
+                    selected: _libre,
+                    onSelected: (_) => setState(() {
+                      _libre = true;
+                      _updateAmount();
+                    }),
+                  ),
+                ],
+              ),
+              if (_libre) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _libreCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de mois',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    suffixText: 'mois',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) {
+                    setState(() {});
+                    _updateAmount();
+                  },
+                ),
+              ],
+              const SizedBox(height: 12),
+
+              // Subscription amount (editable)
+              TextField(
+                controller: _amountCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Montant abonnement (FCFA)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  helperText: 'Modifiable si remise accordée',
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+
+              // Period display
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(6),
+                  border:
+                      Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_month,
+                        size: 14, color: Colors.blue),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Du ${_fmtDate(start)} au ${_fmtDate(end)}',
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.blue),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Payment method
+              InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Méthode de paiement',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _method,
+                    isDense: true,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('Espèces')),
+                      DropdownMenuItem(
+                          value: 'mobile_money', child: Text('Mobile Money')),
+                      DropdownMenuItem(
+                          value: 'bank_transfer', child: Text('Virement')),
+                    ],
+                    onChanged: (v) => setState(() => _method = v ?? _method),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Reference
+              TextField(
+                controller: _refCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Référence (optionnel)',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Payment date
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) setState(() => _date = picked);
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Date de paiement',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  child: Text(_fmtDate(_date)),
+                ),
+              ),
+
+              // Fee checkboxes (only if applicable)
+              if (_showInstallCheckbox || _showTrainingCheckbox) ...[
+                const SizedBox(height: 12),
+                const Text('Frais inclus :',
+                    style: TextStyle(fontWeight: FontWeight.w500)),
+                if (_showInstallCheckbox)
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: _includeInstallation,
+                    onChanged: (v) =>
+                        setState(() => _includeInstallation = v ?? false),
+                    title:
+                        Text('Installation — ${_fmtAmount(_installationFee)}'),
+                  ),
+                if (_showTrainingCheckbox)
+                  CheckboxListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    value: _includeTraining,
+                    onChanged: (v) =>
+                        setState(() => _includeTraining = v ?? false),
+                    title: Text('Formation — ${_fmtAmount(_trainingFee)}'),
+                  ),
+              ],
+
+              // Total (shown when fees are included)
+              if (_includeInstallation || _includeTraining) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Total',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      Text(_fmtAmount(_total),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _submit,
+          child: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Text('Valider et générer reçu'),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Plan Change Dialog ────────────────────────────────────────────────────────
+
+class _PlanChangeDialog extends StatefulWidget {
   final String tenantId;
   final String currentPlan;
   final List<Map<String, dynamic>> plans;
   final String token;
   final WidgetRef ref;
 
-  const _PlanSection({
+  const _PlanChangeDialog({
     required this.tenantId,
     required this.currentPlan,
     required this.plans,
@@ -198,125 +742,86 @@ class _PlanSection extends StatefulWidget {
   });
 
   @override
-  State<_PlanSection> createState() => _PlanSectionState();
+  State<_PlanChangeDialog> createState() => _PlanChangeDialogState();
 }
 
-class _PlanSectionState extends State<_PlanSection> {
+class _PlanChangeDialogState extends State<_PlanChangeDialog> {
   late String _selected;
+  bool _loading = false;
+
+  List<Map<String, dynamic>> get _visiblePlans => widget.plans
+      .where((p) =>
+          (double.tryParse(
+                  (p['monthlyPrice'] ?? p['monthly_price'] ?? 0).toString()) ??
+              0) >
+          0)
+      .toList();
 
   @override
   void initState() {
     super.initState();
-    _selected = _resolveSelection(widget.currentPlan, widget.plans);
+    final others =
+        _visiblePlans.where((p) => p['code'] != widget.currentPlan).toList();
+    _selected =
+        others.isNotEmpty ? others.first['code'] as String : widget.currentPlan;
   }
 
-  String _resolveSelection(String plan, List<Map<String, dynamic>> plans) {
-    final codes = plans.map((p) => p['code'] as String).toList();
-    if (codes.contains(plan)) return plan;
-    return codes.isNotEmpty ? codes.first : plan;
+  Map<String, dynamic>? get _currentPlanDef =>
+      widget.plans.where((p) => p['code'] == widget.currentPlan).firstOrNull;
+
+  Map<String, dynamic>? get _newPlanDef =>
+      widget.plans.where((p) => p['code'] == _selected).firstOrNull;
+
+  List<String> _modules(Map<String, dynamic>? plan) =>
+      ((plan?['includedModules'] ?? plan?['included_modules'] ?? []) as List)
+          .cast<String>();
+
+  List<String> get _toActivate {
+    final cur = _modules(_currentPlanDef);
+    return _modules(_newPlanDef).where((m) => !cur.contains(m)).toList();
   }
 
-  @override
-  void didUpdateWidget(_PlanSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentPlan != widget.currentPlan) {
-      _selected = _resolveSelection(widget.currentPlan, widget.plans);
-    }
+  List<String> get _toDeactivate {
+    final next = _modules(_newPlanDef);
+    return _modules(_currentPlanDef).where((m) => !next.contains(m)).toList();
   }
 
-  String _planLabel(String code) {
-    final plan = widget.plans.where((p) => p['code'] == code).firstOrNull;
-    if (plan == null) return code;
-    final price = plan['monthlyPrice'] ?? plan['monthly_price'] ?? 0;
-    return '${plan['name']} — ${_fmt(price)} FCFA/mois';
-  }
-
-  String _fmt(dynamic v) {
+  String _fmtPrice(Map<String, dynamic>? plan) {
+    if (plan == null) return '—';
+    final v = plan['monthlyPrice'] ?? plan['monthly_price'] ?? 0;
     final n = double.tryParse(v.toString()) ?? 0;
-    return NumberFormat('#,###', 'fr_FR').format(n);
+    return '${NumberFormat('#,###', 'fr_FR').format(n)} FCFA/mois';
   }
 
-  Future<void> _changePlan(BuildContext context) async {
-    if (_selected == widget.currentPlan) return;
-
-    final currentPlan = widget.plans
-        .where((p) => p['code'] == widget.currentPlan)
-        .firstOrNull;
-    final newPlan =
-        widget.plans.where((p) => p['code'] == _selected).firstOrNull;
-    if (newPlan == null) return;
-
-    final currentPrice =
-        double.tryParse((currentPlan?['monthlyPrice'] ?? currentPlan?['monthly_price'] ?? 0).toString()) ?? 0;
-    final newPrice =
-        double.tryParse((newPlan['monthlyPrice'] ?? newPlan['monthly_price'] ?? 0).toString()) ?? 0;
-    final isUpgrade = newPrice >= currentPrice;
-
-    final newModules = (newPlan['includedModules'] ?? newPlan['included_modules'] ?? []) as List;
-    final currentModules = (currentPlan?['includedModules'] ?? currentPlan?['included_modules'] ?? []) as List;
-
-    final toActivate = newModules.where((m) => !currentModules.contains(m)).toList();
-    final toDeactivate = currentModules.where((m) => !newModules.contains(m)).toList();
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(isUpgrade ? 'Upgrade vers $_selected' : 'Downgrade vers $_selected'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (toActivate.isNotEmpty) ...[
-              const Text('Modules qui seront activés :',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              ...toActivate.map((m) => Text('+ $m',
-                  style: const TextStyle(color: Colors.green))),
-              const SizedBox(height: 8),
-            ],
-            if (toDeactivate.isNotEmpty) ...[
-              const Text('Modules qui seront désactivés :',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.orange)),
-              ...toDeactivate.map((m) => Text('- $m',
-                  style: const TextStyle(color: Colors.orange))),
-              const SizedBox(height: 8),
-            ],
-            Text('Abonnement mensuel : ${_fmt(newPrice)} FCFA'),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Annuler')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirmer')),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-
+  Future<void> _confirm(BuildContext context) async {
+    if (_selected == widget.currentPlan) {
+      Navigator.pop(context);
+      return;
+    }
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loading = true);
     try {
       await widget.ref.read(adminApiServiceProvider).assignPlan(
             widget.tenantId,
             _selected,
-            confirmDowngrade: !isUpgrade,
+            confirmDowngrade: _toDeactivate.isNotEmpty,
             token: widget.token,
           );
       widget.ref.invalidate(tenantBillingProvider(widget.tenantId));
       widget.ref.invalidate(adminTenantsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(isUpgrade
-                  ? 'Plan mis à jour — upgrade vers $_selected'
-                  : 'Plan mis à jour — downgrade vers $_selected')),
+      widget.ref.invalidate(billingSummaryProvider);
+      widget.ref.invalidate(adminMonitoringProvider);
+      if (mounted) {
+        navigator.pop();
+        messenger.showSnackBar(
+          SnackBar(content: Text('Plan changé vers $_selected ✓')),
         );
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        setState(() => _loading = false);
+        messenger.showSnackBar(
           SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
         );
       }
@@ -325,534 +830,120 @@ class _PlanSectionState extends State<_PlanSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.plans.isEmpty) {
-      return Text(widget.currentPlan,
-          style: const TextStyle(fontWeight: FontWeight.bold));
-    }
+    final others =
+        _visiblePlans.where((p) => p['code'] != widget.currentPlan).toList();
 
-    return Row(
-      children: [
-        Expanded(
-          child: DropdownButtonFormField<String>(
-            initialValue: _selected,
-            decoration: const InputDecoration(
-              labelText: 'Plan',
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-            items: widget.plans
-                .map((p) => DropdownMenuItem<String>(
-                      value: p['code'] as String,
-                      child: Text(_planLabel(p['code'] as String)),
-                    ))
-                .toList(),
-            onChanged: (v) => setState(() => _selected = v ?? _selected),
-          ),
-        ),
-        const SizedBox(width: 12),
-        FilledButton(
-          onPressed: _selected == widget.currentPlan
-              ? null
-              : () => _changePlan(context),
-          child: const Text('Changer'),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Section Période d'essai ───────────────────────────────────────────────────
-
-class _TrialSection extends StatelessWidget {
-  final String tenantId;
-  final String billingStatus;
-  final String? trialEndsAt;
-  final String currentPlan;
-  final List<Map<String, dynamic>> plans;
-  final String token;
-  final WidgetRef ref;
-
-  const _TrialSection({
-    required this.tenantId,
-    required this.billingStatus,
-    required this.trialEndsAt,
-    required this.currentPlan,
-    required this.plans,
-    required this.token,
-    required this.ref,
-  });
-
-  String _formatDate(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return iso;
-    return DateFormat('dd/MM/yyyy').format(dt);
-  }
-
-  Future<void> _convertToActive(BuildContext context) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _ActivateDialog(
-        currentPlan: currentPlan,
-        plans: plans,
-      ),
-    );
-    if (result == null || !context.mounted) return;
-
-    try {
-      await ref.read(adminApiServiceProvider).activateTenant(
-            tenantId,
-            planCode: result['planCode'] as String,
-            installationFee: result['installationFee'] as double?,
-            trainingFee: result['trainingFee'] as double?,
-            billingStartDate: result['billingStartDate'] as String?,
-            token: token,
-          );
-      ref.invalidate(tenantBillingProvider(tenantId));
-      ref.invalidate(adminTenantsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Client activé ✓')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (billingStatus == 'trial') {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Chip(
-                label: const Text('Essai en cours',
-                    style: TextStyle(color: Colors.blue, fontSize: 12)),
-                backgroundColor: Colors.blue.withValues(alpha: 0.1),
-                side: const BorderSide(color: Colors.blue),
-              ),
-              if (trialEndsAt != null) ...[
-                const SizedBox(width: 8),
-                Text('jusqu\'au ${_formatDate(trialEndsAt!)}',
-                    style: const TextStyle(fontSize: 13)),
-              ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: () => _convertToActive(context),
-            icon: const Icon(Icons.check_circle, size: 16),
-            label: const Text('Convertir en client payant'),
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
-          ),
+    if (others.isEmpty) {
+      return AlertDialog(
+        title: const Text('Changer de plan'),
+        content: const Text('Aucun autre plan disponible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Fermer')),
         ],
       );
     }
-    return const Text('—',
-        style: TextStyle(color: Colors.grey, fontSize: 14));
-  }
-}
 
-// ── Dialog activation trial → payant ─────────────────────────────────────────
+    final toActivate = _toActivate;
+    final toDeactivate = _toDeactivate;
 
-class _ActivateDialog extends StatefulWidget {
-  final String currentPlan;
-  final List<Map<String, dynamic>> plans;
-
-  const _ActivateDialog({required this.currentPlan, required this.plans});
-
-  @override
-  State<_ActivateDialog> createState() => _ActivateDialogState();
-}
-
-class _ActivateDialogState extends State<_ActivateDialog> {
-  late String _plan;
-  final _installCtrl = TextEditingController();
-  final _trainingCtrl = TextEditingController();
-  DateTime _billingStart = DateTime.now();
-
-  @override
-  void initState() {
-    super.initState();
-    final codes = widget.plans.map((p) => p['code'] as String).toList();
-    if (widget.plans.isEmpty) {
-      _plan = widget.currentPlan;
-    } else if (!codes.contains(widget.currentPlan) || widget.currentPlan == 'free') {
-      _plan = widget.plans
-          .firstWhere((p) => p['code'] == 'standard',
-              orElse: () => widget.plans.first)['code'] as String;
-    } else {
-      _plan = widget.currentPlan;
-    }
-  }
-
-  @override
-  void dispose() {
-    _installCtrl.dispose();
-    _trainingCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Convertir en client payant'),
-      content: SizedBox(
-        width: 360,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _plan,
-              decoration: const InputDecoration(
-                  labelText: 'Plan', border: OutlineInputBorder()),
-              items: widget.plans
-                  .map((p) => DropdownMenuItem<String>(
-                        value: p['code'] as String,
-                        child: Text(p['name'] as String? ?? p['code'] as String),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() => _plan = v ?? _plan),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _installCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Frais installation (FCFA)',
-                  border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _trainingCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Frais formation (FCFA, 0 si offert)',
-                  border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _billingStart,
-                  firstDate: DateTime(2024),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) {
-                  setState(() => _billingStart = picked);
-                }
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                    labelText: 'Début facturation',
-                    border: OutlineInputBorder()),
-                child: Text(DateFormat('dd/MM/yyyy').format(_billingStart)),
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler')),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(context, {
-              'planCode': _plan,
-              'installationFee':
-                  double.tryParse(_installCtrl.text.isEmpty ? '0' : _installCtrl.text),
-              'trainingFee':
-                  double.tryParse(_trainingCtrl.text.isEmpty ? '0' : _trainingCtrl.text),
-              'billingStartDate': _billingStart.toIso8601String(),
-            });
-          },
-          child: const Text('Activer'),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Section paidUntil (abonnement actif) ─────────────────────────────────────
-
-class _PaidUntilCard extends StatelessWidget {
-  final String paidUntil;
-  final String tenantId;
-  final List<Map<String, dynamic>> plans;
-  final String token;
-  final WidgetRef ref;
-
-  const _PaidUntilCard({
-    required this.paidUntil,
-    required this.tenantId,
-    required this.plans,
-    required this.token,
-    required this.ref,
-  });
-
-  String _fmt(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return iso;
-    return DateFormat('dd/MM/yyyy').format(dt);
-  }
-
-  int _daysLeft(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return 0;
-    return dt.difference(DateTime.now()).inDays;
-  }
-
-  Future<void> _openRenewalDialog(BuildContext context) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _SubscriptionRenewalDialog(plans: plans),
-    );
-    if (result == null || !context.mounted) return;
-
-    try {
-      await ref.read(adminApiServiceProvider).recordBillingEvent(
-            tenantId,
-            result,
-            token: token,
-          );
-      ref.invalidate(tenantBillingProvider(tenantId));
-      ref.invalidate(billingSummaryProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Renouvellement enregistré ✓')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final days = _daysLeft(paidUntil);
-    final Color color;
-    final String message;
-
-    if (days <= 3) {
-      color = Colors.red;
-      message = 'Expire dans $days jour(s) — urgent !';
-    } else if (days <= 7) {
-      color = Colors.orange;
-      message = 'Expire dans $days jours';
-    } else if (days <= 30) {
-      color = Colors.blue;
-      message = 'Valide jusqu\'au ${_fmt(paidUntil)}';
-    } else {
-      color = Colors.green;
-      message = 'Payé jusqu\'au ${_fmt(paidUntil)} ($days jours)';
-    }
-
-    return Card(
-      color: color.withValues(alpha: 0.07),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today, color: color, size: 18),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(message,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w500)),
-            ),
-            TextButton(
-              onPressed: () => _openRenewalDialog(context),
-              child: const Text('Renouveler'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Dialog renouvellement abonnement ──────────────────────────────────────────
-
-class _SubscriptionRenewalDialog extends StatefulWidget {
-  final List<Map<String, dynamic>> plans;
-
-  const _SubscriptionRenewalDialog({required this.plans});
-
-  @override
-  State<_SubscriptionRenewalDialog> createState() =>
-      _SubscriptionRenewalDialogState();
-}
-
-class _SubscriptionRenewalDialogState
-    extends State<_SubscriptionRenewalDialog> {
-  int _months = 1;
-  String _method = 'cash';
-  final _refCtrl = TextEditingController();
-  final _amountCtrl = TextEditingController();
-  DateTime _date = DateTime.now();
-  double? _planPrice;
-
-  @override
-  void initState() {
-    super.initState();
-    // Try to get the standard plan price as default
-    final std = widget.plans.firstWhere(
-        (p) => p['code'] == 'standard',
-        orElse: () => widget.plans.isNotEmpty ? widget.plans.first : {});
-    _planPrice = std.isEmpty
-        ? null
-        : double.tryParse(
-            (std['monthlyPrice'] ?? std['monthly_price'] ?? 0).toString());
-    _updateAmount();
-  }
-
-  @override
-  void dispose() {
-    _refCtrl.dispose();
-    _amountCtrl.dispose();
-    super.dispose();
-  }
-
-  void _updateAmount() {
-    if (_planPrice != null) {
-      _amountCtrl.text = (_planPrice! * _months).toStringAsFixed(0);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Renouvellement abonnement'),
+      title: const Text('Changer de plan'),
       content: SizedBox(
         width: 340,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Months selector
-            Row(
-              children: [
-                const Text('Nombre de mois :',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
-                const SizedBox(width: 12),
-                ...([1, 3, 6, 12].map((m) => Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text('$m'),
-                        selected: _months == m,
-                        onSelected: (_) => setState(() {
-                          _months = m;
-                          _updateAmount();
-                        }),
-                      ),
-                    ))),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _amountCtrl,
+            Text('Plan actuel : ${widget.currentPlan}',
+                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            const SizedBox(height: 8),
+            InputDecorator(
               decoration: const InputDecoration(
-                labelText: 'Montant total (FCFA)',
+                labelText: 'Nouveau plan',
                 border: OutlineInputBorder(),
-                helperText: 'Modifiable si remise accordée',
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _method,
-              decoration: const InputDecoration(
-                  labelText: 'Méthode', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Espèces')),
-                DropdownMenuItem(
-                    value: 'mobile_money', child: Text('Mobile Money')),
-                DropdownMenuItem(
-                    value: 'bank_transfer', child: Text('Virement')),
-              ],
-              onChanged: (v) => setState(() => _method = v ?? _method),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _refCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Référence (optionnel)',
-                  border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime(2024),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) setState(() => _date = picked);
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                    labelText: 'Date paiement',
-                    border: OutlineInputBorder()),
-                child: Text(DateFormat('dd/MM/yyyy').format(_date)),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selected,
+                  isDense: true,
+                  isExpanded: true,
+                  items: others
+                      .map((p) => DropdownMenuItem<String>(
+                            value: p['code'] as String,
+                            child: Text(
+                                p['name'] as String? ?? p['code'] as String),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selected = v ?? _selected),
+                ),
               ),
+            ),
+            if (toActivate.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text('Modules activés :',
+                  style:
+                      TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+              ...toActivate.map((m) => Text('+ $m',
+                  style: const TextStyle(color: Colors.green, fontSize: 13))),
+            ],
+            if (toDeactivate.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('Modules désactivés :',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.orange,
+                      fontSize: 13)),
+              ...toDeactivate.map((m) => Text('- $m',
+                  style:
+                      const TextStyle(color: Colors.orange, fontSize: 13))),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              'Nouveau tarif : ${_fmtPrice(_newPlanDef)} — applicable dès le prochain paiement.',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler')),
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
         FilledButton(
-          onPressed: () {
-            final amount = double.tryParse(
-                    _amountCtrl.text.replaceAll(' ', '')) ??
-                0;
-            Navigator.pop(context, {
-              'type': 'subscription',
-              'amount': amount.toStringAsFixed(0),
-              'monthsPaid': _months,
-              'paymentMethod': _method,
-              'paymentRef': _refCtrl.text.isNotEmpty ? _refCtrl.text : null,
-              'paidAt': _date.toIso8601String(),
-              'description':
-                  'Abonnement — $_months mois — ${DateFormat('MMMM yyyy', 'fr_FR').format(_date)}',
-            });
-          },
-          child: const Text('Valider et générer reçu'),
+          onPressed: _loading || _selected == widget.currentPlan
+              ? null
+              : () => _confirm(context),
+          child: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : const Text('Confirmer'),
         ),
       ],
     );
   }
 }
 
-// ── Section Frais ──────────────────────────────────────────────────────────────
+// ── Section 2: Frais ponctuels ────────────────────────────────────────────────
 
 class _FeesSection extends StatefulWidget {
   final String tenantId;
   final Map<String, dynamic> tenant;
+  final List<Map<String, dynamic>> events;
   final String token;
   final WidgetRef ref;
 
   const _FeesSection({
     required this.tenantId,
     required this.tenant,
+    required this.events,
     required this.token,
     required this.ref,
   });
@@ -862,29 +953,50 @@ class _FeesSection extends StatefulWidget {
 }
 
 class _FeesSectionState extends State<_FeesSection> {
+  late TextEditingController _installCtrl;
+  late TextEditingController _trainingCtrl;
   late TextEditingController _notesCtrl;
+
+  String _fmtFeeRaw(dynamic v) {
+    if (v == null) return '';
+    final n = double.tryParse(v.toString()) ?? 0;
+    return n > 0 ? n.toStringAsFixed(0) : '';
+  }
 
   @override
   void initState() {
     super.initState();
-    _notesCtrl = TextEditingController(
-        text: widget.tenant['notes'] as String? ?? '');
+    _installCtrl = TextEditingController(
+        text: _fmtFeeRaw(widget.tenant['installationFee']));
+    _trainingCtrl = TextEditingController(
+        text: _fmtFeeRaw(widget.tenant['trainingFee']));
+    _notesCtrl =
+        TextEditingController(text: widget.tenant['notes'] as String? ?? '');
+  }
+
+  @override
+  void didUpdateWidget(_FeesSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tenant['installationFee'] != widget.tenant['installationFee']) {
+      _installCtrl.text = _fmtFeeRaw(widget.tenant['installationFee']);
+    }
+    if (oldWidget.tenant['trainingFee'] != widget.tenant['trainingFee']) {
+      _trainingCtrl.text = _fmtFeeRaw(widget.tenant['trainingFee']);
+    }
+    if (oldWidget.tenant['notes'] != widget.tenant['notes']) {
+      _notesCtrl.text = widget.tenant['notes'] as String? ?? '';
+    }
   }
 
   @override
   void dispose() {
+    _installCtrl.dispose();
+    _trainingCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
-  String _fmt(dynamic v) {
-    if (v == null) return '—';
-    final n = double.tryParse(v.toString()) ?? 0;
-    if (n == 0) return '—';
-    return '${NumberFormat('#,###', 'fr_FR').format(n)} FCFA';
-  }
-
-  Future<void> _toggle(String field, bool value) async {
+  Future<void> _save(String field, dynamic value) async {
     try {
       await widget.ref.read(adminApiServiceProvider).updateTenantBilling(
             widget.tenantId,
@@ -901,15 +1013,17 @@ class _FeesSectionState extends State<_FeesSection> {
     }
   }
 
-  Future<void> _saveNotes() async {
-    try {
-      await widget.ref.read(adminApiServiceProvider).updateTenantBilling(
-            widget.tenantId,
-            {'notes': _notesCtrl.text},
-            token: widget.token,
-          );
-      widget.ref.invalidate(tenantBillingProvider(widget.tenantId));
-    } catch (_) {}
+  String _fmtDisplayFromEvent(String type, dynamic tenantFee) {
+    final n = double.tryParse(tenantFee?.toString() ?? '') ?? 0;
+    if (n > 0) return '${NumberFormat('#,###', 'fr_FR').format(n)} FCFA';
+    // Fallback : chercher le montant dans le billing event correspondant
+    final event = widget.events
+        .where((e) => e['type'] == type)
+        .firstOrNull;
+    if (event == null) return '—';
+    final en = double.tryParse(event['amount']?.toString() ?? '') ?? 0;
+    if (en == 0) return '—';
+    return '${NumberFormat('#,###', 'fr_FR').format(en)} FCFA';
   }
 
   @override
@@ -919,74 +1033,113 @@ class _FeesSectionState extends State<_FeesSection> {
 
     return Column(
       children: [
-        _FeeRow(
+        _FeeEditRow(
           label: 'Installation',
-          amount: _fmt(widget.tenant['installationFee']),
+          displayAmount: _fmtDisplayFromEvent('installation', widget.tenant['installationFee']),
           paid: installPaid,
-          onToggle: (v) => _toggle('installationPaid', v),
+          onMarkPaid: () => _save('installationPaid', true),
+          controller: _installCtrl,
+          onSave: (v) {
+            final n = double.tryParse(v);
+            if (n != null) _save('installationFee', n.toStringAsFixed(2));
+          },
         ),
-        _FeeRow(
+        const SizedBox(height: 6),
+        _FeeEditRow(
           label: 'Formation',
-          amount: _fmt(widget.tenant['trainingFee']),
+          displayAmount: _fmtDisplayFromEvent('training', widget.tenant['trainingFee']),
           paid: trainingPaid,
-          onToggle: (v) => _toggle('trainingPaid', v),
+          onMarkPaid: () => _save('trainingPaid', true),
+          controller: _trainingCtrl,
+          onSave: (v) {
+            final n = double.tryParse(v);
+            if (n != null) _save('trainingFee', n.toStringAsFixed(2));
+          },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextField(
           controller: _notesCtrl,
           decoration: const InputDecoration(
             labelText: 'Notes',
             hintText: 'ex: remise early adopter 20%',
             border: OutlineInputBorder(),
+            isDense: true,
           ),
           maxLines: 2,
-          onEditingComplete: _saveNotes,
-          onTapOutside: (_) => _saveNotes(),
+          onEditingComplete: () => _save('notes', _notesCtrl.text),
+          onTapOutside: (_) => _save('notes', _notesCtrl.text),
         ),
       ],
     );
   }
 }
 
-class _FeeRow extends StatelessWidget {
+class _FeeEditRow extends StatelessWidget {
   final String label;
-  final String amount;
+  final String displayAmount;
   final bool paid;
-  final ValueChanged<bool> onToggle;
+  final VoidCallback onMarkPaid;
+  final TextEditingController controller;
+  final ValueChanged<String> onSave;
 
-  const _FeeRow({
+  const _FeeEditRow({
     required this.label,
-    required this.amount,
+    required this.displayAmount,
     required this.paid,
-    required this.onToggle,
+    required this.onMarkPaid,
+    required this.controller,
+    required this.onSave,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
+    return Row(
+      children: [
+        SizedBox(
+            width: 80,
             child: Text(label,
-                style: const TextStyle(fontWeight: FontWeight.w500)),
+                style: const TextStyle(fontWeight: FontWeight.w500))),
+        Expanded(
+          child: paid
+              ? Text(
+                  displayAmount == '—' ? 'Payé' : displayAmount,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: displayAmount == '—' ? Colors.green : null),
+                )
+              : TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Montant',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    suffixText: 'FCFA',
+                  ),
+                  keyboardType: TextInputType.number,
+                  onEditingComplete: () => onSave(controller.text),
+                  onTapOutside: (_) => onSave(controller.text),
+                ),
+        ),
+        const SizedBox(width: 8),
+        if (paid)
+          const Icon(Icons.check_circle, color: Colors.green, size: 20)
+        else
+          TextButton(
+            onPressed: onMarkPaid,
+            style: TextButton.styleFrom(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            child:
+                const Text('Marquer payé', style: TextStyle(fontSize: 12)),
           ),
-          Expanded(child: Text(amount)),
-          Switch(value: paid, onChanged: onToggle),
-          const SizedBox(width: 4),
-          Text(
-            paid ? 'Payé ✓' : 'Non payé ✗',
-            style: TextStyle(
-                color: paid ? Colors.green : Colors.orange, fontSize: 12),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
 
-// ── BillingEvent row avec facture + reçu ──────────────────────────────────────
+// ── BillingEvent row ──────────────────────────────────────────────────────────
 
 class _BillingEventRow extends StatelessWidget {
   final Map<String, dynamic> event;
@@ -1012,18 +1165,29 @@ class _BillingEventRow extends StatelessWidget {
         'paid' => 'Payé',
         'overdue' => 'En retard',
         'cancelled' => 'Annulé',
+        'completed' => 'Effectué',
         _ => 'En attente',
+      };
+
+  String _typeLabel(String type) => switch (type) {
+        'subscription' => 'Abonnement',
+        'installation' => 'Installation',
+        'training' => 'Formation',
+        'activation' => 'Activation',
+        'plan_change' => 'Changement de plan',
+        'invoice' => 'Facture',
+        _ => type,
       };
 
   String _formatDate(String? iso) {
     if (iso == null) return '—';
     final dt = DateTime.tryParse(iso);
-    if (dt == null) return iso;
-    return DateFormat('dd/MM/yy').format(dt);
+    return dt != null ? DateFormat('dd/MM/yy').format(dt) : iso;
   }
 
   String _formatAmount(dynamic v) {
     final n = double.tryParse(v?.toString() ?? '0') ?? 0;
+    if (n == 0) return '—';
     return '${NumberFormat('#,###', 'fr_FR').format(n)} FCFA';
   }
 
@@ -1043,7 +1207,10 @@ class _BillingEventRow extends StatelessWidget {
             token: token,
           );
       ref.invalidate(tenantBillingProvider(tenantId));
+      ref.invalidate(adminTenantsProvider);
       ref.invalidate(billingSummaryProvider);
+      ref.invalidate(adminMonitoringProvider);
+      ref.invalidate(allBillingEventsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1070,6 +1237,7 @@ class _BillingEventRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = event['status'] as String? ?? 'pending';
     final color = _statusColor(status);
+    final type = event['type'] as String? ?? '';
     final invoiceNumber = event['invoiceNumber'] as String?;
     final receiptNumber = event['receiptNumber'] as String?;
 
@@ -1079,28 +1247,23 @@ class _BillingEventRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            // Status badge
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: color),
               ),
-              child: Text(
-                _statusLabel(status),
-                style: TextStyle(color: color, fontSize: 11),
-              ),
+              child: Text(_statusLabel(status),
+                  style: TextStyle(color: color, fontSize: 11)),
             ),
             const SizedBox(width: 8),
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${event['type']} — ${_formatAmount(event['amount'])}',
+                    '${_typeLabel(type)} — ${_formatAmount(event['amount'])}',
                     style: const TextStyle(
                         fontWeight: FontWeight.w500, fontSize: 13),
                   ),
@@ -1113,26 +1276,26 @@ class _BillingEventRow extends StatelessWidget {
                           (event['description'] as String).isNotEmpty)
                         event['description'] as String,
                     ].join(' • '),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    style:
+                        const TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                 ],
               ),
             ),
-            // Actions
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (invoiceNumber case final String _)
+                if (invoiceNumber != null)
                   IconButton(
-                    icon: const Icon(Icons.description_outlined, size: 18),
-                    tooltip: 'Télécharger facture',
-                    onPressed: () => _redownloadInvoice(context),
+                    icon: const Icon(Icons.description, size: 18),
+                    tooltip: 'Facture',
+                    onPressed: () => _redownloadInvoice(),
                   ),
-                if (receiptNumber case final String _)
+                if (receiptNumber != null)
                   IconButton(
-                    icon: const Icon(Icons.receipt_long, size: 18),
-                    tooltip: 'Télécharger reçu',
-                    onPressed: () => _redownloadReceipt(context),
+                    icon: const Icon(Icons.receipt, size: 18),
+                    tooltip: 'Reçu',
+                    onPressed: () => _redownloadReceipt(),
                   ),
                 if (status == 'pending')
                   TextButton(
@@ -1148,8 +1311,7 @@ class _BillingEventRow extends StatelessWidget {
     );
   }
 
-  void _redownloadInvoice(BuildContext context) {
-    // Re-generate a simple invoice from stored event data
+  void _redownloadInvoice() {
     InvoiceService.generateAndDownloadInvoice({
       'invoiceNumber': event['invoiceNumber'],
       'date': event['createdAt'],
@@ -1158,15 +1320,15 @@ class _BillingEventRow extends StatelessWidget {
       'lines': [
         {
           'description': event['description'] ?? event['type'],
-          'amount': double.tryParse(event['amount']?.toString() ?? '0') ?? 0,
+          'amount':
+              double.tryParse(event['amount']?.toString() ?? '0') ?? 0,
         }
       ],
-      'total':
-          double.tryParse(event['amount']?.toString() ?? '0') ?? 0,
+      'total': double.tryParse(event['amount']?.toString() ?? '0') ?? 0,
     });
   }
 
-  void _redownloadReceipt(BuildContext context) {
+  void _redownloadReceipt() {
     InvoiceService.generateAndDownloadReceipt({
       'receiptNumber': event['receiptNumber'],
       'invoiceNumber': event['invoiceNumber'],
@@ -1180,137 +1342,7 @@ class _BillingEventRow extends StatelessWidget {
   }
 }
 
-// ── Dialog Ajouter paiement ────────────────────────────────────────────────────
-
-class _AddPaymentDialog extends StatefulWidget {
-  const _AddPaymentDialog();
-
-  @override
-  State<_AddPaymentDialog> createState() => _AddPaymentDialogState();
-}
-
-class _AddPaymentDialogState extends State<_AddPaymentDialog> {
-  String _type = 'subscription';
-  String _method = 'cash';
-  final _amountCtrl = TextEditingController();
-  final _refCtrl = TextEditingController();
-  DateTime _date = DateTime.now();
-  bool _markPaid = true;
-
-  @override
-  void dispose() {
-    _amountCtrl.dispose();
-    _refCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Ajouter un paiement'),
-      content: SizedBox(
-        width: 340,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              decoration: const InputDecoration(
-                  labelText: 'Type', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(
-                    value: 'subscription', child: Text('Abonnement')),
-                DropdownMenuItem(
-                    value: 'installation', child: Text('Installation')),
-                DropdownMenuItem(
-                    value: 'training', child: Text('Formation')),
-                DropdownMenuItem(value: 'payment', child: Text('Paiement')),
-              ],
-              onChanged: (v) => setState(() => _type = v ?? _type),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _amountCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Montant (FCFA)',
-                  border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _method,
-              decoration: const InputDecoration(
-                  labelText: 'Méthode', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Espèces')),
-                DropdownMenuItem(
-                    value: 'mobile_money', child: Text('Mobile Money')),
-                DropdownMenuItem(
-                    value: 'bank_transfer', child: Text('Virement')),
-              ],
-              onChanged: (v) => setState(() => _method = v ?? _method),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _refCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Référence (optionnel)',
-                  border: OutlineInputBorder()),
-            ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime(2024),
-                  lastDate: DateTime(2030),
-                );
-                if (picked != null) setState(() => _date = picked);
-              },
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                    labelText: 'Date', border: OutlineInputBorder()),
-                child: Text(DateFormat('dd/MM/yyyy').format(_date)),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              value: _markPaid,
-              onChanged: (v) => setState(() => _markPaid = v),
-              title: const Text('Marquer comme payé'),
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler')),
-        FilledButton(
-          onPressed: () {
-            final amount =
-                double.tryParse(_amountCtrl.text.replaceAll(' ', '')) ?? 0;
-            Navigator.pop(context, {
-              'type': _type,
-              'amount': amount.toStringAsFixed(0),
-              'paymentMethod': _method,
-              'paymentRef':
-                  _refCtrl.text.isNotEmpty ? _refCtrl.text : null,
-              'paidAt': _markPaid ? _date.toIso8601String() : null,
-              'dueDate': !_markPaid ? _date.toIso8601String() : null,
-            });
-          },
-          child: const Text('Enregistrer'),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Dialog Marquer payé (avec paiement) ───────────────────────────────────────
+// ── Mark Paid Dialog ──────────────────────────────────────────────────────────
 
 class _MarkPaidDialog extends StatefulWidget {
   const _MarkPaidDialog();
@@ -1339,18 +1371,28 @@ class _MarkPaidDialogState extends State<_MarkPaidDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DropdownButtonFormField<String>(
-              initialValue: _method,
+            InputDecorator(
               decoration: const InputDecoration(
-                  labelText: 'Méthode', border: OutlineInputBorder()),
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Espèces')),
-                DropdownMenuItem(
-                    value: 'mobile_money', child: Text('Mobile Money')),
-                DropdownMenuItem(
-                    value: 'bank_transfer', child: Text('Virement')),
-              ],
-              onChanged: (v) => setState(() => _method = v ?? _method),
+                labelText: 'Méthode',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _method,
+                  isDense: true,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'cash', child: Text('Espèces')),
+                    DropdownMenuItem(
+                        value: 'mobile_money', child: Text('Mobile Money')),
+                    DropdownMenuItem(
+                        value: 'bank_transfer', child: Text('Virement')),
+                  ],
+                  onChanged: (v) => setState(() => _method = v ?? _method),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(

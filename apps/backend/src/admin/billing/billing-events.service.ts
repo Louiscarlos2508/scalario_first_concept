@@ -5,6 +5,28 @@ import { ModuleRegistryService } from '../../kernel/modules/module-registry.serv
 import { CreateBillingEventDto } from './dto/create-billing-event.dto';
 import { UpdateBillingDto } from './dto/update-billing.dto';
 import { ActivateTenantDto } from './dto/activate-tenant.dto';
+import { RecordPaymentDto } from './dto/record-payment.dto';
+
+function calcPaidUntil(
+  billingStatus: string,
+  trialEndsAt: Date | null,
+  currentPaidUntil: Date | null,
+  monthsPaid: number,
+): Date {
+  const now = new Date();
+  let base: Date;
+  if (billingStatus === 'trial' && trialEndsAt && trialEndsAt > now) {
+    // Start the day after trial ends
+    const next = new Date(trialEndsAt);
+    next.setDate(next.getDate() + 1);
+    base = next;
+  } else if (currentPaidUntil && currentPaidUntil > now) {
+    base = currentPaidUntil;
+  } else {
+    base = now;
+  }
+  return new Date(base.getTime() + monthsPaid * 30 * 24 * 60 * 60 * 1000);
+}
 
 @Injectable()
 export class BillingEventsService {
@@ -40,14 +62,13 @@ export class BillingEventsService {
     // Side-effect: subscription paid → activate or renew tenant
     if (dto.type === 'subscription' && paidAt) {
       const months = monthsPaid ?? 1;
-      const currentPaidUntil: Date | null = tenantAny.paidUntil ?? null;
-      const base = currentPaidUntil && currentPaidUntil > paidAt ? currentPaidUntil : paidAt;
-      const newPaidUntil = new Date(base.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+      const newPaidUntil = calcPaidUntil(tenant.billingStatus, tenant.trialEndsAt, tenantAny.paidUntil ?? null, months);
 
-      await (this.prisma as any).tenant.update({
+      await this.prisma.tenant.update({
         where: { id: tenantId },
         data: {
           billingStatus: 'active',
+          trialEndsAt: null,
           billingStartDate: tenant.billingStartDate ?? paidAt,
           paidUntil: newPaidUntil,
         },
@@ -175,16 +196,22 @@ export class BillingEventsService {
     const plan = await this.prisma.planDefinition.findUnique({ where: { code: dto.planCode } });
     if (!plan) throw new NotFoundException(`Plan "${dto.planCode}" introuvable`);
 
+    const startDate = dto.billingStartDate ? new Date(dto.billingStartDate) : new Date();
+    const months = dto.months ?? 1;
+    const paidUntil = calcPaidUntil('trial', tenant.trialEndsAt, null, months);
+
     const result = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.tenant.update({
+      const updated = await (tx as any).tenant.update({
         where: { id: tenantId },
         data: {
           billingStatus: 'active',
+          trialEndsAt: null,
           plan: dto.planCode,
           maxUsers: plan.maxUsers,
           installationFee: dto.installationFee != null ? String(dto.installationFee) : tenant.installationFee,
           trainingFee: dto.trainingFee != null ? String(dto.trainingFee) : tenant.trainingFee,
-          billingStartDate: dto.billingStartDate ? new Date(dto.billingStartDate) : new Date(),
+          billingStartDate: startDate,
+          paidUntil,
         },
       });
 
@@ -283,34 +310,56 @@ export class BillingEventsService {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-    const monthlyRevenueResult = await (this.prisma as any).billingEvent.aggregate({
-      where: {
-        type: { in: ['subscription', 'payment', 'activation'] },
-        status: 'paid',
-        paidAt: { gte: startOfMonth, lte: endOfMonth },
-        amount: { gt: 0 },
-      },
-      _sum: { amount: true },
-    });
+    const [monthlyRevenueResult, annualRevenueResult] = await Promise.all([
+      (this.prisma as any).billingEvent.aggregate({
+        where: {
+          type: { in: ['subscription', 'payment', 'activation', 'installation', 'training'] },
+          status: 'paid',
+          paidAt: { gte: startOfMonth, lte: endOfMonth },
+          amount: { gt: 0 },
+        },
+        _sum: { amount: true },
+      }),
+      (this.prisma as any).billingEvent.aggregate({
+        where: {
+          type: { in: ['subscription', 'payment', 'activation', 'installation', 'training'] },
+          status: 'paid',
+          paidAt: { gte: startOfYear },
+          amount: { gt: 0 },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
     const [activeClients, trialClients, overdueClients] = await Promise.all([
-      this.prisma.tenant.count({ where: { billingStatus: 'active' } }),
-      this.prisma.tenant.count({ where: { billingStatus: 'trial' } }),
-      this.prisma.tenant.count({ where: { billingStatus: 'overdue' } }),
+      this.prisma.tenant.count({ where: { billingStatus: 'active', plan: { not: 'free' } } }),
+      this.prisma.tenant.count({ where: { billingStatus: 'trial', plan: { not: 'free' } } }),
+      this.prisma.tenant.count({ where: { billingStatus: 'overdue', plan: { not: 'free' } } }),
     ]);
 
     const activeTenants = await this.prisma.tenant.findMany({
-      where: { billingStatus: 'active' },
+      where: { billingStatus: 'active', plan: { not: 'free' } },
       select: { plan: true },
     });
 
-    const planPrices = await this.prisma.planDefinition.findMany({
-      select: { code: true, monthlyPrice: true },
-    });
+    const [planPrices, oneTimePaidThisMonth] = await Promise.all([
+      this.prisma.planDefinition.findMany({ select: { code: true, monthlyPrice: true } }),
+      (this.prisma as any).billingEvent.aggregate({
+        where: {
+          type: { in: ['installation', 'training'] },
+          status: 'paid',
+          paidAt: { gte: startOfMonth, lte: endOfMonth },
+          amount: { gt: 0 },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
     const priceMap = new Map(planPrices.map((p) => [p.code, Number(p.monthlyPrice)]));
 
-    const mrr = activeTenants.reduce((sum, t) => sum + (priceMap.get(t.plan) ?? 0), 0);
+    const mrrSubscriptions = activeTenants.reduce((sum, t) => sum + (priceMap.get(t.plan) ?? 0), 0);
+    const mrr = mrrSubscriptions + Number(oneTimePaidThisMonth._sum.amount ?? 0);
 
     const pendingInvoicesCount = await (this.prisma as any).billingEvent.count({
       where: { type: 'invoice', status: 'pending' },
@@ -327,6 +376,7 @@ export class BillingEventsService {
       trialClients,
       overdueClients,
       mrr,
+      arr: Number(annualRevenueResult._sum.amount ?? 0),
       pendingInvoicesCount,
       totalUnpaid: Number(totalUnpaidResult._sum.amount ?? 0),
     };
@@ -398,6 +448,99 @@ export class BillingEventsService {
     };
   }
 
+  async recordPayment(tenantId: string, dto: RecordPaymentDto) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException(`Tenant introuvable`);
+
+    const tenantAny = tenant as any;
+    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date();
+
+    // Calculate new paidUntil period
+    const newPaidUntil = calcPaidUntil(
+      tenant.billingStatus,
+      tenant.trialEndsAt,
+      tenantAny.paidUntil ?? null,
+      dto.months,
+    );
+
+    // Generate receipt number
+    const month = paymentDate.getMonth() + 1;
+    const year = paymentDate.getFullYear();
+    const receiptCount = await (this.prisma as any).billingEvent.count({
+      where: { receiptNumber: { not: null } },
+    });
+    const receiptNumber = `REC-${year}-${String(month).padStart(2, '0')}-${String(receiptCount + 1).padStart(3, '0')}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      // Create subscription event
+      await (tx as any).billingEvent.create({
+        data: {
+          tenantId,
+          type: 'subscription',
+          amount: dto.amount,
+          description: dto.description ?? `Abonnement — ${dto.months} mois`,
+          status: 'paid',
+          paidAt: paymentDate,
+          paymentMethod: dto.paymentMethod,
+          paymentRef: dto.paymentRef ?? null,
+          monthsPaid: dto.months,
+          receiptNumber,
+        },
+      });
+
+      // Mark existing pending installation event as paid
+      if (dto.includeInstallation) {
+        const existingInstall = await (tx as any).billingEvent.findFirst({
+          where: { tenantId, type: 'installation', status: 'pending' },
+        });
+        if (existingInstall) {
+          await (tx as any).billingEvent.update({
+            where: { id: existingInstall.id },
+            data: { status: 'paid', paidAt: paymentDate, paymentMethod: dto.paymentMethod },
+          });
+        }
+      }
+
+      // Mark existing pending training event as paid
+      if (dto.includeTraining) {
+        const existingTraining = await (tx as any).billingEvent.findFirst({
+          where: { tenantId, type: 'training', status: 'pending' },
+        });
+        if (existingTraining) {
+          await (tx as any).billingEvent.update({
+            where: { id: existingTraining.id },
+            data: { status: 'paid', paidAt: paymentDate, paymentMethod: dto.paymentMethod },
+          });
+        }
+      }
+
+      // Update tenant
+      await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: {
+          billingStatus: 'active',
+          trialEndsAt: null,
+          paidUntil: newPaidUntil,
+          billingStartDate: tenant.billingStartDate ?? paymentDate,
+          ...(dto.includeInstallation ? { installationPaid: true } : {}),
+          ...(dto.includeTraining ? { trainingPaid: true } : {}),
+        },
+      });
+    });
+
+    this.billingGuard?.invalidate(tenantId);
+
+    return {
+      receiptNumber,
+      date: paymentDate.toISOString(),
+      tenant: { name: tenant.name },
+      amount: Number(dto.amount),
+      description: dto.description ?? `Abonnement — ${dto.months} mois`,
+      paymentMethod: dto.paymentMethod,
+      paymentRef: dto.paymentRef ?? null,
+    };
+  }
+
   async generateReceiptData(eventId: string, paymentDetails: {
     paymentMethod: string;
     paymentRef?: string;
@@ -405,7 +548,7 @@ export class BillingEventsService {
   }) {
     const event = await (this.prisma as any).billingEvent.findUnique({
       where: { id: eventId },
-      include: { tenant: { select: { id: true, name: true } } },
+      include: { tenant: true },
     });
     if (!event) throw new NotFoundException('Événement introuvable');
 
@@ -429,6 +572,28 @@ export class BillingEventsService {
         receiptNumber,
       },
     });
+
+    // Side-effect: subscription event marked paid → activate / renew tenant
+    if (event.type === 'subscription') {
+      const months = (event.monthsPaid as number | null) ?? 1;
+      const newPaidUntil = calcPaidUntil(
+        event.tenant.billingStatus,
+        event.tenant.trialEndsAt,
+        (event.tenant as any).paidUntil ?? null,
+        months,
+      );
+
+      await this.prisma.tenant.update({
+        where: { id: event.tenantId },
+        data: {
+          billingStatus: 'active',
+          trialEndsAt: null,
+          billingStartDate: event.tenant.billingStartDate ?? now,
+          paidUntil: newPaidUntil,
+        },
+      });
+      this.billingGuard?.invalidate(event.tenantId);
+    }
 
     return {
       receiptNumber,

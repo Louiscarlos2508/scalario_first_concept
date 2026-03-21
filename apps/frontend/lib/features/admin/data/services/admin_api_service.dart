@@ -318,9 +318,10 @@ class AdminApiService {
     double? installationFee,
     double? trainingFee,
     String? billingStartDate,
+    int months = 1,
     required String token,
   }) async {
-    final body = <String, dynamic>{'planCode': planCode};
+    final body = <String, dynamic>{'planCode': planCode, 'months': months};
     if (installationFee != null) body['installationFee'] = installationFee;
     if (trainingFee != null) body['trainingFee'] = trainingFee;
     if (billingStartDate != null) body['billingStartDate'] = billingStartDate;
@@ -380,6 +381,40 @@ class AdminApiService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     throw Exception('Failed to update event status: HTTP ${response.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> recordPayment(
+    String tenantId, {
+    required int months,
+    required String amount,
+    String? description,
+    required String paymentMethod,
+    String? paymentRef,
+    String? paymentDate,
+    bool includeInstallation = false,
+    bool includeTraining = false,
+    required String token,
+  }) async {
+    final body = <String, dynamic>{
+      'months': months,
+      'amount': amount,
+      'paymentMethod': paymentMethod,
+    };
+    if (description != null) body['description'] = description;
+    if (paymentRef != null) body['paymentRef'] = paymentRef;
+    if (paymentDate != null) body['paymentDate'] = paymentDate;
+    if (includeInstallation) body['includeInstallation'] = true;
+    if (includeTraining) body['includeTraining'] = true;
+
+    final response = await _client.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/billing/payment'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to record payment: HTTP ${response.statusCode} — ${response.body}');
   }
 
   Future<Map<String, dynamic>> generateInvoice(

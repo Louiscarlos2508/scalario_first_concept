@@ -32,7 +32,12 @@ class AdminDashboard extends ConsumerStatefulWidget {
 class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
+  // One navigator key per tab — keeps each tab's navigation stack alive
+  // when switching between tabs (IndexedStack preserves state).
+  final List<GlobalKey<NavigatorState>> _navigatorKeys =
+      List.generate(_adminNavItems.length, (_) => GlobalKey<NavigatorState>());
+
+  static const List<Widget> _roots = [
     AdminTenantsScreen(),
     AdminModulesScreen(),
     AdminMonitoringScreen(),
@@ -42,15 +47,45 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
 
   void _signOut() => ref.read(authRepositoryProvider).signOut();
 
+  // Pop the current tab's nested navigator if it can, otherwise do nothing.
+  bool _popCurrentTab() {
+    final nav = _navigatorKeys[_selectedIndex].currentState;
+    if (nav != null && nav.canPop()) {
+      nav.pop();
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildContent() {
+    return IndexedStack(
+      index: _selectedIndex,
+      children: List.generate(
+        _adminNavItems.length,
+        (i) => Navigator(
+          key: _navigatorKeys[i],
+          onGenerateRoute: (_) =>
+              MaterialPageRoute(builder: (_) => _roots[i]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= kMedium) {
-          return _buildTabletLayout();
-        }
-        return _buildMobileLayout();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _popCurrentTab();
       },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= kMedium) {
+            return _buildTabletLayout();
+          }
+          return _buildMobileLayout();
+        },
+      ),
     );
   }
 
@@ -85,12 +120,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           ),
           const VerticalDivider(thickness: 1, width: 1),
           Expanded(
-            child: SafeArea(
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: _screens,
-              ),
-            ),
+            child: SafeArea(child: _buildContent()),
           ),
         ],
       ),
@@ -109,12 +139,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: _screens,
-        ),
-      ),
+      body: SafeArea(child: _buildContent()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>

@@ -5,11 +5,18 @@ import 'package:printing/printing.dart';
 
 /// Generates and downloads admin billing invoices (FAC-XXXX) and receipts (REC-XXXX).
 class InvoiceService {
+  // Noto Sans supporte Unicode complet (em dash, accents, etc.)
+  static Future<pw.ThemeData> _theme() async {
+    final regular = await PdfGoogleFonts.notoSansRegular();
+    final bold = await PdfGoogleFonts.notoSansBold();
+    return pw.ThemeData.withFont(base: regular, bold: bold);
+  }
+
   // ── Invoice PDF ─────────────────────────────────────────────────────────────
 
   static Future<void> generateAndDownloadInvoice(
       Map<String, dynamic> invoiceData) async {
-    final pdf = pw.Document();
+    final pdf = pw.Document(theme: await _theme());
     final invoiceNumber = invoiceData['invoiceNumber'] as String;
     final date = DateTime.tryParse(invoiceData['date'] as String? ?? '') ??
         DateTime.now();
@@ -48,7 +55,7 @@ class InvoiceService {
 
   static Future<void> generateAndDownloadReceipt(
       Map<String, dynamic> receiptData) async {
-    final pdf = pw.Document();
+    final pdf = pw.Document(theme: await _theme());
     final receiptNumber = receiptData['receiptNumber'] as String;
     final invoiceRef = receiptData['invoiceNumber'] as String?;
     final date = DateTime.tryParse(receiptData['date'] as String? ?? '') ??
@@ -173,9 +180,9 @@ class InvoiceService {
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.grey600)),
               pw.SizedBox(height: 4),
-              pw.Text('Scalario — Carlos SIMPORE',
+              pw.Text('Scalario',
                   style: const pw.TextStyle(fontSize: 11)),
-              pw.Text('Abidjan, Côte d\'Ivoire',
+              pw.Text('Ouagadougou, Burkina Faso',
                   style: const pw.TextStyle(fontSize: 10)),
             ],
           ),
@@ -342,7 +349,7 @@ class InvoiceService {
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Text('Scalario — Carlos SIMPORE',
+            pw.Text('Scalario',
                 style: pw.TextStyle(
                     fontSize: 10, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 4),

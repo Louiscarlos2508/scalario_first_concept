@@ -167,7 +167,10 @@ final productListProvider = FutureProvider<List<Product>>((ref) async {
   final categoryId = ref.watch(selectedCategoryIdProvider);
   final tenantId = ref.watch(activeTenantProvider);
   if (tenantId == null) return [];
-  final products = await repo.getProducts(categoryId: categoryId, tenantId: tenantId);
+  final products = await repo.getProducts(
+    categoryId: categoryId,
+    tenantId: tenantId,
+  );
   // AC3 — Mark parent products (hasChildren) based on parentItemId references
   final parentIds = products
       .where((p) => p.parentItemId != null)
@@ -182,9 +185,9 @@ final productListProvider = FutureProvider<List<Product>>((ref) async {
   // AC5 (Story 24-2) — Merge batch freshness data (fails gracefully offline)
   try {
     final token = Supabase.instance.client.auth.currentSession?.accessToken;
-    final uri = Uri.parse('${ApiConstants.baseUrl}/batches/expiring').replace(
-      queryParameters: {'tenantId': tenantId, 'days': '365'},
-    );
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/batches/expiring',
+    ).replace(queryParameters: {'tenantId': tenantId, 'days': '365'});
     final response = await http.get(
       uri,
       headers: {
@@ -266,7 +269,7 @@ final stockHistoryByItemProvider = FutureProvider.family<List<dynamic>, String>(
       uri,
       headers: {
         'Content-Type': 'application/json',
-        if (tenantId != null) 'x-tenant-id': tenantId,
+        'x-tenant-id': ?tenantId,
         if (token != null) 'Authorization': 'Bearer $token',
       },
     );
@@ -299,7 +302,7 @@ final stockHistoryProvider = FutureProvider<List<dynamic>>((ref) async {
     uri,
     headers: {
       'Content-Type': 'application/json',
-      if (tenantId != null) 'x-tenant-id': tenantId,
+      'x-tenant-id': ?tenantId,
       if (token != null) 'Authorization': 'Bearer $token',
     },
   );

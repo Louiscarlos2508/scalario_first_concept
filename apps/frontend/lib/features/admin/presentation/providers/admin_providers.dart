@@ -79,15 +79,18 @@ final billingSummaryProvider =
   return ref.read(adminApiServiceProvider).getBillingSummary(token: token);
 });
 
-final allBillingEventsProvider =
-    FutureProvider.family<List<Map<String, dynamic>>, Map<String, String?>>(
-        (ref, filters) async {
-  final token = _token();
-  if (token.isEmpty) throw Exception('Not authenticated');
-  return ref.read(adminApiServiceProvider).listAllBillingEvents(
-        tenantId: filters['tenantId'],
-        type: filters['type'],
-        status: filters['status'],
-        token: token,
-      );
-});
+// key: (tenantId, type, status) — record has structural equality, Map does not
+final allBillingEventsProvider = FutureProvider.family<
+    List<Map<String, dynamic>>, (String?, String?, String?)>(
+  (ref, filters) async {
+    final (tenantId, type, status) = filters;
+    final token = _token();
+    if (token.isEmpty) throw Exception('Not authenticated');
+    return ref.read(adminApiServiceProvider).listAllBillingEvents(
+          tenantId: tenantId,
+          type: type,
+          status: status,
+          token: token,
+        );
+  },
+);

@@ -4,6 +4,7 @@ import { BillingEventsService } from './billing-events.service';
 import { CreateBillingEventDto } from './dto/create-billing-event.dto';
 import { UpdateBillingDto } from './dto/update-billing.dto';
 import { ActivateTenantDto } from './dto/activate-tenant.dto';
+import { RecordPaymentDto } from './dto/record-payment.dto';
 
 @Controller('admin/tenants')
 @UseGuards(SuperAdminGuard)
@@ -28,5 +29,10 @@ export class BillingEventsController {
   @Patch(':id/activate')
   activateTenant(@Param('id') id: string, @Body() dto: ActivateTenantDto) {
     return this.billingEventsService.activateTenant(id, dto);
+  }
+
+  @Post(':id/billing/payment')
+  recordPayment(@Param('id') id: string, @Body() dto: RecordPaymentDto) {
+    return this.billingEventsService.recordPayment(id, dto);
   }
 }

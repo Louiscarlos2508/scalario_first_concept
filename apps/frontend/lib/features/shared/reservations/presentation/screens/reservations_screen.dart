@@ -4,9 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 
-String _fcfa(double amount) =>
-    NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
-        .format(amount);
+String _fcfa(double amount) => NumberFormat.currency(
+  locale: 'fr_FR',
+  symbol: 'FCFA',
+  decimalDigits: 0,
+).format(amount);
 
 class ReservationsScreen extends ConsumerStatefulWidget {
   const ReservationsScreen({super.key});
@@ -73,15 +75,13 @@ class _ReservationsList extends ConsumerWidget {
           return const Center(child: Text('Aucune réservation'));
         }
         return RefreshIndicator(
-          onRefresh: () async => ref.invalidate(reservationsListProvider(status)),
+          onRefresh: () async =>
+              ref.invalidate(reservationsListProvider(status)),
           child: ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
               final r = items[index] as Map<String, dynamic>;
-              return _ReservationTile(
-                reservation: r,
-                showActions: showActions,
-              );
+              return _ReservationTile(reservation: r, showActions: showActions);
             },
           ),
         );
@@ -96,13 +96,18 @@ class _ReservationTile extends ConsumerWidget {
   final Map<String, dynamic> reservation;
   final bool showActions;
 
-  const _ReservationTile({required this.reservation, required this.showActions});
+  const _ReservationTile({
+    required this.reservation,
+    required this.showActions,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalAmount = (reservation['totalAmount'] as num?)?.toDouble() ?? 0.0;
-    final depositAmount = (reservation['depositAmount'] as num?)?.toDouble() ?? 0.0;
-    final remainingAmount = (reservation['remainingAmount'] as num?)?.toDouble() ?? 0.0;
+    final depositAmount =
+        (reservation['depositAmount'] as num?)?.toDouble() ?? 0.0;
+    final remainingAmount =
+        (reservation['remainingAmount'] as num?)?.toDouble() ?? 0.0;
     final createdAt = reservation['createdAt'] != null
         ? DateTime.tryParse(reservation['createdAt'].toString())
         : null;
@@ -135,7 +140,9 @@ class _ReservationTile extends ConsumerWidget {
               'Solde restant :',
               _fcfa(remainingAmount),
               valueStyle: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.orange),
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
             ),
             if (showActions) ...[
               const SizedBox(height: 12),
@@ -151,7 +158,9 @@ class _ReservationTile extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
                       onPressed: () =>
                           _showCancelDialog(context, ref, reservation),
                       child: const Text('Annuler'),
@@ -180,7 +189,10 @@ class _ReservationTile extends ConsumerWidget {
   }
 
   Future<void> _showCompleteDialog(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> r) async {
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> r,
+  ) async {
     final remaining = (r['remainingAmount'] as num?)?.toDouble() ?? 0.0;
     String paymentMethod = 'CASH';
 
@@ -192,12 +204,16 @@ class _ReservationTile extends ConsumerWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Solde restant : ${_fcfa(remaining)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Solde restant : ${_fcfa(remaining)}',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: paymentMethod,
-                decoration: const InputDecoration(labelText: 'Mode de paiement'),
+                initialValue: paymentMethod,
+                decoration: const InputDecoration(
+                  labelText: 'Mode de paiement',
+                ),
                 items: ['CASH', 'MOBILE_MONEY']
                     .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                     .toList(),
@@ -207,11 +223,13 @@ class _ReservationTile extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Annuler')),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
             FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Confirmer')),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirmer'),
+            ),
           ],
         ),
       ),
@@ -249,7 +267,10 @@ class _ReservationTile extends ConsumerWidget {
   }
 
   Future<void> _showCancelDialog(
-      BuildContext context, WidgetRef ref, Map<String, dynamic> r) async {
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> r,
+  ) async {
     String resolution = 'cash_refund';
 
     final confirmed = await showDialog<bool>(
@@ -276,8 +297,9 @@ class _ReservationTile extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Retour')),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Retour'),
+            ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () => Navigator.pop(context, true),
@@ -305,10 +327,12 @@ class _ReservationTile extends ConsumerWidget {
       ref.invalidate(reservationsListProvider('cancelled'));
       ref.invalidate(reservationsKpiProvider);
       if (context.mounted) {
-        final label = resolution == 'cash_refund' ? 'Remboursement cash' : 'Avoir client';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Réservation annulée — $label')),
-        );
+        final label = resolution == 'cash_refund'
+            ? 'Remboursement cash'
+            : 'Avoir client';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Réservation annulée — $label')));
       }
     } catch (e) {
       if (context.mounted) {

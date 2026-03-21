@@ -18,11 +18,11 @@ class ClientOrderLineValue {
   });
 
   Map<String, dynamic> toJson() => {
-        'catalogItemId': catalogItemId,
-        if (variantId != null) 'variantId': variantId,
-        'quantity': quantity,
-        'unitPrice': unitPrice,
-      };
+    'catalogItemId': catalogItemId,
+    if (variantId != null) 'variantId': variantId,
+    'quantity': quantity,
+    'unitPrice': unitPrice,
+  };
 }
 
 class ClientOrderLineFormWidget extends StatefulWidget {
@@ -42,8 +42,7 @@ class ClientOrderLineFormWidget extends StatefulWidget {
       _ClientOrderLineFormWidgetState();
 }
 
-class _ClientOrderLineFormWidgetState
-    extends State<ClientOrderLineFormWidget> {
+class _ClientOrderLineFormWidgetState extends State<ClientOrderLineFormWidget> {
   Product? _product;
   ProductVariant? _variant;
   final _qtyController = TextEditingController();
@@ -59,20 +58,28 @@ class _ClientOrderLineFormWidgetState
   void _notify() {
     final qty = double.tryParse(_qtyController.text);
     final price = double.tryParse(_priceController.text);
-    if (_product == null || qty == null || qty <= 0 || price == null || price <= 0) {
+    if (_product == null ||
+        qty == null ||
+        qty <= 0 ||
+        price == null ||
+        price <= 0) {
       widget.onChange(null);
       return;
     }
-    if (_product!.hasVariants && _product!.variants.isNotEmpty && _variant == null) {
+    if (_product!.hasVariants &&
+        _product!.variants.isNotEmpty &&
+        _variant == null) {
       widget.onChange(null);
       return;
     }
-    widget.onChange(ClientOrderLineValue(
-      catalogItemId: _product!.remoteId ?? _product!.id.toString(),
-      variantId: _variant?.id,
-      quantity: qty,
-      unitPrice: price,
-    ));
+    widget.onChange(
+      ClientOrderLineValue(
+        catalogItemId: _product!.remoteId ?? _product!.id.toString(),
+        variantId: _variant?.id,
+        quantity: qty,
+        unitPrice: price,
+      ),
+    );
   }
 
   void _onProductSelected(Product p) {
@@ -86,7 +93,8 @@ class _ClientOrderLineFormWidgetState
 
   @override
   Widget build(BuildContext context) {
-    final hasVariants = _product?.hasVariants == true &&
+    final hasVariants =
+        _product?.hasVariants == true &&
         (_product?.variants.isNotEmpty ?? false);
 
     return Card(
@@ -115,20 +123,24 @@ class _ClientOrderLineFormWidgetState
             if (hasVariants) ...[
               const SizedBox(height: 6),
               DropdownButtonFormField<ProductVariant>(
-                value: _variant,
+                initialValue: _variant,
                 decoration: const InputDecoration(
                   labelText: 'Variante *',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 items: _product!.variants
-                    .map((v) => DropdownMenuItem(
-                          value: v,
-                          child: Text(v.sku ??
+                    .map(
+                      (v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(
+                          v.sku ??
                               v.attributes.entries
                                   .map((e) => '${e.key}: ${e.value}')
-                                  .join(', ')),
-                        ))
+                                  .join(', '),
+                        ),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) {
                   setState(() {
@@ -152,7 +164,9 @@ class _ClientOrderLineFormWidgetState
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],
@@ -174,7 +188,9 @@ class _ClientOrderLineFormWidgetState
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                     ],

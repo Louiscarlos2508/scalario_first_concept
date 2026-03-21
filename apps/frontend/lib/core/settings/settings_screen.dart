@@ -88,8 +88,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await prefs.setString(_kReceiptHeader, _receiptHeaderCtrl.text.trim());
     await prefs.setString(_kReceiptFooter, _receiptFooterCtrl.text.trim());
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Paramètres sauvegardés')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Paramètres sauvegardés')));
   }
 
   Future<void> _confirmLogout() async {
@@ -126,7 +127,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         token = Supabase.instance.client.auth.currentSession?.accessToken;
       } catch (_) {}
       final response = await http.patch(
-        Uri.parse('${ApiConstants.baseUrl}/organizations/notification-settings'),
+        Uri.parse(
+          '${ApiConstants.baseUrl}/organizations/notification-settings',
+        ),
         headers: ApiConstants.headers(tenantId: tenantId, token: token),
         body: jsonEncode({
           'dailySummaryEnabled': _dailySummaryEnabled,
@@ -141,13 +144,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : ${response.statusCode}'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Erreur : ${response.statusCode}'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
@@ -219,9 +228,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       data: (profile) {
         if (profile == null || profile.memberships.isEmpty) return null;
         return profile.memberships.cast<TenantMembership?>().firstWhere(
-              (m) => m?.tenantId == activeTenantId,
-              orElse: () => profile.memberships.first,
-            );
+          (m) => m?.tenantId == activeTenantId,
+          orElse: () => profile.memberships.first,
+        );
       },
       loading: () => null,
       error: (_, _) => null,
@@ -234,252 +243,266 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          // ── 1. Compte ─────────────────────────────────────────────────────
-          _section('Compte', [
-            _infoRow(
-              'Email',
-              userProfileAsync.when(
-                data: (p) => p?.email ?? '—',
-                loading: () => '…',
-                error: (_, _) => '—',
-              ),
-            ),
-            _infoRow(
-              'Rôle',
-              getRoleLabel(
-                activeMembership?.role ?? '',
-                ref.watch(businessTypeConfigProvider).valueOrNull?.roleLabels ?? {},
-              ),
-            ),
-            _infoRow(
-              'Tenant ID',
-              activeTenantId != null
-                  ? '${activeTenantId.substring(0, activeTenantId.length.clamp(0, 8))}…'
-                  : '—',
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.logout),
-                label: const Text('Se déconnecter'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
+            // ── 1. Compte ─────────────────────────────────────────────────────
+            _section('Compte', [
+              _infoRow(
+                'Email',
+                userProfileAsync.when(
+                  data: (p) => p?.email ?? '—',
+                  loading: () => '…',
+                  error: (_, _) => '—',
                 ),
-                onPressed: _confirmLogout,
               ),
-            ),
-          ]),
-
-          const SizedBox(height: 16),
-
-          // ── 2. Boutique ───────────────────────────────────────────────────
-          _section('Boutique', [
-            _field(
-              controller: _shopNameCtrl,
-              label: 'Nom de la boutique',
-              hint: 'Boutique Aminata',
-            ),
-            const SizedBox(height: 12),
-            _field(
-              controller: _shopPhoneCtrl,
-              label: 'Téléphone',
-              hint: '+221 77 000 00 00',
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 12),
-            _field(
-              controller: _shopAddressCtrl,
-              label: 'Adresse',
-              hint: 'Rue 10, Dakar',
-              maxLines: 2,
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: _savePrefs,
-                child: const Text('Sauvegarder'),
+              _infoRow(
+                'Rôle',
+                getRoleLabel(
+                  activeMembership?.role ?? '',
+                  ref
+                          .watch(businessTypeConfigProvider)
+                          .valueOrNull
+                          ?.roleLabels ??
+                      {},
+                ),
               ),
-            ),
-          ]),
+              _infoRow(
+                'Tenant ID',
+                activeTenantId != null
+                    ? '${activeTenantId.substring(0, activeTenantId.length.clamp(0, 8))}…'
+                    : '—',
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Se déconnecter'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                  ),
+                  onPressed: _confirmLogout,
+                ),
+              ),
+            ]),
 
-          const SizedBox(height: 16),
-
-          // ── 3. Reçu ───────────────────────────────────────────────────────
-          _section('Reçu', [
-            _field(
-              controller: _receiptHeaderCtrl,
-              label: 'En-tête du reçu',
-              hint: 'Boutique Aminata',
-            ),
-            const SizedBox(height: 12),
-            _field(
-              controller: _receiptFooterCtrl,
-              label: 'Pied de page du reçu',
-              hint: 'Merci de votre visite !',
-            ),
             const SizedBox(height: 16),
-            const Text('Aperçu', style: AppTextStyles.labelSmall),
-            const SizedBox(height: 8),
-            _receiptPreview(),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: _savePrefs,
-                child: const Text('Sauvegarder'),
-              ),
-            ),
-          ]),
 
-          const SizedBox(height: 16),
-
-          // ── 4. Synchronisation ────────────────────────────────────────────
-          _section('Synchronisation', [
-            _infoRow(
-              'Dernier sync',
-              lastSync.when(
-                data: (dt) => dt != null
-                    ? DateFormat('dd/MM/yyyy HH:mm').format(dt)
-                    : 'Jamais',
-                loading: () => '…',
-                error: (_, _) => '—',
+            // ── 2. Boutique ───────────────────────────────────────────────────
+            _section('Boutique', [
+              _field(
+                controller: _shopNameCtrl,
+                label: 'Nom de la boutique',
+                hint: 'Boutique Aminata',
               ),
-            ),
-            _infoRow(
-              'Statut',
-              _syncLabel(
-                syncStatus.when(
-                  data: (s) => s,
-                  loading: () => SyncUiStatus.disconnected,
-                  error: (_, _) => SyncUiStatus.error,
+              const SizedBox(height: 12),
+              _field(
+                controller: _shopPhoneCtrl,
+                label: 'Téléphone',
+                hint: '+221 77 000 00 00',
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              _field(
+                controller: _shopAddressCtrl,
+                label: 'Adresse',
+                hint: 'Rue 10, Dakar',
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _savePrefs,
+                  child: const Text('Sauvegarder'),
                 ),
               ),
-            ),
-            _infoRow(
-              'En attente',
-              outboxCount.when(
-                data: (n) => '$n élément${n > 1 ? 's' : ''}',
-                loading: () => '…',
-                error: (_, _) => '—',
+            ]),
+
+            const SizedBox(height: 16),
+
+            // ── 3. Reçu ───────────────────────────────────────────────────────
+            _section('Reçu', [
+              _field(
+                controller: _receiptHeaderCtrl,
+                label: 'En-tête du reçu',
+                hint: 'Boutique Aminata',
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.sync),
-                label: const Text('Forcer la synchronisation'),
-                onPressed: () {
-                  ref.read(syncServiceProvider).forceSync();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Synchronisation déclenchée')),
-                  );
-                },
+              const SizedBox(height: 12),
+              _field(
+                controller: _receiptFooterCtrl,
+                label: 'Pied de page du reçu',
+                hint: 'Merci de votre visite !',
               ),
-            ),
-          ]),
-
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 16),
-
-          // ── 5. Notifications ──────────────────────────────────────────────
-          _section('Notifications', [
-            SwitchListTile(
-              key: const Key('notif_daily_summary_toggle'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Résumé quotidien activé'),
-              value: _dailySummaryEnabled,
-              onChanged: (val) => setState(() => _dailySummaryEnabled = val),
-            ),
-            if (_dailySummaryEnabled) ...[
+              const SizedBox(height: 16),
+              const Text('Aperçu', style: AppTextStyles.labelSmall),
               const SizedBox(height: 8),
-              ListTile(
-                key: const Key('notif_summary_time'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text("Heure d'envoi"),
-                trailing: Text(_dailySummaryTime, style: AppTextStyles.bodyMedium),
-                onTap: _pickSummaryTime,
+              _receiptPreview(),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _savePrefs,
+                  child: const Text('Sauvegarder'),
+                ),
               ),
-            ],
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              key: const Key('notif_channel_selector'),
-              value: _notificationChannel,
-              decoration: const InputDecoration(labelText: 'Canal'),
-              items: const [
-                DropdownMenuItem(value: 'in_app', child: Text('Application (in-app)')),
-                DropdownMenuItem(
-                  value: 'whatsapp',
-                  enabled: false,
-                  child: Text('WhatsApp (bientôt disponible)',
-                      style: TextStyle(color: Colors.grey)),
+            ]),
+
+            const SizedBox(height: 16),
+
+            // ── 4. Synchronisation ────────────────────────────────────────────
+            _section('Synchronisation', [
+              _infoRow(
+                'Dernier sync',
+                lastSync.when(
+                  data: (dt) => dt != null
+                      ? DateFormat('dd/MM/yyyy HH:mm').format(dt)
+                      : 'Jamais',
+                  loading: () => '…',
+                  error: (_, _) => '—',
+                ),
+              ),
+              _infoRow(
+                'Statut',
+                _syncLabel(
+                  syncStatus.when(
+                    data: (s) => s,
+                    loading: () => SyncUiStatus.disconnected,
+                    error: (_, _) => SyncUiStatus.error,
+                  ),
+                ),
+              ),
+              _infoRow(
+                'En attente',
+                outboxCount.when(
+                  data: (n) => '$n élément${n > 1 ? 's' : ''}',
+                  loading: () => '…',
+                  error: (_, _) => '—',
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.sync),
+                  label: const Text('Forcer la synchronisation'),
+                  onPressed: () {
+                    ref.read(syncServiceProvider).forceSync();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Synchronisation déclenchée'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+
+            const SizedBox(height: 16),
+
+            const SizedBox(height: 16),
+
+            // ── 5. Notifications ──────────────────────────────────────────────
+            _section('Notifications', [
+              SwitchListTile(
+                key: const Key('notif_daily_summary_toggle'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Résumé quotidien activé'),
+                value: _dailySummaryEnabled,
+                onChanged: (val) => setState(() => _dailySummaryEnabled = val),
+              ),
+              if (_dailySummaryEnabled) ...[
+                const SizedBox(height: 8),
+                ListTile(
+                  key: const Key('notif_summary_time'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text("Heure d'envoi"),
+                  trailing: Text(
+                    _dailySummaryTime,
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                  onTap: _pickSummaryTime,
                 ),
               ],
-              onChanged: (val) {
-                if (val != null) setState(() => _notificationChannel = val);
-              },
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                key: const Key('notif_save_button'),
-                onPressed: _savingNotif ? null : _saveNotificationSettings,
-                child: _savingNotif
-                    ? const SizedBox(
-                        width: 16, height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Sauvegarder'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                key: const Key('notif_channel_selector'),
+                initialValue: _notificationChannel,
+                decoration: const InputDecoration(labelText: 'Canal'),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'in_app',
+                    child: Text('Application (in-app)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'whatsapp',
+                    enabled: false,
+                    child: Text(
+                      'WhatsApp (bientôt disponible)',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => _notificationChannel = val);
+                },
               ),
-            ),
-          ]),
-
-          const SizedBox(height: 16),
-
-          // ── 6. Abonnement ─────────────────────────────────────────────────
-          _section('Abonnement', [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.workspace_premium_outlined),
-              title: const Text('Mon abonnement'),
-              subtitle: const Text('Plan, facturation, historique'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const SubscriptionScreen()),
-              ),
-            ),
-          ]),
-
-          const SizedBox(height: 16),
-
-          // ── 7. Application ────────────────────────────────────────────────
-          _section('Application', [
-            _infoRow('Version', 'Scalario v1.0.0'),
-            _infoRow('Serveur', ApiConstants.baseUrl),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.delete_sweep_outlined),
-                label: const Text('Vider le cache local'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  side: const BorderSide(color: AppColors.error),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  key: const Key('notif_save_button'),
+                  onPressed: _savingNotif ? null : _saveNotificationSettings,
+                  child: _savingNotif
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Sauvegarder'),
                 ),
-                onPressed: _confirmClearCache,
               ),
-            ),
-          ]),
+            ]),
 
-          const SizedBox(height: 32),
-        ],
+            const SizedBox(height: 16),
+
+            // ── 6. Abonnement ─────────────────────────────────────────────────
+            _section('Abonnement', [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.workspace_premium_outlined),
+                title: const Text('Mon abonnement'),
+                subtitle: const Text('Plan, facturation, historique'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                ),
+              ),
+            ]),
+
+            const SizedBox(height: 16),
+
+            // ── 7. Application ────────────────────────────────────────────────
+            _section('Application', [
+              _infoRow('Version', 'Scalario v1.0.0'),
+              _infoRow('Serveur', ApiConstants.baseUrl),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                  label: const Text('Vider le cache local'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                  ),
+                  onPressed: _confirmClearCache,
+                ),
+              ),
+            ]),
+
+            const SizedBox(height: 32),
+          ],
         ),
       ),
     );
@@ -552,8 +575,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Text(header,
-                style: AppTextStyles.titleMedium, textAlign: TextAlign.center),
+            child: Text(
+              header,
+              style: AppTextStyles.titleMedium,
+              textAlign: TextAlign.center,
+            ),
           ),
           const Divider(height: 12),
           Row(
@@ -567,20 +593,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('TOTAL',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(fontWeight: FontWeight.bold)),
-              Text('1 000 FCFA',
-                  style: AppTextStyles.bodyMedium
-                      .copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'TOTAL',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '1 000 FCFA',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           const Divider(height: 12),
           Center(
             child: Text(
               footer,
-              style:
-                  AppTextStyles.bodySmall.copyWith(fontStyle: FontStyle.italic),
+              style: AppTextStyles.bodySmall.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
               textAlign: TextAlign.center,
             ),
           ),

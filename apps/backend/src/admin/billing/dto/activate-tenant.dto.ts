@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 const PLAN_CODES = ['free', 'standard', 'premium', 'enterprise'];
 
@@ -20,4 +20,11 @@ export class ActivateTenantDto {
   @IsOptional()
   @IsDateString()
   billingStartDate?: string;
+
+  /** Nombre de mois payés à l'activation (1 = mensuel, 12 = annuel). Défaut : 1. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  months?: number;
 }

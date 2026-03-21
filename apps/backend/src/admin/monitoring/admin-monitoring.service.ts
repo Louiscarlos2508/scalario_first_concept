@@ -24,6 +24,7 @@ export class AdminMonitoringService {
   async getHealth(): Promise<MonitoringHealthDto> {
     const [tenants, distinctMembers] = await Promise.all([
       this.prisma.tenant.findMany({
+        where: { plan: { not: 'free' } },
         include: {
           _count: { select: { members: true } },
           auditLogs: {
@@ -35,6 +36,7 @@ export class AdminMonitoringService {
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.organizationMember.findMany({
+        where: { tenant: { plan: { not: 'free' } } },
         select: { userId: true },
         distinct: ['userId'],
       }),

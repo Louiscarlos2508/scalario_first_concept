@@ -43,8 +43,8 @@ class InventoryRepository {
       'quantity': quantity,
       'tenantId': tenantId,
       if (reason != null && reason.isNotEmpty) 'reason': reason,
-      if (referenceId != null) 'referenceId': referenceId,
-      if (variantId != null) 'variantId': variantId,
+      'referenceId': ?referenceId,
+      'variantId': ?variantId,
       if (serialNumbers != null && serialNumbers.isNotEmpty)
         'serialNumbers': serialNumbers,
       if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
@@ -168,7 +168,7 @@ class InventoryRepository {
       'referenceId': referenceId,
       'quantity': quantity,
       'tenantId': tenantId,
-      if (catalogItemId != null) 'catalogItemId': catalogItemId,
+      'catalogItemId': ?catalogItemId,
     };
 
     final response = await _httpClient.post(

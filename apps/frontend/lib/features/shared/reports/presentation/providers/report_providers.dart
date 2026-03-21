@@ -7,11 +7,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/features/shared/reports/data/models/sales_stat.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/constants/api_constants.dart';
+
 Map<String, String> _authHeaders({String? tenantId}) {
   final token = Supabase.instance.client.auth.currentSession?.accessToken;
   return {
     'Content-Type': 'application/json',
-    if (tenantId != null) 'x-tenant-id': tenantId,
+    'x-tenant-id': ?tenantId,
     if (token != null) 'Authorization': 'Bearer $token',
   };
 }
@@ -26,7 +27,9 @@ final salesStatsDateRangeProvider = StateProvider<DateTimeRange?>(
 // ── Raw backend response — un seul appel HTTP partagé ─────────────────────────
 // Retourne le Map complet : totalRevenue, dailyStats, activeCustomerCount, etc.
 
-final _salesStatsRawProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+final _salesStatsRawProvider = FutureProvider<Map<String, dynamic>>((
+  ref,
+) async {
   final range = ref.watch(salesStatsDateRangeProvider);
   final tenantId = ref.watch(activeTenantProvider);
 
@@ -41,9 +44,13 @@ final _salesStatsRawProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   };
   if (tenantId != null) queryParams['tenantId'] = tenantId;
 
-  final uri = Uri.parse('${ApiConstants.baseUrl}/reports/sales/stats')
-      .replace(queryParameters: queryParams);
-  final response = await http.get(uri, headers: _authHeaders(tenantId: tenantId));
+  final uri = Uri.parse(
+    '${ApiConstants.baseUrl}/reports/sales/stats',
+  ).replace(queryParameters: queryParams);
+  final response = await http.get(
+    uri,
+    headers: _authHeaders(tenantId: tenantId),
+  );
 
   if (response.statusCode == 200) {
     final dynamic decoded = jsonDecode(response.body);
@@ -165,8 +172,9 @@ final closedSessionsProvider = FutureProvider<List<dynamic>>((ref) async {
     queryParams['to'] = DateFormat('yyyy-MM-dd').format(range.end);
   }
 
-  final uri = Uri.parse('${ApiConstants.baseUrl}/retail/sessions/reports')
-      .replace(queryParameters: queryParams);
+  final uri = Uri.parse(
+    '${ApiConstants.baseUrl}/retail/sessions/reports',
+  ).replace(queryParameters: queryParams);
   final response = await http.get(
     uri,
     headers: _authHeaders(tenantId: tenantId),
@@ -181,20 +189,23 @@ final closedSessionsProvider = FutureProvider<List<dynamic>>((ref) async {
 
 final sessionDetailProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, sessionId) async {
-  final tenantId = ref.watch(activeTenantProvider);
-  final uri =
-      Uri.parse('${ApiConstants.baseUrl}/retail/sessions/summary/$sessionId');
-  final response = await http.get(
-    uri,
-    headers: _authHeaders(tenantId: tenantId),
-  );
+      final tenantId = ref.watch(activeTenantProvider);
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/retail/sessions/summary/$sessionId',
+      );
+      final response = await http.get(
+        uri,
+        headers: _authHeaders(tenantId: tenantId),
+      );
 
-  if (response.statusCode == 200) {
-    return jsonDecode(response.body);
-  } else {
-    throw Exception('Failed to fetch session detail: ${response.statusCode}');
-  }
-});
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception(
+          'Failed to fetch session detail: ${response.statusCode}',
+        );
+      }
+    });
 
 // ── Active sessions ───────────────────────────────────────────────────────────
 

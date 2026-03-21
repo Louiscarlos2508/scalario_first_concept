@@ -66,6 +66,7 @@ class _BillingKpiSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final monthlyRevenue = (billing['monthlyRevenue'] as num?) ?? 0;
     final mrr = (billing['mrr'] as num?) ?? 0;
+    final arr = (billing['arr'] as num?) ?? 0;
     final activeClients = (billing['activeClients'] as num?) ?? 0;
     final trialClients = (billing['trialClients'] as num?) ?? 0;
     final overdueClients = (billing['overdueClients'] as num?) ?? 0;
@@ -96,6 +97,12 @@ class _BillingKpiSection extends StatelessWidget {
               value: '${_fmt(mrr)} FCFA',
               icon: Icons.repeat,
               color: Colors.blue,
+            ),
+            _BillingKpiCard(
+              label: 'ARR',
+              value: '${_fmt(arr)} FCFA',
+              icon: Icons.calendar_today,
+              color: Colors.indigo,
             ),
             _BillingKpiCard(
               label: 'Clients actifs',

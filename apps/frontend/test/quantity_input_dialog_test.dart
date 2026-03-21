@@ -4,7 +4,7 @@ import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/quantity_input_dialog.dart';
 
 void main() {
-  Product _buildWeightProduct({
+  Product buildWeightProduct({
     String name = 'Tomates',
     double price = 1500.0,
     double? pricePerUnit,
@@ -20,44 +20,54 @@ void main() {
   }
 
   group('QuantityInputDialog — AC7, AC4 (Epic 20)', () {
-    testWidgets('confirms entered quantity and pops with the double value',
-        (tester) async {
+    testWidgets('confirms entered quantity and pops with the double value', (
+      tester,
+    ) async {
       double? poppedQty;
 
-      await tester.pumpWidget(MaterialApp(
-        home: Builder(builder: (context) {
-          return ElevatedButton(
-            onPressed: () async {
-              poppedQty = await showDialog<double>(
-                context: context,
-                builder: (_) =>
-                    QuantityInputDialog(product: _buildWeightProduct()),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  poppedQty = await showDialog<double>(
+                    context: context,
+                    builder: (_) =>
+                        QuantityInputDialog(product: buildWeightProduct()),
+                  );
+                },
+                child: const Text('Open'),
               );
             },
-            child: const Text('Open'),
-          );
-        }),
-      ));
+          ),
+        ),
+      );
 
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
-          find.byKey(const Key('quantity_input_field')), '2.3');
+        find.byKey(const Key('quantity_input_field')),
+        '2.3',
+      );
       await tester.tap(find.byKey(const Key('quantity_confirm_button')));
       await tester.pumpAndSettle();
 
       expect(poppedQty, 2.3);
     });
 
-    testWidgets('rejects zero quantity and shows validation error',
-        (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: QuantityInputDialog(product: _buildWeightProduct()),
-      ));
+    testWidgets('rejects zero quantity and shows validation error', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(home: QuantityInputDialog(product: buildWeightProduct())),
+      );
 
       await tester.enterText(
-          find.byKey(const Key('quantity_input_field')), '0');
+        find.byKey(const Key('quantity_input_field')),
+        '0',
+      );
       await tester.tap(find.byKey(const Key('quantity_confirm_button')));
       await tester.pump();
 
@@ -65,9 +75,9 @@ void main() {
     });
 
     testWidgets('rejects empty quantity', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        home: QuantityInputDialog(product: _buildWeightProduct()),
-      ));
+      await tester.pumpWidget(
+        MaterialApp(home: QuantityInputDialog(product: buildWeightProduct())),
+      );
 
       await tester.tap(find.byKey(const Key('quantity_confirm_button')));
       await tester.pump();

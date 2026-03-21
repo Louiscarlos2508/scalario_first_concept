@@ -272,7 +272,7 @@ class SyncService {
             body: jsonEncode({
               'deviceId': deviceId ?? 'terminal_unknown',
               'status': 'online',
-              if (tenantId != null) 'tenantId': tenantId,
+              'tenantId': ?tenantId,
               'metadata': {'platform': 'linux', 'version': '1.0.0'},
               'timestamp': DateTime.now().toIso8601String(),
             }),

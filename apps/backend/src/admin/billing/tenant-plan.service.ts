@@ -53,10 +53,9 @@ export class TenantPlanService {
       });
     }
 
-    // 4. Determine event type
-    const isUpgrade = Number(newPlan.monthlyPrice) >= Number(await this._getCurrentPlanPrice(tenant.plan));
-    const eventType = isUpgrade ? 'upgrade' : 'downgrade';
-    const priceDelta = Math.abs(Number(newPlan.monthlyPrice) - Number(await this._getCurrentPlanPrice(tenant.plan)));
+    // 4. Old plan name for event description
+    const oldPlanDef = await this.prisma.planDefinition.findUnique({ where: { code: tenant.plan } });
+    const oldPlanName = oldPlanDef?.name ?? tenant.plan;
 
     // 5. Apply changes in a transaction
     const updatedTenant = await this.prisma.$transaction(async (tx) => {
@@ -79,13 +78,12 @@ export class TenantPlanService {
       }
 
       // Create billing event
-      // TODO: refactor to BillingEventsService once 28-3 is done
       await (tx as any).billingEvent.create({
         data: {
           tenantId,
-          type: eventType,
-          amount: priceDelta,
-          description: `Plan change: ${tenant.plan} → ${newPlan.code}`,
+          type: 'plan_change',
+          amount: '0',
+          description: `${oldPlanName} → ${newPlan.name}`,
           status: 'paid',
         },
       });

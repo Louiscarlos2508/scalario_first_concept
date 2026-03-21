@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/admin_providers.dart';
-import 'tenant_detail_screen.dart';
-import '../../data/models/tenant_summary.dart';
 
 class AdminBillingScreen extends ConsumerStatefulWidget {
   const AdminBillingScreen({super.key});
@@ -17,11 +15,8 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
   String? _filterType;
   String? _filterStatus;
 
-  Map<String, String?> get _filters => {
-        'tenantId': _filterTenantId,
-        'type': _filterType,
-        'status': _filterStatus,
-      };
+  (String?, String?, String?) get _filters =>
+      (_filterTenantId, _filterType, _filterStatus);
 
   String _formatAmount(dynamic v) {
     final n = double.tryParse(v?.toString() ?? '0') ?? 0;
@@ -57,12 +52,9 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
         'subscription_expired' => 'Abonnement expiré',
         'installation' => 'Installation',
         'training' => 'Formation',
-        'upgrade' => 'Upgrade',
-        'downgrade' => 'Downgrade',
-        'payment' => 'Paiement',
+        'plan_change' => 'Changement de plan',
         'activation' => 'Activation',
         'invoice' => 'Facture',
-        'upgrade_request' => 'Demande upgrade',
         _ => type,
       };
 
@@ -190,8 +182,6 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
                           event['tenant'] as Map<String, dynamic>?;
                       final tenantName =
                           tenantData?['name'] as String? ?? '—';
-                      final tenantId =
-                          tenantData?['id'] as String?;
                       final status =
                           event['status'] as String? ?? 'pending';
                       final color = _statusColor(status);
@@ -239,10 +229,17 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
                             '${_typeLabel(event['type'] as String? ?? '')} • ${_formatDate(event['createdAt'] as String?)}',
                             style: const TextStyle(fontSize: 11),
                           ),
-                          onTap: tenantId == null
-                              ? null
-                              : () => _openTenantDetail(
-                                  context, tenantId, tenantsAsync.valueOrNull),
+                          onTap: () => showDialog(
+                            context: context,
+                            builder: (_) => _BillingEventDetailDialog(
+                              event: event,
+                              typeLabel: _typeLabel(event['type'] as String? ?? ''),
+                              statusLabel: _statusLabel(status),
+                              statusColor: color,
+                              formatAmount: _formatAmount,
+                              formatDate: _formatDate,
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -256,18 +253,6 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
     );
   }
 
-  void _openTenantDetail(
-      BuildContext context, String tenantId, List<TenantSummary>? tenants) {
-    final tenant = tenants?.where((t) => t.id == tenantId).firstOrNull;
-    if (tenant == null) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => TenantDetailScreen(tenant: tenant),
-      ),
-    );
-  }
 }
 
 // ── KPI Bar ────────────────────────────────────────────────────────────────────
@@ -367,6 +352,121 @@ class _KpiChip extends StatelessWidget {
             style: TextStyle(
                 fontSize: 9, color: Colors.grey.shade600)),
       ],
+    );
+  }
+}
+
+// ── Billing Event Detail Dialog ────────────────────────────────────────────────
+
+class _BillingEventDetailDialog extends StatelessWidget {
+  final Map<String, dynamic> event;
+  final String typeLabel;
+  final String statusLabel;
+  final Color statusColor;
+  final String Function(dynamic) formatAmount;
+  final String Function(String?) formatDate;
+  const _BillingEventDetailDialog({
+    required this.event,
+    required this.typeLabel,
+    required this.statusLabel,
+    required this.statusColor,
+    required this.formatAmount,
+    required this.formatDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tenantData = event['tenant'] as Map<String, dynamic>?;
+    final tenantName = tenantData?['name'] as String? ?? '—';
+    final description = event['description'] as String?;
+    final paymentMethod = event['paymentMethod'] as String?;
+    final paymentRef = event['paymentRef'] as String?;
+    final invoiceNumber = event['invoiceNumber'] as String?;
+    final receiptNumber = event['receiptNumber'] as String?;
+    final paidAt = event['paidAt'] as String?;
+
+    final methodLabel = switch (paymentMethod) {
+      'mobile_money' => 'Mobile Money',
+      'bank_transfer' => 'Virement bancaire',
+      'cash' => 'Espèces',
+      null => null,
+      _ => paymentMethod,
+    };
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          Expanded(child: Text(typeLabel)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: statusColor),
+            ),
+            child: Text(statusLabel,
+                style: TextStyle(color: statusColor, fontSize: 11)),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Row('Client', tenantName, bold: true),
+            _Row('Montant', formatAmount(event['amount'])),
+            _Row('Date', formatDate(event['createdAt'] as String?)),
+            if (paidAt != null) _Row('Payé le', formatDate(paidAt)),
+            if (description != null && description.isNotEmpty)
+              _Row('Description', description),
+            if (methodLabel != null) _Row('Méthode', methodLabel),
+            if (paymentRef != null && paymentRef.isNotEmpty)
+              _Row('Référence', paymentRef),
+            if (invoiceNumber != null) _Row('N° Facture', invoiceNumber),
+            if (receiptNumber != null) _Row('N° Reçu', receiptNumber),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Fermer'),
+        ),
+      ],
+    );
+  }
+}
+
+class _Row extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool bold;
+
+  const _Row(this.label, this.value, {this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12, color: Colors.grey.shade600)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight:
+                        bold ? FontWeight.bold : FontWeight.normal)),
+          ),
+        ],
+      ),
     );
   }
 }

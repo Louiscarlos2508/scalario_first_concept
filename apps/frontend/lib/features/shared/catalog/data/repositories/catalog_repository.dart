@@ -15,14 +15,15 @@ class CatalogRepository {
     http.Client? httpClient,
     String? Function()? tokenGetter,
     IsarService? isarService,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _tokenGetter = tokenGetter,
-        _isarService = isarService;
+  }) : _httpClient = httpClient ?? http.Client(),
+       _tokenGetter = tokenGetter,
+       _isarService = isarService;
 
   Map<String, String> _authHeaders({String? tenantId}) {
     String? token;
     try {
-      token = _tokenGetter?.call() ??
+      token =
+          _tokenGetter?.call() ??
           Supabase.instance.client.auth.currentSession?.accessToken;
     } catch (_) {
       // Supabase not initialized in test environment — no auth header
@@ -52,10 +53,10 @@ class CatalogRepository {
       'unitType': unitType,
       if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
-      if (pricePerUnit case final v?) 'pricePerUnit': v,
-      if (conversionRate case final v?) 'conversionRate': v,
+      'pricePerUnit': ?pricePerUnit,
+      'conversionRate': ?conversionRate,
       if (trackSerialNumbers) 'trackSerialNumbers': true,
-      if (warrantyMonths case final v?) 'warrantyMonths': v,
+      'warrantyMonths': ?warrantyMonths,
       if (requiresPrescription) 'requiresPrescription': true,
       if (isUnique) 'isUnique': true,
     };
@@ -69,25 +70,33 @@ class CatalogRepository {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('createItem failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'createItem failed: ${response.statusCode} — ${response.body}',
+    );
   }
 
   /// Reads products from local Isar database filtered by tenantId.
   /// Returns a list of maps with keys: id, name, price, barcode, stockQuantity.
-  Future<List<Map<String, dynamic>>> getProducts({required String tenantId}) async {
+  Future<List<Map<String, dynamic>>> getProducts({
+    required String tenantId,
+  }) async {
     if (_isarService == null) return [];
     final isar = await _isarService.db;
     final allProducts = await isar.products.where().findAll();
     final products = allProducts.where((p) => p.tenantId == tenantId).toList();
-    return products.map((p) => <String, dynamic>{
-      'id': p.remoteId ?? p.id.toString(),
-      'name': p.name,
-      'price': p.price,
-      'barcode': p.barcode,
-      'stockQuantity': p.stockQuantity,
-      'categoryId': p.categoryId,
-      'tenantId': p.tenantId,
-    }).toList();
+    return products
+        .map(
+          (p) => <String, dynamic>{
+            'id': p.remoteId ?? p.id.toString(),
+            'name': p.name,
+            'price': p.price,
+            'barcode': p.barcode,
+            'stockQuantity': p.stockQuantity,
+            'categoryId': p.categoryId,
+            'tenantId': p.tenantId,
+          },
+        )
+        .toList();
   }
 
   /// PATCH /catalog/items/:id — updates a catalog item.
@@ -119,18 +128,18 @@ class CatalogRepository {
       'unitType': unitType,
       if (categoryId != null && categoryId.isNotEmpty) 'categoryId': categoryId,
       if (barcode != null && barcode.isNotEmpty) 'barcode': barcode,
-      if (pricePerUnit case final v?) 'pricePerUnit': v,
-      if (conversionRate case final v?) 'conversionRate': v,
+      'pricePerUnit': ?pricePerUnit,
+      'conversionRate': ?conversionRate,
       'minStockLevel': minStockLevel,
-      if (parentItemId case final v?) 'parentItemId': v,
+      'parentItemId': ?parentItemId,
       if (clearParent) 'parentItemId': null,
-      if (trackSerialNumbers case final v?) 'trackSerialNumbers': v,
-      if (warrantyMonths case final v?) 'warrantyMonths': v,
+      'trackSerialNumbers': ?trackSerialNumbers,
+      'warrantyMonths': ?warrantyMonths,
       if (clearWarranty) 'warrantyMonths': null,
-      if (requiresPrescription case final v?) 'requiresPrescription': v,
-      if (dynamicPricing case final v?) 'dynamicPricing': v,
-      if (priceReason case final v?) 'reason': v,
-      if (isUnique case final v?) 'isUnique': v,
+      'requiresPrescription': ?requiresPrescription,
+      'dynamicPricing': ?dynamicPricing,
+      'reason': ?priceReason,
+      'isUnique': ?isUnique,
     };
     final response = await _httpClient.patch(
       Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id'),
@@ -138,18 +147,25 @@ class CatalogRepository {
       body: jsonEncode(body),
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('updateItem failed: ${response.statusCode} — ${response.body}');
+      throw Exception(
+        'updateItem failed: ${response.statusCode} — ${response.body}',
+      );
     }
   }
 
   /// DELETE /catalog/items/:id — deletes a catalog item.
-  Future<void> deleteItem({required String id, required String tenantId}) async {
+  Future<void> deleteItem({
+    required String id,
+    required String tenantId,
+  }) async {
     final response = await _httpClient.delete(
       Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id'),
       headers: _authHeaders(tenantId: tenantId),
     );
     if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('deleteItem failed: ${response.statusCode} — ${response.body}');
+      throw Exception(
+        'deleteItem failed: ${response.statusCode} — ${response.body}',
+      );
     }
   }
 
@@ -158,8 +174,9 @@ class CatalogRepository {
     required String id,
     required String tenantId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id/children')
-        .replace(queryParameters: {'tenantId': tenantId});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$id/children',
+    ).replace(queryParameters: {'tenantId': tenantId});
     final response = await _httpClient.get(
       uri,
       headers: _authHeaders(tenantId: tenantId),
@@ -177,8 +194,9 @@ class CatalogRepository {
     required String tenantId,
     required Map<String, dynamic> body,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/variants')
-        .replace(queryParameters: {'tenantId': tenantId});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/variants',
+    ).replace(queryParameters: {'tenantId': tenantId});
     final response = await _httpClient.post(
       uri,
       headers: _authHeaders(tenantId: tenantId),
@@ -187,7 +205,9 @@ class CatalogRepository {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('createVariant failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'createVariant failed: ${response.statusCode} — ${response.body}',
+    );
   }
 
   /// GET /catalog/items/:id/variants
@@ -195,9 +215,13 @@ class CatalogRepository {
     required String itemId,
     required String tenantId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/variants')
-        .replace(queryParameters: {'tenantId': tenantId});
-    final response = await _httpClient.get(uri, headers: _authHeaders(tenantId: tenantId));
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/variants',
+    ).replace(queryParameters: {'tenantId': tenantId});
+    final response = await _httpClient.get(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+    );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return (data as List<dynamic>).cast<Map<String, dynamic>>();
@@ -212,8 +236,9 @@ class CatalogRepository {
     required String tenantId,
     required Map<String, dynamic> body,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/variants/$variantId')
-        .replace(queryParameters: {'tenantId': tenantId});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/variants/$variantId',
+    ).replace(queryParameters: {'tenantId': tenantId});
     final response = await _httpClient.patch(
       uri,
       headers: _authHeaders(tenantId: tenantId),
@@ -222,7 +247,9 @@ class CatalogRepository {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('updateVariant failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'updateVariant failed: ${response.statusCode} — ${response.body}',
+    );
   }
 
   /// DELETE /catalog/items/:id/variants/:variantId
@@ -231,9 +258,13 @@ class CatalogRepository {
     required String variantId,
     required String tenantId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/variants/$variantId')
-        .replace(queryParameters: {'tenantId': tenantId});
-    final response = await _httpClient.delete(uri, headers: _authHeaders(tenantId: tenantId));
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/variants/$variantId',
+    ).replace(queryParameters: {'tenantId': tenantId});
+    final response = await _httpClient.delete(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+    );
     if (response.statusCode != 200 && response.statusCode != 204) {
       throw Exception('deleteVariant failed: ${response.statusCode}');
     }
@@ -245,8 +276,9 @@ class CatalogRepository {
     required String tenantId,
     required Map<String, dynamic> body,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/price-levels')
-        .replace(queryParameters: {'tenantId': tenantId});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/price-levels',
+    ).replace(queryParameters: {'tenantId': tenantId});
     final response = await _httpClient.post(
       uri,
       headers: _authHeaders(tenantId: tenantId),
@@ -255,7 +287,9 @@ class CatalogRepository {
     if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('createPriceLevel failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'createPriceLevel failed: ${response.statusCode} — ${response.body}',
+    );
   }
 
   /// GET /catalog/items/:id/price-levels
@@ -263,9 +297,13 @@ class CatalogRepository {
     required String itemId,
     required String tenantId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$itemId/price-levels')
-        .replace(queryParameters: {'tenantId': tenantId});
-    final response = await _httpClient.get(uri, headers: _authHeaders(tenantId: tenantId));
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$itemId/price-levels',
+    ).replace(queryParameters: {'tenantId': tenantId});
+    final response = await _httpClient.get(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+    );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return (data as List<dynamic>).cast<Map<String, dynamic>>();
@@ -280,9 +318,13 @@ class CatalogRepository {
     required String tenantId,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/barcode/$barcode')
-          .replace(queryParameters: {'tenantId': tenantId});
-      final response = await _httpClient.get(uri, headers: _authHeaders(tenantId: tenantId));
+      final uri = Uri.parse(
+        '${ApiConstants.baseUrl}/catalog/barcode/$barcode',
+      ).replace(queryParameters: {'tenantId': tenantId});
+      final response = await _httpClient.get(
+        uri,
+        headers: _authHeaders(tenantId: tenantId),
+      );
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -297,8 +339,9 @@ class CatalogRepository {
     required String id,
     required String tenantId,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id/duplicate')
-        .replace(queryParameters: {'tenantId': tenantId});
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items/$id/duplicate',
+    ).replace(queryParameters: {'tenantId': tenantId});
     final response = await _httpClient.post(
       uri,
       headers: _authHeaders(tenantId: tenantId),
@@ -307,13 +350,18 @@ class CatalogRepository {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    throw Exception('duplicateItem failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'duplicateItem failed: ${response.statusCode} — ${response.body}',
+    );
   }
 
   /// GET /catalog/items?tenantId= — lists catalog items.
-  Future<List<Map<String, dynamic>>> listItems({required String tenantId}) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}/catalog/items')
-        .replace(queryParameters: {'tenantId': tenantId});
+  Future<List<Map<String, dynamic>>> listItems({
+    required String tenantId,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/catalog/items',
+    ).replace(queryParameters: {'tenantId': tenantId});
 
     final response = await _httpClient.get(
       uri,
@@ -329,6 +377,8 @@ class CatalogRepository {
       final items = (data as Map<String, dynamic>)['items'] as List<dynamic>?;
       return (items ?? []).cast<Map<String, dynamic>>();
     }
-    throw Exception('listItems failed: ${response.statusCode} — ${response.body}');
+    throw Exception(
+      'listItems failed: ${response.statusCode} — ${response.body}',
+    );
   }
 }
