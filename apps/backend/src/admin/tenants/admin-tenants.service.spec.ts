@@ -4,6 +4,7 @@ import { AdminTenantsService } from './admin-tenants.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseAdminService } from '../services/supabase-admin.service';
 import { ModuleRegistryService } from '../../kernel/modules/module-registry.service';
+import { BusinessTypeService } from '../business-type/business-type.service';
 
 describe('AdminTenantsService', () => {
   let service: AdminTenantsService;
@@ -24,6 +25,9 @@ describe('AdminTenantsService', () => {
     organizationMember: {
       create: jest.fn(),
     },
+    businessTypeDefinition: {
+      findUnique: jest.fn(),
+    },
   };
 
   const mockSupabaseAdminService = {
@@ -35,8 +39,19 @@ describe('AdminTenantsService', () => {
     activateDefaultModulesForTenant: jest.fn(),
   };
 
+  const mockBusinessTypeService = {
+    seedCategories: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     jest.resetAllMocks();
+    mockBusinessTypeService.seedCategories.mockResolvedValue(undefined);
+    // Default: 'generaliste' is a valid retail type
+    mockPrismaService.businessTypeDefinition.findUnique.mockResolvedValue({
+      code: 'generaliste',
+      isActive: true,
+      vertical: 'retail',
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -44,6 +59,7 @@ describe('AdminTenantsService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: SupabaseAdminService, useValue: mockSupabaseAdminService },
         { provide: ModuleRegistryService, useValue: mockModuleRegistryService },
+        { provide: BusinessTypeService, useValue: mockBusinessTypeService },
       ],
     }).compile();
 
@@ -65,6 +81,7 @@ describe('AdminTenantsService', () => {
         currency: 'XOF',
         timezone: 'Africa/Ouagadougou',
         status: 'active',
+        businessType: 'generaliste',
       });
       mockPrismaService.role.findUnique.mockResolvedValue({
         id: mockRoleId,
@@ -86,7 +103,7 @@ describe('AdminTenantsService', () => {
           currency: 'XOF',
           timezone: 'Africa/Ouagadougou',
           status: 'active',
-          plan: 'free',
+          plan: 'standard',
           billingStatus: 'trial',
         }),
       });
@@ -100,7 +117,7 @@ describe('AdminTenantsService', () => {
           roleId: mockRoleId,
         },
       });
-      expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(mockTenantId, 'free');
+      expect(mockModuleRegistryService.activateDefaultModulesForTenant).toHaveBeenCalledWith(mockTenantId, 'standard');
       expect(result.tenantId).toBe(mockTenantId);
       expect(result.userId).toBe(mockUserId);
       expect(result.name).toBe('Boutique Koné');
@@ -114,6 +131,7 @@ describe('AdminTenantsService', () => {
         currency: 'EUR',
         timezone: 'Europe/Paris',
         status: 'active',
+        businessType: 'generaliste',
       });
       mockPrismaService.role.findUnique.mockResolvedValue({ id: mockRoleId });
       mockPrismaService.organizationMember.create.mockResolvedValue({ id: 'member-uuid' });
@@ -133,7 +151,7 @@ describe('AdminTenantsService', () => {
           currency: 'EUR',
           timezone: 'Europe/Paris',
           status: 'active',
-          plan: 'free',
+          plan: 'standard',
         }),
       });
     });
@@ -166,6 +184,54 @@ describe('AdminTenantsService', () => {
       await expect(
         service.createTenant({ name: 'Test', ownerEmail: 'a@b.com', ownerPassword: 'short' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when businessType does not belong to vertical', async () => {
+      mockPrismaService.businessTypeDefinition.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.createTenant({
+          name: 'Test',
+          ownerEmail: 'a@b.com',
+          ownerPassword: 'password123',
+          businessType: 'artisan_boulangerie',
+          vertical: 'retail',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should store vertical on the tenant and return it', async () => {
+      mockSupabaseAdminService.createUser.mockResolvedValue(mockUserId);
+      mockPrismaService.businessTypeDefinition.findUnique.mockResolvedValue({
+        code: 'epicerie',
+        isActive: true,
+        vertical: 'retail',
+      });
+      mockPrismaService.tenant.create.mockResolvedValue({
+        id: mockTenantId,
+        name: 'Epicerie',
+        currency: 'XOF',
+        timezone: 'Africa/Ouagadougou',
+        status: 'active',
+        businessType: 'epicerie',
+        vertical: 'retail',
+      });
+      mockPrismaService.role.findUnique.mockResolvedValue({ id: mockRoleId });
+      mockPrismaService.organizationMember.create.mockResolvedValue({ id: 'member-uuid' });
+      mockModuleRegistryService.activateDefaultModulesForTenant.mockResolvedValue(undefined);
+
+      const result = await service.createTenant({
+        name: 'Epicerie',
+        ownerEmail: 'owner@epicerie.com',
+        ownerPassword: 'password123',
+        businessType: 'epicerie',
+        vertical: 'retail',
+      });
+
+      expect(mockPrismaService.tenant.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ businessType: 'epicerie', vertical: 'retail' }),
+      });
+      expect(result.businessType).toBe('epicerie');
     });
   });
 

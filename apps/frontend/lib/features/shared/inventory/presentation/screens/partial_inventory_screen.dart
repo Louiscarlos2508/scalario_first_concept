@@ -198,7 +198,10 @@ class _PartialInventoryScreenState
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedProductListProvider);
     final allProducts = paginatedAsync.maybeWhen(
-      data: (data) => (data['items'] as List).cast<Product>(),
+      data: (data) => (data['items'] as List)
+          .cast<Product>()
+          .where((p) => p.itemType != 'service')
+          .toList(),
       orElse: () => <Product>[],
     );
 

@@ -17,9 +17,11 @@ import 'package:frontend/features/shared/expenses/presentation/screens/expenses_
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/promotions/presentation/screens/promotions_screen.dart';
 import 'package:frontend/features/shared/reservations/presentation/screens/reservations_screen.dart';
+import 'package:frontend/features/shared/client_orders/presentation/screens/client_orders_screen.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
 import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/features/shared/billing/presentation/providers/subscription_provider.dart';
 import 'dart:async';
 
 // ── Navigation providers ──────────────────────────────────────────────────────
@@ -61,7 +63,7 @@ final _allNavScreens = <_NavScreenPair>[
         icon: Icons.people_outline,
         selectedIcon: Icons.people,
         label: 'Clients',
-        moduleCode: 'contacts'),
+        moduleCode: 'clients'),
     screen: const ContactsScreen(),
   ),
   (
@@ -106,6 +108,14 @@ final _allNavScreens = <_NavScreenPair>[
   ),
   (
     navItem: const NavItem(
+        icon: Icons.assignment_outlined,
+        selectedIcon: Icons.assignment,
+        label: 'Commandes',
+        moduleCode: 'retail'),
+    screen: const ClientOrdersScreen(),
+  ),
+  (
+    navItem: const NavItem(
         icon: Icons.settings_outlined,
         selectedIcon: Icons.settings,
         label: 'Paramètres'),
@@ -117,7 +127,7 @@ final _allNavScreens = <_NavScreenPair>[
 /// null = no restriction (all active modules visible).
 const _roleAllowedModules = <String, Set<String>?>{
   'owner': null,
-  'manager': {'inventory', 'reports', 'contacts', 'transactions'},
+  'manager': {'inventory', 'reports', 'clients', 'transactions'},
 };
 
 List<_NavScreenPair> _visiblePairs(Set<String> activeModules, String? role) {
@@ -248,7 +258,12 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
           const SizedBox(width: 16),
         ],
       ),
-      body: _buildSduiBody(),
+      body: Column(
+        children: [
+          _BillingBanner(ref: ref),
+          Expanded(child: _buildSduiBody()),
+        ],
+      ),
     );
   }
 
@@ -260,5 +275,113 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       error: (_, _) => SduiLayout.dashboardDefault(),
     );
     return SduiRenderer(layout: layout);
+  }
+}
+
+// ── Billing Banner ─────────────────────────────────────────────────────────────
+
+class _BillingBanner extends StatelessWidget {
+  final WidgetRef ref;
+  const _BillingBanner({required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final subAsync = ref.watch(subscriptionProvider);
+    return subAsync.when(
+      data: (data) {
+        final status = data['billingStatus'] as String? ?? '';
+        final trialEndsAt = data['trialEndsAt'] as String?;
+        final paidUntil = data['paidUntil'] as String?;
+        return _buildBanner(context, status, trialEndsAt, paidUntil);
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildBanner(
+    BuildContext context,
+    String status,
+    String? trialEndsAt,
+    String? paidUntil,
+  ) {
+    if (status == 'trial' && trialEndsAt != null) {
+      final days = DateTime.tryParse(trialEndsAt)
+              ?.difference(DateTime.now())
+              .inDays ??
+          0;
+      final color = days <= 3 ? Colors.red : Colors.blue;
+      return _Banner(
+        color: color,
+        icon: Icons.hourglass_top,
+        message: "Période d'essai — $days jour(s) restant(s)",
+      );
+    }
+
+    if (status == 'active' && paidUntil != null) {
+      final days = DateTime.tryParse(paidUntil)
+              ?.difference(DateTime.now())
+              .inDays ??
+          0;
+      if (days > 30) return const SizedBox.shrink();
+      final color = days <= 3
+          ? Colors.red
+          : days <= 7
+              ? Colors.orange
+              : Colors.blue;
+      return _Banner(
+        color: color,
+        icon: Icons.calendar_today,
+        message: days <= 0
+            ? 'Abonnement expiré — contactez Scalario'
+            : 'Abonnement expire dans $days jour(s)',
+      );
+    }
+
+    if (status == 'overdue') {
+      return const _Banner(
+        color: Colors.red,
+        icon: Icons.warning_amber,
+        message: 'Abonnement expiré — renouvelez pour continuer',
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+}
+
+class _Banner extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final String message;
+
+  const _Banner({
+    required this.color,
+    required this.icon,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: color.withValues(alpha: 0.12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

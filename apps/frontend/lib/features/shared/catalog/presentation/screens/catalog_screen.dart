@@ -501,9 +501,54 @@ class _CatalogItemTile extends StatelessWidget {
                   ),
                 ),
               ],
+              if (item['hasVariants'] == true) ...[
+                const SizedBox(width: 4),
+                Container(
+                  key: Key('badge_variants_$id'),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'VAR',
+                    style: TextStyle(
+                      color: Colors.blue.shade700,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+              if (item['trackSerialNumbers'] == true) ...[
+                const SizedBox(width: 4),
+                Container(
+                  key: Key('badge_sn_$id'),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'SN',
+                    style: TextStyle(
+                      color: Colors.teal.shade700,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
-          subtitle: Text(_fcfa.format(price), style: AppTextStyles.bodySmall),
+          subtitle: Builder(builder: (_) {
+            final unitType = item['unitType']?.toString() ?? 'piece';
+            final unit = item['weightUnit']?.toString() ?? unitType;
+            final priceLabel = unitType == 'piece'
+                ? _fcfa.format(price)
+                : '${_fcfa.format(price)}/$unit';
+            return Text(priceLabel, style: AppTextStyles.bodySmall);
+          }),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

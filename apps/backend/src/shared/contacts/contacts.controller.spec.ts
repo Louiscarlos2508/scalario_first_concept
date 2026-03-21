@@ -70,7 +70,7 @@ describe('ContactsController', () => {
 
       const result = await controller.searchContacts('tid', 'alice');
 
-      expect(mockContactsService.searchContacts).toHaveBeenCalledWith('tid', 'alice');
+      expect(mockContactsService.searchContacts).toHaveBeenCalledWith('tid', 'alice', undefined);
       expect(result).toEqual([{ id: 'c-1', name: 'Alice' }]);
     });
   });

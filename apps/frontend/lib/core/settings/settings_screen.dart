@@ -13,6 +13,8 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/shared/billing/presentation/screens/subscription_screen.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
 
 // ── SharedPreferences keys ────────────────────────────────────────────────────
 const _kShopName = 'settings_shop_name';
@@ -242,7 +244,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 error: (_, _) => '—',
               ),
             ),
-            _infoRow('Rôle', _formatRole(activeMembership?.role)),
+            _infoRow(
+              'Rôle',
+              getRoleLabel(
+                activeMembership?.role ?? '',
+                ref.watch(businessTypeConfigProvider).valueOrNull?.roleLabels ?? {},
+              ),
+            ),
             _infoRow(
               'Tenant ID',
               activeTenantId != null
@@ -582,19 +590,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-
-  String _formatRole(String? role) {
-    switch (role) {
-      case 'owner':
-        return 'Propriétaire';
-      case 'manager':
-        return 'Manager';
-      case 'commercial':
-        return 'Commercial';
-      default:
-        return role ?? '—';
-    }
-  }
 
   String _syncLabel(SyncUiStatus status) {
     switch (status) {

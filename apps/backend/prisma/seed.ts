@@ -105,14 +105,21 @@ async function seedRbac() {
 
 const MODULES = [
   // Shared modules — core ERP capabilities
-  { code: 'catalog',      name: 'Catalogue',    type: 'shared',   dependencies: [] },
-  { code: 'contacts',     name: 'Contacts',     type: 'shared',   dependencies: [] },
-  { code: 'inventory',    name: 'Inventaire',   type: 'shared',   dependencies: ['catalog'] },
-  { code: 'transactions', name: 'Transactions', type: 'shared',   dependencies: ['catalog', 'contacts'] },
-  { code: 'expenses',     name: 'Dépenses',     type: 'shared',   dependencies: [] },
-  { code: 'reports',      name: 'Rapports',     type: 'shared',   dependencies: ['transactions'] },
+  { code: 'catalog',           name: 'Catalogue',                type: 'shared',   dependencies: [] },
+  { code: 'clients',           name: 'Clients',                  type: 'shared',   dependencies: [] },
+  { code: 'inventory',         name: 'Inventaire & Stock',       type: 'shared',   dependencies: ['catalog'] },
+  { code: 'transactions',      name: 'Transactions & Ventes',    type: 'shared',   dependencies: ['catalog', 'clients'] },
+  { code: 'expenses',          name: 'Dépenses & Charges',       type: 'shared',   dependencies: [] },
+  { code: 'reports',           name: 'Rapports & KPI',           type: 'shared',   dependencies: ['transactions'] },
+  { code: 'variants',          name: 'Variantes Produit',        type: 'shared',   dependencies: ['catalog'] },
+  { code: 'pricing',           name: 'Multi-Tarifs',             type: 'shared',   dependencies: ['catalog'] },
+  { code: 'promotions',        name: 'Promotions & Remises',     type: 'shared',   dependencies: ['catalog'] },
+  { code: 'purchase_orders',   name: 'Commandes Fournisseurs',   type: 'shared',   dependencies: ['catalog', 'clients', 'inventory'] },
+  { code: 'internal_requests', name: 'Demandes Internes',        type: 'shared',   dependencies: ['catalog', 'inventory'] },
+  { code: 'batches',           name: 'Lots & Fraîcheur',         type: 'shared',   dependencies: ['catalog', 'inventory'] },
+  { code: 'client_orders',     name: 'Commandes Clients',        type: 'shared',   dependencies: ['catalog', 'clients', 'transactions'] },
   // Retail vertical — POS, sessions sont des sous-fonctionnalités de retail
-  { code: 'retail',       name: 'Retail',       type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions', 'contacts'] },
+  { code: 'retail',            name: 'Point de Vente (POS)',     type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions', 'clients'] },
 ];
 
 async function seedModules() {
@@ -127,45 +134,39 @@ async function seedModules() {
   console.log(`  ✓ ${MODULES.length} modules seeded`);
 }
 
+// No "free" plan — billingStatus:'trial' gives STANDARD access for 30 days
 const PLANS = [
-  {
-    code: 'free',
-    name: 'Gratuit',
-    monthlyPrice: 0,
-    maxUsers: 1,
-    includedModules: [] as string[],
-    suggestedInstallationFee: null,
-    suggestedTrainingFee: null,
-  },
   {
     code: 'standard',
     name: 'Standard',
     monthlyPrice: 15000,
-    maxUsers: 4,
-    includedModules: ['catalog', 'inventory', 'retail'],
+    maxUsers: 3,
+    includedModules: ['catalog', 'clients', 'inventory', 'transactions', 'expenses', 'reports', 'retail'],
     suggestedInstallationFee: 25000,
     suggestedTrainingFee: 10000,
   },
   {
     code: 'premium',
     name: 'Premium',
-    monthlyPrice: 30000,
-    maxUsers: 10,
-    includedModules: ['catalog', 'inventory', 'retail', 'reporting', 'purchase_orders'],
+    monthlyPrice: 25000,
+    maxUsers: 999,
+    includedModules: [
+      'catalog', 'clients', 'inventory', 'transactions', 'expenses', 'reports',
+      'variants', 'pricing', 'promotions', 'purchase_orders', 'internal_requests',
+      'batches', 'client_orders', 'retail',
+    ],
     suggestedInstallationFee: 50000,
     suggestedTrainingFee: 20000,
   },
   {
+    // Enterprise: Carlos activates modules manually per contract
     code: 'enterprise',
     name: 'Enterprise',
-    monthlyPrice: 50000,
-    maxUsers: 25,
-    includedModules: [
-      'catalog', 'inventory', 'retail', 'reporting',
-      'purchase_orders', 'variants', 'pricing', 'promotions',
-    ],
-    suggestedInstallationFee: 100000,
-    suggestedTrainingFee: 50000,
+    monthlyPrice: 0,
+    maxUsers: 999,
+    includedModules: [] as string[],
+    suggestedInstallationFee: null,
+    suggestedTrainingFee: null,
   },
 ];
 
@@ -186,6 +187,233 @@ async function seedPlans() {
     });
   }
   console.log(`  ✓ ${PLANS.length} plan definitions seeded`);
+
+  // Remove obsolete 'free' plan if it still exists
+  const removed = await (prisma as any).planDefinition.deleteMany({
+    where: { code: { notIn: PLANS.map((p) => p.code) } },
+  });
+  if (removed.count > 0) {
+    console.log(`  ✓ Removed ${removed.count} obsolete plan(s) (e.g. "free")`);
+  }
+}
+
+// ── Retail business types — Phase 2a ─────────────────────────────────────────
+// Exactly 14 types. vertical: "retail" on all.
+// Non-retail verticals (artisan, restaurant, services) are Phase 3+.
+const BUSINESS_TYPES = [
+  {
+    code: 'generaliste',
+    name: 'Généraliste',
+    description: 'Commerce de détail généraliste, vente de tout type de produit physique',
+    defaultFlags: {},
+    visibleSections: [] as string[],
+    suggestedCategories: ['Alimentation', 'Électronique', 'Habillement', 'Maison', 'Loisirs'] as string[],
+    documentType: 'receipt',
+    roleLabels: {},
+    icon: 'store',
+    vertical: 'retail',
+  },
+  {
+    code: 'epicerie',
+    name: 'Épicerie & Alimentation',
+    description: 'Vente de produits alimentaires, gestion des dates d\'expiration et de la fraîcheur',
+    defaultFlags: { expiryDays: 30 },
+    visibleSections: ['expiry'] as string[],
+    suggestedCategories: ['Fruits & Légumes', 'Épices', 'Céréales', 'Boissons', 'Produits laitiers', 'Conserves'] as string[],
+    documentType: 'receipt',
+    roleLabels: {},
+    icon: 'local_grocery_store',
+    vertical: 'retail',
+  },
+  {
+    code: 'telephonie',
+    name: 'Téléphonie & Accessoires',
+    description: 'Vente de téléphones, accessoires et cartes SIM avec suivi IMEI et garantie',
+    defaultFlags: { hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 },
+    visibleSections: ['variants', 'serial', 'warranty'] as string[],
+    suggestedCategories: ['Smartphones', 'Accessoires', 'Cartes SIM', 'Recharge', 'Réparation'] as string[],
+    documentType: 'receipt',
+    roleLabels: { commercial: 'Vendeur', manager: 'Responsable boutique', cashier: 'Caissier' },
+    icon: 'phone_android',
+    vertical: 'retail',
+  },
+  {
+    code: 'textile',
+    name: 'Textile & Habillement',
+    description: 'Vente de vêtements et tissus avec variantes taille/couleur',
+    defaultFlags: { hasVariants: true },
+    visibleSections: ['variants'] as string[],
+    suggestedCategories: ['Hauts', 'Bas', 'Robes', 'Chaussures', 'Accessoires', 'Tissu'] as string[],
+    documentType: 'receipt',
+    roleLabels: {},
+    icon: 'checkroom',
+    vertical: 'retail',
+  },
+  {
+    code: 'pharmacie',
+    name: 'Pharmacie & Parapharmacie',
+    description: 'Vente de médicaments et produits parapharmaceutiques avec gestion ordonnances et lots',
+    defaultFlags: { expiryDays: 365, requiresPrescription: false },
+    visibleSections: ['expiry', 'prescription'] as string[],
+    suggestedCategories: ['Médicaments', 'Parapharmacie', 'Matériel médical', 'Vitamines'] as string[],
+    documentType: 'receipt',
+    roleLabels: { commercial: 'Préparateur', manager: 'Pharmacien gérant' },
+    icon: 'local_pharmacy',
+    vertical: 'retail',
+  },
+  {
+    code: 'quincaillerie',
+    name: 'Quincaillerie & Matériaux',
+    description: 'Vente de matériaux de construction, outillage et quincaillerie avec vente au poids',
+    defaultFlags: { hasVariants: true, unitType: 'weight' },
+    visibleSections: ['variants', 'weight'] as string[],
+    suggestedCategories: ['Peinture', 'Plomberie', 'Électricité', 'Outillage', 'Ciment', 'Fer'] as string[],
+    documentType: 'delivery_note',
+    roleLabels: {},
+    icon: 'hardware',
+    vertical: 'retail',
+  },
+  {
+    code: 'electromenager',
+    name: 'Électroménager & Appareils',
+    description: 'Vente d\'appareils électroménagers et électroniques avec numéro de série et garantie',
+    defaultFlags: { trackSerialNumbers: true, warrantyMonths: 12, hasVariants: true },
+    visibleSections: ['serial', 'warranty', 'variants'] as string[],
+    suggestedCategories: ['Réfrigérateurs', 'Téléviseurs', 'Climatiseurs', 'Cuisinières', 'Petits appareils'] as string[],
+    documentType: 'invoice',
+    roleLabels: { commercial: 'Vendeur', manager: 'Responsable technique' },
+    icon: 'kitchen',
+    vertical: 'retail',
+  },
+  {
+    code: 'cave_vin',
+    name: 'Cave à Vins & Spiritueux',
+    description: 'Vente de vins, champagnes et spiritueux avec millésime et gestion de cave',
+    defaultFlags: { hasVariants: true },
+    visibleSections: ['variants'] as string[],
+    suggestedCategories: ['Vins rouges', 'Vins blancs', 'Rosés', 'Champagnes', 'Spiritueux', 'Bières artisanales'] as string[],
+    documentType: 'receipt',
+    roleLabels: { commercial: 'Caviste', manager: 'Gérant cave' },
+    icon: 'wine_bar',
+    vertical: 'retail',
+  },
+  {
+    code: 'bijouterie',
+    name: 'Bijouterie & Joaillerie',
+    description: 'Vente de bijoux, or au gramme et articles de joaillerie avec prix dynamique',
+    defaultFlags: { hasVariants: true, dynamicPricing: true },
+    visibleSections: ['variants', 'dynamic_pricing'] as string[],
+    suggestedCategories: ['Or', 'Argent', 'Bagues', 'Colliers', 'Bracelets', 'Montres'] as string[],
+    documentType: 'receipt',
+    roleLabels: { commercial: 'Joaillier', manager: 'Responsable bijouterie' },
+    icon: 'diamond',
+    vertical: 'retail',
+  },
+  {
+    code: 'depot_vente',
+    name: 'Dépôt-Vente',
+    description: 'Vente d\'articles uniques d\'occasion déposés par des tiers',
+    defaultFlags: { uniqueArticles: true },
+    visibleSections: ['unique'] as string[],
+    suggestedCategories: ['Vêtements occasion', 'Électronique occasion', 'Meubles', 'Livres', 'Montres occasion'] as string[],
+    documentType: 'receipt',
+    roleLabels: {},
+    icon: 'recycling',
+    vertical: 'retail',
+  },
+  {
+    code: 'boulangerie',
+    name: 'Boulangerie & Pâtisserie',
+    description: 'Vente de pain, viennoiseries et pâtisseries avec gestion fraîcheur quotidienne',
+    defaultFlags: { expiryDays: 3 },
+    visibleSections: ['expiry'] as string[],
+    suggestedCategories: ['Pain', 'Viennoiseries', 'Gâteaux', 'Sandwichs', 'Boissons'] as string[],
+    documentType: 'receipt',
+    roleLabels: {},
+    icon: 'bakery_dining',
+    vertical: 'retail',
+  },
+  {
+    code: 'station_service',
+    name: 'Station-Service & Carburant',
+    description: 'Vente de carburant au litre et produits pétroliers avec compteur pompe',
+    defaultFlags: { unitType: 'volume' },
+    visibleSections: ['weight'] as string[],
+    suggestedCategories: ['Essence', 'Diesel', 'Huiles moteur', 'Lubrifiants', 'Accessoires auto'] as string[],
+    documentType: 'receipt',
+    roleLabels: { commercial: 'Pompiste', manager: 'Chef de station' },
+    icon: 'local_gas_station',
+    vertical: 'retail',
+  },
+  {
+    code: 'grossiste',
+    name: 'Commerce de Gros',
+    description: 'Vente en gros avec multi-tarifs selon le volume et la fidélité client',
+    defaultFlags: { hasVariants: true, unitType: 'weight' },
+    visibleSections: ['variants', 'weight'] as string[],
+    suggestedCategories: ['Alimentaire', 'Cosmétique', 'Textile', 'Quincaillerie', 'Électronique'] as string[],
+    documentType: 'delivery_note',
+    roleLabels: { commercial: 'Commercial', manager: 'Responsable dépôt', cashier: 'Opérateur' },
+    icon: 'warehouse',
+    vertical: 'retail',
+  },
+  {
+    code: 'distribution',
+    name: 'Commerce de Distribution',
+    description: 'Vente en gros avec livraison clients et bons de livraison',
+    defaultFlags: { hasVariants: true },
+    visibleSections: ['variants'] as string[],
+    suggestedCategories: ['Alimentaire', 'Boissons', 'Hygiène', 'Nettoyage', 'Épicerie fine'] as string[],
+    documentType: 'delivery_note',
+    roleLabels: { commercial: 'Commercial terrain', manager: 'Directeur dépôt', cashier: 'Opérateur' },
+    icon: 'local_shipping',
+    vertical: 'retail',
+  },
+  {
+    code: 'cafe_restaurant',
+    name: 'Café & Restauration Rapide',
+    description: 'Vente de plats préparés, boissons, snacks au comptoir',
+    defaultFlags: { expiryDays: 1, unitType: 'piece' },
+    visibleSections: ['expiry', 'freshness'] as string[],
+    suggestedCategories: ['Plats du jour', 'Sandwichs', 'Boissons chaudes', 'Boissons fraîches', 'Snacks', 'Desserts'] as string[],
+    documentType: 'receipt',
+    roleLabels: { owner: 'Gérant', manager: 'Chef cuisinier', commercial: 'Serveur', cashier: 'Caissier' },
+    icon: 'restaurant',
+    vertical: 'retail',
+  },
+];
+
+async function seedBusinessTypes() {
+  console.log('Seeding business type definitions...');
+  for (const bt of BUSINESS_TYPES) {
+    const data = {
+      name: bt.name,
+      description: bt.description,
+      defaultFlags: bt.defaultFlags,
+      visibleSections: bt.visibleSections,
+      suggestedCategories: bt.suggestedCategories,
+      documentType: bt.documentType,
+      roleLabels: bt.roleLabels,
+      icon: bt.icon,
+      vertical: bt.vertical,
+      isActive: true,
+    };
+    await (prisma as any).businessTypeDefinition.upsert({
+      where: { code: bt.code },
+      update: data,
+      create: { code: bt.code, ...data },
+    });
+  }
+  console.log(`  ✓ ${BUSINESS_TYPES.length} business type definitions seeded`);
+
+  // Remove types that are no longer in the retail list (non-retail verticals removed)
+  const validCodes = BUSINESS_TYPES.map((bt) => bt.code);
+  const removed = await (prisma as any).businessTypeDefinition.deleteMany({
+    where: { code: { notIn: validCodes } },
+  });
+  if (removed.count > 0) {
+    console.log(`  ✓ Removed ${removed.count} non-retail business type(s)`);
+  }
 }
 
 async function main() {
@@ -197,6 +425,9 @@ async function main() {
 
   // Seed billing plan definitions
   await seedPlans();
+
+  // Seed business type definitions
+  await seedBusinessTypes();
 
   // Create a tenant for development
   let tenant = await prisma.tenant.findFirst();

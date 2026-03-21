@@ -45,6 +45,11 @@ model Tenant {
   returnRequiresReason     Boolean           @default(true) @map("return_requires_reason")
   returnRequiresApproval   Boolean           @default(false) @map("return_requires_approval")
 
+  /// Epic 29 — Business Type (FR104–FR106)
+  businessType             String            @default("generaliste") @map("business_type")
+  /// Epic 29 — Vertical (retail | artisan | restaurant | services — Phase 3+)
+  vertical                 String            @default("retail")
+
   /// Epic 28 — Billing (FR100–FR103)
   plan                     String            @default("free")
   maxUsers                 Int               @default(1) @map("max_users")
@@ -56,6 +61,7 @@ model Tenant {
   billingStatus            String            @default("trial") @map("billing_status") // trial | active | overdue | suspended
   trialEndsAt              DateTime?         @map("trial_ends_at") @db.Timestamptz(6)
   overdueAt                DateTime?         @map("overdue_at") @db.Timestamptz(6)
+  paidUntil                DateTime?         @map("paid_until") @db.Timestamptz(6)
   notes                    String?
   billingEvents            BillingEvent[]
 
@@ -69,6 +75,32 @@ model Tenant {
   expenses              Expense[]
 
   @@map("tenants")
+  @@schema("kernel")
+}
+
+// ─── Epic 29+30: FR104–FR106, FR109, FR111 — Business Type Definitions ──────────
+model BusinessTypeDefinition {
+  id                  String   @id @default(uuid()) @db.Uuid
+  // code: 'generaliste' | 'epicerie' | 'telephonie' | 'textile' | 'pharmacie' | 'quincaillerie'
+  //      | 'electromenager' | 'cave_vin' | 'bijouterie' | 'depot_vente' | 'boulangerie'
+  //      | 'station_service' | 'grossiste' | 'distribution'
+  code                String   @unique
+  name                String
+  description         String?
+  defaultFlags        Json     @default("{}") @map("default_flags")
+  visibleSections     String[] @map("visible_sections")
+  suggestedCategories String[] @map("suggested_categories")
+  icon                String?
+  isActive            Boolean  @default(true) @map("is_active")
+  // Epic 30 — FR111: role display labels per business type (owner key ignored by UI)
+  roleLabels          Json     @default("{}") @map("role_labels")
+  // Epic 30 — FR109: delivery document type ('receipt' | 'delivery_note' | 'invoice')
+  documentType        String   @default("receipt") @map("document_type")
+  // Phase 3+ — vertical discriminator: 'retail' | 'artisan' | 'restaurant' | 'services'
+  vertical            String   @default("retail")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("business_type_definitions")
   @@schema("kernel")
 }
 
@@ -93,7 +125,7 @@ model PlanDefinition {
 model BillingEvent {
   id            String    @id @default(uuid()) @db.Uuid
   tenantId      String    @map("tenant_id") @db.Uuid
-  type          String    // subscription | installation | training | upgrade | downgrade | payment | upgrade_request
+  type          String    // subscription | installation | training | upgrade | downgrade | payment | upgrade_request | activation | invoice
   amount        Decimal   @db.Decimal(10, 0)
   description   String?
   paidAt        DateTime? @map("paid_at") @db.Timestamptz(6)
@@ -101,6 +133,9 @@ model BillingEvent {
   status        String    @default("pending") // pending | paid | overdue | cancelled
   paymentMethod String?   @map("payment_method") // cash | mobile_money | card | bank_transfer
   paymentRef    String?   @map("payment_ref")
+  invoiceNumber String?   @map("invoice_number") // FAC-2026-03-001
+  receiptNumber String?   @map("receipt_number")  // REC-2026-03-001
+  monthsPaid    Int?      @map("months_paid")     // for subscription events: number of months paid
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   tenant        Tenant    @relation(fields: [tenantId], references: [id])
 
@@ -395,6 +430,47 @@ model Reservation {
   @@schema("shared")
 }
 
+// ── Epic 30 — Commandes Clients (FR107–FR110) ─────────────────────────────
+
+model ClientOrder {
+  id                  String            @id @default(uuid()) @db.Uuid
+  orderNumber         String            @unique @map("order_number") // CO-XXXX — auto-incremented per tenant
+  tenantId            String            @map("tenant_id") @db.Uuid
+  customerId          String            @map("customer_id") @db.Uuid
+  // status: 'draft' | 'confirmed' | 'in-progress' | 'ready' | 'delivered' | 'invoiced' | 'paid' | 'cancelled'
+  status              String            @default("draft")
+  depositAmount       Decimal?          @db.Decimal(10, 2) @map("deposit_amount")
+  depositPaidAt       DateTime?         @map("deposit_paid_at") @db.Timestamptz(6)
+  notes               String?
+  desiredDeliveryDate DateTime?         @map("desired_delivery_date") @db.Date
+  createdBy           String            @map("created_by") @db.Uuid
+  preparedBy          String?           @map("prepared_by") @db.Uuid
+  deliveredBy         String?           @map("delivered_by") @db.Uuid
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  deliveredAt         DateTime?         @map("delivered_at") @db.Timestamptz(6)
+  lines               ClientOrderLine[]
+
+  @@index([tenantId, status])
+  @@index([customerId])
+  @@map("client_orders")
+  @@schema("shared")
+}
+
+model ClientOrderLine {
+  id            String      @id @default(uuid()) @db.Uuid
+  clientOrderId String      @map("client_order_id") @db.Uuid
+  clientOrder   ClientOrder @relation(fields: [clientOrderId], references: [id])
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  variantId     String?     @map("variant_id") @db.Uuid
+  quantity      Decimal     @db.Decimal(10, 3)
+  unitPrice     Decimal     @db.Decimal(10, 2) @map("unit_price")
+  deliveredQty  Decimal     @default(0) @db.Decimal(10, 3) @map("delivered_qty")
+
+  @@index([clientOrderId])
+  @@map("client_order_lines")
+  @@schema("shared")
+}
+
 model Transaction {
   id              String   @id @default(uuid()) @db.Uuid
   totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
@@ -423,7 +499,7 @@ model Transaction {
 model InventoryMovement {
   id            String   @id @default(uuid()) @db.Uuid
   catalogItemId String?  @map("catalog_item_id") @db.Uuid
-  // Valid values: 'SALE' | 'DELIVERY' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'LOSS' | 'ADJUSTMENT'
+  // Valid values: 'SALE' | 'DELIVERY' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'LOSS' | 'ADJUSTMENT' | 'RESERVATION' | 'RESERVATION_RELEASE'
   type          String
   quantity      Decimal  @db.Decimal(10, 2)
   reason        String?

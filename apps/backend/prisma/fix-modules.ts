@@ -18,16 +18,23 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const TARGET_MODULES = [
-  { code: 'catalog',      name: 'Catalogue',    type: 'shared',   dependencies: [] },
-  { code: 'contacts',     name: 'Contacts',     type: 'shared',   dependencies: [] },
-  { code: 'inventory',    name: 'Inventaire',   type: 'shared',   dependencies: ['catalog'] },
-  { code: 'transactions', name: 'Transactions', type: 'shared',   dependencies: ['catalog', 'contacts'] },
-  { code: 'expenses',     name: 'Dépenses',     type: 'shared',   dependencies: [] },
-  { code: 'reports',      name: 'Rapports',     type: 'shared',   dependencies: ['transactions'] },
-  { code: 'retail',       name: 'Retail',       type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions', 'contacts'] },
+  { code: 'catalog',           name: 'Catalogue',                type: 'shared',   dependencies: [] },
+  { code: 'clients',           name: 'Clients',                  type: 'shared',   dependencies: [] },
+  { code: 'inventory',         name: 'Inventaire & Stock',       type: 'shared',   dependencies: ['catalog'] },
+  { code: 'transactions',      name: 'Transactions & Ventes',    type: 'shared',   dependencies: ['catalog', 'clients'] },
+  { code: 'expenses',          name: 'Dépenses & Charges',       type: 'shared',   dependencies: [] },
+  { code: 'reports',           name: 'Rapports & KPI',           type: 'shared',   dependencies: ['transactions'] },
+  { code: 'variants',          name: 'Variantes Produit',        type: 'shared',   dependencies: ['catalog'] },
+  { code: 'pricing',           name: 'Multi-Tarifs',             type: 'shared',   dependencies: ['catalog'] },
+  { code: 'promotions',        name: 'Promotions & Remises',     type: 'shared',   dependencies: ['catalog'] },
+  { code: 'purchase_orders',   name: 'Commandes Fournisseurs',   type: 'shared',   dependencies: ['catalog', 'clients', 'inventory'] },
+  { code: 'internal_requests', name: 'Demandes Internes',        type: 'shared',   dependencies: ['catalog', 'inventory'] },
+  { code: 'batches',           name: 'Lots & Fraîcheur',         type: 'shared',   dependencies: ['catalog', 'inventory'] },
+  { code: 'client_orders',     name: 'Commandes Clients',        type: 'shared',   dependencies: ['catalog', 'clients', 'transactions'] },
+  { code: 'retail',            name: 'Point de Vente (POS)',     type: 'vertical', dependencies: ['catalog', 'inventory', 'transactions', 'clients'] },
 ];
 
-const OBSOLETE_CODES = ['pos', 'reporting', 'dashboard', 'connect', 'enterprise'];
+const OBSOLETE_CODES = ['pos', 'reporting', 'dashboard', 'connect', 'enterprise', 'contacts'];
 
 async function main() {
   console.log('\n🔧 fix-modules\n');

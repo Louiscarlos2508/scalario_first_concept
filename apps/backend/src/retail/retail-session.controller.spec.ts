@@ -109,7 +109,7 @@ describe('RetailSessionController', () => {
 
       const result = await controller.getSessionReports(TENANT_ID);
 
-      expect(mockPosSessionService.getSessionReports).toHaveBeenCalledWith(TENANT_ID);
+      expect(mockPosSessionService.getSessionReports).toHaveBeenCalledWith(TENANT_ID, undefined, undefined);
       expect(result).toEqual(reports);
     });
   });

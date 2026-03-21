@@ -12,6 +12,10 @@ import 'package:frontend/features/shared/stock_alerts/presentation/providers/sto
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
+import 'package:frontend/features/shared/client_orders/domain/models/client_order.dart'
+    show ClientOrderKpis;
+import 'package:frontend/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 /// Dashboard KPI card grid panel.
 /// Registered as SDUI type `kpi_card_grid`.
@@ -27,10 +31,18 @@ class KpiCardGrid extends ConsumerWidget {
     final stockAlertCountAsync = ref.watch(stockAlertCountProvider);
     final urgentBatchAsync = ref.watch(urgentBatchCountProvider);
     final reservationsKpiAsync = ref.watch(reservationsKpiProvider);
+    final clientOrderKpisAsync = ref.watch(clientOrderKpisProvider);
     final activeClientCountAsync = ref.watch(activeClientCountProvider);
     final lowStockCountAsync = ref.watch(lowStockCountProvider);
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
     final canSeeStockAlerts = role == 'owner' || role == 'manager';
+    final visibleSections = ref
+        .watch(businessTypeConfigProvider)
+        .valueOrNull
+        ?.visibleSections ?? [];
+    final freshnessRelevant = visibleSections.isEmpty ||
+        visibleSections.contains('freshness') ||
+        visibleSections.contains('expiry');
 
     return statsAsync.when(
       data: (stats) {
@@ -156,8 +168,44 @@ class KpiCardGrid extends ConsumerWidget {
                   showWarning: (stockAlertCountAsync.valueOrNull ?? 0) > 0,
                   onTap: () => ref.read(dashboardNavigationProvider.notifier).state = 'inventory',
                 ),
-              // AC4 (Story 24-3) — Lots urgents KPI card
-              if (canSeeStockAlerts)
+              // Story 30-6 — Commandes clients KPI cards (FR110)
+              if (canSeeStockAlerts) ...[
+                _KpiCard(
+                  key: const Key('kpi_client_orders'),
+                  icon: Icons.assignment_outlined,
+                  label: 'Commandes en cours',
+                  value: clientOrderKpisAsync.when(
+                    data: (ClientOrderKpis kpis) => '${kpis.inProgressCount}',
+                    loading: () => '…',
+                    error: (_, _) => '--',
+                  ),
+                  iconColor: AppColors.primary,
+                  onTap: () => ref
+                      .read(dashboardNavigationProvider.notifier)
+                      .state = 'Commandes',
+                ),
+                _KpiCard(
+                  key: const Key('kpi_client_orders_revenue'),
+                  icon: Icons.monetization_on_outlined,
+                  label: 'CA en attente',
+                  value: clientOrderKpisAsync.when(
+                    data: (ClientOrderKpis kpis) => NumberFormat.currency(
+                            locale: 'fr_FR',
+                            symbol: 'FCFA',
+                            decimalDigits: 0)
+                        .format(kpis.pendingRevenue),
+                    loading: () => '…',
+                    error: (_, _) => '--',
+                  ),
+                  iconColor: AppColors.success,
+                  onTap: () => ref
+                      .read(dashboardNavigationProvider.notifier)
+                      .state = 'Commandes',
+                ),
+              ],
+              // AC4 (Story 24-3) — Lots urgents KPI card: hide when 0 and freshness irrelevant
+              if (canSeeStockAlerts &&
+                  (freshnessRelevant || (urgentBatchAsync.valueOrNull ?? 0) > 0))
                 _KpiCard(
                   key: const Key('kpi_lots_urgents'),
                   icon: Icons.eco_outlined,

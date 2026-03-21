@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/retail/pos/data/models/cart_item.dart';
 import 'package:frontend/features/retail/pos/data/models/order.dart';
@@ -26,12 +27,12 @@ void main() {
         ..unitLabel = 'kg'
         ..pricePerUnit = 1500.0;
 
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         home: ReceiptDialog(
           order: _buildOrder(items: [item]),
           tenantName: 'Test Shop',
         ),
-      ));
+      )));
 
       // "1.5 kg" should appear
       expect(find.textContaining('1.5'), findsWidgets);
@@ -51,12 +52,12 @@ void main() {
         ..unitLabel = 'kg'
         ..pricePerUnit = 1500.0;
 
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         home: ReceiptDialog(
           order: _buildOrder(items: [item]),
           tenantName: 'Test Shop',
         ),
-      ));
+      )));
 
       // Total line = 1500 × 1.5 = 2250 → shown as "2 250"
       expect(find.textContaining('2\u202f250'), findsWidgets);
@@ -69,12 +70,12 @@ void main() {
         ..price = 500.0
         ..unitType = 'piece';
 
-      await tester.pumpWidget(MaterialApp(
+      await tester.pumpWidget(ProviderScope(child: MaterialApp(
         home: ReceiptDialog(
           order: _buildOrder(items: [item]),
           tenantName: 'Test Shop',
         ),
-      ));
+      )));
 
       expect(find.textContaining('x3'), findsWidgets);
     });

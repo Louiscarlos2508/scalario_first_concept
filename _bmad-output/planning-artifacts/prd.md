@@ -14,7 +14,7 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '6.5'
+version: '6.6'
 date: '2026-03-11'
 lastEdited: '2026-03-19'
 editHistory:
@@ -52,7 +52,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 6.5** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+**Version 6.6** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
 
 Confidentiel — Carlos-simpore
 
@@ -73,6 +73,7 @@ Confidentiel — Carlos-simpore
 | 6.3 | 2026-03-19 | Carlos-simpore | Ajout FR98–FR99 (Retours & Réservations) : retour article au POS avec politique tenant configurable — remboursement/avoir/échange, réintégration stock RETURN (FR98, Phase 2a) ; réservation avec acompte partiel configurable, suivi solde client, KPI dashboard (FR99, Phase 2b). Mise à jour phases 2a/2b, Table des matières FR1–FR99. |
 | 6.4 | 2026-03-20 | Carlos-simpore | Ajout FR100–FR103 (Plans Tarifaires & Facturation) : plan tarifaire par tenant avec PlanDefinition — free/standard/premium/enterprise, changement plan auto-applique modules et maxUsers, downgrade avec confirmation (FR100, Phase 2a) ; frais d'installation/formation + statuts facturation trial/active/overdue/suspended + suspension auto configurable (FR101, Phase 2a) ; consultation plan et demande upgrade par propriétaire tenant (FR102, Phase 2a — self-service préparé Phase 3) ; paiement en ligne Mobile Money/carte + onboarding self-service + auto-provisioning tenant (FR103, Phase 3). Architecture anticipée dès Phase 2a (champs Tenant + PlanDefinition). Mise à jour phases 2a et 3, Table des matières FR1–FR103. |
 | 6.5 | 2026-03-20 | Carlos-simpore | Ajout FR104–FR106 (Configuration Business Type) : BusinessTypeDefinition configurable sans déploiement — code unique, nom, flags produit par défaut (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), sections visibles dans le formulaire produit, catégories suggérées, icône admin (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — champs pertinents prioritaires et pré-remplis, champs non-pertinents masqués avec toggle "Afficher plus d'options", override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). 13 types seedés (généraliste, épicerie, téléphonie, textile, pharmacie, quincaillerie, électroménager, cave à vin, bijouterie, dépôt-vente, boulangerie, station service, grossiste). Mise à jour Phase 2a, Table des matières FR1–FR106. |
+| 6.6 | 2026-03-20 | Carlos-simpore | Ajout FR107–FR111 : Commandes clients avec lifecycle complet draft→paid, lignes produit avec variantes et quantités réelles livrées, document de livraison configurable par business type (FR107–FR109, Phase 2a) ; dashboard commandes en cours + paiements partiels + solde client (FR110, Phase 2a) ; labels de rôle par business type (commercial → "Chauffeur-livreur", etc.) via BusinessTypeDefinition.roleLabels (FR111, Phase 2a). Ajout business type "distribution" (14e type). Mise à jour Phase 2a, Table des matières FR1–FR111. |
 
 ---
 
@@ -98,7 +99,7 @@ Confidentiel — Carlos-simpore
 | 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
 | 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
 | 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
-| 19 | Exigences Fonctionnelles (FR1–FR106) | Toutes les exigences numérotées par module |
+| 19 | Exigences Fonctionnelles (FR1–FR111) | Toutes les exigences numérotées par module |
 | 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
 | 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
 | 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
@@ -204,6 +205,8 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 - Plans tarifaires et facturation admin (FR100–FR101)
 - Consultation plan par le propriétaire (FR102)
 - Types de business configurables (FR104–FR106)
+- Commandes clients (FR107–FR110)
+- Labels de rôle par business type (FR111)
 
 ### Phase 2b — Croissance
 
@@ -221,13 +224,50 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 ### Phase 3 — Expansion
 
 - Promotions configurables (remise %, X+Y gratuit, prix barré temporaire) (FR91)
-- Deuxième vertical (Pharmacie ou Services)
 - Scalario Connect — Interconnexion inter-entreprises (voir section dédiée)
 - Scalario Enterprise — Modèle multi-départements PME : RH & Paie, Comptabilité OHADA, Secrétariat, Logistique (voir section dédiée)
 - Paiement en ligne + onboarding self-service (FR103)
 - Facturation et abonnement intégrés
 - Reporting avancé, prédictions IA
 - Open API, multi-devises, expansion internationale
+- Verticaux non-retail (Artisan, Restaurant, Services — voir ci-dessous)
+
+### Verticaux Futurs (Phase 3+)
+
+Chaque vertical réutilise les modules shared (catalog, contacts, inventory, transactions, expenses, reports) et ajoute ses modules spécifiques. Chaque vertical a ses propres business types configurés dans `BusinessTypeDefinition` avec le champ `vertical` correspondant. Le champ `vertical` est déjà présent dans le schéma (Phase 2a anticipation) et vaut `"retail"` pour tous les types actuels.
+
+**Vertical Artisan / Atelier** — Fabrication sur commande
+
+Business types prévus : `tailleur`, `menuisier`, `forgeron`, `cordonnier`, `imprimeur`, `artisan_general`
+
+Modules spécifiques :
+- `models_gallery` : catalogue modèles/designs avec photos
+- `client_specs` : mesures et spécifications par client
+- `quotation` : devis (matériaux + main d'œuvre + marge)
+- `work_order` : commande fabrication avec étapes (kanban)
+- `material_consumption` : nomenclature (BOM) + consommation stock
+- `workshop_planning` : planning atelier, file d'attente, dates
+
+**Vertical Restaurant** — Service en salle
+
+Business types prévus : `restaurant`, `fast_food`, `bar`, `traiteur`
+
+Modules spécifiques :
+- `table_management` : plan de salle, attribution tables
+- `kitchen_display` : tickets cuisine, statut préparation
+- `menu_builder` : formules, menus du jour, suggestions
+- `tips` : pourboires par serveur
+
+**Vertical Services** — Prestations pures
+
+Business types prévus : `salon_coiffure`, `lavage_auto`, `cyber_cafe`, `photographe`, `services_general`
+
+Modules spécifiques :
+- `appointment` : prise de rendez-vous, planning
+- `service_catalog` : prestations avec durée et tarif
+- `client_history` : historique prestations par client
+
+> **Note :** Ces verticaux ne sont PAS implémentés en Phase 2. Ils sont documentés pour que l'architecture shared/vertical reste cohérente et que les modules shared soient réutilisables par tous les verticaux. Le champ `vertical` sur `BusinessTypeDefinition` permet d'ajouter ces types sans migration de schéma.
 
 ---
 
@@ -1117,6 +1157,56 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 > Le propriétaire garde le contrôle total sur chaque produit.
 > Un tenant "téléphonie" peut vendre des fruits — il suffit d'activer
 > expiryDays sur ce produit spécifique.
+
+---
+
+### Commandes Clients (FR107–FR110)
+
+- **FR107 :** Le commercial peut créer une commande client depuis
+  le backoffice ou le POS. La commande contient : client (Contact),
+  liste de produits avec quantités et prix, date de livraison souhaitée,
+  mode de paiement prévu (comptant, crédit, partiel), et notes.
+  Chaque commande a un numéro unique auto-généré. Si le produit a
+  hasVariants: true, la variante est obligatoire. Si unitType != "piece",
+  la quantité est en unité du produit (kg, litre, etc.).
+  Statuts : draft → confirmed → preparing → ready → delivered → invoiced → paid.
+  *(Phase 2a — bloquant pour grossiste/distribution)*
+
+- **FR108 :** Le gestionnaire/propriétaire peut valider une commande
+  (draft → confirmed). La validation vérifie la disponibilité du stock
+  et alerte si stock insuffisant (sans bloquer — le propriétaire décide).
+  Le gestionnaire prépare la commande (confirmed → preparing → ready)
+  en cochant chaque ligne préparée. Le système réserve le stock
+  des lignes préparées (StockMovement type RESERVED). *(Phase 2a)*
+
+- **FR109 :** Le commercial enregistre la livraison (ready → delivered).
+  Il saisit les quantités réellement livrées (variance possible).
+  La livraison génère automatiquement une transaction de vente liée
+  à la commande. Le document généré est configurable par business type :
+  "Ticket de caisse" (défaut), "Bon de livraison", ou "Facture".
+  Le type de document est défini dans BusinessTypeDefinition.documentType.
+  Le stock réservé est converti en stock sorti (RESERVED → SALE). *(Phase 2a)*
+
+- **FR110 :** Le propriétaire peut consulter les commandes en cours
+  dans le backoffice : liste filtrable par statut, client, date.
+  KPI dashboard : "Commandes en cours" (count), "CA en attente" (somme).
+  Le client peut payer en plusieurs fois (paiements partiels enregistrés
+  sur la commande). Le solde restant est visible sur la fiche client.
+  *(Phase 2a)*
+
+---
+
+### Labels de Rôle par Business Type (FR111)
+
+- **FR111 :** Chaque BusinessTypeDefinition inclut un champ roleLabels
+  (Json) qui mappe les codes de rôle prédéfinis (owner, manager,
+  commercial, cashier) à des labels métier affichés dans l'UI.
+  Exemples : "commercial" → "Chauffeur-livreur" (distribution),
+  "manager" → "Pharmacien adjoint" (pharmacie).
+  Les rôles sous-jacents (permissions, routing) ne changent pas —
+  seul le label affiché change. Le panel admin utilise ces labels
+  dans le dropdown de création d'utilisateur. Le backoffice utilise
+  ces labels dans les rapports et l'historique. *(Phase 2a)*
 
 ---
 

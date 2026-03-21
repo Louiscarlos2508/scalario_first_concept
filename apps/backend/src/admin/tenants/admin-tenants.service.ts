@@ -2,11 +2,13 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseAdminService } from '../services/supabase-admin.service';
 import { ModuleRegistryService } from '../../kernel/modules/module-registry.service';
+import { BusinessTypeService } from '../business-type/business-type.service';
 
 const VALID_STATUSES = ['active', 'suspended', 'archived'] as const;
 type TenantStatus = (typeof VALID_STATUSES)[number];
@@ -18,6 +20,9 @@ export class CreateTenantDto {
   currency?: string;
   timezone?: string;
   billingStatus?: 'trial' | 'active';
+  plan?: string;
+  businessType?: string;
+  vertical?: string;
 }
 
 export class UpdateTenantDto {
@@ -29,10 +34,13 @@ export class UpdateTenantDto {
 
 @Injectable()
 export class AdminTenantsService {
+  private readonly logger = new Logger(AdminTenantsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly supabaseAdmin: SupabaseAdminService,
     private readonly moduleRegistry: ModuleRegistryService,
+    private readonly businessTypeService: BusinessTypeService,
   ) {}
 
   async createTenant(dto: CreateTenantDto) {
@@ -42,6 +50,17 @@ export class AdminTenantsService {
     }
     if (!dto.ownerPassword || dto.ownerPassword.length < 8) {
       throw new BadRequestException('ownerPassword must be at least 8 characters');
+    }
+
+    const vertical = dto.vertical ?? 'retail';
+    const businessType = dto.businessType ?? 'generaliste';
+
+    // Validate businessType belongs to the requested vertical
+    const btDef = await this.prisma.businessTypeDefinition.findUnique({
+      where: { code: businessType },
+    });
+    if (!btDef || !btDef.isActive || btDef.vertical !== vertical) {
+      throw new BadRequestException('Business type invalide pour ce vertical');
     }
 
     // Step 1 — Create Supabase Auth user
@@ -55,9 +74,10 @@ export class AdminTenantsService {
     }
 
     // Step 2 — Create tenant in Prisma (with compensation on failure)
-    let tenant: { id: string; name: string; currency: string; timezone: string; status: string };
+    let tenant: { id: string; name: string; currency: string; timezone: string; status: string; businessType: string; vertical: string };
     try {
       const billingStatus = dto.billingStatus ?? 'trial';
+      const plan = dto.plan ?? 'standard';
       const trialEndsAt = billingStatus === 'trial'
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         : null;
@@ -67,10 +87,11 @@ export class AdminTenantsService {
           currency: dto.currency ?? 'XOF',
           timezone: dto.timezone ?? 'Africa/Ouagadougou',
           status: 'active',
-          plan: 'free',
-          maxUsers: 1,
+          plan,
           billingStatus,
           trialEndsAt,
+          businessType,
+          vertical,
         },
       });
     } catch (err) {
@@ -97,8 +118,15 @@ export class AdminTenantsService {
         },
       });
 
-      // Step 4 — Activate default modules for the plan (free on creation)
-      await this.moduleRegistry.activateDefaultModulesForTenant(tenant.id, 'free');
+      // Step 4 — Activate default modules
+      // Trial → always activate STANDARD modules regardless of chosen plan
+      // Enterprise → Carlos activates manually from the panel
+      const planForModules = (dto.billingStatus ?? 'trial') === 'trial'
+        ? 'standard'
+        : (dto.plan ?? 'standard');
+      if (planForModules !== 'enterprise') {
+        await this.moduleRegistry.activateDefaultModulesForTenant(tenant.id, planForModules);
+      }
     } catch (err) {
       // Compensate: delete tenant and Supabase user
       await this.prisma.tenant
@@ -110,6 +138,13 @@ export class AdminTenantsService {
       );
     }
 
+    // Step 5 — Seed suggested categories for the business type (non-blocking)
+    this.businessTypeService
+      .seedCategories(tenant.id, businessType)
+      .catch((err) =>
+        this.logger.warn(`seedCategories failed for tenant ${tenant.id}: ${err.message}`),
+      );
+
     return {
       tenantId: tenant.id,
       userId,
@@ -117,6 +152,7 @@ export class AdminTenantsService {
       currency: tenant.currency,
       timezone: tenant.timezone,
       status: tenant.status,
+      businessType: tenant.businessType,
       modulesActivated: ['catalog', 'inventory', 'transactions', 'retail'],
     };
   }
@@ -145,6 +181,10 @@ export class AdminTenantsService {
         .map((tm) => tm.module.code),
       plan: t.plan,
       billingStatus: t.billingStatus,
+      trialEndsAt: t.trialEndsAt,
+      paidUntil: (t as any).paidUntil ?? null,
+      businessType: t.businessType,
+      vertical: t.vertical,
     }));
   }
 

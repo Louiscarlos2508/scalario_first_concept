@@ -6,10 +6,11 @@ import 'package:frontend/features/retail/pos/data/models/order.dart';
 import 'package:intl/intl.dart';
 
 class ReceiptService {
-  static Future<void> generateAndPrintReceipt(CartState cart, String tenantName) async {
+  static Future<void> generateAndPrintReceipt(CartState cart, String tenantName, {String documentType = 'receipt'}) async {
     final now = DateTime.now();
     await _generatePdf(
       tenantName: tenantName,
+      documentType: documentType,
       date: now,
       orderRef: cart.id?.toString() ?? 'NEW-${now.millisecondsSinceEpoch}',
       paymentMethod: cart.paymentMethod,
@@ -27,9 +28,10 @@ class ReceiptService {
     );
   }
 
-  static Future<void> printOrder(Order order, String tenantName) async {
+  static Future<void> printOrder(Order order, String tenantName, {String documentType = 'receipt'}) async {
     await _generatePdf(
       tenantName: tenantName,
+      documentType: documentType,
       date: order.createdAt,
       orderRef: order.uuid.substring(0, 8),
       paymentMethod: order.paymentMethod ?? 'CASH',
@@ -47,8 +49,15 @@ class ReceiptService {
     );
   }
 
+  static String _headerText(String documentType) => switch (documentType) {
+    'delivery_note' => 'BON DE LIVRAISON',
+    'invoice' => 'FACTURE',
+    _ => 'OFFICIAL RECEIPT',
+  };
+
   static Future<void> _generatePdf({
     required String tenantName,
+    String documentType = 'receipt',
     required DateTime date,
     required String orderRef,
     required String paymentMethod,
@@ -74,7 +83,7 @@ class ReceiptService {
                   children: [
                     pw.Text(tenantName, style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                     pw.SizedBox(height: 2),
-                    pw.Text('OFFICIAL RECEIPT', style: const pw.TextStyle(fontSize: 8)),
+                    pw.Text(_headerText(documentType), style: const pw.TextStyle(fontSize: 8)),
                     pw.SizedBox(height: 10),
                   ],
                 ),

@@ -5,6 +5,9 @@ class CreateTenantDto {
   final String currency;
   final String timezone;
   final String billingStatus;
+  final String plan;
+  final String businessType;
+  final String vertical;
 
   const CreateTenantDto({
     required this.name,
@@ -13,6 +16,9 @@ class CreateTenantDto {
     this.currency = 'XOF',
     this.timezone = 'Africa/Ouagadougou',
     this.billingStatus = 'trial',
+    this.plan = 'standard',
+    this.businessType = 'generaliste',
+    this.vertical = 'retail',
   });
 
   Map<String, dynamic> toJson() => {
@@ -22,5 +28,8 @@ class CreateTenantDto {
         'currency': currency,
         'timezone': timezone,
         'billingStatus': billingStatus,
+        'plan': plan,
+        'businessType': businessType,
+        'vertical': vertical,
       };
 }

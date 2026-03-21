@@ -51,8 +51,9 @@ export class ContactsService {
     since?: string;
     page?: number;
     limit?: number;
+    contactType?: string;
   }) {
-    const { tenantId, since, page = 1, limit = 100 } = params;
+    const { tenantId, since, page = 1, limit = 100, contactType } = params;
     const skip = (page - 1) * limit;
 
     const where: any = since
@@ -60,6 +61,7 @@ export class ContactsService {
       : { isDeleted: false };
 
     if (tenantId) where.tenantId = tenantId;
+    if (contactType) where.contactType = contactType;
 
     const serverTime = new Date().toISOString();
 
@@ -85,18 +87,17 @@ export class ContactsService {
     };
   }
 
-  async searchContacts(tenantId: string, query: string) {
-    return this.prisma.contact.findMany({
-      where: {
-        tenantId,
-        isDeleted: false,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { phone: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      take: 20,
-    });
+  async searchContacts(tenantId: string, query: string, contactType?: string) {
+    const where: any = {
+      tenantId,
+      isDeleted: false,
+      OR: [
+        { name: { contains: query, mode: 'insensitive' } },
+        { phone: { contains: query, mode: 'insensitive' } },
+      ],
+    };
+    if (contactType) where.contactType = contactType;
+    return this.prisma.contact.findMany({ where, take: 20 });
   }
 
   async getContactById(id: string) {

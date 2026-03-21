@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/constants/api_constants.dart';
+import '../models/business_type_summary.dart';
 import '../models/create_tenant_dto.dart';
 import '../models/monitoring_health.dart';
 import '../models/tenant_module_status.dart';
@@ -279,6 +280,142 @@ class AdminApiService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     throw Exception('Failed to record billing event: HTTP ${response.statusCode}');
+  }
+
+  // ── Business Types ────────────────────────────────────────────────────────
+
+  Future<List<BusinessTypeSummary>> fetchBusinessTypes({required String token}) async {
+    final response = await _client.get(
+      Uri.parse('${ApiConstants.baseUrl}/admin/business-types'),
+      headers: ApiConstants.headers(token: token),
+    );
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List;
+      return list
+          .map((e) => BusinessTypeSummary.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw Exception('Failed to fetch business types: HTTP ${response.statusCode}');
+  }
+
+  Future<void> assignBusinessType(
+    String tenantId,
+    String businessType, {
+    required String token,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/business-type'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode({'businessType': businessType}),
+    );
+    if (response.statusCode == 200) return;
+    throw Exception('Failed to assign business type: HTTP ${response.statusCode}');
+  }
+
+  Future<void> activateTenant(
+    String tenantId, {
+    required String planCode,
+    double? installationFee,
+    double? trainingFee,
+    String? billingStartDate,
+    required String token,
+  }) async {
+    final body = <String, dynamic>{'planCode': planCode};
+    if (installationFee != null) body['installationFee'] = installationFee;
+    if (trainingFee != null) body['trainingFee'] = trainingFee;
+    if (billingStartDate != null) body['billingStartDate'] = billingStartDate;
+
+    final response = await _client.patch(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/activate'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 200) return;
+    throw Exception('Failed to activate tenant: HTTP ${response.statusCode} — ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> getBillingSummary({required String token}) async {
+    final response = await _client.get(
+      Uri.parse('${ApiConstants.baseUrl}/admin/billing/summary'),
+      headers: ApiConstants.headers(token: token),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to fetch billing summary: HTTP ${response.statusCode}');
+  }
+
+  Future<List<Map<String, dynamic>>> listAllBillingEvents({
+    String? tenantId,
+    String? type,
+    String? status,
+    required String token,
+  }) async {
+    final query = <String, String>{};
+    if (tenantId != null) query['tenantId'] = tenantId;
+    if (type != null) query['type'] = type;
+    if (status != null) query['status'] = status;
+
+    final uri = Uri.parse('${ApiConstants.baseUrl}/admin/billing/events')
+        .replace(queryParameters: query.isNotEmpty ? query : null);
+    final response = await _client.get(uri, headers: ApiConstants.headers(token: token));
+    if (response.statusCode == 200) {
+      final list = jsonDecode(response.body) as List;
+      return list.cast<Map<String, dynamic>>();
+    }
+    throw Exception('Failed to fetch billing events: HTTP ${response.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> updateBillingEventStatus(
+    String eventId,
+    String status, {
+    required String token,
+  }) async {
+    final response = await _client.patch(
+      Uri.parse('${ApiConstants.baseUrl}/admin/billing/events/$eventId'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode({'status': status}),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to update event status: HTTP ${response.statusCode}');
+  }
+
+  Future<Map<String, dynamic>> generateInvoice(
+    String tenantId, {
+    required String token,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/billing/generate-invoice/$tenantId'),
+      headers: ApiConstants.headers(token: token),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to generate invoice: HTTP ${response.statusCode} — ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> generateReceipt(
+    String eventId, {
+    required String paymentMethod,
+    String? paymentRef,
+    String? paymentDate,
+    required String token,
+  }) async {
+    final body = <String, dynamic>{'paymentMethod': paymentMethod};
+    if (paymentRef != null) body['paymentRef'] = paymentRef;
+    if (paymentDate != null) body['paymentDate'] = paymentDate;
+
+    final response = await _client.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/billing/generate-receipt/$eventId'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to generate receipt: HTTP ${response.statusCode} — ${response.body}');
   }
 
   // ── Monitoring ────────────────────────────────────────────────────────────

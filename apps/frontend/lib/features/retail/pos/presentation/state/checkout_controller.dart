@@ -73,8 +73,9 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
       }
       
       // Decrement stock locally (Real-time deduction as per PRD)
+      // Services have no physical stock — skip decrement for itemType == 'service'
       for (final item in cart.items) {
-        if (item.product.remoteId != null) {
+        if (item.product.remoteId != null && item.product.itemType != 'service') {
           await _productRepository.decrementStock(item.product.remoteId!, item.quantity.toDouble());
         }
       }

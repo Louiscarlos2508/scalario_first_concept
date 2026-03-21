@@ -238,7 +238,10 @@ class _DeliveryFormState extends ConsumerState<DeliveryForm> {
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedProductListProvider);
     final products = paginatedAsync.maybeWhen(
-      data: (data) => (data['items'] as List).cast<Product>(),
+      data: (data) => (data['items'] as List)
+          .cast<Product>()
+          .where((p) => p.itemType != 'service')
+          .toList(),
       orElse: () => <Product>[],
     );
 

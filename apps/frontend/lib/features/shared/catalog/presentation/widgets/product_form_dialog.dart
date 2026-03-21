@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
 import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
@@ -58,6 +60,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   String? _selectedParentName;
   List<Map<String, dynamic>> _allItems = [];
   List<Map<String, dynamic>> _childItems = [];
+
+  // Epic 29 — Adaptive form (businessType)
+  bool _showAdvanced = false;
+  bool _defaultsApplied = false;
 
   @override
   void initState() {
@@ -235,6 +241,10 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     minQtyCtrl.dispose();
   }
 
+  bool _showSection(String section, List<String> visibleSections) {
+    return _showAdvanced || visibleSections.isEmpty || visibleSections.contains(section);
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -252,6 +262,31 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.product != null;
+
+    // Epic 29 — Load businessType config and apply defaults on creation
+    final configAsync = ref.watch(businessTypeConfigProvider);
+    ref.listen<AsyncValue<BusinessTypeConfig>>(businessTypeConfigProvider,
+        (prev, next) {
+      if (!_defaultsApplied && widget.product == null) {
+        next.whenData((config) {
+          setState(() {
+            _defaultsApplied = true;
+            final flags = config.defaultFlags;
+            _hasVariants = flags['hasVariants'] as bool? ?? false;
+            _trackSerialNumbers = flags['trackSerialNumbers'] as bool? ?? false;
+            final wm = flags['warrantyMonths'] as int?;
+            if (wm != null && wm > 0) {
+              _hasWarranty = true;
+              _warrantyMonthsController.text = wm.toString();
+            }
+          });
+        });
+      }
+    });
+    final visibleSections = configAsync.maybeWhen(
+      data: (config) => config.visibleSections,
+      orElse: () => <String>[],
+    );
 
     return AlertDialog(
       title: Text(isEditing ? 'Modifier le produit' : 'Nouveau produit'),
@@ -271,7 +306,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: const Key('product_unit_type_field'),
-                value: _selectedUnitType,
+                initialValue: _selectedUnitType,
                 decoration: const InputDecoration(labelText: "Type d'unité"),
                 items: const [
                   DropdownMenuItem(value: 'piece', child: Text('Pièce')),
@@ -519,18 +554,32 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ],
                 ),
               ],
+              // Epic 29 — Toggle "Afficher plus d'options"
+              if (widget.submitToCatalog) ...[
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showAdvanced = !_showAdvanced),
+                    icon: Icon(_showAdvanced ? Icons.expand_less : Icons.expand_more),
+                    label: Text(_showAdvanced
+                        ? 'Masquer les options avancées'
+                        : 'Afficher plus d\'options'),
+                  ),
+                ),
+              ],
               // Epic 26 — Traçabilité (serial number tracking toggle)
               if (widget.submitToCatalog) ...[
                 const SizedBox(height: 16),
                 const Divider(),
-                SwitchListTile(
-                  key: const Key('track_serial_numbers_toggle'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Traçabilité par numéro de série'),
-                  subtitle: const Text('Demande un n° de série à la vente', style: TextStyle(fontSize: 12)),
-                  value: _trackSerialNumbers,
-                  onChanged: (v) => setState(() => _trackSerialNumbers = v),
-                ),
+                if (_showSection('serial', visibleSections))
+                  SwitchListTile(
+                    key: const Key('track_serial_numbers_toggle'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Traçabilité par numéro de série'),
+                    subtitle: const Text('Demande un n° de série à la vente', style: TextStyle(fontSize: 12)),
+                    value: _trackSerialNumbers,
+                    onChanged: (v) => setState(() => _trackSerialNumbers = v),
+                  ),
                 SwitchListTile(
                   key: const Key('dynamic_pricing_toggle'),
                   contentPadding: EdgeInsets.zero,
@@ -549,42 +598,45 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ),
                   const SizedBox(height: 8),
                 ],
-                SwitchListTile(
-                  key: const Key('requires_prescription_toggle'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Requiert une ordonnance'),
-                  subtitle: const Text('Le caissier devra saisir un n° d\'ordonnance à chaque vente', style: TextStyle(fontSize: 12)),
-                  value: _requiresPrescription,
-                  onChanged: (v) => setState(() => _requiresPrescription = v),
-                ),
-                SwitchListTile(
-                  key: const Key('has_warranty_toggle'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Durée de garantie'),
-                  subtitle: const Text('Un certificat sera généré automatiquement à chaque vente', style: TextStyle(fontSize: 12)),
-                  value: _hasWarranty,
-                  onChanged: (v) => setState(() {
-                    _hasWarranty = v;
-                    if (!v) _warrantyMonthsController.clear();
-                  }),
-                ),
-                if (_hasWarranty) ...[
-                  TextFormField(
-                    key: const Key('warranty_months_field'),
-                    controller: _warrantyMonthsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Durée de garantie (mois) *',
-                      hintText: 'Ex: 12',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (!_hasWarranty) return null;
-                      final n = int.tryParse(v ?? '');
-                      if (n == null || n <= 0) return 'Nombre de mois invalide (> 0)';
-                      return null;
-                    },
+                if (_showSection('prescription', visibleSections))
+                  SwitchListTile(
+                    key: const Key('requires_prescription_toggle'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Requiert une ordonnance'),
+                    subtitle: const Text('Le caissier devra saisir un n° d\'ordonnance à chaque vente', style: TextStyle(fontSize: 12)),
+                    value: _requiresPrescription,
+                    onChanged: (v) => setState(() => _requiresPrescription = v),
                   ),
-                  const SizedBox(height: 8),
+                if (_showSection('warranty', visibleSections)) ...[
+                  SwitchListTile(
+                    key: const Key('has_warranty_toggle'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Durée de garantie'),
+                    subtitle: const Text('Un certificat sera généré automatiquement à chaque vente', style: TextStyle(fontSize: 12)),
+                    value: _hasWarranty,
+                    onChanged: (v) => setState(() {
+                      _hasWarranty = v;
+                      if (!v) _warrantyMonthsController.clear();
+                    }),
+                  ),
+                  if (_hasWarranty) ...[
+                    TextFormField(
+                      key: const Key('warranty_months_field'),
+                      controller: _warrantyMonthsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Durée de garantie (mois) *',
+                        hintText: 'Ex: 12',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (!_hasWarranty) return null;
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n <= 0) return 'Nombre de mois invalide (> 0)';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ],
                 SwitchListTile(
                   key: const Key('is_unique_toggle'),
@@ -604,7 +656,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
                   ),
               ],
               // AC1 (Story 25-2) — Variants toggle + section
-              if (widget.submitToCatalog) ...[
+              if (widget.submitToCatalog && _showSection('variants', visibleSections)) ...[
                 const SizedBox(height: 16),
                 const Divider(),
                 SwitchListTile(

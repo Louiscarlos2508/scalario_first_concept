@@ -5,6 +5,8 @@ import 'package:frontend/core/theme/app_breakpoints.dart';
 import 'admin_tenants_screen.dart';
 import 'admin_modules_screen.dart';
 import 'admin_monitoring_screen.dart';
+import 'admin_billing_screen.dart';
+import 'business_types_screen.dart';
 
 class _NavItem {
   final IconData icon;
@@ -16,6 +18,8 @@ const List<_NavItem> _adminNavItems = [
   _NavItem(icon: Icons.business, label: 'Tenants'),
   _NavItem(icon: Icons.extension, label: 'Modules'),
   _NavItem(icon: Icons.monitor_heart, label: 'Monitoring'),
+  _NavItem(icon: Icons.store, label: 'Types métier'),
+  _NavItem(icon: Icons.receipt_long, label: 'Facturation'),
 ];
 
 class AdminDashboard extends ConsumerStatefulWidget {
@@ -32,6 +36,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     AdminTenantsScreen(),
     AdminModulesScreen(),
     AdminMonitoringScreen(),
+    BusinessTypesScreen(),
+    AdminBillingScreen(),
   ];
 
   void _signOut() => ref.read(authRepositoryProvider).signOut();

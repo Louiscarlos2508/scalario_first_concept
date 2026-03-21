@@ -12,7 +12,7 @@ import { RequiresModule } from '../../kernel/modules/module.decorator';
 import { Roles } from '../../kernel/rbac/roles.decorator';
 
 @Controller('contacts')
-@RequiresModule('contacts')
+@RequiresModule('clients')
 export class ContactsController {
   constructor(private readonly contactsService: ContactsService) {}
 
@@ -29,12 +29,14 @@ export class ContactsController {
     @Query('since') since?: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '100',
+    @Query('contactType') contactType?: string,
   ) {
     return this.contactsService.getContacts({
       tenantId,
       since,
       page: parseInt(page),
       limit: parseInt(limit),
+      contactType,
     });
   }
 
@@ -42,8 +44,9 @@ export class ContactsController {
   async searchContacts(
     @Query('tenantId') tenantId: string,
     @Query('q') query: string,
+    @Query('contactType') contactType?: string,
   ) {
-    return this.contactsService.searchContacts(tenantId, query);
+    return this.contactsService.searchContacts(tenantId, query, contactType);
   }
 
   @Post(':id/settle')

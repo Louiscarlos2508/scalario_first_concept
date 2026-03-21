@@ -201,7 +201,9 @@ class ProductGrid extends ConsumerWidget {
                                 textAlign: TextAlign.center,
                               ),
                               Text(
-                                _fcfa(product.price),
+                                product.unitType == 'piece'
+                                    ? _fcfa(product.price)
+                                    : '${_fcfa(product.price)}/${product.weightUnit ?? product.unitType}',
                                 style:
                                     Theme.of(context).textTheme.bodyMedium,
                               ),
@@ -273,6 +275,28 @@ class ProductGrid extends ConsumerWidget {
                             ),
                             child: const Text(
                               'UNIQUE',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      // Badge "VAR" for products with variants
+                      if (product.hasVariants)
+                        Positioned(
+                          bottom: 4,
+                          right: 4,
+                          child: Container(
+                            key: Key('badge_var_${product.remoteId}'),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade600,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'VAR',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,

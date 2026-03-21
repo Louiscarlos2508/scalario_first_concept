@@ -20,6 +20,12 @@ const mockPrisma = {
   inventoryMovement: {
     create: jest.fn(),
   },
+  catalogItem: {
+    findUnique: jest.fn().mockResolvedValue(null),
+  },
+  productBatch: {
+    create: jest.fn(),
+  },
 };
 
 const mockAuditLog = { log: jest.fn() };

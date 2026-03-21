@@ -220,6 +220,26 @@ From Architecture:
 | FR90 | Epic 25 | Multi-niveaux de prix tenant-configurables ; résolution automatique par contactType ou quantité |
 | FR91 | Epic 25 | Promotions configurables (%, quantitatif, prix barré) ; application auto au POS ; reçu avec prix barré |
 | FR86 | Epic 22 | Résumé quotidien automatique — canal et heure configurables par tenant |
+| FR92 | Epic 26 | Numéros de série traçables par unité vendue (trackSerialNumbers) |
+| FR93 | Epic 26 | Certificat de garantie généré depuis SerialRecord + warrantyMonths |
+| FR94 | Epic 26 | Flag requiresPrescription sur article ; blocage vente sans ordonnance |
+| FR95 | Epic 26 | Date de garde optimale sur ProductBatch (bestBeforeDate) |
+| FR96 | Epic 26 | Prix dynamique avec historique complet (PriceHistory) |
+| FR97 | Epic 26 | Article unique non-réapprovisable (isUnique) — archivé automatiquement après vente |
+| FR98 | Epic 27 | Retour article au POS — remboursement / avoir / échange ; stock réintégré (RETURN) ; politique tenant configurable |
+| FR99 | Epic 27 | Réservation avec acompte partiel configurable ; suivi solde ; KPI dashboard |
+| FR100 | Epic 28 | Plan tarifaire par tenant (PlanDefinition) ; activation/désactivation modules auto ; maxUsers synchronisé |
+| FR101 | Epic 28 | Frais installation/formation ; cycle de vie facturation (trial → active → overdue → suspended) ; cron suspension auto |
+| FR102 | Epic 28 | Propriétaire consulte son plan, modules inclus, statut facturation et historique paiements ; demande upgrade |
+| FR103 | Epic 28 | Paiement en ligne (Mobile Money / carte) + auto-provisioning tenant (Phase 3) |
+| FR104 | Epic 29 | BusinessTypeDefinition configurable sans déploiement ; assignation par superadmin à la création du tenant |
+| FR105 | Epic 29 | ProductFormDialog adaptatif — visibleSections, defaultFlags, toggle "Afficher plus d'options", override libre |
+| FR106 | Epic 29 | Catégories suggérées pré-créées à la création du tenant ; propriétaire peut renommer/supprimer/ajouter |
+| FR107 | Epic 30 | Commandes clients — cycle de vie draft→confirmed→in-progress→delivered\|cancelled ; numérotation auto CO-XXXX ; validation stock à la confirmation |
+| FR108 | Epic 30 | Stock réservé à la confirmation (StockMovement RESERVATION) ; consommé ou libéré à la livraison ; livraison partielle supportée (deliveredQty par ligne) |
+| FR109 | Epic 30 | Document de livraison généré selon BusinessTypeDefinition.documentType (receipt/delivery_note/invoice) ; acompte suivi (depositAmount, depositPaidAt) |
+| FR110 | Epic 30 | KPI "Commandes en cours" et "CA en attente" dans le dashboard ; liste filtrable par statut et client |
+| FR111 | Epic 30 | Labels rôles adaptés au type de business via BusinessTypeDefinition.roleLabels ; permissions sous-jacentes inchangées ; fallback sur le code du rôle |
 
 ## Epic List
 
@@ -313,6 +333,42 @@ Chaque article du catalogue peut être enrichi de configurations métier avancé
 **Phase:** 2b
 **FRs covered:** FR92, FR93, FR94, FR95, FR96, FR97
 **Prerequisite:** Epic 2 (catalog), Epic 5 (inventory/stock movements), Epic 16 (réception fournisseur), Epic 24 (fraîcheur/batches), Epic 25 (variants/pricing)
+
+---
+
+### Epic 27: Retours Articles & Réservations
+
+Le POS supporte les retours d'articles avec trois modes de résolution configurables par tenant (remboursement cash, avoir client, échange article) et réintégration automatique du stock en mouvement RETURN. La politique de retour est tenant-configurable (délai en jours, exigence de raison, approbation manager). Les réservations permettent à un client de bloquer un article avec un acompte partiel configurable (10–50%) ; le cycle de vie pending → completed est suivi avec solde client et KPI dashboard.
+**Phase:** 2a (FR98) + 2b (FR99)
+**FRs covered:** FR98, FR99
+**Prerequisite:** Epics 1–9, Epic 4 (transactions + paiements), Epic 3 (contacts + solde client), Epic 5 (mouvements de stock)
+
+---
+
+### Epic 28: Plans Tarifaires & Facturation
+
+Le superadmin gère les plans tarifaires (PlanDefinition), assigne un plan par tenant avec activation automatique des modules et synchronisation du maxUsers, enregistre les frais d'installation et de formation, et pilote le cycle de vie de facturation (trial → active → overdue → suspended) avec suspension automatique configurable. Le propriétaire consulte son plan et son historique de facturation depuis son backoffice et peut demander un upgrade.
+**Phase:** 2a (FR100–FR102) + Phase 3 (FR103)
+**FRs covered:** FR100, FR101, FR102, FR103
+**Prerequisite:** Epic 1 (Kernel + ModuleRegistry), Epic 19 (admin panel)
+
+---
+
+### Epic 29: Types de Business Configurables
+
+Le superadmin assigne un type de business à chaque tenant via une table `BusinessTypeDefinition` configurable sans déploiement (13 types seedés : généraliste, épicerie, téléphonie, textile, pharmacie, quincaillerie, cosmétique, restaurant, boulangerie, services, informatique, véhicules, grossiste). Le formulaire produit du backoffice s'adapte automatiquement au type du tenant (sections visibles, flags pré-remplis, toggle "Afficher plus d'options"). À la création du tenant, les catégories suggérées du type sont pré-créées dans le catalogue.
+**Phase:** 2a
+**FRs covered:** FR104, FR105, FR106
+**Prerequisite:** Epic 1 (Kernel + Tenant), Epic 2 (catalog + CatalogCategory), Epic 19 (admin panel), Epic 28 (NewTenantForm — ajouter le champ après plan)
+
+---
+
+### Epic 30: Commandes Clients & Labels Rôle
+
+Les tenants de type grossiste/distribution peuvent créer et piloter des commandes clients avec cycle de vie complet (draft → confirmed → in-progress → delivered), numérotation automatique (CO-XXXX), validation de stock à la confirmation (StockMovement RESERVATION), et génération du document de livraison selon le type de business (ticket, bon de livraison, facture). Un KPI "Commandes en cours / CA en attente" s'affiche sur le dashboard. Les labels de rôles s'affichent dans toute l'UI selon `BusinessTypeDefinition.roleLabels` du tenant sans impact sur les permissions.
+**Phase:** 2a
+**FRs covered:** FR107, FR108, FR109, FR110, FR111
+**Prerequisite:** Epic 1 (Kernel + RBAC), Epic 2 (catalog), Epic 3 (contacts), Epic 4 (transactions), Epic 5 (inventory/StockMovement), Epic 29 (BusinessTypeDefinition + roleLabels/documentType)
 
 ---
 
@@ -5444,7 +5500,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 **Then** 13 types sont créés par upsert sur `code` :
 
 | code | name | defaultFlags (clés non-nulles) | visibleSections | suggestedCategories |
-|:---|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- | :--- |
 | `generaliste` | Généraliste | tous false/null | [] | [] |
 | `epicerie` | Épicerie & Alimentation | expiryDays: 30 | ["expiry"] | ["Fruits & Légumes", "Épices", "Céréales", "Boissons", "Produits laitiers", "Conserves"] |
 | `telephonie` | Téléphonie & Accessoires | hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 | ["variants", "serial", "warranty"] | ["Smartphones", "Accessoires", "Cartes SIM", "Recharge", "Réparation"] |
@@ -5486,6 +5542,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 **And** le `businessType` du tenant n'est pas modifié
 
 **Notes dev :**
+
 - Module `BusinessTypeModule` dans `apps/backend/src/kernel/business-type/`
 - `BusinessTypeService` expose : `listActive()`, `getDefinition(code)`, `seedCategories(tenantId, code)` (utilisée en 29-4)
 - `SuperadminGuard` sur toutes les routes admin ; `TenantGuard` sur `PATCH /admin/tenants/:id/business-type`
@@ -5494,6 +5551,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 - Seed dans `apps/backend/prisma/seed.ts` section kernel — ajouter après le seed `PlanDefinition`
 
 **Files to create:**
+
 - `apps/backend/prisma/migrations/20260320040000_add_business_type_definitions/migration.sql`
 - `apps/backend/src/kernel/business-type/business-type.module.ts`
 - `apps/backend/src/kernel/business-type/business-type.controller.ts`
@@ -5501,6 +5559,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 - `apps/backend/src/kernel/business-type/dto/assign-business-type.dto.ts`
 
 **Files to modify:**
+
 - `apps/backend/prisma/schema.prisma` — modèle `BusinessTypeDefinition` + champ `businessType` sur `Tenant`
 - `apps/backend/prisma/seed.ts` — seed 13 types
 - `apps/backend/src/app.module.ts` — importer `BusinessTypeModule`
@@ -5554,6 +5613,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 **And** aucun bouton de modification n'est exposé (édition réservée à une Phase 3 du backoffice admin)
 
 **Notes dev :**
+
 - `BusinessTypeRepository` Flutter dans `apps/frontend/lib/features/admin/business_type/data/`
 - Provider Riverpod `businessTypesProvider` charge la liste depuis l'API au montage de l'écran
 - `NewTenantForm` est dans `apps/frontend/lib/features/admin/tenants/presentation/` — ajouter le champ `businessType` après le champ `plan`
@@ -5561,11 +5621,13 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 - L'écran "Types de business" est accessible via la navigation latérale admin (item après "Plans tarifaires")
 
 **Files to create:**
+
 - `apps/frontend/lib/features/admin/business_type/data/business_type_repository.dart`
 - `apps/frontend/lib/features/admin/business_type/presentation/screens/business_types_screen.dart`
 - `apps/frontend/lib/features/admin/business_type/presentation/providers/business_type_providers.dart`
 
 **Files to modify:**
+
 - `apps/frontend/lib/features/admin/tenants/presentation/widgets/new_tenant_form.dart` — dropdown businessType
 - `apps/frontend/lib/features/admin/tenants/presentation/screens/tenant_detail_screen.dart` — section type + bouton Modifier
 - `apps/frontend/lib/features/admin/navigation/admin_navigation.dart` — item "Types de business"
@@ -5628,6 +5690,7 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 **And** les defaults du businessType s'appliquent uniquement à la création de nouveaux produits
 
 **Notes dev :**
+
 - Endpoint backend requis : `GET /api/v1/business-type/config` — retourne le `BusinessTypeDefinition` du tenant courant (lu depuis `Tenant.businessType`) ; protégé par `JwtAuthGuard` + `TenantGuard`
 - Ajouter ce endpoint dans `BusinessTypeController` côté backend (non admin)
 - `ProductFormDialog` est dans `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — lire la config depuis `businessTypeConfigProvider`
@@ -5635,10 +5698,12 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 - La logique de masquage est purement Flutter : `visibleSections` drive `_showSection(String section)` → bool
 
 **Files to create:**
+
 - `apps/frontend/lib/features/shared/business_type/data/business_type_config_repository.dart`
 - `apps/frontend/lib/features/shared/business_type/presentation/providers/business_type_config_provider.dart`
 
 **Files to modify:**
+
 - `apps/backend/src/kernel/business-type/business-type.controller.ts` — ajouter `GET /business-type/config` (tenant-scoped)
 - `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — adapter selon `visibleSections` et `defaultFlags`
 
@@ -5702,11 +5767,525 @@ Le superadmin peut assigner un type de business à chaque tenant lors de sa cré
 **And** elle coexiste avec les catégories suggérées sans distinction visuelle particulière
 
 **Notes dev :**
+
 - `BusinessTypeService.seedCategories(tenantId, code)` est appelé dans `OrganizationService.createTenant()` après la création du tenant, dans un try/catch — un échec du seed ne doit PAS faire échouer la création du tenant (erreur loggée, pas propagée)
 - La méthode `seedCategories` appelle `CatalogService.createCategory()` ou insère directement via Prisma (dépendance à valider selon l'architecture du `CatalogModule`)
 - Frontend : aucun changement requis sur les écrans existants — les catégories apparaissent automatiquement via le endpoint `GET /api/v1/catalog/categories` déjà implémenté
 - Un log structuré est émis au moment du seed : `{ event: "business_type_categories_seeded", tenantId, businessType, count }` pour traçabilité admin
 
 **Files to modify:**
+
 - `apps/backend/src/kernel/business-type/business-type.service.ts` — implémenter `seedCategories(tenantId, code)`
 - `apps/backend/src/organization/organization.service.ts` — appeler `BusinessTypeService.seedCategories()` dans le flux `createTenant()`
+
+---
+
+## Epic 30: Commandes Clients & Labels Rôle (FR107–FR111)
+
+Les tenants de type grossiste/distribution peuvent créer et piloter des commandes clients avec cycle de vie complet (draft → confirmed → in-progress → delivered), numérotation automatique (CO-XXXX), validation de stock à la confirmation (StockMovement RESERVATION), et génération du document de livraison selon le type de business (ticket, bon de livraison, facture). Un KPI "Commandes en cours / CA en attente" s'affiche sur le dashboard. Les labels de rôles s'affichent dans toute l'UI selon `BusinessTypeDefinition.roleLabels` du tenant sans impact sur les permissions.
+
+---
+
+### Story 30-1: Backend — ClientOrder + ClientOrderLine, migration, endpoints CRUD (FR107, FR108)
+
+**As a** commercial or manager,
+**I want** a `ClientOrder` and `ClientOrderLine` backend with CRUD endpoints, automatic order numbering, stock validation at confirmation, and StockMovement RESERVATION on confirmation,
+**So that** client orders can be created, tracked, and confirmed with stock integrity guarantees (FR107, FR108).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma :**
+
+**Given** le fichier `schema.prisma` est mis à jour avec les modèles `ClientOrder` et `ClientOrderLine`
+**When** la migration est appliquée
+**Then** les tables `client_orders` et `client_order_lines` existent dans le schéma `shared` avec les colonnes définies dans l'architecture (id, orderNumber unique, tenantId, customerId, status, depositAmount, depositPaidAt, notes, createdBy, preparedBy, deliveredBy, createdAt, deliveredAt)
+
+**AC2 — POST /api/v1/client-orders — création :**
+
+**Given** un utilisateur authentifié envoie `POST /api/v1/client-orders` avec `{ customerId, lines: [{catalogItemId, variantId?, quantity, unitPrice}], notes?, depositAmount? }`
+**When** la requête est valide
+**Then** une commande est créée en statut `draft` avec un `orderNumber` auto-généré au format `CO-XXXX` (séquence par tenant, 4 chiffres minimum)
+**And** les lignes sont créées avec `deliveredQty = 0`
+**And** la commande créée est retournée en `201 Created`
+
+**AC3 — GET /api/v1/client-orders — liste avec filtres :**
+
+**Given** un utilisateur authentifié appelle `GET /api/v1/client-orders`
+**When** des filtres optionnels `status`, `customerId`, `dateFrom`, `dateTo` sont passés en query params
+**Then** la liste des commandes du tenant est retournée filtrée
+**And** les commandes sont triées par `createdAt DESC`
+
+**AC4 — GET /api/v1/client-orders/:id — détail :**
+
+**Given** un utilisateur appelle `GET /api/v1/client-orders/:id`
+**When** la commande appartient au tenant courant
+**Then** la commande complète avec ses lignes est retournée en `200 OK`
+**When** la commande n'appartient pas au tenant courant
+**Then** la réponse est `404 Not Found`
+
+**AC5 — PATCH /api/v1/client-orders/:id — modification draft :**
+
+**Given** un utilisateur envoie `PATCH /api/v1/client-orders/:id` sur une commande en statut `draft`
+**When** la requête est valide
+**Then** les champs `notes`, `depositAmount`, et les lignes sont mis à jour
+**When** la commande n'est pas en statut `draft`
+**Then** la réponse est `422 Unprocessable Entity` : `"Seules les commandes en statut draft peuvent être modifiées"`
+
+**AC6 — POST /api/v1/client-orders/:id/confirm — confirmation et validation stock :**
+
+**Given** un manager ou owner appelle `POST /api/v1/client-orders/:id/confirm` sur une commande `draft`
+**When** le stock disponible est suffisant pour toutes les lignes
+**Then** le statut passe à `confirmed`
+**And** un `StockMovement` de type `RESERVATION` est créé par ligne (quantity × unité, référence clientOrderId)
+**When** le stock est insuffisant pour au moins une ligne
+**Then** la réponse est `422 Unprocessable Entity` : `"Stock insuffisant pour : [nom article]"` (sans créer de mouvement)
+
+**AC7 — POST /api/v1/client-orders/:id/cancel — annulation :**
+
+**Given** un manager ou owner appelle `POST /api/v1/client-orders/:id/cancel` sur une commande `draft` ou `confirmed`
+**When** la commande est en statut `confirmed`
+**Then** les `StockMovement RESERVATION` liés sont annulés (mouvement inverse `RESERVATION_RELEASE`)
+**And** le statut passe à `cancelled`
+
+**AC8 — GET /api/v1/client-orders/kpis — agrégats dashboard :**
+
+**Given** un utilisateur appelle `GET /api/v1/client-orders/kpis`
+**When** la requête est valide
+**Then** la réponse est `200 OK` avec `{ inProgressCount: number, pendingRevenue: number }` pour les statuts actifs (confirmed, in-progress, ready)
+
+**Notes dev :**
+
+- Module `ClientOrderModule` dans `apps/backend/src/shared/client-orders/`
+- orderNumber séquentiel par tenant : `SELECT MAX(order_number) LIKE 'CO-%' WHERE tenant_id = ?` ; parser le numéro, incrémenter, formatter `CO-${String(n+1).padStart(4, '0')}`
+- Le type `RESERVATION` doit exister dans l'enum des types de StockMovement — vérifier et ajouter si absent
+- Routes protégées par `@Roles('owner', 'manager', 'commercial')` ; transitions confirm/cancel par `@Roles('owner', 'manager')`
+- L'endpoint `/kpis` doit être déclaré AVANT `/:id` dans le contrôleur pour éviter le conflit de routing NestJS
+
+**Files to create:**
+
+- `apps/backend/prisma/migrations/20260320050000_add_client_orders/migration.sql`
+- `apps/backend/src/shared/client-orders/client-order.module.ts`
+- `apps/backend/src/shared/client-orders/client-order.controller.ts`
+- `apps/backend/src/shared/client-orders/client-order.service.ts`
+- `apps/backend/src/shared/client-orders/dto/create-client-order.dto.ts`
+- `apps/backend/src/shared/client-orders/dto/update-client-order.dto.ts`
+
+**Files to modify:**
+
+- `apps/backend/prisma/schema.prisma` — modèles `ClientOrder`, `ClientOrderLine`
+- `apps/backend/src/app.module.ts` — importer `ClientOrderModule`
+
+---
+
+### Story 30-2: Backend — roleLabels + documentType sur BusinessTypeDefinition, migration, seed 14 types (FR109, FR111)
+
+**As a** superadmin,
+**I want** `roleLabels` (JSON) and `documentType` (String) fields on `BusinessTypeDefinition`, the seed updated for all 14 types (including the new "distribution" type), and these fields returned by the existing GET endpoints,
+**So that** the UI can display business-specific role names and determine the correct delivery document type (FR109, FR111).
+
+**Acceptance Criteria:**
+
+**AC1 — Migration Prisma :**
+
+**Given** le fichier `schema.prisma` est mis à jour avec `roleLabels Json @default("{}")` et `documentType String @default("receipt")` sur `BusinessTypeDefinition`
+**When** la migration est appliquée
+**Then** les colonnes `role_labels` (jsonb, défaut `{}`) et `document_type` (text, défaut `'receipt'`) existent dans `business_type_definitions`
+**And** les lignes existantes ont les valeurs par défaut sans erreur de migration
+
+**AC2 — Seed mis à jour pour 14 types :**
+
+**Given** la commande `prisma db seed` est exécutée
+**When** les 14 types sont traités par upsert sur `code`
+**Then** chaque type a un `documentType` approprié :
+
+| code | documentType |
+| :--- | :--- |
+| `generaliste` | `receipt` |
+| `epicerie` | `receipt` |
+| `telephonie` | `receipt` |
+| `textile` | `receipt` |
+| `pharmacie` | `receipt` |
+| `quincaillerie` | `delivery_note` |
+| `cosmetique` | `receipt` |
+| `restaurant` | `receipt` |
+| `boulangerie` | `receipt` |
+| `services` | `invoice` |
+| `informatique` | `invoice` |
+| `vehicules` | `invoice` |
+| `grossiste` | `delivery_note` |
+| `distribution` | `delivery_note` |
+
+**And** chaque type a des `roleLabels` adaptés (ex: `telephonie` → `{"commercial": "Vendeur", "manager": "Responsable boutique"}` ; `distribution` → `{"commercial": "Commercial terrain", "manager": "Directeur dépôt", "cashier": "Opérateur"}` ; les types généralistes gardent `{}`)
+
+**AC3 — Type "distribution" ajouté :**
+
+**Given** le seed est exécuté
+**When** le type `distribution` n'existe pas encore
+**Then** il est créé avec : name `"Commerce de distribution"`, description `"Vente en gros, livraison clients, bons de livraison"`, defaultFlags `{ hasVariants: true }`, visibleSections `["variants"]`, suggestedCategories `["Alimentaire", "Boissons", "Hygiène", "Nettoyage", "Épicerie fine"]`, documentType `"delivery_note"`, roleLabels appropriés
+
+**AC4 — Endpoints retournent les nouveaux champs :**
+
+**Given** un appel à `GET /api/v1/admin/business-types/:code` ou `GET /api/v1/business-type/config`
+**When** la requête est valide
+**Then** la réponse inclut `roleLabels` et `documentType` dans le payload
+
+**Notes dev :**
+
+- Migration additive — pas de breaking change sur les lignes existantes
+- `roleLabels` est un objet JSON libre : clés = codes rôles existants (`owner`, `manager`, `commercial`, `cashier`) ; valeurs = labels affichés
+- Le champ `owner` dans `roleLabels` est facultatif — s'il est présent, il n'est PAS utilisé dans l'UI (le propriétaire voit toujours "Propriétaire")
+- Vérifier que le `BusinessTypeConfigRepository` Flutter (créé en 29-3) mappe `roleLabels` et `documentType` dans `BusinessTypeConfig`
+
+**Files to modify:**
+
+- `apps/backend/prisma/schema.prisma` — `roleLabels`, `documentType` sur `BusinessTypeDefinition`
+- `apps/backend/prisma/seed.ts` — mise à jour des 13 types + ajout `distribution`
+- `apps/backend/prisma/migrations/` — nouvelle migration SQL
+
+---
+
+### Story 30-3: Frontend backoffice — Écran liste des commandes clients (FR107, FR110)
+
+**As a** owner or manager,
+**I want** a "Commandes" screen in the backoffice with a filterable, color-coded list of client orders and contextual action buttons,
+**So that** I can monitor all orders and take quick actions without opening each one (FR107, FR110).
+
+**Acceptance Criteria:**
+
+**AC1 — Navigation backoffice :**
+
+**Given** l'utilisateur est dans le backoffice
+**When** il consulte la navigation principale
+**Then** un item "Commandes" est présent après "Réservations" (ou dans la section Ventes)
+**And** le tap navigue vers `ClientOrdersScreen`
+
+**AC2 — Liste des commandes chargée :**
+
+**Given** `ClientOrdersScreen` s'ouvre
+**When** le provider charge les données depuis `GET /api/v1/client-orders`
+**Then** la liste des commandes du tenant est affichée sous forme de cards
+**And** un indicateur de chargement est affiché pendant le fetch
+**And** un message "Aucune commande" est affiché si la liste est vide
+
+**AC3 — Filtres :**
+
+**Given** l'utilisateur voit la liste
+**When** il utilise la barre de filtres
+**Then** il peut filtrer par statut (chips multi-sélection : Brouillon, Confirmée, En cours, Livrée, Annulée)
+**And** par client (champ recherche texte)
+**And** par période (date début / date fin via DateRangePicker)
+**And** les filtres déclenchent un rechargement de la liste avec les query params correspondants
+
+**AC4 — Carte commande :**
+
+**Given** la liste est chargée
+**When** une commande est affichée
+**Then** la card affiche : numéro (CO-XXXX), nom du client, date de création, montant total calculé, badge statut coloré
+
+**AC5 — Badge statut coloré :**
+
+**Given** une commande est affichée
+**When** son statut est `draft` → gris, `confirmed` → bleu, `in-progress` ou `ready` → orange, `delivered` ou `paid` → vert, `cancelled` → rouge
+**Then** le badge affiche la couleur correspondante et le label français du statut
+
+**AC6 — Boutons d'action contextuels :**
+
+**Given** la card affiche une commande
+**When** le statut est `draft` et le rôle est owner ou manager
+**Then** un bouton "Valider" est affiché (appelle POST /:id/confirm)
+**When** le statut est `confirmed`
+**Then** un bouton "Préparer" est affiché (appelle POST /:id/prepare)
+**When** le statut est `in-progress` ou `ready`
+**Then** un bouton "Livrer" est affiché (navigue vers l'écran de livraison)
+**When** le statut est `draft` ou `confirmed` et le rôle est owner ou manager
+**Then** un bouton "Annuler" est affiché (appelle POST /:id/cancel avec confirmation dialog)
+
+**AC7 — Navigation vers détail :**
+
+**Given** l'utilisateur tape sur le corps d'une card
+**When** la navigation s'effectue
+**Then** l'écran de détail de la commande s'ouvre
+
+**Notes dev :**
+
+- Provider Riverpod `clientOrdersProvider(ClientOrdersFilter filter)` — `family` provider avec paramètre de filtre
+- Widget `ClientOrderCard` réutilisable avec un callback `onAction`
+- Ajouter item de navigation dans le widget de navigation backoffice existant
+
+**Files to create:**
+
+- `apps/frontend/lib/features/shared/client_orders/data/client_order_repository.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_orders_screen.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_card.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/providers/client_orders_provider.dart`
+- `apps/frontend/lib/features/shared/client_orders/domain/models/client_order.dart`
+
+**Files to modify:**
+
+- Navigation backoffice widget — ajouter item "Commandes"
+
+---
+
+### Story 30-4: Frontend — Formulaire de création de commande (FR107)
+
+**As a** commercial or manager,
+**I want** to create a client order by selecting a customer, adding product lines with quantities and prices, and optionally recording a deposit,
+**So that** I can register a client's order from both the backoffice and the POS before preparing it (FR107).
+
+**Acceptance Criteria:**
+
+**AC1 — Accès au formulaire :**
+
+**Given** l'utilisateur est dans l'écran Commandes du backoffice
+**When** il tape sur le bouton "Nouvelle commande"
+**Then** l'écran `ClientOrderFormScreen` s'ouvre
+**Given** l'utilisateur est dans le POS
+**When** il accède au menu secondaire ou à un bouton contextuel
+**Then** le même écran est accessible
+
+**AC2 — Sélection client :**
+
+**Given** le formulaire est ouvert
+**When** l'utilisateur tape dans le champ client
+**Then** un autocomplete affiche les contacts du tenant (réutiliser `ContactAutocomplete`)
+**And** le client sélectionné est affiché avec son nom et son solde crédit
+
+**AC3 — Ajout de lignes produit :**
+
+**Given** le formulaire est ouvert
+**When** l'utilisateur ajoute une ligne
+**Then** il peut sélectionner un article via `ProductAutocomplete`
+**And** si l'article a des variantes, un sélecteur de variante apparaît
+**And** il peut saisir la quantité (>0) et le prix unitaire (pré-rempli depuis le prix catalogue)
+**And** il peut ajouter plusieurs lignes ou supprimer une ligne
+
+**AC4 — Champs additionnels :**
+
+**Given** le formulaire est affiché
+**When** l'utilisateur remplit les champs optionnels
+**Then** il peut saisir une date souhaitée (DatePicker), un acompte (champ montant décimal, libellé "Acompte reçu"), et des notes libres (TextField multi-lignes)
+
+**AC5 — Total automatique :**
+
+**Given** des lignes sont ajoutées
+**When** les quantités ou prix sont modifiés
+**Then** le montant total est recalculé et affiché en temps réel (somme quantity × unitPrice par ligne)
+
+**AC6 — Validation et soumission :**
+
+**Given** le formulaire est rempli
+**When** l'utilisateur appuie sur "Créer la commande"
+**Then** le formulaire valide : client requis, au moins une ligne, quantité > 0 pour chaque ligne
+**And** si valide, `POST /api/v1/client-orders` est appelé
+**And** en cas de succès, l'écran navigue vers l'écran de détail de la commande créée
+**And** en cas d'erreur API, un message d'erreur est affiché sans fermer le formulaire
+
+**Notes dev :**
+
+- `ClientOrderFormScreen` est un écran dédié (pas un dialog) — le formulaire est potentiellement long
+- Réutiliser `ProductAutocomplete` (déjà implémenté dans le backoffice) et `ContactAutocomplete`
+- Le prix unitaire est pré-rempli depuis le prix catalogue de l'article sélectionné mais reste éditable
+- Accès POS : ajouter un bouton dans l'AppBar ou via un menu contextuel dans `PosScreen`
+
+**Files to create:**
+
+- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_form_screen.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_line_form_widget.dart`
+
+**Files to modify:**
+
+- `apps/frontend/lib/features/pos/presentation/screens/pos_screen.dart` — ajouter accès "Nouvelle commande"
+
+---
+
+### Story 30-5: Frontend + Backend — Flux de statuts, livraison et génération document (FR107, FR108, FR109)
+
+**As a** commercial or manager,
+**I want** to move a client order through its lifecycle — prepare, mark ready, deliver with partial quantities — and have the correct delivery document (ticket, bon de livraison, or facture) generated automatically based on my business type,
+**So that** each step is traceable and the delivery document reflects my industry's standard (FR107, FR108, FR109).
+
+**Acceptance Criteria:**
+
+**AC1 — Endpoints de transition statut :**
+
+**Given** les endpoints suivants sont implémentés
+**When** ils sont appelés sur une commande au bon statut
+**Then** :
+- `POST /api/v1/client-orders/:id/prepare` : `confirmed → in-progress`
+- `POST /api/v1/client-orders/:id/mark-ready` : `in-progress → ready`
+- `POST /api/v1/client-orders/:id/deliver` : `ready → delivered` (voir AC2)
+- `POST /api/v1/client-orders/:id/invoice` : `delivered → invoiced`
+- `POST /api/v1/client-orders/:id/pay` : `invoiced → paid` (ou `partially_paid` si partiel)
+
+**When** une transition invalide est tentée (ex: deliver depuis draft)
+**Then** la réponse est `422 Unprocessable Entity` avec le message d'erreur explicite
+
+**AC2 — Livraison avec quantités et génération transaction :**
+
+**Given** un manager appelle `POST /api/v1/client-orders/:id/deliver` avec `{ lines: [{lineId, deliveredQty}], paymentMethod? }`
+**When** la requête est valide
+**Then** chaque ligne est mise à jour avec `deliveredQty`
+**And** une `Transaction` est créée (type SALE) avec les lignes livrées et le montant correspondant
+**And** le `StockMovement RESERVATION` est consommé (mouvement SALE) pour `deliveredQty` ; le reliquat est libéré (mouvement RESERVATION_RELEASE) si `deliveredQty < quantity`
+**And** le statut passe à `delivered`
+
+**AC3 — Écran de détail commande :**
+
+**Given** l'utilisateur navigue vers une commande
+**When** l'écran se charge
+**Then** les lignes sont affichées avec : nom article, variante, quantité commandée, quantité livrée, prix unitaire, sous-total
+**And** le statut courant est affiché avec les boutons d'action correspondants (Préparer / Marquer prêt / Livrer / Facturer / Encaisser)
+**And** les informations client, numéro commande, date, notes et acompte sont affichés
+
+**AC4 — Écran de livraison (saisie quantités livrées) :**
+
+**Given** l'utilisateur tape "Livrer" sur une commande `ready`
+**When** l'écran de livraison s'ouvre
+**Then** chaque ligne est affichée avec un champ de saisie "Qté livrée" pré-rempli avec la quantité commandée
+**And** l'utilisateur peut modifier la quantité livrée pour une livraison partielle
+**And** un récapitulatif du montant total livré est affiché
+**And** en confirmant, `POST /api/v1/client-orders/:id/deliver` est appelé avec les quantités saisies
+
+**AC5 — Génération du document de livraison :**
+
+**Given** la livraison est confirmée
+**When** `businessTypeConfig.documentType` est `"receipt"`
+**Then** un ticket de caisse standard est généré/affiché
+**When** `documentType` est `"delivery_note"`
+**Then** un bon de livraison est généré avec : numéro commande, client, date, lignes livrées avec quantités, signature
+**When** `documentType` est `"invoice"`
+**Then** une facture simplifiée est générée avec les informations du tenant et les lignes avec TVA (si applicable)
+
+**Notes dev :**
+
+- Les endpoints prepare, mark-ready, invoice, pay peuvent être ajoutés dans `client-order.controller.ts` comme méthodes POST `@Post(':id/prepare')` etc.
+- La génération du document côté Flutter utilise `businessTypeConfigProvider` (chargé en 29-3) — pas de nouvel appel API nécessaire
+- Pour MVP, le document peut être un simple écran résumé affichable et partageable (pas de PDF généré côté serveur)
+- Les types `RESERVATION_RELEASE` et `SALE` doivent exister dans l'enum `StockMovement.type` — vérifier
+
+**Files to create:**
+
+- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_detail_screen.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_deliver_screen.dart`
+- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_document_widget.dart`
+
+**Files to modify:**
+
+- `apps/backend/src/shared/client-orders/client-order.controller.ts` — ajouter endpoints de transition
+- `apps/backend/src/shared/client-orders/client-order.service.ts` — implémenter les transitions et la logique de livraison
+
+---
+
+### Story 30-6: Frontend — KPI Commandes sur le dashboard (FR110)
+
+**As a** owner or manager,
+**I want** "Commandes en cours" and "CA en attente" KPI cards on the dashboard,
+**So that** I can monitor my order pipeline at a glance without navigating to the orders screen (FR110).
+
+**Acceptance Criteria:**
+
+**AC1 — Endpoint /kpis retourne les données :**
+
+**Given** `GET /api/v1/client-orders/kpis` est appelé (implémenté en Story 30-1)
+**When** la requête est authentifiée
+**Then** la réponse inclut `{ inProgressCount: number, pendingRevenue: number }` pour les statuts actifs (confirmed, in-progress, ready, delivered non-payées)
+
+**AC2 — Deux KPI cards sur le dashboard :**
+
+**Given** l'utilisateur consulte le dashboard backoffice
+**When** les KPIs sont chargés
+**Then** une card "Commandes en cours" affiche `inProgressCount` (nombre entier)
+**And** une card "CA en attente" affiche `pendingRevenue` formaté en devise du tenant (FCFA ou autre)
+
+**AC3 — Navigation depuis les cards :**
+
+**Given** l'utilisateur tape sur "Commandes en cours"
+**When** la navigation s'effectue
+**Then** l'écran `ClientOrdersScreen` s'ouvre filtré sur les statuts actifs (confirmed, in-progress, ready)
+**Given** l'utilisateur tape sur "CA en attente"
+**When** la navigation s'effectue
+**Then** le même écran s'ouvre sans filtre de statut particulier
+
+**AC4 — Affichage conditionnel :**
+
+**Given** le tenant n'a encore aucune commande
+**When** les KPIs sont chargés (inProgressCount = 0)
+**Then** les cards sont affichées avec valeur 0 (toujours visible pour inviter à créer des commandes)
+
+**Notes dev :**
+
+- Provider Riverpod `clientOrderKpisProvider` — `FutureProvider<ClientOrderKpis>`
+- Les cards s'ajoutent dans la section des KPIs du dashboard, après les cards "Réservations" existantes
+- Si le dashboard utilise le SDUI engine : ajouter les widgets dans la config JSON du dashboard layout
+- Si le dashboard est hardcodé : ajouter les deux `KpiCard` widgets directement dans `DashboardScreen`
+
+**Files to create:**
+
+- `apps/frontend/lib/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart`
+
+**Files to modify:**
+
+- Dashboard screen ou layout SDUI JSON — ajouter les deux KPI cards
+
+---
+
+### Story 30-7: Frontend — Labels rôles selon businessType dans toute l'UI (FR111)
+
+**As a** tenant user,
+**I want** role labels throughout the UI to reflect my business type's configured labels (e.g. "Commercial terrain" instead of "Caissier" for a distribution company),
+**So that** the interface speaks my industry's language while underlying permissions remain unchanged (FR111).
+
+**Acceptance Criteria:**
+
+**AC1 — `roleLabels` chargés via `businessTypeConfigProvider` :**
+
+**Given** l'application est lancée et la session établie
+**When** `businessTypeConfigProvider` a chargé la config (déjà fait en Story 29-3)
+**Then** `config.roleLabels` est un `Map<String, String>` accessible dans tous les widgets via `ref.watch(businessTypeConfigProvider)`
+
+**AC2 — Labels utilisés dans l'admin panel (dropdown rôle) :**
+
+**Given** le superadmin crée ou modifie un utilisateur dans l'admin panel Flutter
+**When** le dropdown de sélection de rôle s'affiche
+**Then** chaque option affiche le label du type de business du tenant sélectionné (ex: "Commercial terrain" pour le rôle `commercial` d'un tenant `distribution`)
+**And** si aucun label n'est configuré pour ce rôle (`roleLabels` vide ou clé absente), le code du rôle est affiché en fallback
+
+**AC3 — Labels dans les rapports et historiques backoffice :**
+
+**Given** un utilisateur consulte un rapport de session, l'historique des transactions, ou la liste des membres
+**When** le nom d'un rôle est affiché
+**Then** le label du type de business est utilisé à la place du code du rôle
+
+**AC4 — Labels dans le profil utilisateur :**
+
+**Given** un utilisateur consulte son profil ou la fiche d'un autre membre
+**When** le rôle est affiché
+**Then** le label du type de business est utilisé
+
+**AC5 — Le rôle "owner" n'est pas overridable :**
+
+**Given** le type de business a un label pour `owner` dans `roleLabels`
+**When** l'UI affiche le rôle du propriétaire
+**Then** "Propriétaire" est toujours affiché (le label `owner` dans `roleLabels` est ignoré)
+
+**AC6 — Fallback propre :**
+
+**Given** `roleLabels` est vide `{}` (ex: type `generaliste`)
+**When** un rôle est affiché dans l'UI
+**Then** le code du rôle est affiché avec la première lettre en majuscule (ex: `cashier` → "Cashier") sans erreur
+
+**Notes dev :**
+
+- Créer une fonction utilitaire `getRoleLabel(String roleCode, Map<String, dynamic> roleLabels)` dans `apps/frontend/lib/features/shared/business_type/utils/role_label_utils.dart`
+- La fonction retourne `roleLabels[roleCode] as String?` si présent et `roleCode != 'owner'` ; sinon retourne le code formaté
+- Utiliser cette fonction dans tous les widgets qui affichent un rôle : `RoleChip`, `UserListTile`, session report widgets, member list, user profile
+- L'admin panel doit charger la config du tenant sélectionné pour obtenir les roleLabels — si le tenant n'est pas le tenant courant, un appel séparé `GET /api/v1/admin/business-types/:code` peut être nécessaire
+
+**Files to create:**
+
+- `apps/frontend/lib/features/shared/business_type/utils/role_label_utils.dart`
+
+**Files to modify:**
+
+- Tous les widgets affichant un rôle utilisateur : `RoleChip`, `UserListTile`, session report widgets, member list screen, user profile screen
+- Admin panel dropdown rôle dans le formulaire utilisateur

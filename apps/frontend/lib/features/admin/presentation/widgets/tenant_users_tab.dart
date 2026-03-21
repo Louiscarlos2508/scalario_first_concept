@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
 import '../../data/models/tenant_user.dart';
 import '../../data/services/admin_api_service.dart';
 import '../providers/admin_providers.dart';
 
-const List<String> _kRoles = ['owner', 'manager', 'commercial', 'cashier'];
+const List<String> _kAssignableRoles = ['manager', 'commercial', 'cashier'];
 
 class TenantUsersTab extends ConsumerWidget {
   final String tenantId;
@@ -193,7 +194,7 @@ class _UserTile extends StatelessWidget {
     return ListTile(
       leading: CircleAvatar(child: Text(initial)),
       title: Text(user.email),
-      subtitle: Text('Rôle : ${user.role} • Dernière connexion : $lastSignIn'),
+      subtitle: Text('Rôle : ${getRoleLabel(user.role, {})} • Dernière connexion : $lastSignIn'),
       trailing: IconButton(
         icon: const Icon(Icons.more_vert),
         onPressed: onMoreTap,
@@ -299,8 +300,11 @@ class _AddUserDialogState extends State<AddUserDialog> {
             DropdownButtonFormField<String>(
               initialValue: _role,
               decoration: const InputDecoration(labelText: 'Rôle'),
-              items: _kRoles
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+              items: _kAssignableRoles
+                  .map((r) => DropdownMenuItem(
+                        value: r,
+                        child: Text(getRoleLabel(r, {})),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() => _role = v ?? _role),
             ),
@@ -345,9 +349,9 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
   @override
   void initState() {
     super.initState();
-    _role = _kRoles.contains(widget.currentRole)
+    _role = _kAssignableRoles.contains(widget.currentRole)
         ? widget.currentRole
-        : _kRoles.first;
+        : _kAssignableRoles.first;
   }
 
   @override
@@ -356,8 +360,11 @@ class _RoleChangeDialogState extends State<RoleChangeDialog> {
       title: const Text('Changer le rôle'),
       content: DropdownButtonFormField<String>(
         initialValue: _role,
-        items: _kRoles
-            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+        items: _kAssignableRoles
+            .map((r) => DropdownMenuItem(
+                  value: r,
+                  child: Text(getRoleLabel(r, {})),
+                ))
             .toList(),
         onChanged: (v) => setState(() => _role = v ?? _role),
       ),

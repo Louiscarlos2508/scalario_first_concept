@@ -1,6 +1,6 @@
-import { IsDateString, IsDecimal, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsDecimal, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
-const BILLING_EVENT_TYPES = ['subscription', 'installation', 'training', 'upgrade', 'downgrade', 'payment'];
+const BILLING_EVENT_TYPES = ['subscription', 'installation', 'training', 'upgrade', 'downgrade', 'payment', 'activation', 'invoice'];
 const PAYMENT_METHODS = ['cash', 'mobile_money', 'card', 'bank_transfer'];
 
 export class CreateBillingEventDto {
@@ -31,4 +31,10 @@ export class CreateBillingEventDto {
   @IsOptional()
   @IsString()
   paymentRef?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  monthsPaid?: number;
 }

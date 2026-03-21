@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -131,6 +133,11 @@ class _SessionCard extends ConsumerWidget {
     final userId = session['userId']?.toString() ?? '';
     final userLabel =
         userId.length > 8 ? userId.substring(0, 8) : userId;
+    final roleLabels = ref
+        .watch(businessTypeConfigProvider)
+        .valueOrNull
+        ?.roleLabels ?? {};
+    final cashierLabel = getRoleLabel('cashier', roleLabels);
 
     final varianceColor =
         variance >= 0 ? AppColors.success : AppColors.error;
@@ -178,7 +185,7 @@ class _SessionCard extends ConsumerWidget {
                       size: 14, color: AppColors.textSecondary),
                   const SizedBox(width: 4),
                   Text(
-                    'Caissier : $userLabel…',
+                    '$cashierLabel : $userLabel…',
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
                   ),

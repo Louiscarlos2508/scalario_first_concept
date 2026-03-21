@@ -122,9 +122,16 @@ class _TenantCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                '${tenant.membersCount} membres • plan: ${tenant.plan}',
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${tenant.membersCount} membres • plan: ${tenant.plan}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  _CountdownChip(tenant: tenant),
+                ],
               ),
               if (tenant.activeModules.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -190,6 +197,61 @@ class _BillingStatusChip extends StatelessWidget {
       side: BorderSide(color: color, width: 1),
       padding: EdgeInsets.zero,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+}
+
+class _CountdownChip extends StatelessWidget {
+  final TenantSummary tenant;
+  const _CountdownChip({required this.tenant});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = tenant.billingStatus;
+
+    if (status == 'trial' && tenant.trialEndsAt != null) {
+      final days = tenant.trialEndsAt!.difference(DateTime.now()).inDays;
+      final color = days <= 3 ? Colors.red : Colors.blue;
+      return _chip('🔵 Essai ($days j)', color);
+    }
+
+    if (status == 'active') {
+      if (tenant.paidUntil == null) return const SizedBox.shrink();
+      final days = tenant.paidUntil!.difference(DateTime.now()).inDays;
+      if (days > 30) {
+        final date =
+            '${tenant.paidUntil!.day.toString().padLeft(2, '0')}/${tenant.paidUntil!.month.toString().padLeft(2, '0')}';
+        return _chip('🟢 Payé jusqu\'au $date', Colors.green);
+      }
+      final color = days <= 3 ? Colors.red : Colors.orange;
+      return _chip('🟠 Expire dans $days j', color);
+    }
+
+    if (status == 'overdue') {
+      final since = tenant.paidUntil != null
+          ? DateTime.now().difference(tenant.paidUntil!).inDays
+          : 0;
+      return _chip('🔴 Impayé depuis ${since}j', Colors.red);
+    }
+
+    if (status == 'suspended') {
+      return _chip('⚫ Suspendu', Colors.black54);
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _chip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.w500)),
     );
   }
 }

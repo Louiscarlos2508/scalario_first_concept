@@ -19,7 +19,9 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
   final _passwordCtrl = TextEditingController();
   String _currency = 'XOF';
   String _timezone = 'Africa/Ouagadougou';
-  String _billingStatus = 'trial';
+  bool _trial = true;
+  String _plan = 'standard';
+  String _businessType = 'generaliste';
   bool _loading = false;
   bool _obscure = true;
 
@@ -62,7 +64,9 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
         ownerPassword: _passwordCtrl.text,
         currency: _currency,
         timezone: _timezone,
-        billingStatus: _billingStatus,
+        billingStatus: _trial ? 'trial' : 'active',
+        plan: _plan,
+        businessType: _businessType,
       );
 
       await ref
@@ -71,8 +75,11 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
 
       ref.invalidate(adminTenantsProvider);
 
+      final extraMsg = dto.businessType != 'generaliste'
+          ? ' — catégories suggérées créées'
+          : '';
       messenger.showSnackBar(SnackBar(
-        content: Text('Client ${dto.name} créé avec succès'),
+        content: Text('Client ${dto.name} créé avec succès$extraMsg'),
         backgroundColor: Colors.green,
       ));
       nav.pop();
@@ -183,45 +190,74 @@ class _NewTenantFormState extends ConsumerState<NewTenantForm> {
               ),
               const SizedBox(height: 16),
 
-              // Statut de facturation
+              // Plan
               DropdownButtonFormField<String>(
-                initialValue: _billingStatus,
+                initialValue: _plan,
                 decoration: const InputDecoration(
-                  labelText: 'Statut de facturation',
+                  labelText: 'Plan',
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'trial',
-                    child: Text('Essai gratuit (30 jours)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'active',
-                    child: Text('Actif (client a déjà payé)'),
-                  ),
+                  DropdownMenuItem(value: 'standard',   child: Text('Standard — 15 000 FCFA/mois')),
+                  DropdownMenuItem(value: 'premium',    child: Text('Premium — 25 000 FCFA/mois')),
+                  DropdownMenuItem(value: 'enterprise', child: Text('Enterprise — sur devis')),
                 ],
-                onChanged: (v) =>
-                    setState(() => _billingStatus = v ?? _billingStatus),
+                onChanged: (v) => setState(() => _plan = v ?? _plan),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-              // Type métier (read-only — Retail only in MVP)
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Type métier',
-                  border: OutlineInputBorder(),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.radio_button_checked,
-                        color: Theme.of(context).disabledColor),
-                    const SizedBox(width: 8),
-                    Text('Retail',
-                        style: TextStyle(
-                            color: Theme.of(context).disabledColor)),
-                  ],
-                ),
+              // Période d'essai (30 jours)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Période d\'essai (30 jours)'),
+                subtitle: Text(_trial
+                    ? 'Modules Standard activés pendant l\'essai'
+                    : 'Modules du plan choisi activés immédiatement'),
+                value: _trial,
+                onChanged: (v) => setState(() => _trial = v),
               ),
+              const SizedBox(height: 8),
+
+              // Type de business (filtre par vertical "retail" — seul vertical actif)
+              ref.watch(businessTypesProvider).when(
+                    data: (types) {
+                      final retailTypes =
+                          types.where((t) => t.vertical == 'retail').toList();
+                      return DropdownButtonFormField<String>(
+                        initialValue: _businessType,
+                        decoration: const InputDecoration(
+                          labelText: 'Type de business',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: retailTypes
+                            .map((t) => DropdownMenuItem(
+                                  value: t.code,
+                                  child: Text(t.name),
+                                ))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _businessType = v ?? _businessType),
+                      );
+                    },
+                    loading: () => const InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Type de business',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (e, st) => const InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Type de business',
+                        border: OutlineInputBorder(),
+                      ),
+                      child: Text('Généraliste (défaut)'),
+                    ),
+                  ),
               const SizedBox(height: 32),
 
               // Submit

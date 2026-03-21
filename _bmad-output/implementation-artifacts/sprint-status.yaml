@@ -257,3 +257,24 @@ development_status:
   28-6-billing-status-enforcement: done
   epic-28-retrospective: optional
 
+  # Epic 29: Types de Business Configurables (FR104–FR106)
+  # Phase 2a: 4 stories — backend model + seed, admin panel dropdown, product form adaptive, category seed
+  epic-29: done
+  29-1-business-type-backend: done
+  29-2-admin-panel-business-type: done
+  29-3-product-form-adaptive: done
+  29-4-suggested-categories-seed: done
+  epic-29-retrospective: optional
+
+  # Epic 30: Commandes Clients & Labels Rôle (FR107–FR111)
+  # Phase 2a: 7 stories — client order backend, role labels backend, list/create/workflow screens, dashboard KPI, role labels UI
+  epic-30: done
+  30-1-client-order-backend: review
+  30-2-role-labels-backend: review
+  30-3-client-order-list-screen: review
+  30-4-client-order-create-screen: review
+  30-5-client-order-workflow: review
+  30-6-client-order-kpi-dashboard: review
+  30-7-role-labels-frontend: review
+  epic-30-retrospective: optional
+

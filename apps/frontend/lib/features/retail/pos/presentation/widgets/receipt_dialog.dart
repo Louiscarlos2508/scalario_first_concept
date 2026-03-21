@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/retail/pos/data/models/order.dart';
 import 'package:frontend/features/retail/pos/presentation/state/cart_state.dart';
 import 'package:frontend/core/services/receipt_service.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
         .format(amount);
 
-class ReceiptDialog extends StatelessWidget {
+String _receiptTitle(String documentType) => switch (documentType) {
+  'delivery_note' => 'Bon de livraison',
+  'invoice' => 'Facture',
+  _ => 'Reçu',
+};
+
+class ReceiptDialog extends ConsumerWidget {
   final Order order;
   final String tenantName;
   /// Original cart used to display promo strikethrough and total savings (AC5).
@@ -22,9 +30,14 @@ class ReceiptDialog extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final documentType = ref
+        .watch(businessTypeConfigProvider)
+        .valueOrNull
+        ?.documentType ?? 'receipt';
+
     return AlertDialog(
-      title: const Center(child: Text('Reçu')),
+      title: Center(child: Text(_receiptTitle(documentType))),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(
@@ -100,7 +113,7 @@ class ReceiptDialog extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () async {
             try {
-              await ReceiptService.printOrder(order, tenantName);
+              await ReceiptService.printOrder(order, tenantName, documentType: documentType);
             } catch (e) {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

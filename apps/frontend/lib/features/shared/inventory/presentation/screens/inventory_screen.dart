@@ -11,6 +11,7 @@ import 'package:frontend/features/shared/purchase_orders/presentation/screens/pu
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/freshness/presentation/screens/freshness_screen.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 class InventoryScreen extends ConsumerWidget {
   final int initialIndex;
@@ -24,9 +25,17 @@ class InventoryScreen extends ConsumerWidget {
     final pendingCount = statsAsync.valueOrNull?['total'] ?? 0;
     final urgentCountAsync = ref.watch(urgentBatchCountProvider);
     final urgentCount = urgentCountAsync.valueOrNull ?? 0;
+    final visibleSections = ref
+        .watch(businessTypeConfigProvider)
+        .valueOrNull
+        ?.visibleSections ?? [];
+    final showFreshness = visibleSections.isEmpty ||
+        visibleSections.contains('freshness') ||
+        visibleSections.contains('expiry') ||
+        urgentCount > 0;
 
     return DefaultTabController(
-      length: 6,
+      length: showFreshness ? 6 : 5,
       initialIndex: initialIndex,
       child: Scaffold(
         appBar: ScalarioAppBar(
@@ -46,16 +55,17 @@ class InventoryScreen extends ConsumerWidget {
                 ),
                 text: 'Commandes',
               ),
-              // AC1 (Story 24-3) — Fraîcheur tab with urgent badge
-              Tab(
-                icon: Badge(
-                  isLabelVisible: urgentCount > 0,
-                  label: Text('$urgentCount'),
-                  backgroundColor: Colors.orange,
-                  child: const Icon(Icons.eco_outlined),
+              // AC1 (Story 24-3) — Fraîcheur tab: shown only when relevant
+              if (showFreshness)
+                Tab(
+                  icon: Badge(
+                    isLabelVisible: urgentCount > 0,
+                    label: Text('$urgentCount'),
+                    backgroundColor: Colors.orange,
+                    child: const Icon(Icons.eco_outlined),
+                  ),
+                  text: 'Fraîcheur',
                 ),
-                text: 'Fraîcheur',
-              ),
             ],
           ),
         ),
@@ -66,7 +76,7 @@ class InventoryScreen extends ConsumerWidget {
             _LossTab(repo: repo),
             _InventoryCountTab(repo: repo),
             const PurchaseOrdersScreen(),
-            const FreshnessScreen(),
+            if (showFreshness) const FreshnessScreen(),
           ],
         ),
       ),

@@ -9,15 +9,32 @@ class AdminMonitoringScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final healthAsync = ref.watch(adminMonitoringProvider);
+    final billingAsync = ref.watch(billingSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Monitoring plateforme')),
       body: healthAsync.when(
         data: (health) => RefreshIndicator(
-          onRefresh: () async => ref.refresh(adminMonitoringProvider),
+          onRefresh: () async {
+            ref.invalidate(adminMonitoringProvider);
+            ref.invalidate(billingSummaryProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Billing KPIs
+              billingAsync.when(
+                data: (billing) => _BillingKpiSection(billing: billing),
+                loading: () => const SizedBox(
+                  height: 80,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) =>
+                    Text('KPI billing indisponible: $e',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ),
+              const SizedBox(height: 16),
+              // Platform KPIs
               _KpiRow(health: health),
               const SizedBox(height: 16),
               ...health.tenants.map((t) => _TenantHealthTile(tenant: t)),
@@ -26,6 +43,157 @@ class AdminMonitoringScreen extends ConsumerWidget {
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Erreur: $e')),
+      ),
+    );
+  }
+}
+
+// ── Billing KPIs ──────────────────────────────────────────────────────────────
+
+class _BillingKpiSection extends StatelessWidget {
+  final Map<String, dynamic> billing;
+
+  const _BillingKpiSection({required this.billing});
+
+  String _fmt(num v) {
+    if (v == 0) return '0';
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(0)}k';
+    return v.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final monthlyRevenue = (billing['monthlyRevenue'] as num?) ?? 0;
+    final mrr = (billing['mrr'] as num?) ?? 0;
+    final activeClients = (billing['activeClients'] as num?) ?? 0;
+    final trialClients = (billing['trialClients'] as num?) ?? 0;
+    final overdueClients = (billing['overdueClients'] as num?) ?? 0;
+    final pendingInvoices = (billing['pendingInvoicesCount'] as num?) ?? 0;
+    final totalUnpaid = (billing['totalUnpaid'] as num?) ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Facturation',
+            style: Theme.of(context)
+                .textTheme
+                .titleSmall
+                ?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _BillingKpiCard(
+              label: 'Revenus du mois',
+              value: '${_fmt(monthlyRevenue)} FCFA',
+              icon: Icons.trending_up,
+              color: Colors.green,
+            ),
+            _BillingKpiCard(
+              label: 'MRR',
+              value: '${_fmt(mrr)} FCFA',
+              icon: Icons.repeat,
+              color: Colors.blue,
+            ),
+            _BillingKpiCard(
+              label: 'Clients actifs',
+              value: '$activeClients',
+              icon: Icons.check_circle,
+              color: Colors.green,
+            ),
+            _BillingKpiCard(
+              label: 'En essai',
+              value: '$trialClients',
+              icon: Icons.hourglass_top,
+              color: Colors.blue,
+            ),
+            _BillingKpiCard(
+              label: 'Impayés',
+              value: '$overdueClients',
+              icon: Icons.warning_amber,
+              color: overdueClients > 0 ? Colors.red : Colors.grey,
+              badge: overdueClients > 0,
+            ),
+            _BillingKpiCard(
+              label: 'Factures en attente',
+              value: '$pendingInvoices',
+              icon: Icons.description_outlined,
+              color: pendingInvoices > 0 ? Colors.orange : Colors.grey,
+            ),
+            _BillingKpiCard(
+              label: 'Total impayé',
+              value: '${_fmt(totalUnpaid)} FCFA',
+              icon: Icons.money_off,
+              color: totalUnpaid > 0 ? Colors.orange : Colors.grey,
+            ),
+          ],
+        ),
+        const Divider(height: 24),
+      ],
+    );
+  }
+}
+
+class _BillingKpiCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final bool badge;
+
+  const _BillingKpiCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.badge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 140,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 16),
+                  const SizedBox(width: 4),
+                  if (badge)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('!',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold, color: color)),
+              const SizedBox(height: 2),
+              Text(label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey.shade600)),
+            ],
+          ),
+        ),
       ),
     );
   }

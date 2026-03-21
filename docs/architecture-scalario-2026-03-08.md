@@ -15,6 +15,7 @@
 | 1.3 | 2026-03-19 | FR98–FR99: return policy fields on Tenant (returnPolicyDays, returnRequiresReason, returnRequiresApproval), two new shared models (ReturnRecord, Reservation). |
 | 1.4 | 2026-03-20 | FR100–FR103: billing fields on Tenant (plan, maxUsers, installationFee/Paid, trainingFee/Paid, billingStartDate, billingStatus, trialEndsAt, notes), two new kernel models (PlanDefinition, BillingEvent). New section 4.1.6 Billing Module. Diagram and FR traceability updated. |
 | 1.5 | 2026-03-20 | FR104–FR106: businessType field on Tenant, new kernel model BusinessTypeDefinition (code, name, defaultFlags JSON, visibleSections, suggestedCategories, icon, isActive). New section 4.1.7 Business Type Module. Diagram, FR traceability, and Summary updated. 13 types seeded. |
+| 1.6 | 2026-03-20 | FR107–FR111: two new shared models (ClientOrder, ClientOrderLine), two new fields on BusinessTypeDefinition (roleLabels JSON, documentType String). New section 4.2.13 Client Orders Module. "distribution" added as 14th business type. Diagram, FR traceability, and Summary updated. |
 
 ---
 
@@ -130,11 +131,15 @@ These NFRs have the highest impact on architectural decisions. They are ordered 
 └──────────────────────────────────────────────────────────────┘
 ```
 
-> **PRD v5 — Future Architecture Layers (not in current diagram):**
+> **PRD v6.2 — Future Architecture Layers (not in current diagram):**
 > - **Server-Driven UI (Epic 10):** Flutter layout engine reads JSON layout config from server. Planned after Epic 6. Adds a `LayoutRegistry` service in KERNEL and a `LayoutEngine` module in the client. No backend structural change.
 > - **Scalario Connect (Epic 12, Phase 3):** Inter-tenant B2B mesh. DB anticipation fields seeded in Phase 1 (Story 1.6). Adds a Connect vertical module + inter-tenant API layer.
 > - **Scalario Enterprise (Epic 13, Phase 3):** Multi-department overlay on the kernel. DB anticipation fields seeded in Phase 1 (Story 1.6). Adds Enterprise vertical module, department-scoped RBAC, and intra-tenant event flows (FR62).
 > - **Programme Ambassadeurs (Epic 11, Phase 2b):** Referral tracking via `referred_by` on Tenant (seeded in Story 1.6). Adds referral service + Mobile Money payout automation.
+> - **Vertical Artisan (Phase 3+):** Fabrication sur commande. Réutilise catalog, inventory, contacts, transactions, expenses, reports. Ajoute : work_order, quotation, material_consumption, workshop_planning. Business types : tailleur, menuisier, forgeron, cordonnier, imprimeur, artisan_general.
+> - **Vertical Restaurant (Phase 3+):** Service en salle. Réutilise catalog, contacts, transactions, expenses, reports. Ajoute : table_management, kitchen_display, menu_builder. Business types : restaurant, fast_food, bar, traiteur.
+> - **Vertical Services (Phase 3+):** Prestations pures. Réutilise contacts, transactions, expenses, reports. Ajoute : appointment, service_catalog, client_history. Business types : salon_coiffure, lavage_auto, cyber_cafe, photographe, services_general.
+> - **Champ `vertical` sur `BusinessTypeDefinition`:** Déjà présent dans le schéma (Phase 2a anticipation, migration 20260320070000). Vaut `"retail"` pour les 15 types actuels. Permettra d'ajouter des types artisan/restaurant/services sans migration.
 
 ### Data Flow Patterns
 
@@ -406,13 +411,14 @@ Tenant.plan, Tenant.maxUsers, Tenant.installationFee/Paid, Tenant.trainingFee/Pa
 
 **Dependencies:** Tenancy Module, Catalog Module (for category seeding), Prisma (kernel schema)
 
-**FRs Addressed:** FR104, FR105, FR106
+**FRs Addressed:** FR104, FR105, FR106, FR111
 
-**Current State:** Does not exist. New module. Phase 2a scope: definition management + tenant assignment + category seeding.
+**Current State:** Does not exist. New module. Phase 2a scope: definition management + tenant assignment + category seeding + role labels.
 
 **Data Model:**
 ```
-BusinessTypeDefinition(id, code, name, description?, defaultFlags JSON, visibleSections String[], suggestedCategories String[], icon?, isActive)
+BusinessTypeDefinition(id, code, name, description?, defaultFlags JSON, visibleSections String[],
+  suggestedCategories String[], roleLabels JSON, documentType String, icon?, isActive)
 Tenant.businessType  (FK by code, default "generaliste")
 ```
 
@@ -757,6 +763,57 @@ ProductBatch (shared.product_batches)
 
 ---
 
+#### 4.2.13 Client Orders Module (`shared/client-orders`)
+
+**Purpose:** End-to-end customer order management for B2B and wholesale workflows
+
+**Responsibilities:**
+- Create and manage client orders from backoffice or POS (draft → confirmed → preparing → ready → delivered → invoiced → paid)
+- Auto-generate unique order numbers per tenant
+- Validate stock availability on confirmation (alert only, no hard block)
+- Reserve stock on preparation (StockMovement RESERVED per line)
+- Record delivery with actual quantities (variance supported); auto-generate sale transaction on delivery
+- Select delivery document type from `BusinessTypeDefinition.documentType` (receipt / delivery_note / invoice)
+- Convert reserved stock to sold stock (RESERVED → SALE) on delivery
+- Track partial payments; expose outstanding balance on the customer record
+
+**Interfaces:**
+- REST API: `POST /api/v1/client-orders`, `GET /api/v1/client-orders`, `PATCH /api/v1/client-orders/:id/status`
+- REST API: `POST /api/v1/client-orders/:id/deliver`, `POST /api/v1/client-orders/:id/payments`
+- `ClientOrdersService.confirm(orderId)` — stock check + status transition
+- `ClientOrdersService.deliver(orderId, deliveredLines[])` — generates transaction + releases stock
+- Dashboard aggregations: `GET /api/v1/client-orders/kpis` (count in-progress, pending CA)
+
+**Dependencies:** Kernel (Tenant, auth), Contacts, Catalog, Inventory (StockMovement), Transactions, BusinessType Module
+
+**FRs Addressed:** FR107, FR108, FR109, FR110
+
+**Current State:** Does not exist. New module. Phase 2a scope. Bloquant pour grossiste/distribution.
+
+**Data Model:**
+```
+ClientOrder (shared.client_orders)
+  ├── id, orderNumber (unique), tenantId
+  ├── customerId → Contact
+  ├── status (draft|confirmed|preparing|ready|delivered|invoiced|paid|cancelled)
+  ├── requestedDate?, deliveryAddress?, paymentMethod (cash|credit|partial)
+  ├── notes?, totalAmount, paidAmount
+  ├── transactionId? → Transaction (set on delivery)
+  ├── createdBy, preparedBy?, deliveredBy?
+  ├── createdAt, deliveredAt?
+  └── lines → ClientOrderLine[]
+
+ClientOrderLine (shared.client_order_lines)
+  ├── id, clientOrderId → ClientOrder
+  ├── catalogItemId → CatalogItem
+  ├── variantId? → ProductVariant
+  ├── quantity, unitPrice
+  ├── preparedQuantity?, deliveredQuantity?
+  └── notes?
+```
+
+---
+
 #### 4.2.6 Reporting Module (`shared/reporting`)
 
 **Purpose:** Cross-module reporting and analytics
@@ -945,7 +1002,9 @@ Target state: Three logical schemas.
 │  │  ├── serial_recs │   ← FR92/FR93             │
 │  │  ├── price_hist  │   ← FR96/FR97             │
 │  │  ├── return_recs │   ← FR98                  │
-│  │  └── reservations│   ← FR99                  │
+│  │  ├── reservations│   ← FR99                  │
+│  │  ├── client_orders│  ← FR107/FR108/FR109/FR110│
+│  │  └── client_ord_ln│  ← FR107                 │
 │  └──────────────────┘                            │
 │                                                  │
 │  ┌──────────────────┐                            │
@@ -1584,7 +1643,7 @@ model BillingEvent {
 
 model BusinessTypeDefinition {
   id                  String   @id @default(uuid()) @db.Uuid
-  code                String   @unique // generaliste, epicerie, telephonie, textile, pharmacie, etc.
+  code                String   @unique // generaliste, epicerie, telephonie, textile, pharmacie, distribution, etc.
   name                String   // "Épicerie & Alimentation"
   description         String?  // "Fruits, légumes, épices, produits frais"
   defaultFlags        Json     // {"trackSerialNumbers": false, "hasVariants": false,
@@ -1593,12 +1652,65 @@ model BusinessTypeDefinition {
                                //  "dynamicPricing": false, "unitType": "piece"}
   visibleSections     String[] @map("visible_sections") // ["expiry", "weight"] — shown by default in ProductFormDialog
   suggestedCategories String[] @map("suggested_categories") // ["Fruits", "Légumes", "Épices", "Boissons"]
+  // FR111 — Role label overrides displayed in the UI (admin user creation, reports, history).
+  // Maps predefined role codes to business-specific labels.
+  // Underlying permissions and routing are unchanged — display only.
+  roleLabels          Json     @default("{}") @map("role_labels")
+                               // {"owner": "Propriétaire", "manager": "Gestionnaire",
+                               //  "commercial": "Vendeur", "cashier": "Caissier"}
+  // FR109 — Delivery document type generated on order delivery.
+  // "receipt" = ticket de caisse (défaut), "delivery_note" = bon de livraison, "invoice" = facture
+  documentType        String   @default("receipt") @map("document_type")
   icon                String?  // Material icon name for admin panel
   isActive            Boolean  @default(true) @map("is_active")
   createdAt           DateTime @default(now()) @map("created_at")
 
   @@map("business_type_definitions")
   @@schema("kernel")
+}
+
+// ─── FR107/FR108/FR109/FR110: Client Orders ───────────────────────────────────
+// Wholesale/distribution order lifecycle: draft → confirmed → in-progress →
+// delivered | cancelled. Stock reserved at confirmation (StockMovement RESERVATION),
+// released or consumed at delivery. Supports partial delivery.
+// documentType on BusinessTypeDefinition drives the delivery document generated.
+
+model ClientOrder {
+  id            String            @id @default(uuid()) @db.Uuid
+  orderNumber   String            @unique @map("order_number") // ORD-2026-0001
+  tenantId      String            @map("tenant_id") @db.Uuid
+  customerId    String            @map("customer_id") @db.Uuid
+  status        String            @default("draft")
+                                  // draft | confirmed | in-progress | delivered | cancelled
+  depositAmount Decimal?          @db.Decimal(10, 2) @map("deposit_amount")
+  depositPaidAt DateTime?         @map("deposit_paid_at") @db.Timestamptz(6)
+  notes         String?
+  createdBy     String            @map("created_by") @db.Uuid
+  preparedBy    String?           @map("prepared_by") @db.Uuid
+  deliveredBy   String?           @map("delivered_by") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  deliveredAt   DateTime?         @map("delivered_at") @db.Timestamptz(6)
+  lines         ClientOrderLine[]
+
+  @@index([tenantId, status])
+  @@index([customerId])
+  @@map("client_orders")
+  @@schema("shared")
+}
+
+model ClientOrderLine {
+  id            String      @id @default(uuid()) @db.Uuid
+  clientOrderId String      @map("client_order_id") @db.Uuid
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  variantId     String?     @map("variant_id") @db.Uuid
+  quantity      Decimal     @db.Decimal(10, 3)
+  unitPrice     Decimal     @db.Decimal(10, 2) @map("unit_price")
+  deliveredQty  Decimal     @default(0) @db.Decimal(10, 3) @map("delivered_qty")
+  clientOrder   ClientOrder @relation(fields: [clientOrderId], references: [id])
+
+  @@index([clientOrderId])
+  @@map("client_order_lines")
+  @@schema("shared")
 }
 
 // ═══════════════════════════════════════════
@@ -2469,8 +2581,13 @@ Push to main → GitHub Actions:
 | FR104 | Superadmin assigns a business type to each tenant at creation; BusinessTypeDefinition configurable without deployment — code, name, defaultFlags (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), visibleSections, suggestedCategories, icon; "generaliste" is default (all flags off) | BusinessTypeDefinition + Tenant.businessType | kernel |
 | FR105 | Product form adapts to tenant businessType — relevant fields shown first and pre-filled with type defaults, irrelevant fields hidden behind "Afficher plus d'options" toggle; owner can always override each flag per product | BusinessTypeDefinition.defaultFlags + BusinessTypeDefinition.visibleSections | kernel + backoffice |
 | FR106 | On tenant creation with a businessType, system auto-creates suggested categories from the type's suggestedCategories list; owner can rename, delete or add categories freely | BusinessTypeService.seedCategories + CatalogCategory | kernel + shared |
+| FR107 | Client order creation and lifecycle management: draft→confirmed→in-progress→delivered\|cancelled; orderNumber auto-generated; notes field; all roles can view | ClientOrder + ClientOrderLine | shared |
+| FR108 | Stock reserved at order confirmation (StockMovement RESERVATION); released or consumed at delivery; partial delivery supported (deliveredQty per line) | ClientOrder + StockMovement (RESERVATION) | shared |
+| FR109 | On delivery: system generates a delivery document based on BusinessTypeDefinition.documentType (receipt/delivery_note/invoice); deposit tracked (depositAmount, depositPaidAt) | ClientOrder.depositAmount + BusinessTypeDefinition.documentType | shared + kernel |
+| FR110 | Dashboard KPIs for client orders: count in-progress, total pending CA; backoffice list with filters by status and customer | ClientOrdersService + GET /api/v1/client-orders/kpis | shared |
+| FR111 | Role labels in the UI adapt to the tenant's business type via BusinessTypeDefinition.roleLabels JSON (owner/manager/commercial/cashier → custom labels); underlying permissions unchanged | BusinessTypeDefinition.roleLabels | kernel |
 
-**Coverage:** 106/106 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics. FR92–FR97 added in architecture v1.2 — traceability and configuration fields. FR98–FR99 added in architecture v1.3 — return records and reservations. FR100–FR103 added in architecture v1.4 — billing module, plan definitions, billing events. FR104–FR106 added in architecture v1.5 — business type definitions, product form adaptation, category seeding.)
+**Coverage:** 111/111 FRs mapped to components. (DB-only FRs marked with (DB) are addressed in Story 1.6 — schema only, no business logic. FR52–FR55 and FR59–FR61 business logic activates in Epics 11–13. FR76–FR91 added in architecture v1.1 — implementation in Phase 2 epics. FR92–FR97 added in architecture v1.2 — traceability and configuration fields. FR98–FR99 added in architecture v1.3 — return records and reservations. FR100–FR103 added in architecture v1.4 — billing module, plan definitions, billing events. FR104–FR106 added in architecture v1.5 — business type definitions, product form adaptation, category seeding. FR107–FR111 added in architecture v1.6 — client orders module, role labels.)
 
 ---
 
@@ -2681,7 +2798,7 @@ During migration, the backend maintains backward compatibility:
 | **Backend Components** | 5 kernel + 12 shared + 3 retail = 20 |
 | **Client Components** | 3 core services + 5 repositories + 7 Isar collections |
 | **API Endpoints** | ~50 REST endpoints |
-| **FRs Covered** | 106/106 (100%) |
+| **FRs Covered** | 111/111 (100%) |
 | **NFRs Covered** | 30/30 (100%) |
 | **Migration Steps** | 9 incremental steps |
 | **Key Innovation** | Offline-first ERP with polymorphic shared entities + chain-of-custody trust pattern |
@@ -2690,6 +2807,7 @@ During migration, the backend maintains backward compatibility:
 | **v1.3 Additions** | 2 new shared models (ReturnRecord, Reservation) + 3 return policy fields on Tenant (FR98–FR99) |
 | **v1.4 Additions** | 2 new kernel models (PlanDefinition, BillingEvent) + 9 billing fields on Tenant + new section 4.1.6 Billing Module (FR100–FR103) |
 | **v1.5 Additions** | 1 new kernel model (BusinessTypeDefinition) + 1 field on Tenant (businessType) + new section 4.1.7 Business Type Module + 13 types seeded (FR104–FR106) |
+| **v1.6 Additions** | 2 new shared models (ClientOrder, ClientOrderLine) + 2 new fields on BusinessTypeDefinition (roleLabels, documentType) + new section 4.2.13 Client Orders Module + "distribution" as 14th business type (FR107–FR111) |
 
 ---
 

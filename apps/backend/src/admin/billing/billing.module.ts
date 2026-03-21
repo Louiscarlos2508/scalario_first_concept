@@ -6,6 +6,7 @@ import { TenantPlanController } from './tenant-plan.controller';
 import { BillingEventsService } from './billing-events.service';
 import { BillingEventsController } from './billing-events.controller';
 import { BillingSchedulerService } from './billing-scheduler.service';
+import { BillingSummaryController } from './billing-summary.controller';
 import { SettingsBillingController } from './settings-billing.controller';
 import { ModulesModule } from '../../kernel/modules/modules.module';
 
@@ -15,6 +16,7 @@ import { ModulesModule } from '../../kernel/modules/modules.module';
     PlanDefinitionController,
     TenantPlanController,
     BillingEventsController,
+    BillingSummaryController,
     SettingsBillingController,
   ],
   providers: [

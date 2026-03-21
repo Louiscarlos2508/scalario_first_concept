@@ -22,6 +22,7 @@ import { BatchesModule } from './shared/batches/batches.module';
 import { PromotionsModule } from './shared/promotions/promotions.module';
 import { ReturnsModule } from './shared/returns/returns.module';
 import { ReservationsModule } from './shared/reservations/reservations.module';
+import { ClientOrdersModule } from './shared/client-orders/client-orders.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ReservationsModule } from './shared/reservations/reservations.module';
     PromotionsModule.register(),
     ReturnsModule.register(),
     ReservationsModule.register(),
+    ClientOrdersModule.register(),
   ],
   controllers: [AppController],
   providers: [AppService],

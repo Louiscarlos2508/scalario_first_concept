@@ -15,6 +15,7 @@ import 'package:frontend/features/shared/catalog/presentation/widgets/serial_inp
 import 'prescription_input_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/return_search_sheet.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -690,9 +691,10 @@ class CartPanel extends ConsumerWidget {
                       .firstOrNull
                       ?.tenantName ??
                   'Scalario POS';
+              final docType = ref.read(businessTypeConfigProvider).valueOrNull?.documentType ?? 'receipt';
 
               await ReceiptService.generateAndPrintReceipt(
-                  cart, tenantName);
+                  cart, tenantName, documentType: docType);
               if (context.mounted) Navigator.pop(context);
             },
             icon: const Icon(Icons.print),

@@ -13,6 +13,7 @@ import '../../../../../core/widgets/barcode_listener.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
+import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -28,6 +29,14 @@ class PosScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           if (sessionOpen) ...[
+            IconButton(
+              icon: const Icon(Icons.assignment_add),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const ClientOrderFormScreen()),
+              ),
+              tooltip: 'Commande client',
+            ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => _openCameraScanner(context, ref),
