@@ -64,6 +64,10 @@ class Product {
   @ignore
   List<PriceLevel> priceLevels = [];
 
+  // Photo produit
+  @ignore
+  String? imageUrl;
+
   DateTime? lastUpdated;
   bool isDeleted = false;
 
@@ -84,6 +88,7 @@ class Product {
       'pricePerUnit': pricePerUnit,
       'conversionRate': conversionRate,
       'parentItemId': parentItemId,
+      'imageUrl': imageUrl,
     };
   }
 
@@ -149,6 +154,7 @@ class Product {
                 ?.map((p) => PriceLevel.fromJson(p as Map<String, dynamic>))
                 .toList() ??
             []
+        ..imageUrl = json['imageUrl']?.toString() ?? json['image_url']?.toString()
         ..isDeleted = json['isDeleted'] ?? json['is_deleted'] ?? false
         ..lastUpdated = json['updatedAt'] != null
             ? DateTime.parse(json['updatedAt'])

@@ -286,6 +286,9 @@ model CatalogItem {
   // Epic 25 — Variantes
   hasVariants         Boolean       @default(false) @map("has_variants")
 
+  // Photo produit
+  imageUrl            String?       @map("image_url")
+
   // Epic 26 — Traçabilité Articles
   trackSerialNumbers  Boolean       @default(false) @map("track_serial_numbers")
   warrantyMonths      Int?          @map("warranty_months")

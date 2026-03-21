@@ -1,5 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
@@ -61,6 +64,11 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   List<Map<String, dynamic>> _allItems = [];
   List<Map<String, dynamic>> _childItems = [];
 
+  // Photo produit
+  Uint8List? _selectedImageBytes;
+  String? _existingImageUrl;
+  bool _clearImage = false;
+
   // Epic 29 — Adaptive form (businessType)
   bool _showAdvanced = false;
   bool _defaultsApplied = false;
@@ -97,6 +105,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _requiresPrescription = widget.product?.requiresPrescription ?? false;
     _dynamicPricing = widget.product?.dynamicPricing ?? false;
     _isUnique = widget.product?.isUnique ?? false;
+    _existingImageUrl = widget.product?.imageUrl;
     _priceReasonController = TextEditingController();
     final wm = widget.product?.warrantyMonths;
     _hasWarranty = wm != null && wm > 0;
@@ -296,6 +305,17 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // ── Photo produit ──────────────────────────────────────────────
+              _ImagePickerSection(
+                imageBytes: _selectedImageBytes,
+                imageUrl: _clearImage ? null : _existingImageUrl,
+                onPick: _pickImage,
+                onClear: () => setState(() {
+                  _selectedImageBytes = null;
+                  _clearImage = true;
+                }),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 key: const Key('product_name_field'),
                 controller: _nameController,
@@ -835,6 +855,32 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 400,
+      maxHeight: 400,
+      imageQuality: 70,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (mounted) setState(() { _selectedImageBytes = bytes; _clearImage = false; });
+  }
+
+  Future<String?> _uploadImage(String tenantId) async {
+    if (_selectedImageBytes == null) return null;
+    final storage = Supabase.instance.client.storage;
+    const bucket = 'product-images';
+    final path = '$tenantId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await storage.from(bucket).uploadBinary(
+      path,
+      _selectedImageBytes!,
+      fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+    );
+    return storage.from(bucket).getPublicUrl(path);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -867,6 +913,9 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
           ? null
           : double.tryParse(_minStockController.text.trim());
 
+      final uploadedUrl = await _uploadImage(tenantId);
+      final imageUrl = _clearImage ? null : (uploadedUrl ?? _existingImageUrl);
+
       if (widget.product != null && widget.product!.remoteId != null) {
         // Edit existing product
         await catalogRepo.updateItem(
@@ -891,6 +940,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               ? _priceReasonController.text.trim()
               : null,
           isUnique: _isUnique,
+          imageUrl: imageUrl,
+          clearImage: _clearImage,
         );
       } else {
         // Create new product
@@ -908,6 +959,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               : null,
           requiresPrescription: _requiresPrescription,
           isUnique: _isUnique,
+          imageUrl: imageUrl,
         );
         final initialStock = double.tryParse(_stockController.text.trim()) ?? 0;
         if (initialStock > 0) {
@@ -975,5 +1027,71 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
       product.stockQuantity = double.tryParse(_stockController.text) ?? 0;
     }
     Navigator.of(context).pop(product);
+  }
+}
+
+class _ImagePickerSection extends StatelessWidget {
+  final Uint8List? imageBytes;
+  final String? imageUrl;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  const _ImagePickerSection({
+    required this.imageBytes,
+    required this.imageUrl,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = imageBytes != null || imageUrl != null;
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: onPick,
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey.shade100,
+            ),
+            child: hasImage
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: imageBytes != null
+                        ? Image.memory(imageBytes!, fit: BoxFit.cover)
+                        : Image.network(imageUrl!, fit: BoxFit.cover,
+                            errorBuilder: (ctx, e, st) =>
+                                const Icon(Icons.broken_image, size: 40)),
+                  )
+                : const Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextButton.icon(
+              onPressed: onPick,
+              icon: const Icon(Icons.photo_library_outlined, size: 18),
+              label: Text(hasImage ? 'Changer la photo' : 'Ajouter une photo'),
+            ),
+            if (hasImage)
+              TextButton.icon(
+                onPressed: onClear,
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                label: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+              ),
+            const Text(
+              'Max 400×400 px · qualité 70%',
+              style: TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

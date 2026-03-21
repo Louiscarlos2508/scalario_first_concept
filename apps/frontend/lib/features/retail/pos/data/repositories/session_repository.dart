@@ -9,9 +9,14 @@ class SessionRepository {
 
   SessionRepository(this._isarService);
 
-  Future<PosSession?> getActiveSession() async {
+  Future<PosSession?> getActiveSession({required String userId}) async {
     final isar = await _isarService.db;
-    return await isar.posSessions.filter().statusEqualTo('OPEN').findFirst();
+    return await isar.posSessions
+        .filter()
+        .userIdEqualTo(userId)
+        .and()
+        .statusEqualTo('OPEN')
+        .findFirst();
   }
 
   final Uuid _uuid = const Uuid();

@@ -168,7 +168,7 @@ class _OpenSessionScreenState extends ConsumerState<OpenSessionScreen> {
                 ),
                 decoration: const InputDecoration(
                   labelText: 'Fond de caisse',
-                  prefixIcon: Icon(Icons.attach_money),
+                  prefixText: 'FCFA ',
                   border: OutlineInputBorder(),
                 ),
               ),

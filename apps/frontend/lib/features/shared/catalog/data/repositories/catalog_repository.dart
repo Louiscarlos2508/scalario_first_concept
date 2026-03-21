@@ -45,6 +45,7 @@ class CatalogRepository {
     int? warrantyMonths,
     bool requiresPrescription = false,
     bool isUnique = false,
+    String? imageUrl,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -59,6 +60,7 @@ class CatalogRepository {
       'warrantyMonths': ?warrantyMonths,
       if (requiresPrescription) 'requiresPrescription': true,
       if (isUnique) 'isUnique': true,
+      'imageUrl': ?imageUrl,
     };
 
     final response = await _httpClient.post(
@@ -120,6 +122,8 @@ class CatalogRepository {
     bool? dynamicPricing,
     String? priceReason,
     bool? isUnique,
+    String? imageUrl,
+    bool clearImage = false,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -140,6 +144,7 @@ class CatalogRepository {
       'dynamicPricing': ?dynamicPricing,
       'reason': ?priceReason,
       'isUnique': ?isUnique,
+      if (clearImage) 'imageUrl': null else 'imageUrl': ?imageUrl,
     };
     final response = await _httpClient.patch(
       Uri.parse('${ApiConstants.baseUrl}/catalog/items/$id'),

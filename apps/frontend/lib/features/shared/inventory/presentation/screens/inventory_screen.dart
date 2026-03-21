@@ -16,6 +16,7 @@ import 'package:frontend/features/shared/inventory/presentation/screens/partial_
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 import 'package:frontend/features/shared/freshness/presentation/screens/freshness_screen.dart';
 import 'package:frontend/features/shared/catalog/presentation/screens/categories_screen.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 
 final _fcfa = NumberFormat.currency(
   locale: 'fr_FR',
@@ -26,14 +27,120 @@ final _fcfa = NumberFormat.currency(
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 class InventoryScreen extends ConsumerStatefulWidget {
-  // ignore: avoid_unused_constructor_parameters
-  const InventoryScreen({super.key, int initialIndex = 0});
+  final int initialIndex;
+  const InventoryScreen({super.key, this.initialIndex = 0});
 
   @override
   ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends ConsumerState<InventoryScreen> {
+class _InventoryScreenState extends ConsumerState<InventoryScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  static const _tabs = [
+    Tab(text: 'Réceptions'),
+    Tab(text: 'Transferts'),
+    Tab(text: 'Pertes'),
+    Tab(text: 'Comptage'),
+    Tab(text: 'Commandes'),
+    Tab(text: 'Fraîcheur'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 6,
+      vsync: this,
+      initialIndex: widget.initialIndex,
+    );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
+    final isOwner = role == 'owner';
+    final repo = ref.watch(inventoryRepositoryProvider);
+
+    return Scaffold(
+      appBar: ScalarioAppBar(
+        title: 'Inventaire',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.inventory_2_outlined),
+            tooltip: 'Produits & Stock',
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => FractionallySizedBox(
+                heightFactor: 0.92,
+                child: _ProductListSheet(isOwner: isOwner),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: _tabs,
+        ),
+      ),
+      floatingActionButton: isOwner
+          ? FloatingActionButton(
+              heroTag: 'inventory_fab',
+              tooltip: 'Nouveau produit',
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => const ProductFormDialog(submitToCatalog: true),
+              ).then((_) => ref.invalidate(catalogProvider)),
+              child: const Icon(Icons.add),
+            )
+          : null,
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          SingleChildScrollView(child: DeliveryForm(repository: repo)),
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                TransferOutForm(repository: repo),
+                const SizedBox(height: 16),
+                TransferPendingScreen(repository: repo),
+              ],
+            ),
+          ),
+          SingleChildScrollView(child: LossDeclarationForm(repository: repo)),
+          PartialInventoryScreen(repository: repo, embedded: true),
+          const PurchaseOrdersScreen(),
+          const FreshnessScreen(),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Product list sheet ────────────────────────────────────────────────────────
+
+class _ProductListSheet extends ConsumerStatefulWidget {
+  final bool isOwner;
+  const _ProductListSheet({required this.isOwner});
+
+  @override
+  ConsumerState<_ProductListSheet> createState() => _ProductListSheetState();
+}
+
+class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
   final _searchController = TextEditingController();
   String _search = '';
   String? _activeFilter; // null | 'low_stock'
@@ -69,147 +176,137 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
-    final isOwner = role == 'owner';
-    final canAct = isOwner || role == 'manager';
+    final isOwner = widget.isOwner;
     final itemsAsync = ref.watch(catalogProvider);
     final lowStockCount = ref.watch(lowStockCountProvider).valueOrNull ?? 0;
     final expiringCount = ref.watch(urgentBatchCountProvider).valueOrNull ?? 0;
-    final repo = ref.watch(inventoryRepositoryProvider);
 
-    return Scaffold(
-      appBar: ScalarioAppBar(
-        title: 'Produits & Stock',
-        actions: [
-          if (isOwner)
-            IconButton(
-              icon: const Icon(Icons.category_outlined),
-              tooltip: 'Catégories',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualiser',
-            onPressed: () => ref.invalidate(catalogProvider),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      floatingActionButton: isOwner
-          ? FloatingActionButton(
-              heroTag: 'inventory_fab',
-              tooltip: 'Nouveau produit',
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => const ProductFormDialog(submitToCatalog: true),
-              ).then((_) => ref.invalidate(catalogProvider)),
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Zone 1 — Summary stats
-          _SummaryRow(
-            totalCount: itemsAsync.valueOrNull?.length ?? 0,
-            lowStockCount: lowStockCount,
-            expiringCount: expiringCount,
-            activeFilter: _activeFilter,
-            onTapLowStock: () => _toggleFilter('low_stock'),
-            onTapExpiring: () => _openFreshnessSheet(context),
-          ),
-          // Zone 2 — Action chips (owner + manager)
-          if (canAct) _ActionChipsRow(repo: repo),
-          // Zone 3 — Search + product list
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: 'Rechercher un produit...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 10),
-              ),
-              onChanged: (v) => setState(() => _search = v),
-            ),
-          ),
-          Expanded(
-            child: itemsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Sheet header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
+          child: Row(
+            children: [
+              Expanded(
                 child: Text(
-                  'Erreur : $err',
-                  style: const TextStyle(color: AppColors.error),
+                  'Produits & Stock',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              data: (items) {
-                final filtered = _applyFilter(items);
-                if (filtered.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 48,
-                          color: AppColors.textSecondary,
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'Aucun produit',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () async => ref.invalidate(catalogProvider),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, i) {
-                      final item = filtered[i];
-                      final id = item['id']?.toString() ?? '$i';
-                      return _ProductTile(
-                        key: Key('inv_product_$id'),
-                        item: item,
-                        isOwner: isOwner,
-                        onTap: () => showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          useSafeArea: true,
-                          builder: (_) => FractionallySizedBox(
-                            heightFactor: 0.90,
-                            child: _ProductDetailPage(
-                              item: item,
-                              isOwner: isOwner,
-                            ),
-                          ),
-                        ).then((_) => ref.invalidate(catalogProvider)),
-                        onMenuTap: isOwner
-                            ? () => _showOwnerMenu(context, ref, item)
-                            : null,
-                      );
-                    },
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Actualiser',
+                onPressed: () => ref.invalidate(catalogProvider),
+              ),
+              if (isOwner)
+                IconButton(
+                  icon: const Icon(Icons.category_outlined),
+                  tooltip: 'Catégories',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CategoriesScreen()),
+                  ),
+                ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        _SummaryRow(
+          totalCount: itemsAsync.valueOrNull?.length ?? 0,
+          lowStockCount: lowStockCount,
+          expiringCount: expiringCount,
+          activeFilter: _activeFilter,
+          onTapLowStock: () => _toggleFilter('low_stock'),
+          onTapExpiring: () => _openFreshnessSheet(context),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              hintText: 'Rechercher un produit...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 10),
+            ),
+            onChanged: (v) => setState(() => _search = v),
+          ),
+        ),
+        Expanded(
+          child: itemsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(
+              child: Text(
+                'Erreur : $err',
+                style: const TextStyle(color: AppColors.error),
+              ),
+            ),
+            data: (items) {
+              final filtered = _applyFilter(items);
+              if (filtered.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.inventory_2_outlined,
+                        size: 48,
+                        color: AppColors.textSecondary,
+                      ),
+                      SizedBox(height: 12),
+                      Text(
+                        'Aucun produit',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
                 );
-              },
-            ),
+              }
+              return RefreshIndicator(
+                onRefresh: () async => ref.invalidate(catalogProvider),
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, i) {
+                    final item = filtered[i];
+                    final id = item['id']?.toString() ?? '$i';
+                    return _ProductTile(
+                      key: Key('inv_product_$id'),
+                      item: item,
+                      isOwner: isOwner,
+                      onTap: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        builder: (_) => FractionallySizedBox(
+                          heightFactor: 0.90,
+                          child: _ProductDetailPage(
+                            item: item,
+                            isOwner: isOwner,
+                          ),
+                        ),
+                      ).then((_) => ref.invalidate(catalogProvider)),
+                      onMenuTap: isOwner
+                          ? () => _showOwnerMenu(context, ref, item)
+                          : null,
+                    );
+                  },
+                ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-
-  // ── Owner context menu ────────────────────────────────────────────────────
 
   void _showOwnerMenu(
     BuildContext context,
@@ -446,8 +543,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-// ── Zone 2: Action chips ──────────────────────────────────────────────────────
-
 void _openFreshnessSheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
@@ -493,132 +588,6 @@ void _openFreshnessSheet(BuildContext context) {
   );
 }
 
-class _ActionChipsRow extends ConsumerWidget {
-  final dynamic repo;
-
-  const _ActionChipsRow({required this.repo});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _ActionChip(
-              icon: Icons.local_shipping_outlined,
-              label: 'Réceptionner',
-              onTap: () =>
-                  _openSheet(context, child: DeliveryForm(repository: repo)),
-            ),
-            const SizedBox(width: 8),
-            _ActionChip(
-              icon: Icons.swap_horiz_outlined,
-              label: 'Transférer',
-              onTap: () => _openSheet(
-                context,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TransferOutForm(repository: repo),
-                    const SizedBox(height: 16),
-                    TransferPendingScreen(repository: repo),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _ActionChip(
-              icon: Icons.remove_circle_outline,
-              label: 'Déclarer perte',
-              onTap: () => _openSheet(
-                context,
-                child: LossDeclarationForm(repository: repo),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _ActionChip(
-              icon: Icons.fact_check_outlined,
-              label: 'Comptage',
-              onTap: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => FractionallySizedBox(
-                  heightFactor: 0.90,
-                  child: PartialInventoryScreen(
-                      repository: repo, embedded: true),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _ActionChip(
-              icon: Icons.eco_outlined,
-              label: 'Fraîcheur',
-              onTap: () => _openFreshnessSheet(context),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openSheet(BuildContext context, {required Widget child}) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.65,
-        maxChildSize: 0.95,
-        builder: (_, sc) => ListView(
-          controller: sc,
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          children: [
-            const SizedBox(height: 12),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
-}
-
-class _ActionChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionChip(
-      avatar: Icon(icon, size: 18),
-      label: Text(label),
-      onPressed: onTap,
-    );
-  }
-}
 
 // ── Zone 3: Product tile ──────────────────────────────────────────────────────
 

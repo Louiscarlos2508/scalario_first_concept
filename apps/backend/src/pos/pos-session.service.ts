@@ -78,6 +78,10 @@ export class PosSessionService {
     return updated;
   }
 
+  async getSessionById(id: string) {
+    return this.prisma.posSession.findUnique({ where: { id } });
+  }
+
   async getActiveSession(userId: string, tenantId: string) {
     return this.prisma.posSession.findFirst({
       where: { userId, tenantId, status: 'OPEN' },

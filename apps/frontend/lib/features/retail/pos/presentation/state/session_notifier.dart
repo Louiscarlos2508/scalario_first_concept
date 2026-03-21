@@ -7,16 +7,18 @@ import 'package:frontend/core/models/sync_status.dart';
 class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
   final SessionRepository _repository;
   final OrderRepository _orderRepository;
+  final String _userId;
 
-  SessionNotifier(this._repository, this._orderRepository)
-    : super(const AsyncValue.loading()) {
+  SessionNotifier(this._repository, this._orderRepository, {required String userId})
+    : _userId = userId,
+      super(const AsyncValue.loading()) {
     checkActiveSession();
   }
 
   Future<void> checkActiveSession() async {
     state = const AsyncValue.loading();
     try {
-      final session = await _repository.getActiveSession();
+      final session = await _repository.getActiveSession(userId: _userId);
       state = AsyncValue.data(session);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);

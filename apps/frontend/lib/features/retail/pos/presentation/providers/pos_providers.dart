@@ -87,7 +87,8 @@ final sessionProvider =
     StateNotifierProvider<SessionNotifier, AsyncValue<PosSession?>>((ref) {
       final repo = ref.watch(sessionRepositoryProvider);
       final orderRepo = ref.watch(orderRepositoryProvider);
-      return SessionNotifier(repo, orderRepo);
+      final userId = ref.watch(userProfileProvider).valueOrNull?.id ?? '';
+      return SessionNotifier(repo, orderRepo, userId: userId);
     });
 
 final syncServiceProvider = Provider<SyncService>((ref) {
@@ -137,6 +138,8 @@ final checkoutControllerProvider =
     });
 
 final selectedCategoryIdProvider = StateProvider<String?>((ref) => null);
+
+final posSearchQueryProvider = StateProvider<String>((ref) => '');
 
 // Epic 24 — Freshness filter state (persisted for POS session duration)
 final urgentOnlyFilterProvider = StateProvider<bool>((ref) => false);

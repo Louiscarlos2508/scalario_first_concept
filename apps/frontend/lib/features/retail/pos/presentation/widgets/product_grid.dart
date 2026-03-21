@@ -11,13 +11,27 @@ import 'package:frontend/features/shared/catalog/data/models/product_variant.dar
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/catalog/presentation/widgets/freshness_chip.dart';
 import 'package:frontend/features/shared/promotions/presentation/providers/promotions_providers.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
         .format(amount);
 
-class ProductGrid extends ConsumerWidget {
+class ProductGrid extends ConsumerStatefulWidget {
   const ProductGrid({super.key});
+
+  @override
+  ConsumerState<ProductGrid> createState() => _ProductGridState();
+}
+
+class _ProductGridState extends ConsumerState<ProductGrid> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   /// AC3 (Story 24-2) — Freshness priority for sorting: 0=red, 1=orange, 2=green, 3=none.
   int _freshnessPriority(Product product, FreshnessThresholds thresholds) {
@@ -32,15 +46,43 @@ class ProductGrid extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final productsAsync = ref.watch(productListProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final selectedCategoryId = ref.watch(selectedCategoryIdProvider);
     final urgentOnly = ref.watch(urgentOnlyFilterProvider);
     final thresholds = ref.watch(freshnessThresholdsProvider);
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final showFreshness = config == null || config.visibleSections.contains('freshness');
+    final searchQuery = ref.watch(posSearchQueryProvider);
 
     return Column(
       children: [
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un produit...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(posSearchQueryProvider.notifier).state = '';
+                      },
+                    )
+                  : null,
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            ),
+            onChanged: (v) => ref.read(posSearchQueryProvider.notifier).state = v,
+          ),
+        ),
+        const SizedBox(height: 4),
         // Category + urgent filter bar
         SizedBox(
           height: 60,
@@ -70,19 +112,20 @@ class ProductGrid extends ConsumerWidget {
                         },
                       ),
                     )),
-                // AC4 (Story 24-2) — "Articles urgents" toggle
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    key: const Key('filter_urgent'),
-                    avatar: const Icon(Icons.warning_amber_rounded, size: 16),
-                    label: const Text('Urgents'),
-                    selected: urgentOnly,
-                    selectedColor: Colors.orange.shade100,
-                    onSelected: (val) =>
-                        ref.read(urgentOnlyFilterProvider.notifier).state = val,
+                // AC4 (Story 24-2) — "Articles urgents" toggle (épicerie only)
+                if (showFreshness)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: FilterChip(
+                      key: const Key('filter_urgent'),
+                      avatar: const Icon(Icons.warning_amber_rounded, size: 16),
+                      label: const Text('Urgents'),
+                      selected: urgentOnly,
+                      selectedColor: Colors.orange.shade100,
+                      onSelected: (val) =>
+                          ref.read(urgentOnlyFilterProvider.notifier).state = val,
+                    ),
                   ),
-                ),
               ],
             ),
             loading: () => const Center(child: LinearProgressIndicator()),
@@ -93,12 +136,20 @@ class ProductGrid extends ConsumerWidget {
         Expanded(
           child: productsAsync.when(
             data: (allProducts) {
-              // AC4 — filter to urgent only (orange or red freshness)
-              var products = urgentOnly
+              // Filter by search query
+              final q = searchQuery.trim().toLowerCase();
+              var products = q.isEmpty
                   ? allProducts
-                      .where((p) => _freshnessPriority(p, thresholds) <= 1)
-                      .toList()
-                  : allProducts;
+                  : allProducts.where((p) =>
+                      p.name.toLowerCase().contains(q) ||
+                      (p.barcode?.toLowerCase().contains(q) ?? false)).toList();
+
+              // AC4 — filter to urgent only (orange or red freshness)
+              if (urgentOnly) {
+                products = products
+                    .where((p) => _freshnessPriority(p, thresholds) <= 1)
+                    .toList();
+              }
 
               // AC3 — sort within category: red → orange → green → none
               final sorted = List<Product>.from(products)
@@ -109,21 +160,26 @@ class ProductGrid extends ConsumerWidget {
               if (sorted.isEmpty) {
                 return const Center(child: Text('Aucun produit trouvé.'));
               }
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 0.8,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: sorted.length,
-                itemBuilder: (context, index) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final cols = w < 600 ? 2 : w < 900 ? 3 : 4;
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: cols,
+                      childAspectRatio: 0.75,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: sorted.length,
+                    itemBuilder: (context, index) {
                   final product = sorted[index];
                   final isCritical = product.minStockLevel != null &&
                       product.stockQuantity <= product.minStockLevel!;
                   final isBulkParent = product.hasChildren;
-                  final hasFreshness = product.nearestExpiryDate != null &&
+                  final hasFreshness = showFreshness &&
+                      product.nearestExpiryDate != null &&
                       product.expiryDays != null;
 
                   return Stack(
@@ -191,21 +247,39 @@ class ProductGrid extends ConsumerWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.inventory_2,
-                                  size: 48, color: Colors.teal),
-                              const SizedBox(height: 8),
-                              Text(
-                                product.name,
-                                style:
-                                    Theme.of(context).textTheme.titleMedium,
-                                textAlign: TextAlign.center,
+                              if (product.imageUrl != null)
+                                SizedBox(
+                                  height: 72,
+                                  width: double.infinity,
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(12)),
+                                    child: Image.network(
+                                      product.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx, err, st) =>
+                                          _ProductAvatar(name: product.name),
+                                    ),
+                                  ),
+                                )
+                              else
+                                _ProductAvatar(name: product.name),
+                              const SizedBox(height: 6),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Text(
+                                  product.name,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               Text(
                                 product.unitType == 'piece'
                                     ? _fcfa(product.price)
                                     : '${_fcfa(product.price)}/${product.weightUnit ?? product.unitType}',
-                                style:
-                                    Theme.of(context).textTheme.bodyMedium,
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                           ),
@@ -307,6 +381,8 @@ class ProductGrid extends ConsumerWidget {
                     ],
                   );
                 },
+                  );
+                },
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -320,7 +396,7 @@ class ProductGrid extends ConsumerWidget {
   void _showBranchStock(BuildContext context, WidgetRef ref, dynamic product) async {
     if (product.barcode == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product has no barcode for lookup')),
+        const SnackBar(content: Text('Ce produit n\'a pas de code-barres')),
       );
       return;
     }
@@ -349,11 +425,11 @@ class ProductGrid extends ConsumerWidget {
                 Text('Stock en magasins : ${product.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const Divider(),
                 if (stocks.isEmpty)
-                  const Padding(padding: EdgeInsets.all(16), child: Text('No other branches found with this product.')),
+                  const Padding(padding: EdgeInsets.all(16), child: Text('Aucune autre succursale ne dispose de ce produit.')),
                 ...stocks.map((s) => ListTile(
                   title: Text(s['tenant']['name']),
                   trailing: Text(
-                    '${s['stockQuantity']} left',
+                    '${s['stockQuantity']} restant(s)',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: (s['stockQuantity'] as num) > 5 ? Colors.green : Colors.red,
@@ -364,6 +440,38 @@ class ProductGrid extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ProductAvatar extends StatelessWidget {
+  final String name;
+  const _ProductAvatar({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final letter = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final colors = [
+      Colors.teal, Colors.blue, Colors.orange,
+      Colors.purple, Colors.green, Colors.red,
+    ];
+    final color = colors[name.codeUnitAt(0) % colors.length];
+    return SizedBox(
+      height: 72,
+      width: double.infinity,
+      child: ColoredBox(
+        color: color.withValues(alpha: 0.15),
+        child: Center(
+          child: Text(
+            letter,
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ),
       ),
     );
   }

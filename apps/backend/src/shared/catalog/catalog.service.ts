@@ -172,6 +172,7 @@ export class CatalogService {
       pricePerUnit?: number | null;
       conversionRate?: number | null;
       isUnique?: boolean;
+      imageUrl?: string | null;
     },
     userId: string | null,
   ) {
@@ -195,6 +196,7 @@ export class CatalogService {
         pricePerUnit: data.pricePerUnit ?? null,
         conversionRate: data.conversionRate ?? null,
         isUnique: data.isUnique ?? false,
+        imageUrl: data.imageUrl ?? null,
       },
     });
 
@@ -236,6 +238,7 @@ export class CatalogService {
       requiresPrescription?: boolean;
       dynamicPricing?: boolean;
       isUnique?: boolean;
+      imageUrl?: string | null;
       reason?: string; // for price history
     },
     userId: string | null,
@@ -286,6 +289,7 @@ export class CatalogService {
     if (data.requiresPrescription !== undefined) updateData.requiresPrescription = data.requiresPrescription;
     if (data.dynamicPricing !== undefined) updateData.dynamicPricing = data.dynamicPricing;
     if (data.isUnique !== undefined) updateData.isUnique = data.isUnique;
+    if ('imageUrl' in data) updateData.imageUrl = data.imageUrl;
 
     const updated = await this.prisma.catalogItem.update({
       where: { id },
@@ -365,6 +369,7 @@ export class CatalogService {
         requiresPrescription: original.requiresPrescription,
         dynamicPricing: original.dynamicPricing,
         isUnique: original.isUnique,
+        imageUrl: original.imageUrl,
       },
     });
 

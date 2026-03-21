@@ -17,6 +17,8 @@ class CameraScannerDialog extends StatelessWidget {
       body: Stack(
         children: [
           MobileScanner(
+            errorBuilder: (context, error) =>
+                _BarcodeFallback(onSubmit: (v) => Navigator.pop(context, v)),
             onDetect: (capture) {
               final barcodes = capture.barcodes;
               if (barcodes.isNotEmpty) {
@@ -44,11 +46,71 @@ class CameraScannerDialog extends StatelessWidget {
             child: Center(
               child: Text(
                 'Align barcode within the frame',
-                style: TextStyle(color: Colors.white, backgroundColor: Colors.black54),
+                style: TextStyle(
+                    color: Colors.white, backgroundColor: Colors.black54),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BarcodeFallback extends StatefulWidget {
+  final ValueChanged<String> onSubmit;
+
+  const _BarcodeFallback({required this.onSubmit});
+
+  @override
+  State<_BarcodeFallback> createState() => _BarcodeFallbackState();
+}
+
+class _BarcodeFallbackState extends State<_BarcodeFallback> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.no_photography_outlined,
+                size: 48, color: Colors.grey),
+            const SizedBox(height: 12),
+            const Text(
+              'Caméra non disponible sur cette plateforme.\nSaisis le code-barres manuellement.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Code-barres',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (v) {
+                if (v.isNotEmpty) widget.onSubmit(v);
+              },
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                if (_ctrl.text.isNotEmpty) widget.onSubmit(_ctrl.text);
+              },
+              child: const Text('Valider'),
+            ),
+          ],
+        ),
       ),
     );
   }
