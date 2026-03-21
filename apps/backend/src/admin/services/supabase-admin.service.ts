@@ -17,11 +17,12 @@ export class SupabaseAdminService implements OnModuleInit {
    * Returns the created user's id.
    * Throws if email is already taken or any other Supabase error.
    */
-  async createUser(email: string, password: string): Promise<string> {
+  async createUser(email: string, password: string, fullName?: string): Promise<string> {
     const { data, error } = await this.client.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+      user_metadata: fullName ? { full_name: fullName } : undefined,
     });
 
     if (error || !data.user) {
@@ -41,11 +42,12 @@ export class SupabaseAdminService implements OnModuleInit {
   /**
    * Fetches a user from Supabase Auth by id.
    */
-  async getUserById(userId: string): Promise<{ email: string; lastSignInAt: string | null } | null> {
+  async getUserById(userId: string): Promise<{ email: string; fullName: string | null; lastSignInAt: string | null } | null> {
     const { data, error } = await this.client.auth.admin.getUserById(userId);
     if (error || !data.user) return null;
     return {
       email: data.user.email ?? '',
+      fullName: (data.user.user_metadata?.full_name as string | undefined) ?? null,
       lastSignInAt: data.user.last_sign_in_at ?? null,
     };
   }

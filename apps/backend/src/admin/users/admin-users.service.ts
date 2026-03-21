@@ -15,6 +15,7 @@ export class CreateTenantUserDto {
   email: string;
   password: string;
   role: string;
+  fullName?: string;
 }
 
 export class UpdateTenantUserRoleDto {
@@ -36,7 +37,7 @@ export class AdminUsersService {
     // Step 1 — Create Supabase Auth user
     let userId: string;
     try {
-      userId = await this.supabaseAdmin.createUser(dto.email, dto.password);
+      userId = await this.supabaseAdmin.createUser(dto.email, dto.password, dto.fullName);
     } catch (err: any) {
       const message: string = err?.message ?? '';
       if (
@@ -75,6 +76,7 @@ export class AdminUsersService {
     return {
       userId,
       email: dto.email,
+      fullName: dto.fullName ?? null,
       role: dto.role,
       createdAt: member.createdAt,
     };
@@ -93,6 +95,7 @@ export class AdminUsersService {
         return {
           userId: m.userId,
           email: supabaseUser?.email ?? '',
+          fullName: supabaseUser?.fullName ?? null,
           role: m.role.name,
           createdAt: m.createdAt,
           lastSignInAt: supabaseUser?.lastSignInAt ?? null,

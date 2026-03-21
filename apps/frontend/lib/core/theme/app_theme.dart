@@ -101,16 +101,17 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData light() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.primary,
-      error: AppColors.error,
-      surface: AppColors.surface,
-      onSurface: AppColors.textPrimary,
-      outline: AppColors.border,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.primary,
+          error: AppColors.error,
+          surface: AppColors.surface,
+          onSurface: AppColors.textPrimary,
+          outline: AppColors.border,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -131,16 +132,12 @@ class AppTheme {
 
       // ElevatedButton — Fitts: min 48dp height
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(64, 48),
-        ),
+        style: ElevatedButton.styleFrom(minimumSize: const Size(64, 48)),
       ),
 
       // FilledButton — primary CTA, Fitts: min 56dp height
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(88, 56),
-        ),
+        style: FilledButton.styleFrom(minimumSize: const Size(88, 56)),
       ),
 
       // InputDecoration — OutlineInputBorder with design system border color

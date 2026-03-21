@@ -152,6 +152,7 @@ class SduiRenderer extends ConsumerWidget {
           right: 16,
           bottom: 16,
           child: FloatingActionButton(
+            heroTag: null,
             onPressed: onCartFabPressed,
             tooltip: 'Cart ($itemCount items)',
             child: Badge(

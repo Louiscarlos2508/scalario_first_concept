@@ -35,16 +35,15 @@ Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
       syncServiceProvider.overrideWithValue(_StubSyncService()),
       inventoryRepositoryProvider.overrideWithValue(repo),
     ],
-    child: MaterialApp(
-      home: InventoryScreen(initialIndex: initialIndex),
-    ),
+    child: MaterialApp(home: InventoryScreen(initialIndex: initialIndex)),
   );
 }
 
 void main() {
   group('InventoryScreen — tab navigation', () {
-    testWidgets('TabBar présent avec 6 onglets aux labels corrects',
-        (tester) async {
+    testWidgets('TabBar présent avec 6 onglets aux labels corrects', (
+      tester,
+    ) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
@@ -65,8 +64,9 @@ void main() {
       expect(find.text('Fraîcheur'), findsOneWidget);
     });
 
-    testWidgets('tap onglet "Pertes" → LossDeclarationForm visible',
-        (tester) async {
+    testWidgets('tap onglet "Pertes" → LossDeclarationForm visible', (
+      tester,
+    ) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
@@ -81,8 +81,9 @@ void main() {
       expect(find.byKey(const Key('loss_product_field')), findsOneWidget);
     });
 
-    testWidgets('tap onglet "Réceptions" → DeliveryForm visible',
-        (tester) async {
+    testWidgets('tap onglet "Réceptions" → DeliveryForm visible', (
+      tester,
+    ) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
@@ -97,8 +98,9 @@ void main() {
       expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
     });
 
-    testWidgets('initialIndex: 0 → onglet Réceptions actif par défaut',
-        (tester) async {
+    testWidgets('initialIndex: 0 → onglet Réceptions actif par défaut', (
+      tester,
+    ) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
@@ -110,8 +112,9 @@ void main() {
       expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
     });
 
-    testWidgets('tap onglet "Transferts" → TransferOutForm visible',
-        (tester) async {
+    testWidgets('tap onglet "Transferts" → TransferOutForm visible', (
+      tester,
+    ) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       );
@@ -124,7 +127,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(
-          find.byKey(const Key('transfer_out_product_field')), findsOneWidget);
+        find.byKey(const Key('transfer_out_product_field')),
+        findsOneWidget,
+      );
     });
   });
 }

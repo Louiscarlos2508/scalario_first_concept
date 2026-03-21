@@ -129,13 +129,34 @@ class _ClientOrderFormScreenState
     final productsAsync = ref.watch(productListProvider);
     final products = productsAsync.valueOrNull ?? [];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle commande client')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle + title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Nouvelle commande client',
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.all(16),
+              children: [
             // ── Client selection ────────────────────────────────────────
             Text('Client', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 6),
@@ -258,7 +279,9 @@ class _ClientOrderFormScreenState
           ],
         ),
       ),
-    );
+    ],
+  ),
+);
   }
 }
 

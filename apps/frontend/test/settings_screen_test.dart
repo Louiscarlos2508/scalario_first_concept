@@ -7,6 +7,7 @@ import 'package:frontend/core/auth/auth_repository.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
+import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
@@ -57,32 +58,88 @@ class _StubAuthRepo implements AuthRepository {
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-final _mockProfile = UserProfile(
-  id: 'u-settings-1',
+final _ownerProfile = UserProfile(
+  id: 'u-owner-1',
   email: 'owner@settings.test',
   memberships: [
-    TenantMembership(tenantId: 'tenant-settings', role: 'owner'),
+    TenantMembership(
+      tenantId: 'tenant-settings',
+      role: 'owner',
+      tenantName: 'Demo Store',
+    ),
   ],
 );
+
+final _managerProfile = UserProfile(
+  id: 'u-manager-1',
+  email: 'manager@settings.test',
+  memberships: [
+    TenantMembership(
+      tenantId: 'tenant-settings',
+      role: 'manager',
+      tenantName: 'Demo Store',
+    ),
+  ],
+);
+
+final _mockTenantInfo = {
+  'id': 'tenant-settings',
+  'name': 'Demo Store',
+  'address': 'Ouaga, Secteur 30',
+  'phone': '+226 70 00 00 00',
+  'businessType': 'epicerie',
+  'businessTypeName': 'Épicerie & Alimentation',
+  'currency': 'XOF',
+  'plan': 'standard',
+};
+
+final _mockBilling = {
+  'plan': {'name': 'Standard', 'monthlyPrice': 25000},
+  'billingStatus': 'active',
+  'trialEndsAt': null,
+  'paidUntil': DateTime.now().add(const Duration(days: 92)).toIso8601String(),
+};
+
+final _mockUsers = [
+  {'userId': 'u-owner-1', 'email': 'owner@settings.test', 'role': 'owner'},
+  {'userId': 'u-manager-1', 'email': 'manager@settings.test', 'role': 'manager'},
+];
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
 Widget _buildScreen(
   _StubSyncService syncService, {
+  UserProfile? profile,
   _StubAuthRepo? authRepo,
+  bool withBillingAndUsers = true,
 }) {
+  final resolvedProfile = profile ?? _ownerProfile;
   return ProviderScope(
     overrides: [
-      userProfileProvider.overrideWith((ref) => Future.value(_mockProfile)),
+      userProfileProvider.overrideWith(
+          (ref) => Future.value(resolvedProfile)),
       activeTenantProvider.overrideWith((ref) => 'tenant-settings'),
       syncServiceProvider.overrideWithValue(syncService),
       syncStatusProvider.overrideWith(
         (ref) => Stream.value(SyncUiStatus.connected),
       ),
-      inventoryOutboxCountProvider.overrideWith((ref) => Stream.value(2)),
+      inventoryOutboxCountProvider.overrideWith(
+          (ref) => Stream.value(2)),
       lastSyncProvider.overrideWith(
         (ref) => Future.value(DateTime(2026, 3, 16, 10, 30)),
       ),
+      tenantInfoProvider.overrideWith(
+          (ref) => Future.value(_mockTenantInfo)),
+      activeModulesProvider.overrideWith(
+        (ref) => Future.value({'catalog', 'clients', 'inventory',
+            'transactions', 'expenses', 'reports', 'retail'}),
+      ),
+      if (withBillingAndUsers) ...[
+        tenantBillingProvider.overrideWith(
+            (ref) => Future.value(_mockBilling)),
+        tenantUsersProvider.overrideWith(
+            (ref) => Future.value(_mockUsers)),
+      ],
       if (authRepo != null)
         authRepositoryProvider.overrideWithValue(authRepo),
     ],
@@ -97,9 +154,8 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  // ── T1 : toutes les sections sont présentes ──────────────────────────────
-  testWidgets('Toutes les sections et boutons clés sont présents',
-      (tester) async {
+  // ── T1 : sections communes présentes (owner) ──────────────────────────────
+  testWidgets('Owner : toutes les sections sont présentes', (tester) async {
     final syncService = _StubSyncService();
     await tester.pumpWidget(_buildScreen(syncService));
     await tester.pump();
@@ -107,16 +163,19 @@ void main() {
 
     // Section headers
     expect(find.text('Compte'), findsOneWidget);
+    expect(find.text('Mon abonnement'), findsOneWidget);
     expect(find.text('Boutique'), findsOneWidget);
+    expect(find.text('Utilisateurs'), findsOneWidget);
+    expect(find.text('Modules actifs'), findsOneWidget);
     expect(find.text('Reçu'), findsOneWidget);
     expect(find.text('Synchronisation'), findsOneWidget);
     expect(find.text('Application'), findsOneWidget);
 
-    // Compte section content
-    expect(find.text('owner@settings.test'), findsOneWidget);
-    expect(find.text('Propriétaire'), findsOneWidget);
-    expect(
-        find.widgetWithText(OutlinedButton, 'Se déconnecter'), findsOneWidget);
+    // Compte section (email/role may also appear in Utilisateurs section)
+    expect(find.text('owner@settings.test'), findsAtLeastNWidgets(1));
+    expect(find.text('Propriétaire'), findsAtLeastNWidgets(1));
+    expect(find.widgetWithText(OutlinedButton, 'Se déconnecter'),
+        findsOneWidget);
 
     // Sync section
     expect(find.text('Forcer la synchronisation'), findsOneWidget);
@@ -129,36 +188,54 @@ void main() {
     );
   });
 
-  // ── T2 : logout — dialog de confirmation + appelle signOut ───────────────
+  // ── T2 : manager ne voit pas les sections owner-only ─────────────────────
+  testWidgets('Manager : sections owner-only absentes', (tester) async {
+    final syncService = _StubSyncService();
+    await tester.pumpWidget(
+        _buildScreen(syncService, profile: _managerProfile));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Toujours là
+    expect(find.text('Compte'), findsOneWidget);
+    expect(find.text('Boutique'), findsOneWidget);
+    expect(find.text('Synchronisation'), findsOneWidget);
+    expect(find.text('Application'), findsOneWidget);
+
+    // Absentes pour manager
+    expect(find.text('Mon abonnement'), findsNothing);
+    expect(find.text('Utilisateurs'), findsNothing);
+    expect(find.text('Modules actifs'), findsNothing);
+    expect(find.text('Reçu'), findsNothing);
+  });
+
+  // ── T3 : logout — dialog de confirmation + appelle signOut ───────────────
   testWidgets('Se déconnecter : dialog puis signOut appelé', (tester) async {
     final syncService = _StubSyncService();
     final authRepo = _StubAuthRepo();
 
-    await tester.pumpWidget(_buildScreen(syncService, authRepo: authRepo));
+    await tester.pumpWidget(
+        _buildScreen(syncService, authRepo: authRepo));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    // Scroll to make button visible, then tap
-    final logoutBtn =
-        find.widgetWithText(OutlinedButton, 'Se déconnecter');
+    final logoutBtn = find.widgetWithText(OutlinedButton, 'Se déconnecter');
     await tester.ensureVisible(logoutBtn);
     await tester.tap(logoutBtn);
     await tester.pumpAndSettle();
 
-    // Dialog must be visible
     expect(
       find.text('Voulez-vous vraiment vous déconnecter ?'),
       findsOneWidget,
     );
 
-    // Confirm logout
     await tester.tap(find.widgetWithText(TextButton, 'Confirmer'));
     await tester.pump();
 
     expect(authRepo.signOutCalled, isTrue);
   });
 
-  // ── T3 : force sync — appelle syncService.forceSync ─────────────────────
+  // ── T4 : force sync ───────────────────────────────────────────────────────
   testWidgets('Forcer la synchronisation appelle syncService.forceSync()',
       (tester) async {
     final syncService = _StubSyncService();
@@ -167,12 +244,65 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    // Scroll the button into the viewport before tapping.
     await tester.ensureVisible(find.text('Forcer la synchronisation'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forcer la synchronisation'));
     await tester.pump();
 
     expect(syncService.forceSyncCalled, isTrue);
+  });
+
+  // ── T5 : vider cache — dialog de confirmation ─────────────────────────────
+  testWidgets('Vider le cache : dialog de confirmation affiché',
+      (tester) async {
+    final syncService = _StubSyncService();
+
+    await tester.pumpWidget(_buildScreen(syncService));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    final clearBtn =
+        find.widgetWithText(OutlinedButton, 'Vider le cache local');
+    await tester.ensureVisible(clearBtn);
+    await tester.tap(clearBtn);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vider le cache local'), findsWidgets);
+    expect(
+      find.text(
+          'Toutes les données locales seront supprimées. '
+          "Redémarrez l'application pour recharger les données."),
+      findsOneWidget,
+    );
+
+    // Dismiss
+    await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
+    await tester.pumpAndSettle();
+  });
+
+  // ── T6 : boutique owner — champs éditables ────────────────────────────────
+  testWidgets('Owner : section boutique montre les champs éditables',
+      (tester) async {
+    final syncService = _StubSyncService();
+
+    await tester.pumpWidget(_buildScreen(syncService));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(
+      find.widgetWithText(FilledButton, 'Enregistrer les modifications'),
+      findsOneWidget,
+    );
+  });
+
+  // ── T7 : rôle affiché en label lisible ───────────────────────────────────
+  testWidgets('Rôle owner affiché en "Propriétaire"', (tester) async {
+    final syncService = _StubSyncService();
+
+    await tester.pumpWidget(_buildScreen(syncService));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Propriétaire'), findsAtLeastNWidgets(1));
   });
 }

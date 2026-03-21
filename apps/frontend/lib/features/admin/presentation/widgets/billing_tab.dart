@@ -1013,6 +1013,50 @@ class _FeesSectionState extends State<_FeesSection> {
     }
   }
 
+  Future<void> _markFeePaid(String feeType, BuildContext ctx) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: ctx,
+      builder: (_) => const _MarkPaidDialog(),
+    );
+    if (result == null || !ctx.mounted) return;
+
+    try {
+      final receiptData = await widget.ref
+          .read(adminApiServiceProvider)
+          .markFeePaid(
+            widget.tenantId,
+            feeType: feeType,
+            paymentMethod: result['paymentMethod'] as String,
+            paymentRef: result['paymentRef'] as String?,
+            paymentDate: result['paymentDate'] as String?,
+            token: widget.token,
+          );
+      widget.ref.invalidate(tenantBillingProvider(widget.tenantId));
+      widget.ref.invalidate(billingSummaryProvider);
+      widget.ref.invalidate(adminMonitoringProvider);
+      widget.ref.invalidate(allBillingEventsProvider);
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: const Text('Paiement enregistré — Génération du reçu...'),
+            action: SnackBarAction(
+              label: 'Télécharger',
+              onPressed: () =>
+                  InvoiceService.generateAndDownloadReceipt(receiptData),
+            ),
+          ),
+        );
+        await InvoiceService.generateAndDownloadReceipt(receiptData);
+      }
+    } catch (e) {
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   String _fmtDisplayFromEvent(String type, dynamic tenantFee) {
     final n = double.tryParse(tenantFee?.toString() ?? '') ?? 0;
     if (n > 0) return '${NumberFormat('#,###', 'fr_FR').format(n)} FCFA';
@@ -1037,7 +1081,7 @@ class _FeesSectionState extends State<_FeesSection> {
           label: 'Installation',
           displayAmount: _fmtDisplayFromEvent('installation', widget.tenant['installationFee']),
           paid: installPaid,
-          onMarkPaid: () => _save('installationPaid', true),
+          onMarkPaid: (ctx) => _markFeePaid('installation', ctx),
           controller: _installCtrl,
           onSave: (v) {
             final n = double.tryParse(v);
@@ -1049,7 +1093,7 @@ class _FeesSectionState extends State<_FeesSection> {
           label: 'Formation',
           displayAmount: _fmtDisplayFromEvent('training', widget.tenant['trainingFee']),
           paid: trainingPaid,
-          onMarkPaid: () => _save('trainingPaid', true),
+          onMarkPaid: (ctx) => _markFeePaid('training', ctx),
           controller: _trainingCtrl,
           onSave: (v) {
             final n = double.tryParse(v);
@@ -1078,7 +1122,7 @@ class _FeeEditRow extends StatelessWidget {
   final String label;
   final String displayAmount;
   final bool paid;
-  final VoidCallback onMarkPaid;
+  final Future<void> Function(BuildContext) onMarkPaid;
   final TextEditingController controller;
   final ValueChanged<String> onSave;
 
@@ -1126,7 +1170,7 @@ class _FeeEditRow extends StatelessWidget {
           const Icon(Icons.check_circle, color: Colors.green, size: 20)
         else
           TextButton(
-            onPressed: onMarkPaid,
+            onPressed: () => onMarkPaid(context),
             style: TextButton.styleFrom(
               padding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

@@ -53,6 +53,7 @@ class _PromotionsScreenState extends ConsumerState<PromotionsScreen>
             .toList(),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => _openCreateSheet(),
         icon: const Icon(Icons.add),
         label: const Text('Nouvelle promotion'),

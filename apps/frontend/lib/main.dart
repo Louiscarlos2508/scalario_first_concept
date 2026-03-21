@@ -13,6 +13,7 @@ import 'features/shared/billing/presentation/screens/suspended_screen.dart';
 import 'app/sdui_registry_setup.dart';
 import 'features/retail/pos/presentation/screens/pos_screen.dart';
 import 'features/retail/pos/presentation/providers/pos_providers.dart';
+import 'features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,6 +29,19 @@ Future<void> main() async {
   );
 
   runApp(const ProviderScope(child: ScalarioApp()));
+}
+
+List<String> _fallbackScreens(String role) {
+  switch (role) {
+    case 'owner':
+      return ['backoffice', 'pos'];
+    case 'manager':
+      return ['backoffice_restricted'];
+    case 'commercial':
+      return ['pos', 'losses', 'transfers', 'stock_view', 'daily_sales'];
+    default:
+      return ['pos'];
+  }
 }
 
 class ScalarioApp extends ConsumerStatefulWidget {
@@ -91,12 +105,19 @@ class _ScalarioAppState extends ConsumerState<ScalarioApp> {
                         return const SuspendedScreen();
                       }
 
-                      // POS-only roles — no backoffice access
-                      if (profile?.role == 'cashier' ||
-                          profile?.role == 'commercial') {
-                        return const PosScreen();
+                      // Config-driven routing: screens determined by roleScreenAccess
+                      final role = profile?.role ?? '';
+                      final config = ref
+                          .watch(businessTypeConfigProvider)
+                          .valueOrNull;
+                      final screens = config != null
+                          ? config.screensForRole(role)
+                          : _fallbackScreens(role);
+                      if (screens.contains('backoffice') ||
+                          screens.contains('backoffice_restricted')) {
+                        return const DashboardScreen();
                       }
-                      return const DashboardScreen();
+                      return const PosScreen();
                     },
                     loading: () => const Scaffold(
                       body: Center(child: CircularProgressIndicator()),

@@ -7,6 +7,7 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/contacts/presentation/widgets/settle_debt_dialog.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 String _fcfa(double amount) => NumberFormat.currency(
   locale: 'fr_FR',
@@ -36,6 +37,13 @@ class ContactsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final customersAsync = ref.watch(customersProvider);
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    // Read-only if the role has clients_view but NOT full clients access
+    final isReadOnly = config != null
+        ? (config.canAccess(role, 'clients_view') &&
+            !config.canAccess(role, 'clients'))
+        : role == 'manager';
 
     return Scaffold(
       appBar: ScalarioAppBar(
@@ -66,7 +74,7 @@ class ContactsScreen extends ConsumerWidget {
         ],
       ),
       body: customersAsync.when(
-        data: (customers) => _buildCustomerList(context, ref, customers),
+        data: (customers) => _buildCustomerList(context, ref, customers, isReadOnly),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Erreur : $err')),
       ),
@@ -77,6 +85,7 @@ class ContactsScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     List<Customer> customers,
+    bool isReadOnly,
   ) {
     if (customers.isEmpty) {
       return const Center(child: Text('Aucun client trouvé.'));
@@ -137,7 +146,7 @@ class ContactsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                if (hasDebt) ...[
+                if (hasDebt && !isReadOnly) ...[
                   const SizedBox(width: 24),
                   ElevatedButton(
                     onPressed: () =>

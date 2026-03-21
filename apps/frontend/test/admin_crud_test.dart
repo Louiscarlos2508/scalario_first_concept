@@ -33,6 +33,7 @@ class _StubAdminApiService extends AdminApiService {
       {required String email,
       required String password,
       required String role,
+      String? fullName,
       required String token}) async {
     if (createUserError != null) throw createUserError!;
     return createUserResult ??

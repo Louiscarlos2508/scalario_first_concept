@@ -153,12 +153,18 @@ class AdminApiService {
     required String email,
     required String password,
     required String role,
+    String? fullName,
     required String token,
   }) async {
     final response = await _client.post(
       Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/users'),
       headers: ApiConstants.headers(token: token),
-      body: jsonEncode({'email': email, 'password': password, 'role': role}),
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'role': role,
+        if (fullName != null && fullName.isNotEmpty) 'fullName': fullName,
+      }),
     );
 
     if (response.statusCode == 201) {
@@ -429,6 +435,32 @@ class AdminApiService {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
     throw Exception('Failed to generate invoice: HTTP ${response.statusCode} — ${response.body}');
+  }
+
+  Future<Map<String, dynamic>> markFeePaid(
+    String tenantId, {
+    required String feeType,
+    required String paymentMethod,
+    String? paymentRef,
+    String? paymentDate,
+    required String token,
+  }) async {
+    final body = <String, dynamic>{
+      'feeType': feeType,
+      'paymentMethod': paymentMethod,
+    };
+    if (paymentRef != null) body['paymentRef'] = paymentRef;
+    if (paymentDate != null) body['paymentDate'] = paymentDate;
+
+    final response = await _client.post(
+      Uri.parse('${ApiConstants.baseUrl}/admin/tenants/$tenantId/billing/fees/pay'),
+      headers: ApiConstants.headers(token: token),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    throw Exception('Failed to mark fee paid: HTTP ${response.statusCode} — ${response.body}');
   }
 
   Future<Map<String, dynamic>> generateReceipt(

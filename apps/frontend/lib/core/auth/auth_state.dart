@@ -29,8 +29,10 @@ final userProfileProvider = FutureProvider<UserProfile?>((ref) async {
       if (state.session == null) return null;
       final profile = await ref.read(authRepositoryProvider).getUserProfile();
       
-      if (profile != null && ref.read(activeTenantProvider) == null) {
+      if (profile != null) {
         ref.read(activeTenantProvider.notifier).state = profile.primaryTenantId;
+      } else {
+        ref.read(activeTenantProvider.notifier).state = null;
       }
       
       return profile;

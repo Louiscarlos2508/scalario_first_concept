@@ -16,6 +16,8 @@ datasource db {
 model Tenant {
   id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                  String
+  address               String?
+  phone                 String?
   currency              String               @default("XOF")
   timezone              String               @default("Africa/Abidjan")
   fiscalJurisdiction    String?              @map("fiscal_jurisdiction")
@@ -96,6 +98,8 @@ model BusinessTypeDefinition {
   roleLabels          Json     @default("{}") @map("role_labels")
   // Epic 30 — FR109: delivery document type ('receipt' | 'delivery_note' | 'invoice')
   documentType        String   @default("receipt") @map("document_type")
+  // Epic 30 — FR112: screen access per role (e.g. {"commercial": ["pos","losses","stock_view"]})
+  roleScreenAccess    Json     @default("{}") @map("role_screen_access")
   // Phase 3+ — vertical discriminator: 'retail' | 'artisan' | 'restaurant' | 'services'
   vertical            String   @default("retail")
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

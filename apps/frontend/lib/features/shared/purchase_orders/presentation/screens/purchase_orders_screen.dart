@@ -7,6 +7,7 @@ import 'package:frontend/features/shared/purchase_orders/presentation/providers/
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_order_detail_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/widgets/create_purchase_order_sheet.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/widgets/receive_purchase_order_sheet.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 
 // Status chip color mapping
 Color _statusColor(String status) {
@@ -50,6 +51,16 @@ class PurchaseOrdersScreen extends ConsumerWidget {
     final activeFilter = ref.watch(purchaseOrdersFilterProvider);
 
     return Scaffold(
+      appBar: ScalarioAppBar(
+        title: 'Commandes fournisseurs',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(purchaseOrdersProvider),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         key: const Key('po_fab'),
         heroTag: null,

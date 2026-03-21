@@ -157,12 +157,13 @@ class TenantUsersTab extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (_) => AddUserDialog(
-        onSubmit: (email, password, role) async {
+        onSubmit: (email, password, role, fullName) async {
           await ref.read(adminApiServiceProvider).createTenantUser(
                 tenantId,
                 email: email,
                 password: password,
                 role: role,
+                fullName: fullName,
                 token: _token,
               );
           ref.invalidate(tenantUsersProvider(tenantId));
@@ -186,15 +187,20 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial = user.email.isNotEmpty ? user.email[0].toUpperCase() : '?';
-    final lastSignIn = user.lastSignInAt != null
-        ? _formatDate(user.lastSignInAt!)
-        : 'Jamais';
+    final initial = user.displayName.isNotEmpty
+        ? user.displayName[0].toUpperCase()
+        : '?';
+    final lastSignIn =
+        user.lastSignInAt != null ? _formatDate(user.lastSignInAt!) : 'Jamais';
 
     return ListTile(
       leading: CircleAvatar(child: Text(initial)),
-      title: Text(user.email),
-      subtitle: Text('Rôle : ${getRoleLabel(user.role, {})} • Dernière connexion : $lastSignIn'),
+      title: Text(user.displayName),
+      subtitle: Text(
+        '${user.fullName != null ? '${user.email} • ' : ''}'
+        'Rôle : ${getRoleLabel(user.role, {})} • '
+        'Dernière connexion : $lastSignIn',
+      ),
       trailing: IconButton(
         icon: const Icon(Icons.more_vert),
         onPressed: onMoreTap,
@@ -215,7 +221,8 @@ class _UserTile extends StatelessWidget {
 // ── AddUserDialog ─────────────────────────────────────────────────────────────
 
 class AddUserDialog extends StatefulWidget {
-  final Future<void> Function(String email, String password, String role)
+  final Future<void> Function(
+          String email, String password, String role, String? fullName)
       onSubmit;
 
   const AddUserDialog({super.key, required this.onSubmit});
@@ -226,6 +233,7 @@ class AddUserDialog extends StatefulWidget {
 
 class _AddUserDialogState extends State<AddUserDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   String _role = 'manager';
@@ -234,6 +242,7 @@ class _AddUserDialogState extends State<AddUserDialog> {
 
   @override
   void dispose() {
+    _fullNameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
@@ -243,7 +252,13 @@ class _AddUserDialogState extends State<AddUserDialog> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await widget.onSubmit(_emailCtrl.text.trim(), _passwordCtrl.text, _role);
+      final fullName = _fullNameCtrl.text.trim();
+      await widget.onSubmit(
+        _emailCtrl.text.trim(),
+        _passwordCtrl.text,
+        _role,
+        fullName.isNotEmpty ? fullName : null,
+      );
       if (mounted) Navigator.pop(context);
     } on AdminApiException catch (e) {
       if (!mounted) return;
@@ -270,6 +285,12 @@ class _AddUserDialogState extends State<AddUserDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            TextFormField(
+              controller: _fullNameCtrl,
+              decoration: const InputDecoration(labelText: 'Prénom & Nom'),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _emailCtrl,
               decoration: const InputDecoration(labelText: 'Email'),

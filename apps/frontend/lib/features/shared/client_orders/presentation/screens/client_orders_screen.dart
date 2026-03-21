@@ -62,9 +62,12 @@ class _ClientOrdersScreenState extends ConsumerState<ClientOrdersScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-              builder: (_) => const ClientOrderFormScreen()),
+        heroTag: null,
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          builder: (_) => const ClientOrderFormScreen(),
         ),
         child: const Icon(Icons.add),
       ),

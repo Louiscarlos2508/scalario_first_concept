@@ -14,6 +14,12 @@ import '../widgets/sync_status_indicator.dart';
 import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/core/settings/settings_screen.dart';
+import 'loss_declaration_page.dart';
+import 'transfer_confirm_page.dart';
+import 'stock_view_page.dart';
+import 'daily_sales_page.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -22,6 +28,12 @@ class PosScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider).valueOrNull;
     final sessionOpen = session != null && session.status == 'OPEN';
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final screens = config != null
+        ? config.screensForRole(role)
+        : _fallbackScreensForRole(role);
+    final hasMenu = screens.where((s) => s != 'pos').isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -31,9 +43,11 @@ class PosScreen extends ConsumerWidget {
           if (sessionOpen) ...[
             IconButton(
               icon: const Icon(Icons.assignment_add),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const ClientOrderFormScreen()),
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => const ClientOrderFormScreen(),
               ),
               tooltip: 'Commande client',
             ),
@@ -49,6 +63,13 @@ class PosScreen extends ConsumerWidget {
               tooltip: 'Fermer la caisse',
             ),
           ],
+          if (hasMenu)
+            IconButton(
+              icon: const Icon(Icons.menu),
+              tooltip: 'Mon espace',
+              onPressed: () =>
+                  _showCommercialMenu(context, ref, screens),
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(authRepositoryProvider).signOut(),
@@ -191,6 +212,105 @@ class PosScreen extends ConsumerWidget {
         await ref.read(sessionProvider.notifier).closeSession(physicalAmount, theoretical);
       }
     }
+  }
+}
+
+// ── Commercial menu helpers ───────────────────────────────────────────────────
+
+List<String> _fallbackScreensForRole(String role) {
+  switch (role) {
+    case 'owner':
+      return ['backoffice', 'pos'];
+    case 'manager':
+      return ['backoffice_restricted'];
+    case 'commercial':
+      return ['pos', 'losses', 'transfers', 'stock_view', 'daily_sales'];
+    default:
+      return ['pos'];
+  }
+}
+
+void _showCommercialMenu(
+  BuildContext context,
+  WidgetRef ref,
+  List<String> screens,
+) {
+  void go(Widget page) {
+    Navigator.pop(context);
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  showModalBottomSheet(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          if (screens.contains('losses'))
+            ListTile(
+              leading: const Icon(Icons.remove_circle_outline),
+              title: const Text('Déclarer une perte'),
+              onTap: () => go(const LossDeclarationPage()),
+            ),
+          if (screens.contains('transfers'))
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Confirmer un transfert'),
+              onTap: () => go(const TransferConfirmPage()),
+            ),
+          if (screens.contains('stock_view'))
+            ListTile(
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text('Mon stock'),
+              onTap: () => go(const StockViewPage()),
+            ),
+          if (screens.contains('client_orders'))
+            ListTile(
+              leading: const Icon(Icons.shopping_cart_outlined),
+              title: const Text('Commandes clients'),
+              onTap: () => go(const _PlaceholderPage('Commandes clients')),
+            ),
+          if (screens.contains('deliveries'))
+            ListTile(
+              leading: const Icon(Icons.local_shipping_outlined),
+              title: const Text('Livraisons'),
+              onTap: () => go(const _PlaceholderPage('Livraisons')),
+            ),
+          if (screens.contains('daily_sales'))
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined),
+              title: const Text('Mes ventes du jour'),
+              onTap: () => go(const DailySalesPage()),
+            ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('Paramètres'),
+            onTap: () => go(const SettingsScreen()),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
+class _PlaceholderPage extends StatelessWidget {
+  final String title;
+  const _PlaceholderPage(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Text(
+          'Bientôt disponible',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      ),
+    );
   }
 }
 

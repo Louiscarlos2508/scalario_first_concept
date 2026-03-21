@@ -4,8 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
-import 'package:frontend/features/shared/catalog/presentation/screens/catalog_screen.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/stock_history_screen.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
 import 'package:frontend/features/shared/contacts/presentation/screens/contacts_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart'
@@ -13,6 +12,8 @@ import 'package:frontend/features/shared/reports/presentation/providers/report_p
 import 'package:frontend/core/sdui/sdui_layout.dart';
 import 'package:frontend/core/sdui/sdui_providers.dart';
 import 'package:frontend/core/sdui/sdui_renderer.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/expenses/presentation/screens/expenses_screen.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/promotions/presentation/screens/promotions_screen.dart';
@@ -46,17 +47,17 @@ final _allNavScreens = <_NavScreenPair>[
     navItem: const NavItem(
         icon: Icons.inventory_2_outlined,
         selectedIcon: Icons.inventory_2,
-        label: 'Inventaire',
+        label: 'Produits & Stock',
         moduleCode: 'inventory'),
     screen: const InventoryScreen(),
   ),
   (
     navItem: const NavItem(
-        icon: Icons.shopping_bag_outlined,
-        selectedIcon: Icons.shopping_bag,
-        label: 'Catalogue',
-        moduleCode: 'catalog'),
-    screen: const CatalogScreen(),
+        icon: Icons.shopping_cart_outlined,
+        selectedIcon: Icons.shopping_cart,
+        label: 'Commandes',
+        moduleCode: 'purchase_orders'),
+    screen: const PurchaseOrdersScreen(),
   ),
   (
     navItem: const NavItem(
@@ -65,14 +66,6 @@ final _allNavScreens = <_NavScreenPair>[
         label: 'Clients',
         moduleCode: 'clients'),
     screen: const ContactsScreen(),
-  ),
-  (
-    navItem: const NavItem(
-        icon: Icons.history_outlined,
-        selectedIcon: Icons.history,
-        label: 'Historique',
-        moduleCode: 'transactions'),
-    screen: const StockHistoryScreen(),
   ),
   (
     navItem: const NavItem(
@@ -123,15 +116,29 @@ final _allNavScreens = <_NavScreenPair>[
   ),
 ];
 
-/// Modules each role is allowed to see in the backoffice.
-/// null = no restriction (all active modules visible).
+/// Base modules visible per role. Dynamic additions via roleScreenAccess:
+/// - 'clients' if canAccess(role, 'clients_view')
+/// - 'expenses' if canAccess(role, 'expenses')
+/// - 'purchase_orders' always included for manager (if module is active)
 const _roleAllowedModules = <String, Set<String>?>{
   'owner': null,
-  'manager': {'inventory', 'reports', 'clients', 'transactions'},
+  'manager': {'inventory', 'reports', 'transactions', 'purchase_orders'},
 };
 
-List<_NavScreenPair> _visiblePairs(Set<String> activeModules, String? role) {
-  final allowedByRole = _roleAllowedModules[role]; // null = owner/unrestricted
+List<_NavScreenPair> _visiblePairs(
+  Set<String> activeModules,
+  String? role,
+  BusinessTypeConfig? config,
+) {
+  final base = _roleAllowedModules[role]; // null = owner/unrestricted
+  Set<String>? allowedByRole;
+  if (base != null) {
+    allowedByRole = {...base};
+    if (role != null && config != null) {
+      if (config.canAccess(role, 'clients_view')) allowedByRole.add('clients');
+      if (config.canAccess(role, 'expenses')) allowedByRole.add('expenses');
+    }
+  }
   return _allNavScreens.where((p) {
     if (p.navItem.moduleCode == null) return true; // Accueil, Paramètres always shown
     if (!activeModules.contains(p.navItem.moduleCode)) return false;
@@ -157,7 +164,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final modulesAsync = ref.watch(activeModulesProvider);
     final activeModules = modulesAsync.valueOrNull ?? {};
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
-    final pairs = _visiblePairs(activeModules, role);
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final pairs = _visiblePairs(activeModules, role, config);
 
     // Handle programmatic navigation from KPI cards (by module code)
     ref.listen(dashboardNavigationProvider, (_, moduleCode) {

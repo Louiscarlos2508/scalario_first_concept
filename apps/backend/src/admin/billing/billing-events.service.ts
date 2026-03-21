@@ -6,6 +6,7 @@ import { CreateBillingEventDto } from './dto/create-billing-event.dto';
 import { UpdateBillingDto } from './dto/update-billing.dto';
 import { ActivateTenantDto } from './dto/activate-tenant.dto';
 import { RecordPaymentDto } from './dto/record-payment.dto';
+import { MarkFeePaidDto } from './dto/mark-fee-paid.dto';
 
 function calcPaidUntil(
   billingStatus: string,
@@ -604,6 +605,74 @@ export class BillingEventsService {
       description: event.description,
       paymentMethod: paymentDetails.paymentMethod,
       paymentRef: paymentDetails.paymentRef ?? null,
+    };
+  }
+
+  async markFeePaid(tenantId: string, dto: MarkFeePaidDto) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException(`Tenant introuvable`);
+
+    const tenantAny = tenant as any;
+    const paidFlag = dto.feeType === 'installation' ? 'installationPaid' : 'trainingPaid';
+    if (tenantAny[paidFlag]) throw new ConflictException(`${dto.feeType} déjà marqué payé`);
+
+    const feeAmount = dto.feeType === 'installation' ? tenantAny.installationFee : tenantAny.trainingFee;
+    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date();
+    const month = paymentDate.getMonth() + 1;
+    const year = paymentDate.getFullYear();
+
+    const receiptCount = await (this.prisma as any).billingEvent.count({
+      where: { receiptNumber: { not: null } },
+    });
+    const receiptNumber = `REC-${year}-${String(month).padStart(2, '0')}-${String(receiptCount + 1).padStart(3, '0')}`;
+
+    const description = dto.feeType === 'installation' ? "Frais d'installation" : 'Frais de formation';
+
+    // Find existing pending event or create one
+    let feeEvent = await (this.prisma as any).billingEvent.findFirst({
+      where: { tenantId, type: dto.feeType, status: 'pending' },
+    });
+
+    if (feeEvent) {
+      feeEvent = await (this.prisma as any).billingEvent.update({
+        where: { id: feeEvent.id },
+        data: {
+          status: 'paid',
+          paidAt: paymentDate,
+          paymentMethod: dto.paymentMethod,
+          paymentRef: dto.paymentRef ?? null,
+          receiptNumber,
+        },
+      });
+    } else {
+      feeEvent = await (this.prisma as any).billingEvent.create({
+        data: {
+          tenantId,
+          type: dto.feeType,
+          amount: feeAmount ?? '0',
+          description,
+          status: 'paid',
+          paidAt: paymentDate,
+          paymentMethod: dto.paymentMethod,
+          paymentRef: dto.paymentRef ?? null,
+          receiptNumber,
+        },
+      });
+    }
+
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { [paidFlag]: true },
+    });
+
+    return {
+      receiptNumber,
+      date: paymentDate.toISOString(),
+      tenant: { name: tenant.name },
+      amount: Number(feeEvent.amount),
+      description: feeEvent.description,
+      paymentMethod: dto.paymentMethod,
+      paymentRef: dto.paymentRef ?? null,
     };
   }
 }

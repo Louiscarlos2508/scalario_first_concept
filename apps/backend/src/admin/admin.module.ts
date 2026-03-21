@@ -17,5 +17,6 @@ import { BusinessTypeModule } from './business-type/business-type.module';
   imports: [ModulesModule, BillingModule, BusinessTypeModule],
   controllers: [AdminTenantsController, AdminModulesController, AdminUsersController, AdminMonitoringController],
   providers: [SuperAdminGuard, SupabaseAdminService, AdminTenantsService, AdminModulesService, AdminUsersService, AdminMonitoringService],
+  exports: [SupabaseAdminService],
 })
 export class AdminModule {}

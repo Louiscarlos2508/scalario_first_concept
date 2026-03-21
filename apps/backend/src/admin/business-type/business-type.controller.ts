@@ -17,7 +17,7 @@ export class BusinessTypeController {
   constructor(private readonly businessTypeService: BusinessTypeService) {}
 
   @Get('business-type/config')
-  @Roles('owner', 'manager', 'cashier')
+  @Roles('owner', 'manager', 'cashier', 'commercial')
   async getMyConfig(@CurrentTenant() tenantId: string) {
     return this.businessTypeService.getMyConfig(tenantId);
   }

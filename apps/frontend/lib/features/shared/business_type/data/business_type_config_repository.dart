@@ -3,6 +3,14 @@ import 'package:frontend/core/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Default screens per role when config is unavailable (fallback).
+const _kDefaultScreens = <String, List<String>>{
+  'owner': ['backoffice', 'pos'],
+  'manager': ['backoffice_restricted'],
+  'commercial': ['pos', 'losses', 'transfers', 'stock_view', 'daily_sales'],
+  'cashier': ['pos'],
+};
+
 class BusinessTypeConfig {
   final String code;
   final String name;
@@ -13,6 +21,8 @@ class BusinessTypeConfig {
   final Map<String, dynamic> roleLabels;
   // Epic 30 — FR109: delivery document type ('receipt' | 'delivery_note' | 'invoice')
   final String documentType;
+  // Epic 30 — FR112: screen access per role
+  final Map<String, List<String>> roleScreenAccess;
 
   const BusinessTypeConfig({
     required this.code,
@@ -22,9 +32,29 @@ class BusinessTypeConfig {
     required this.suggestedCategories,
     this.roleLabels = const {},
     this.documentType = 'receipt',
+    this.roleScreenAccess = const {},
   });
 
+  /// Returns the list of allowed screens for [role].
+  /// Falls back to sensible defaults if roleScreenAccess is not configured.
+  List<String> screensForRole(String role) {
+    if (roleScreenAccess.containsKey(role)) {
+      return roleScreenAccess[role]!;
+    }
+    return _kDefaultScreens[role] ?? ['pos'];
+  }
+
+  bool canAccess(String role, String screen) =>
+      screensForRole(role).contains(screen);
+
   factory BusinessTypeConfig.fromJson(Map<String, dynamic> json) {
+    final rawAccess = json['roleScreenAccess'] as Map<String, dynamic>? ?? {};
+    final roleScreenAccess = rawAccess.map(
+      (k, v) => MapEntry(
+        k,
+        (v as List<dynamic>).map((e) => e as String).toList(),
+      ),
+    );
     return BusinessTypeConfig(
       code: json['code'] as String? ?? 'generaliste',
       name: json['name'] as String? ?? 'Généraliste',
@@ -39,6 +69,7 @@ class BusinessTypeConfig {
           [],
       roleLabels: (json['roleLabels'] as Map<String, dynamic>?) ?? {},
       documentType: json['documentType'] as String? ?? 'receipt',
+      roleScreenAccess: roleScreenAccess,
     );
   }
 
@@ -50,6 +81,7 @@ class BusinessTypeConfig {
         suggestedCategories: [],
         roleLabels: {},
         documentType: 'receipt',
+        roleScreenAccess: {},
       );
 }
 

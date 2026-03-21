@@ -23,6 +23,7 @@ import { PromotionsModule } from './shared/promotions/promotions.module';
 import { ReturnsModule } from './shared/returns/returns.module';
 import { ReservationsModule } from './shared/reservations/reservations.module';
 import { ClientOrdersModule } from './shared/client-orders/client-orders.module';
+import { TenantModule } from './tenant/tenant.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ClientOrdersModule } from './shared/client-orders/client-orders.module'
     ReturnsModule.register(),
     ReservationsModule.register(),
     ClientOrdersModule.register(),
+    TenantModule,
   ],
   controllers: [AppController],
   providers: [AppService],

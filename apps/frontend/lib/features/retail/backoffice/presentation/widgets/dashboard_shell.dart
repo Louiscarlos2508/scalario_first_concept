@@ -46,7 +46,7 @@ class DashboardShell extends ConsumerStatefulWidget {
 class _DashboardShellState extends ConsumerState<DashboardShell> {
   /// Returns an icon widget with an outbox badge for the Inventaire tab.
   Widget _navIcon(WidgetRef ref, String label, IconData icon) {
-    if (label != 'Inventaire') return Icon(icon);
+    if (label != 'Produits & Stock') return Icon(icon);
     final countAsync = ref.watch(inventoryOutboxCountProvider);
     final count = countAsync.when(
       data: (n) => n,
