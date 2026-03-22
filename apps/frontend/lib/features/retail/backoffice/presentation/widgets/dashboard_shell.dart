@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/app_breakpoints.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/sync_status_indicator.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
 
 /// Navigation destination item.
 /// [moduleCode] null = always visible; non-null = visible only when module is active.
@@ -66,7 +66,9 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= kCompact;
-        return isWide ? _buildTabletLayout(context) : _buildPhoneLayout(context);
+        return isWide
+            ? _buildTabletLayout(context)
+            : _buildPhoneLayout(context);
       },
     );
   }
@@ -81,16 +83,21 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
+          Column(
+            children: [
+              Expanded(
+                child: NavigationRail(
             extended: MediaQuery.of(context).size.width >= 1200,
             selectedIndex: widget.selectedIndex,
             onDestinationSelected: widget.onDestinationSelected,
             destinations: widget.items
-                .map((item) => NavigationRailDestination(
-                      icon: _navIcon(ref, item.label, item.icon),
-                      selectedIcon: _navIcon(ref, item.label, item.selectedIcon),
-                      label: Text(item.label),
-                    ))
+                .map(
+                  (item) => NavigationRailDestination(
+                    icon: _navIcon(ref, item.label, item.icon),
+                    selectedIcon: _navIcon(ref, item.label, item.selectedIcon),
+                    label: Text(item.label),
+                  ),
+                )
                 .toList(),
             leading: Column(
               children: [
@@ -100,7 +107,10 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                     if (profile == null || profile.memberships.length <= 1) {
                       return CircleAvatar(
                         backgroundColor: colorScheme.primaryContainer,
-                        child: Icon(Icons.business, color: colorScheme.onPrimaryContainer),
+                        child: Icon(
+                          Icons.business,
+                          color: colorScheme.onPrimaryContainer,
+                        ),
                       );
                     }
                     return PopupMenuButton<String>(
@@ -110,28 +120,38 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                         ref.read(activeTenantProvider.notifier).state = id;
                       },
                       itemBuilder: (context) => profile.memberships
-                          .map((m) => PopupMenuItem(
-                                value: m.tenantId,
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.location_on_outlined,
-                                        size: 18,
-                                        color: m.tenantId == activeTenantId
-                                            ? colorScheme.primary
-                                            : null),
-                                    const SizedBox(width: 8),
-                                    Text(m.tenantName ?? 'Branche',
-                                        style: TextStyle(
-                                            fontWeight: m.tenantId == activeTenantId
-                                                ? FontWeight.bold
-                                                : null)),
-                                  ],
-                                ),
-                              ))
+                          .map(
+                            (m) => PopupMenuItem(
+                              value: m.tenantId,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    size: 18,
+                                    color: m.tenantId == activeTenantId
+                                        ? colorScheme.primary
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    m.tenantName ?? 'Branche',
+                                    style: TextStyle(
+                                      fontWeight: m.tenantId == activeTenantId
+                                          ? FontWeight.bold
+                                          : null,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
                           .toList(),
                       child: CircleAvatar(
                         backgroundColor: colorScheme.primary,
-                        child: const Icon(Icons.swap_horiz, color: Colors.white),
+                        child: const Icon(
+                          Icons.swap_horiz,
+                          color: Colors.white,
+                        ),
                       ),
                     );
                   },
@@ -142,17 +162,19 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                 if (activeTenantId != null)
                   userProfileAsync.when(
                     data: (profile) {
-                      final active = profile?.memberships
-                          .firstWhere((m) => m.tenantId == activeTenantId,
-                              orElse: () => profile.memberships.first);
+                      final active = profile?.memberships.firstWhere(
+                        (m) => m.tenantId == activeTenantId,
+                        orElse: () => profile.memberships.first,
+                      );
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
                           active?.tenantName ?? 'Branche',
                           style: TextStyle(
-                              fontSize: 10,
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.bold),
+                            fontSize: 10,
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -162,25 +184,22 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                     loading: () => const SizedBox(),
                     error: (_, _) => const SizedBox(),
                   ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
             ),
-            trailing: Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
+          ),
+            ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (userProfileAsync.valueOrNull?.role == 'owner') ...[
+                  if (ref.watch(userProfileProvider).valueOrNull?.role == 'owner')
                     IconButton(
                       icon: const Icon(Icons.point_of_sale),
                       tooltip: 'Ouvrir la caisse',
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PosScreen()),
-                        );
-                      },
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const PosScreen()),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                  ],
                   IconButton(
                     icon: const Icon(Icons.logout),
                     tooltip: 'Déconnexion',
@@ -188,17 +207,14 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
                       ref.read(authRepositoryProvider).signOut();
                     },
                   ),
-                  const SizedBox(height: 8),
                   const SyncStatusIndicator(),
                   const SizedBox(height: 8),
                 ],
               ),
-            ),
+            ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
-          Expanded(
-            child: SafeArea(child: widget.child),
-          ),
+          Expanded(child: SafeArea(child: widget.child)),
         ],
       ),
     );
@@ -220,11 +236,13 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
         items: visibleBottom
             .asMap()
             .entries
-            .map((e) => BottomNavigationBarItem(
-                  icon: _navIcon(ref, e.value.label, e.value.icon),
-                  activeIcon: _navIcon(ref, e.value.label, e.value.selectedIcon),
-                  label: e.value.label,
-                ))
+            .map(
+              (e) => BottomNavigationBarItem(
+                icon: _navIcon(ref, e.value.label, e.value.icon),
+                activeIcon: _navIcon(ref, e.value.label, e.value.selectedIcon),
+                label: e.value.label,
+              ),
+            )
             .toList(),
       ),
     );

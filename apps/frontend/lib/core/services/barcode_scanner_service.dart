@@ -3,26 +3,41 @@ import 'package:flutter/services.dart';
 import 'package:frontend/features/retail/pos/data/repositories/product_repository.dart';
 import 'package:frontend/features/retail/pos/presentation/state/cart_notifier.dart';
 
+class ScanEvent {
+  final bool found;
+  final String barcode;
+  final String? productName;
+
+  const ScanEvent({
+    required this.found,
+    required this.barcode,
+    this.productName,
+  });
+}
+
 class BarcodeScannerService {
   final ProductRepository _productRepository;
   final CartNotifier _cartNotifier;
-  
+
   String _buffer = '';
   DateTime? _lastKeyPress;
-  
-  // Barcode scanners usually send keys within 10-50ms of each other.
+
+  // Barcode scanners send keys within 10-50ms of each other.
   // 100ms is a safe threshold to distinguish from manual typing.
   static const _keyboardThreshold = Duration(milliseconds: 100);
+
+  final _eventController = StreamController<ScanEvent>.broadcast();
+  Stream<ScanEvent> get events => _eventController.stream;
 
   BarcodeScannerService(this._productRepository, this._cartNotifier);
 
   void init() {
     HardwareKeyboard.instance.addHandler(_handleKeyEvent);
-    print('[BarcodeScanner] Global listener initialized');
   }
 
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    _eventController.close();
   }
 
   bool _handleKeyEvent(KeyEvent event) {
@@ -31,11 +46,10 @@ class BarcodeScannerService {
     final now = DateTime.now();
     final character = event.character;
 
-    // Detect if this is a "rapid" sequence
-    final isRapid = _lastKeyPress == null || now.difference(_lastKeyPress!) < _keyboardThreshold;
+    final isRapid = _lastKeyPress == null ||
+        now.difference(_lastKeyPress!) < _keyboardThreshold;
     _lastKeyPress = now;
 
-    // If "Enter" is pressed and we have a buffer, process it
     if (event.logicalKey == LogicalKeyboardKey.enter) {
       if (_buffer.isNotEmpty && _buffer.length >= 3) {
         _processBarcode(_buffer);
@@ -44,9 +58,10 @@ class BarcodeScannerService {
       return true;
     }
 
-    if (character != null && _isNumeric(character)) {
+    // Accept any printable character valid in standard barcode symbologies:
+    // digits, letters, and common special chars (-, ., $, /, +, %, space)
+    if (character != null && _isBarcodeChar(character)) {
       if (!isRapid) {
-        // Not rapid enough to be a scanner, reset buffer
         _buffer = character;
       } else {
         _buffer += character;
@@ -55,22 +70,23 @@ class BarcodeScannerService {
     return false;
   }
 
-  bool _isNumeric(String s) {
-    return RegExp(r'^[0-9]+$').hasMatch(s);
+  bool _isBarcodeChar(String s) {
+    return RegExp(r'^[A-Za-z0-9\-\.\$\/\+\% ]+$').hasMatch(s);
   }
 
   Future<void> _processBarcode(String barcode) async {
-    print('[BarcodeScanner] Detected barcode: $barcode');
     try {
       final product = await _productRepository.getProductByBarcode(barcode);
       if (product != null) {
         _cartNotifier.addProduct(product);
-        print('[BarcodeScanner] Added product: ${product.name}');
+        _eventController.add(
+          ScanEvent(found: true, barcode: barcode, productName: product.name),
+        );
       } else {
-        print('[BarcodeScanner] Product not found for barcode: $barcode');
+        _eventController.add(ScanEvent(found: false, barcode: barcode));
       }
-    } catch (e) {
-      print('[BarcodeScanner] Error looking up barcode: $e');
+    } catch (_) {
+      _eventController.add(ScanEvent(found: false, barcode: barcode));
     }
   }
 }

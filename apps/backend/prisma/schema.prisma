@@ -47,6 +47,9 @@ model Tenant {
   returnRequiresReason     Boolean           @default(true) @map("return_requires_reason")
   returnRequiresApproval   Boolean           @default(false) @map("return_requires_approval")
 
+  /// Payment methods enabled for the POS. Defaults to ['CASH','MOBILE_MONEY'].
+  paymentMethods           Json?             @map("payment_methods")
+
   /// Epic 29 — Business Type (FR104–FR106)
   businessType             String            @default("generaliste") @map("business_type")
   /// Epic 29 — Vertical (retail | artisan | restaurant | services — Phase 3+)

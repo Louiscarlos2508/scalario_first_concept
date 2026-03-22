@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/session_history_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 String _fcfa(double amount) =>
@@ -96,6 +97,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildSalesHistoryCard(),
+          const SizedBox(height: 16),
           _buildSessionHistoryCard(),
           const SizedBox(height: 24),
           _buildSectionTitle('Ventes par produit'),
@@ -106,6 +109,29 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           const SizedBox(height: 16),
           _buildPaymentMethodChart(paymentMethodStats),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSalesHistoryCard() {
+    return Card(
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        side: BorderSide(color: AppColors.border),
+      ),
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.primary,
+          child: Icon(Icons.receipt_long, color: Colors.white, size: 20),
+        ),
+        title: const Text('Historique des ventes',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: const Text('Consulter toutes les transactions par période'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
+        ),
       ),
     );
   }

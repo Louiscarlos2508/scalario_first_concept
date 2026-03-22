@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseAdminService } from '../admin/services/supabase-admin.service';
 
+const DEFAULT_PAYMENT_METHODS = ['CASH', 'MOBILE_MONEY'];
+const ALL_PAYMENT_METHODS = ['CASH', 'MOBILE_MONEY', 'CARD', 'TRANSFER', 'CREDIT', 'SPLIT'];
+
 export class UpdateMyInfoDto {
   name?: string;
   address?: string;
   phone?: string;
+  paymentMethods?: string[];
 }
 
 @Injectable()
@@ -25,6 +29,11 @@ export class TenantService {
     });
 
     const t = tenant as any;
+    const rawMethods = t.paymentMethods;
+    const paymentMethods: string[] = Array.isArray(rawMethods) && rawMethods.length > 0
+      ? rawMethods
+      : DEFAULT_PAYMENT_METHODS;
+
     return {
       id: tenant.id,
       name: tenant.name,
@@ -34,6 +43,7 @@ export class TenantService {
       businessTypeName: businessTypeDef?.name ?? tenant.businessType,
       currency: tenant.currency,
       plan: tenant.plan,
+      paymentMethods,
     };
   }
 
@@ -45,6 +55,11 @@ export class TenantService {
     if (dto.name !== undefined && dto.name.trim() !== '') data.name = dto.name.trim();
     if (dto.address !== undefined) data.address = dto.address.trim() || null;
     if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
+    if (dto.paymentMethods !== undefined) {
+      const valid = dto.paymentMethods.filter(m => ALL_PAYMENT_METHODS.includes(m));
+      // Always keep CASH active as a baseline
+      data.paymentMethods = valid.includes('CASH') ? valid : ['CASH', ...valid];
+    }
 
     const updated = await this.prisma.tenant.update({ where: { id: tenantId }, data });
     const u = updated as any;
@@ -55,6 +70,14 @@ export class TenantService {
       address: u.address ?? null,
       phone: u.phone ?? null,
     };
+  }
+
+  async getPaymentMethods(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const t = tenant as any;
+    const raw = t?.paymentMethods;
+    const methods: string[] = Array.isArray(raw) && raw.length > 0 ? raw : DEFAULT_PAYMENT_METHODS;
+    return { paymentMethods: methods, allMethods: ALL_PAYMENT_METHODS };
   }
 
   async getMyUsers(tenantId: string) {

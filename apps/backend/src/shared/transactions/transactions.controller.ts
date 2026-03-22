@@ -26,12 +26,23 @@ export class TransactionsController {
   async getTransactions(
     @Query('tenantId') tenantId?: string,
     @Query('since') since?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('userId') userId?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+    @Query('search') search?: string,
+    @Query('receiptNumber') receiptNumber?: string,
     @Query('page') page: string = '1',
-    @Query('limit') limit: string = '100',
+    @Query('limit') limit: string = '50',
   ) {
     return this.transactionsService.getTransactions({
       tenantId,
       since,
+      from,
+      to,
+      userId,
+      paymentMethod,
+      search: search ?? receiptNumber,
       page: parseInt(page),
       limit: parseInt(limit),
     });

@@ -15,6 +15,7 @@ import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 
 // ── SharedPreferences keys ────────────────────────────────────────────────────
 const _kReceiptHeader = 'settings_receipt_header';
@@ -364,7 +365,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildModulesSection(activeModules),
             ],
 
-            // ── 6. Reçu (owner seulement) ────────────────────────────────────
+            // ── 6. Méthodes de paiement (owner seulement) ───────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildPaymentMethodsSection(),
+            ],
+
+            // ── 7. Reçu (owner seulement) ────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildReceiptSection(),
@@ -608,6 +615,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    ]);
+  }
+
+  Widget _buildPaymentMethodsSection() {
+    final enabledAsync = ref.watch(enabledPaymentMethodsProvider);
+    final enabled = enabledAsync.valueOrNull ?? kDefaultPaymentMethods;
+    final tenantId = ref.read(activeTenantProvider);
+
+    Future<void> toggle(String code, bool currentlyOn) async {
+      final next = currentlyOn
+          ? enabled.where((m) => m != code).toList()
+          : [...enabled, code];
+      // CASH is mandatory — cannot be disabled
+      if (!next.contains('CASH')) return;
+
+      try {
+        final token = _token();
+        final response = await http.patch(
+          Uri.parse('${ApiConstants.baseUrl}/tenant/my-info'),
+          headers: ApiConstants.headers(tenantId: tenantId, token: token),
+          body: jsonEncode({'paymentMethods': next}),
+        );
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          ref.invalidate(enabledPaymentMethodsProvider);
+        }
+      } catch (_) {}
+    }
+
+    return _section('Méthodes de paiement', [
+      const Padding(
+        padding: EdgeInsets.only(bottom: 8),
+        child: Text(
+          'Espèces est toujours activé. Activez les autres selon vos besoins.',
+          style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      ),
+      ...kAllPaymentMethods.map((entry) {
+        final code = entry.$1;
+        final label = entry.$2;
+        final isCash = code == 'CASH';
+        final isOn = enabled.contains(code);
+        return SwitchListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: Text(label),
+          value: isOn,
+          onChanged: isCash ? null : (_) => toggle(code, isOn),
+        );
+      }),
     ]);
   }
 

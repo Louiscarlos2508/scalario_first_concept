@@ -7,6 +7,7 @@ import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/core/services/realtime_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:frontend/core/services/barcode_scanner_service.dart';
+export 'package:frontend/core/services/barcode_scanner_service.dart' show ScanEvent;
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/data/repositories/category_repository.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
@@ -114,6 +115,10 @@ final barcodeScannerServiceProvider = Provider<BarcodeScannerService>((ref) {
   ref.onDispose(() => service.dispose());
 
   return service;
+});
+
+final scanEventsProvider = StreamProvider<ScanEvent>((ref) {
+  return ref.watch(barcodeScannerServiceProvider).events;
 });
 
 // UI State

@@ -24,9 +24,15 @@ export class TenantController {
     return this.tenantService.updateMyInfo(tenantId, dto);
   }
 
-  /** GET /tenant/my-users — owner only */
+  /** GET /tenant/payment-methods — all authenticated roles (needed by POS) */
+  @Get('payment-methods')
+  getPaymentMethods(@CurrentTenant() tenantId: string) {
+    return this.tenantService.getPaymentMethods(tenantId);
+  }
+
+  /** GET /tenant/my-users — owner + manager (manager needs it for cashier filter in history) */
   @Get('my-users')
-  @Roles('owner')
+  @Roles('owner', 'manager')
   getMyUsers(@CurrentTenant() tenantId: string) {
     return this.tenantService.getMyUsers(tenantId);
   }

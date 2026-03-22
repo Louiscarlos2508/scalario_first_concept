@@ -19,7 +19,7 @@ import 'package:frontend/core/settings/settings_screen.dart';
 import 'loss_declaration_page.dart';
 import 'transfer_confirm_page.dart';
 import 'stock_view_page.dart';
-import 'daily_sales_page.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -33,7 +33,31 @@ class PosScreen extends ConsumerWidget {
     final screens = config != null
         ? config.screensForRole(role)
         : _fallbackScreensForRole(role);
-    final hasMenu = screens.where((s) => s != 'pos').isNotEmpty;
+    final hasBackoffice = screens.contains('backoffice') ||
+        screens.contains('backoffice_restricted');
+    final hasExtraScreens = screens
+        .where((s) => s != 'pos' && s != 'backoffice' && s != 'backoffice_restricted')
+        .isNotEmpty;
+    final hasMenu = hasExtraScreens && !hasBackoffice;
+
+    ref.listen<AsyncValue<ScanEvent>>(scanEventsProvider, (_, next) {
+      next.whenData((event) {
+        final messenger = ScaffoldMessenger.of(context);
+        if (event.found) {
+          messenger.showSnackBar(SnackBar(
+            content: Text('✓ ${event.productName ?? event.barcode}'),
+            duration: const Duration(seconds: 1),
+            backgroundColor: Colors.green.shade700,
+          ));
+        } else {
+          messenger.showSnackBar(SnackBar(
+            content: Text('Code-barres non trouvé : ${event.barcode}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red.shade700,
+          ));
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -67,14 +91,16 @@ class PosScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.menu),
               tooltip: 'Mon espace',
-              onPressed: () =>
-                  _showCommercialMenu(context, ref, screens),
+              onPressed: () => _showCommercialMenu(context, ref, screens),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authRepositoryProvider).signOut(),
-            tooltip: 'Déconnexion',
-          ),
+          // Commercial / Cashier → le POS est leur écran principal → déconnexion
+          // Owner → le bouton retour natif de l'AppBar suffit (Navigator.pop)
+          if (!hasBackoffice)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Déconnexion',
+              onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            ),
           const SizedBox(width: 8),
         ],
       ),
@@ -144,7 +170,7 @@ class PosScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Product not found: $barcode'),
+              content: Text('Code-barres non trouvé : $barcode'),
               backgroundColor: Colors.orange),
         );
       }
@@ -220,7 +246,7 @@ class PosScreen extends ConsumerWidget {
 List<String> _fallbackScreensForRole(String role) {
   switch (role) {
     case 'owner':
-      return ['backoffice', 'pos'];
+      return ['pos'];
     case 'manager':
       return ['backoffice_restricted'];
     case 'commercial':
@@ -281,7 +307,14 @@ void _showCommercialMenu(
             ListTile(
               leading: const Icon(Icons.receipt_long_outlined),
               title: const Text('Mes ventes du jour'),
-              onTap: () => go(const DailySalesPage()),
+              onTap: () {
+                final userId =
+                    ref.read(userProfileProvider).valueOrNull?.id;
+                go(SalesHistoryScreen(
+                  fixedUserId: userId,
+                  initialPeriod: 'today',
+                ));
+              },
             ),
           const Divider(height: 1),
           ListTile(
@@ -321,7 +354,7 @@ class _CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cart')),
+      appBar: AppBar(title: const Text('Panier')),
       body: const CartPanel(),
     );
   }

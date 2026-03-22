@@ -140,6 +140,9 @@ These NFRs have the highest impact on architectural decisions. They are ordered 
 > - **Vertical Restaurant (Phase 3+):** Service en salle. Réutilise catalog, contacts, transactions, expenses, reports. Ajoute : table_management, kitchen_display, menu_builder. Business types : restaurant, fast_food, bar, traiteur.
 > - **Vertical Services (Phase 3+):** Prestations pures. Réutilise contacts, transactions, expenses, reports. Ajoute : appointment, service_catalog, client_history. Business types : salon_coiffure, lavage_auto, cyber_cafe, photographe, services_general.
 > - **Champ `vertical` sur `BusinessTypeDefinition`:** Déjà présent dans le schéma (Phase 2a anticipation, migration 20260320070000). Vaut `"retail"` pour les 15 types actuels. Permettra d'ajouter des types artisan/restaurant/services sans migration.
+> - **Usage Limits Engine (Phase 2a):** Middleware qui vérifie les limites d'usage par tenant (transactions/mois, produits, users) contre `PlanDefinition.limits` (Json). Intercepte les requêtes de création et retourne 429 si limite atteinte. Champ d'anticipation sur `PlanDefinition` : `limits Json @default("{}")` — `{"maxUsers": 5, "maxTransactions": 500, "maxProducts": 200, "maxStorageMb": 500, "historyMonths": 6}`. NE PAS implémenter le middleware maintenant — juste le champ.
+> - **AI Service Layer (Phase 2b+):** Service Python ou Node séparé, communique avec le backend NestJS via API interne. Consomme les events du EventBus pour alimenter les modèles. Isolation stricte : l'IA d'un tenant ne voit que SES données. Endpoints prévus : `GET /ai/predictions/:tenantId`, `GET /ai/anomalies/:tenantId`.
+> - **Network Intelligence (Phase 3+):** Service séparé opérant sur des données agrégées anonymisées cross-tenants. Nécessite consentement explicite (opt-in par tenant). AUCUNE donnée individuelle partagée — uniquement des patterns statistiques. Motivé par l'effet réseau : valeur maximale à 10 000+ tenants.
 
 ### Data Flow Patterns
 

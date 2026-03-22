@@ -204,6 +204,9 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
                               if (!context.mounted) return;
                               final variant = await showModalBottomSheet<ProductVariant>(
                                 context: context,
+                                isScrollControlled: true,
+                                useSafeArea: true,
+                                showDragHandle: true,
                                 builder: (_) => VariantSelectorSheet(
                                   productName: product.name,
                                   variants: variants,
@@ -406,6 +409,9 @@ class _ProductGridState extends ConsumerState<ProductGrid> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
       builder: (context) => FutureBuilder<List<dynamic>>(
         future: ref.read(productRepositoryProvider).getStockAcrossBranches(product.barcode!, user.id),
         builder: (context, snapshot) {

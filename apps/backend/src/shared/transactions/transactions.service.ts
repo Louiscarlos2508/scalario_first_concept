@@ -117,19 +117,48 @@ export class TransactionsService {
   async getTransactions(params: {
     tenantId?: string;
     since?: string;
+    from?: string;
+    to?: string;
+    userId?: string;
+    paymentMethod?: string;
+    search?: string;
     page?: number;
     limit?: number;
   } = {}) {
-    const { tenantId, since, page = 1, limit = 100 } = params;
+    const { tenantId, since, from, to, userId, paymentMethod, search, page = 1, limit = 50 } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = { AND: [] };
     if (tenantId) where.tenantId = tenantId;
-    if (since) where.createdAt = { gt: new Date(since) };
+    if (paymentMethod) where.paymentMethod = paymentMethod;
+
+    // Date range — prefer from/to over legacy since
+    if (from || to) {
+      const createdAt: any = {};
+      if (from) createdAt.gte = new Date(from);
+      if (to) createdAt.lte = new Date(`${to}T23:59:59.999Z`);
+      where.createdAt = createdAt;
+    } else if (since) {
+      where.createdAt = { gt: new Date(since) };
+    }
+
+    // Nested retailSale filters (cashier + receipt number search)
+    const retailSaleFilter: any = {};
+    if (userId) retailSaleFilter.cashierId = userId;
+    if (search) retailSaleFilter.receiptNumber = { contains: search, mode: 'insensitive' };
+    if (Object.keys(retailSaleFilter).length > 0) {
+      where.retailSale = retailSaleFilter;
+    }
+
+    // Clean up AND if unused
+    if (where.AND.length === 0) delete where.AND;
 
     const [items, total] = await Promise.all([
       this.prisma.transaction.findMany({
         where,
+        include: {
+          retailSale: { select: { receiptNumber: true, cashierId: true } },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -137,10 +166,28 @@ export class TransactionsService {
       this.prisma.transaction.count({ where }),
     ]);
 
+    // Batch-fetch customer names for transactions that have a customerId
+    const customerIds = [...new Set(
+      items.map(i => i.customerId).filter((id): id is string => id != null)
+    )];
+    const customerMap = new Map<string, { name: string; phone: string | null }>();
+    if (customerIds.length > 0) {
+      const contacts = await this.prisma.contact.findMany({
+        where: { id: { in: customerIds } },
+        select: { id: true, name: true, phone: true },
+      });
+      for (const c of contacts) customerMap.set(c.id, { name: c.name, phone: c.phone });
+    }
+
+    const itemsWithCustomer = items.map(item => ({
+      ...item,
+      customer: item.customerId ? (customerMap.get(item.customerId) ?? null) : null,
+    }));
+
     const hasMore = skip + items.length < total;
 
     return {
-      items,
+      items: itemsWithCustomer,
       meta: {
         total,
         page,

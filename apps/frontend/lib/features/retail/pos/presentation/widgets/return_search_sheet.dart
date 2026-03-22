@@ -5,7 +5,10 @@ import 'package:frontend/features/retail/pos/presentation/providers/pos_provider
 import 'return_resolution_dialog.dart';
 
 class ReturnSearchSheet extends ConsumerStatefulWidget {
-  const ReturnSearchSheet({super.key});
+  /// When provided, skips the search step and goes straight to item selection.
+  final Map<String, dynamic>? initialTransaction;
+
+  const ReturnSearchSheet({super.key, this.initialTransaction});
 
   @override
   ConsumerState<ReturnSearchSheet> createState() => _ReturnSearchSheetState();
@@ -20,9 +23,18 @@ class _ReturnSearchSheetState extends ConsumerState<ReturnSearchSheet> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    final preloaded = widget.initialTransaction;
+    if (preloaded != null) {
+      _state = _SheetStateFound(preloaded);
+      final receipt = (preloaded['retailSale'] as Map<String, dynamic>?)?['receiptNumber']?.toString()
+          ?? preloaded['id']?.toString()
+          ?? '';
+      _receiptController.text = receipt;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -72,15 +84,6 @@ class _ReturnSearchSheetState extends ConsumerState<ReturnSearchSheet> {
         builder: (context, scrollController) => Column(
           children: [
             const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -202,12 +205,15 @@ class _ReturnSearchSheetState extends ConsumerState<ReturnSearchSheet> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: FilledButton.icon(
-              onPressed: totalSelected > 0
-                  ? () => _confirmReturn(context, tx, items, quantities)
-                  : null,
-              icon: const Icon(Icons.undo),
-              label: const Text('Confirmer le retour'),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: totalSelected > 0
+                    ? () => _confirmReturn(context, tx, items, quantities)
+                    : null,
+                icon: const Icon(Icons.undo),
+                label: const Text('Confirmer le retour'),
+              ),
             ),
           ),
         ],

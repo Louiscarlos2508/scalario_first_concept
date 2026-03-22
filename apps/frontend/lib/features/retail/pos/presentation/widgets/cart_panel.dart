@@ -13,9 +13,10 @@ import 'package:frontend/features/shared/catalog/data/models/price_level.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/catalog/presentation/widgets/serial_input_dialog.dart';
 import 'prescription_input_dialog.dart';
-import 'package:frontend/features/retail/pos/presentation/widgets/return_search_sheet.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -63,7 +64,6 @@ class CartPanel extends ConsumerWidget {
     });
 
     return Container(
-      width: 350,
       color: Colors.grey.shade100,
       child: Column(
         children: [
@@ -80,6 +80,9 @@ class CartPanel extends ConsumerWidget {
                   if (parked.isEmpty) return;
                   showModalBottomSheet(
                     context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    showDragHandle: true,
                     builder: (context) => const ParkedCartsDialog(),
                   );
                 },
@@ -261,18 +264,29 @@ class CartPanel extends ConsumerWidget {
                       icon: const Icon(Icons.pause),
                       label: const Text('ATTENTE'),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: () => showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (_) => const ReturnSearchSheet(),
+                    if ((userProfile?.role ?? '') != 'cashier')
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          final role = userProfile?.role ?? '';
+                          final isCommercial = role == 'commercial';
+                          // Owner voit toutes les ventes (7j),
+                          // commercial voit uniquement ses ventes du jour.
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SalesHistoryScreen(
+                                fixedUserId:
+                                    isCommercial ? userProfile?.id : null,
+                                initialPeriod: isCommercial ? 'today' : '7d',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.undo, color: Colors.orange),
+                        label: const Text(
+                          'RETOUR',
+                          style: TextStyle(color: Colors.orange),
+                        ),
                       ),
-                      icon: const Icon(Icons.undo, color: Colors.orange),
-                      label: const Text(
-                        'RETOUR',
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                    ),
                     OutlinedButton.icon(
                       onPressed: cartState.items.isEmpty
                           ? null
@@ -385,16 +399,14 @@ class CartPanel extends ConsumerWidget {
                       DropdownButton<String>(
                         value: cartState.paymentMethod,
                         underline: Container(),
-                        items: [
-                          'CASH',
-                          'MOBILE_MONEY',
-                          'CARD',
-                          'CREDIT',
-                          'SPLIT',
-                        ]
-                            .map((e) => DropdownMenuItem(
-                                value: e,
-                                child: Text(e,
+                        items: (ref
+                                .watch(enabledPaymentMethodsProvider)
+                                .valueOrNull ??
+                            kDefaultPaymentMethods)
+                            .map((code) => DropdownMenuItem(
+                                value: code,
+                                child: Text(
+                                    paymentMethodLabel(code),
                                     style:
                                         const TextStyle(fontSize: 12))))
                             .toList(),
@@ -522,6 +534,9 @@ class CartPanel extends ConsumerWidget {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
       builder: (_) => FutureBuilder<List<Map<String, dynamic>>>(
         future: ref.read(catalogRepositoryProvider).getPriceLevels(
           itemId: itemId,

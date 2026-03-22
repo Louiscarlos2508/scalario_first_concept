@@ -14,9 +14,9 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '6.6'
+version: '6.7'
 date: '2026-03-11'
-lastEdited: '2026-03-19'
+lastEdited: '2026-03-22'
 editHistory:
   - date: '2026-03-19'
     changes: 'FR76–FR88 ajoutés (Inventaire Avancé & Vente Configurable). Phases 2a/2b mises à jour. Table des matières, Politique Notifications, UI-Driven retail mis à jour. Source: gaps proposition client Blandine.'
@@ -32,6 +32,8 @@ editHistory:
     changes: 'FR100–FR103 ajoutés (Plans Tarifaires & Facturation). PlanDefinition par tenant (FR100, Phase 2a) ; frais installation + statuts facturation trial/active/overdue/suspended (FR101, Phase 2a) ; consultation plan + demande upgrade propriétaire (FR102, Phase 2a préparé Phase 3) ; paiement en ligne Mobile Money/carte + auto-provisioning tenant (FR103, Phase 3). Table des matières FR1–FR103. Version 6.3→6.4.'
   - date: '2026-03-20'
     changes: 'FR104–FR106 ajoutés (Configuration Business Type). BusinessTypeDefinition configurable sans déploiement avec flags produit par défaut, sections visibles et catégories suggérées (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — priorité et pré-remplissage des champs pertinents, masquage des champs non-pertinents, override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). Phase 2a mise à jour. Table des matières FR1–FR106. Version 6.4→6.5.'
+  - date: '2026-03-22'
+    changes: 'Vision stratégique documentée : 3 nouvelles sections ajoutées après Verticaux Futurs — Limites d''Usage par Plan (Phase 2a), Intelligence Artificielle Roadmap (Phase 2b→Phase 4), Scalario Platform Écosystème Inter-Entreprises (Phase 3+). Documentation uniquement — aucun epic, aucune implémentation. Version 6.6→6.7.'
 classification:
   projectType: saas_b2b
   domain: erp_multi_vertical_commerce
@@ -268,6 +270,122 @@ Modules spécifiques :
 - `client_history` : historique prestations par client
 
 > **Note :** Ces verticaux ne sont PAS implémentés en Phase 2. Ils sont documentés pour que l'architecture shared/vertical reste cohérente et que les modules shared soient réutilisables par tous les verticaux. Le champ `vertical` sur `BusinessTypeDefinition` permet d'ajouter ces types sans migration de schéma.
+
+---
+
+### Limites d'Usage par Plan (Phase 2a)
+
+Chaque plan a des limites d'usage au-delà des modules activés :
+
+| Limite | Standard | Premium | Enterprise |
+|--------|----------|---------|------------|
+| Utilisateurs max | 5 | 15 | Illimité |
+| Transactions/mois | 500 | Illimité | Illimité |
+| Produits catalogue | 200 | Illimité | Illimité |
+| Stockage données | 500 Mo | 5 Go | Illimité |
+| Historique accessible | 6 mois | 2 ans | Illimité |
+
+Quand un tenant atteint une limite, le système :
+- Affiche un banner non-bloquant "Vous avez atteint X% de votre limite"
+- À 100% : dialog d'upgrade "Passez au Premium pour continuer"
+- NE bloque PAS les opérations critiques (ventes, encaissements)
+- Bloque les opérations non-critiques (création produit, nouvel user)
+- Le owner voit ses limites dans Paramètres → Mon abonnement
+
+> **Note :** Les limites sont configurées dans `PlanDefinition.limits` (Json), pas hardcodées. Carlos peut ajuster par tenant si nécessaire. Champ d'anticipation prévu dans le schéma — implémentation middleware en Phase 2a.
+
+---
+
+### Intelligence Artificielle — Roadmap (Phase 2b → Phase 4)
+
+L'IA est une couche transversale qui exploite les données accumulées par chaque tenant pour créer de la valeur.
+
+**Phase 2b — IA individuelle (données du tenant seul) :**
+
+| Fonctionnalité | Description | Module |
+|----------------|-------------|--------|
+| Prévision de stock | "Vous allez manquer de farine dans 4 jours selon vos ventes" | inventory |
+| Détection d'anomalies caisse | "Cette caisse a 3 écarts suspects cette semaine" | reports |
+| Suggestions réapprovisionnement | "Commandez 50kg de riz — votre consommation moyenne est 7kg/jour" | purchase_orders |
+| Assistant métier | Le commerçant pose une question en français, l'IA répond avec SES données | kernel |
+| Scoring crédit client | Historique paiement du client → risque crédit automatique | clients |
+
+Architecture : service IA backend (Python ou API externe) qui consomme les données du tenant via des endpoints internes. L'IA ne voit JAMAIS les données d'un autre tenant (isolation stricte).
+
+**Phase 3 — IA réseau (données agrégées anonymisées) :**
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| Recommandation fournisseur | "3 retailers similaires s'approvisionnent chez ce distributeur — satisfaction 94%" |
+| Opportunité produit manquant | "12 clients ont cherché ce produit que vous ne proposez pas" |
+| Alerte rupture anticipée | "Votre fournisseur a une baisse de 40% de ses sorties — risque de rupture" |
+| Benchmark anonyme | "Votre panier moyen est 12% sous la moyenne de votre zone" |
+| Matching B2B | "Un grossiste à Bobo cherche un distributeur dans votre zone" |
+
+Architecture : service IA séparé qui opère sur des données AGRÉGÉES et ANONYMISÉES. Aucune donnée individuelle n'est partagée sans consentement explicite du tenant.
+
+**Phase 4-5 — Scalario Intelligence (vision long terme) :**
+
+Scalario devient le "système nerveux commercial" des marchés émergents :
+- Cartographie des flux commerciaux B2B en temps réel
+- Optimisation des chaînes d'approvisionnement locales
+- Indicateurs économiques locaux basés sur les données réelles
+- API ouverte pour les institutions financières (scoring PME)
+
+> **Note :** Cette vision est documentée pour orienter les décisions architecturales dès Phase 1 (isolation données, events, audit trail). Aucune implémentation avant Phase 3.
+
+---
+
+### Scalario Platform — Écosystème Inter-Entreprises (Phase 3+)
+
+Extension de Scalario Connect (FR52-FR55) vers un écosystème complet :
+
+```text
+Fournisseur ──► Distributeur ──► Retailer ──► Client final
+     │               │               │
+     └───────────────┴───────────────┘
+              SCALARIO NETWORK
+         (commandes, paiements, factures,
+          stocks en temps réel)
+```
+
+**Effets de réseau :**
+
+| Utilisateurs | Valeur |
+|-------------|--------|
+| 100 clients | Outil utile individuellement |
+| 1 000 clients | Connexions inter-entreprises possibles |
+| 10 000 clients | L'écosystème = la valeur principale |
+| 100 000 clients | Infrastructure commerciale de l'Afrique francophone |
+
+**Fonctionnalités Platform :**
+- Commandes inter-entreprises (acheteur → vendeur, tout dans Scalario)
+- Factures inter-entreprises avec réconciliation automatique
+- Paiement Mobile Money B2B intégré
+- Catalogue fournisseur partagé (le vendeur publie, l'acheteur commande)
+- Marketplace B2B locale (découverte de fournisseurs par zone)
+
+> **Note architecture :** Les champs d'anticipation existent déjà dans le schéma (FR52-FR55 : `referred_by`, `linked_tenant_id`, `supplier_reference`, `transfer_inter_tenant`). La logique métier s'activera en Phase 3.
+
+**Positionnement stratégique :**
+
+Scalario ne bat pas Odoo sur les marchés occidentaux. Scalario rend Odoo non pertinent sur les marchés où 4 milliards de personnes vont s'équiper pour la première fois.
+
+Avantages défensifs :
+- Mobile Money natif (pas un plugin)
+- FCFA + fiscalité OHADA + TVA locale intégrés
+- Interface et support en français
+- Pricing PME-friendly (15 000 FCFA vs 50€+ Odoo)
+- Onboarding terrain (opérationnel en 48h vs semaines pour Odoo)
+- Effet réseau local impossible à reproduire depuis l'extérieur
+
+**Projections utilisateurs :**
+
+| Phase | Horizon | Clients | Utilisateurs |
+|-------|---------|---------|--------------|
+| Phase 1 | 0–3 ans | 1 000–3 000 | 5K–24K (UEMOA) |
+| Phase 2 | 3–7 ans | 20 000–60 000 | 160K–720K (Pan-Afrique) |
+| Phase 3 | 7–15 ans | 300 000–1M | 3,6M–15M (Marchés émergents) |
 
 ---
 

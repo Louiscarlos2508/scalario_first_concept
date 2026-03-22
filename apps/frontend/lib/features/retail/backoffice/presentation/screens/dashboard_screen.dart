@@ -6,6 +6,7 @@ import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboa
 import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/features/shared/contacts/presentation/screens/contacts_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart'
     show salesStatsProvider, activeSessionsProvider, salesStatsDateRangeProvider;
@@ -22,6 +23,7 @@ import 'package:frontend/features/shared/client_orders/presentation/screens/clie
 import 'package:frontend/core/settings/settings_screen.dart';
 import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
 import 'package:frontend/features/shared/billing/presentation/providers/subscription_provider.dart';
 import 'dart:async';
 
@@ -109,6 +111,14 @@ final _allNavScreens = <_NavScreenPair>[
   ),
   (
     navItem: const NavItem(
+        icon: Icons.history_outlined,
+        selectedIcon: Icons.history,
+        label: 'Historique',
+        moduleCode: 'transactions'),
+    screen: const SalesHistoryScreen(),
+  ),
+  (
+    navItem: const NavItem(
         icon: Icons.settings_outlined,
         selectedIcon: Icons.settings,
         label: 'Paramètres'),
@@ -139,12 +149,29 @@ List<_NavScreenPair> _visiblePairs(
       if (config.canAccess(role, 'expenses')) allowedByRole.add('expenses');
     }
   }
-  return _allNavScreens.where((p) {
+  final pairs = _allNavScreens.where((p) {
     if (p.navItem.moduleCode == null) return true; // Accueil, Paramètres always shown
+    if (p.navItem.moduleCode == 'pos') return false; // handled separately below
     if (!activeModules.contains(p.navItem.moduleCode)) return false;
     if (allowedByRole != null && !allowedByRole.contains(p.navItem.moduleCode)) return false;
     return true;
   }).toList();
+
+  // Only non-owner roles with explicit POS access get a Caisse shortcut (owners live in the backoffice).
+  final canPos = role != 'owner' && config != null && config.canAccess(role ?? '', 'pos');
+  if (canPos) {
+    pairs.add((
+      navItem: const NavItem(
+        icon: Icons.point_of_sale_outlined,
+        selectedIcon: Icons.point_of_sale,
+        label: 'Caisse',
+        moduleCode: 'pos',
+      ),
+      screen: const SizedBox.shrink(), // never rendered — nav intercepts before showing
+    ));
+  }
+
+  return pairs;
 }
 
 // ── DashboardScreen ───────────────────────────────────────────────────────────
@@ -188,7 +215,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return DashboardShell(
       items: pairs.map((p) => p.navItem).toList(),
       selectedIndex: clampedIndex,
-      onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+      onDestinationSelected: (index) {
+        if (pairs[index].navItem.moduleCode == 'pos') {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PosScreen()),
+          );
+          return;
+        }
+        setState(() => _selectedIndex = index);
+      },
       child: IndexedStack(
         index: clampedIndex,
         children: pairs.map((p) => p.screen).toList(),
