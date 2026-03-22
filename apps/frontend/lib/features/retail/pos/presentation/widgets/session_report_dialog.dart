@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/features/retail/pos/data/services/z_report_service.dart';
 
 String _fcfa(double amount) =>
@@ -23,6 +24,8 @@ class SessionReportDialog extends ConsumerWidget {
     final theoreticalCash = summary['theoreticalCash'] as double;
     final variance = physicalCount - theoreticalCash;
     final totalsByMethod = summary['totalsByMethod'] as Map<String, double>;
+    final orderCount = (summary['orderCount'] as int?) ?? 0;
+    final splitCount = (summary['splitCount'] as int?) ?? 0;
     final userProfile = ref.watch(userProfileProvider).value;
 
     return AlertDialog(
@@ -38,8 +41,19 @@ class SessionReportDialog extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Ventes par méthode'),
-            ...totalsByMethod.entries.map((e) => _buildRow(e.key, e.value)),
+            _buildSectionTitle(
+                '$orderCount vente${orderCount > 1 ? 's' : ''} — Encaissements par méthode'),
+            ...totalsByMethod.entries.map(
+              (e) => _buildRow(paymentMethodLabel(e.key), e.value),
+            ),
+            if (splitCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: Text(
+                  'Dont $splitCount paiement${splitCount > 1 ? 's' : ''} mixte${splitCount > 1 ? 's' : ''} (ventilés ci-dessus)',
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ),
             const Divider(),
             // Story 27-3 — 3-line Z-report: gross / returns / net
             Builder(builder: (context) {

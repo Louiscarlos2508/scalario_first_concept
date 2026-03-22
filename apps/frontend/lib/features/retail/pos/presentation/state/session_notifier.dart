@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/retail/pos/data/models/pos_session.dart';
 import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
@@ -49,18 +50,42 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
 
     final Map<String, double> totalsByMethod = {};
     double totalSales = 0;
+    int orderCount = 0;
+    int splitCount = 0;
 
     for (var order in orders) {
-      final method = order.paymentMethod ?? 'UNKNOWN';
-      totalsByMethod[method] =
-          (totalsByMethod[method] ?? 0) + order.totalAmount;
       totalSales += order.totalAmount;
+      orderCount++;
+
+      final splitsJson = order.paymentSplits;
+      if (splitsJson != null && splitsJson.isNotEmpty) {
+        // Vente split — ventiler chaque part dans sa méthode
+        splitCount++;
+        try {
+          final splits = jsonDecode(splitsJson) as Map<String, dynamic>;
+          for (final entry in splits.entries) {
+            final method = entry.key;
+            final amount = (entry.value as num).toDouble();
+            totalsByMethod[method] = (totalsByMethod[method] ?? 0) + amount;
+          }
+        } catch (_) {
+          // JSON malformé — fallback sur le total brut sous SPLIT
+          totalsByMethod['SPLIT'] =
+              (totalsByMethod['SPLIT'] ?? 0) + order.totalAmount;
+        }
+      } else {
+        final method = order.paymentMethod ?? 'CASH';
+        totalsByMethod[method] =
+            (totalsByMethod[method] ?? 0) + order.totalAmount;
+      }
     }
 
     return {
       'openingBalance': currentSession.openingBalance,
       'totalsByMethod': totalsByMethod,
       'totalSales': totalSales,
+      'orderCount': orderCount,
+      'splitCount': splitCount,
       'theoreticalCash':
           (currentSession.openingBalance) + (totalsByMethod['CASH'] ?? 0),
     };

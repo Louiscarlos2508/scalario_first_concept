@@ -2,6 +2,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 
 class ZReportService {
   static Future<void> generateAndPrintZReport({
@@ -17,6 +18,24 @@ class ZReportService {
     final theoreticalCash = summary['theoreticalCash'] as double;
     final variance = physicalCount - theoreticalCash;
     final totalsByMethod = summary['totalsByMethod'] as Map<String, double>;
+    final totalSales = summary['totalSales'] as double;
+    final orderCount = (summary['orderCount'] as int?) ?? 0;
+    final splitCount = (summary['splitCount'] as int?) ?? 0;
+    final openingBalance = (summary['openingBalance'] as double?) ?? 0.0;
+
+    pw.Widget row(String label, String value, {bool bold = false}) => pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(label,
+                style: pw.TextStyle(
+                    fontWeight:
+                        bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+            pw.Text(value,
+                style: pw.TextStyle(
+                    fontWeight:
+                        bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+          ],
+        );
 
     pdf.addPage(
       pw.Page(
@@ -25,65 +44,50 @@ class ZReportService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Center(child: pw.Text('SCALARIO - Z-REPORT', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16))),
+              pw.Center(
+                  child: pw.Text('SCALARIO - Z-REPORT',
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold, fontSize: 16))),
               pw.Divider(),
-              pw.Text('Terminal: $tenantName'),
-              pw.Text('Cashier: $userName'),
-              pw.Text('Date: ${dateFormat.format(now)}'),
+              pw.Text('Terminal : $tenantName'),
+              pw.Text('Caissier : $userName'),
+              pw.Text('Date : ${dateFormat.format(now)}'),
               pw.SizedBox(height: 10),
-              
-              pw.Text('SALES BY METHOD', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+
+              pw.Text('ENCAISSEMENTS PAR MÉTHODE',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text('$orderCount vente${orderCount > 1 ? 's' : ''}',
+                  style: const pw.TextStyle(fontSize: 10)),
               pw.Divider(),
-              ...totalsByMethod.entries.map((e) => pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(e.key),
-                  pw.Text('${e.value.toStringAsFixed(0)} FCFA'),
-                ],
-              )),
-              pw.Divider(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('TOTAL SALES', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  pw.Text('${(summary['totalSales'] as double).toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                ],
+              ...totalsByMethod.entries.map(
+                (e) => row(paymentMethodLabel(e.key),
+                    '${e.value.toStringAsFixed(0)} FCFA'),
               ),
-              
+              if (splitCount > 0)
+                pw.Text(
+                  'dont $splitCount paiement${splitCount > 1 ? 's' : ''} mixte${splitCount > 1 ? 's' : ''} ventilés',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              pw.Divider(),
+              row('TOTAL VENTES',
+                  '${totalSales.toStringAsFixed(0)} FCFA', bold: true),
+
               pw.SizedBox(height: 20),
-              pw.Text('CASH RECONCILIATION', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text('RÉCONCILIATION ESPÈCES',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.Divider(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                   pw.Text('Opening Balance:'),
-                   pw.Text('${((summary['openingBalance'] as double?) ?? 0.0).toStringAsFixed(0)} FCFA'),
-                ],
-              ),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                   pw.Text('Theoretical Cash:'),
-                   pw.Text('${theoreticalCash.toStringAsFixed(0)} FCFA'),
-                ],
-              ),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                   pw.Text('Physical Count:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                   pw.Text('${physicalCount.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
+              row('Fond de caisse', '${openingBalance.toStringAsFixed(0)} FCFA'),
+              row('+ Espèces reçues',
+                  '${(totalsByMethod['CASH'] ?? 0).toStringAsFixed(0)} FCFA'),
+              row('= Théorique caisse',
+                  '${theoreticalCash.toStringAsFixed(0)} FCFA'),
+              row('Montant déclaré',
+                  '${physicalCount.toStringAsFixed(0)} FCFA', bold: true),
               pw.Divider(),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                   pw.Text('Variance:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                   pw.Text('${variance.toStringAsFixed(0)} FCFA', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
+              row('Écart', '${variance.toStringAsFixed(0)} FCFA', bold: true),
+
               pw.SizedBox(height: 30),
-              pw.Center(child: pw.Text('--- END OF REPORT ---')),
+              pw.Center(child: pw.Text('--- FIN DU RAPPORT ---')),
             ],
           );
         },
