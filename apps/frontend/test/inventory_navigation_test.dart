@@ -27,7 +27,7 @@ final _mockProfile = UserProfile(
   memberships: [TenantMembership(tenantId: 'tenant-1', role: 'manager')],
 );
 
-Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
+Widget _buildScreen(InventoryRepository repo) {
   return ProviderScope(
     overrides: [
       userProfileProvider.overrideWith((ref) => Future.value(_mockProfile)),
@@ -35,13 +35,13 @@ Widget _buildScreen(InventoryRepository repo, {int initialIndex = 0}) {
       syncServiceProvider.overrideWithValue(_StubSyncService()),
       inventoryRepositoryProvider.overrideWithValue(repo),
     ],
-    child: MaterialApp(home: InventoryScreen(initialIndex: initialIndex)),
+    child: const MaterialApp(home: InventoryScreen()),
   );
 }
 
 void main() {
-  group('InventoryScreen — tab navigation', () {
-    testWidgets('TabBar présent avec 6 onglets aux labels corrects', (
+  group('InventoryScreen — action chips (pas de TabBar)', () {
+    testWidgets('pas de TabBar — les 4 action chips sont présents', (
       tester,
     ) async {
       final repo = InventoryRepository(
@@ -51,20 +51,26 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(TabBar), findsOneWidget);
-      expect(find.byType(Tab), findsNWidgets(6));
-      expect(find.text('Produits'), findsNothing);
-      expect(find.text('Réceptions'), findsOneWidget);
-      expect(find.text('Transferts'), findsOneWidget);
-      expect(find.text('Pertes'), findsOneWidget);
-      // "Inventaire" appears in AppBar title only (tab is now "Comptage")
-      expect(find.text('Inventaire'), findsOneWidget);
+      expect(find.byType(TabBar), findsNothing);
+      expect(find.text('Réception'), findsOneWidget);
+      expect(find.text('Transfert'), findsOneWidget);
+      expect(find.text('Perte'), findsOneWidget);
       expect(find.text('Comptage'), findsOneWidget);
-      expect(find.text('Commandes'), findsOneWidget);
-      expect(find.text('Fraîcheur'), findsOneWidget);
     });
 
-    testWidgets('tap onglet "Pertes" → LossDeclarationForm visible', (
+    testWidgets('titre AppBar est "Produits & Stock"', (tester) async {
+      final repo = InventoryRepository(
+        httpClient: MockClient((_) async => http.Response('[]', 200)),
+      );
+      await tester.pumpWidget(_buildScreen(repo));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Produits & Stock'), findsOneWidget);
+      expect(find.text('Inventaire'), findsNothing);
+    });
+
+    testWidgets('tap chip "Réception" → DeliveryForm visible', (
       tester,
     ) async {
       final repo = InventoryRepository(
@@ -74,14 +80,31 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('Pertes'));
+      await tester.tap(find.text('Réception'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
+    });
+
+    testWidgets('tap chip "Perte" → LossDeclarationForm visible', (
+      tester,
+    ) async {
+      final repo = InventoryRepository(
+        httpClient: MockClient((_) async => http.Response('[]', 200)),
+      );
+      await tester.pumpWidget(_buildScreen(repo));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Perte'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byKey(const Key('loss_product_field')), findsOneWidget);
     });
 
-    testWidgets('tap onglet "Réceptions" → DeliveryForm visible', (
+    testWidgets('tap chip "Transfert" → TransferOutForm visible', (
       tester,
     ) async {
       final repo = InventoryRepository(
@@ -91,40 +114,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('Réceptions'));
+      await tester.tap(find.text('Transfert'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
-    });
-
-    testWidgets('initialIndex: 0 → onglet Réceptions actif par défaut', (
-      tester,
-    ) async {
-      final repo = InventoryRepository(
-        httpClient: MockClient((_) async => http.Response('[]', 200)),
-      );
-      await tester.pumpWidget(_buildScreen(repo, initialIndex: 0));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      // Réceptions tab is active — delivery form is visible without tapping
-      expect(find.byKey(const Key('delivery_product_field')), findsOneWidget);
-    });
-
-    testWidgets('tap onglet "Transferts" → TransferOutForm visible', (
-      tester,
-    ) async {
-      final repo = InventoryRepository(
-        httpClient: MockClient((_) async => http.Response('[]', 200)),
-      );
-      await tester.pumpWidget(_buildScreen(repo));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-
-      await tester.tap(find.text('Transferts'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(
         find.byKey(const Key('transfer_out_product_field')),

@@ -16,7 +16,6 @@ import 'package:frontend/features/shared/inventory/presentation/screens/partial_
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 import 'package:frontend/features/shared/freshness/presentation/screens/freshness_screen.dart';
 import 'package:frontend/features/shared/catalog/presentation/screens/categories_screen.dart';
-import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 
 final _fcfa = NumberFormat.currency(
   locale: 'fr_FR',
@@ -27,123 +26,16 @@ final _fcfa = NumberFormat.currency(
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 class InventoryScreen extends ConsumerStatefulWidget {
-  final int initialIndex;
-  const InventoryScreen({super.key, this.initialIndex = 0});
+  const InventoryScreen({super.key});
 
   @override
   ConsumerState<InventoryScreen> createState() => _InventoryScreenState();
 }
 
-class _InventoryScreenState extends ConsumerState<InventoryScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  static const _tabs = [
-    Tab(text: 'Réceptions'),
-    Tab(text: 'Transferts'),
-    Tab(text: 'Pertes'),
-    Tab(text: 'Comptage'),
-    Tab(text: 'Commandes'),
-    Tab(text: 'Fraîcheur'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(
-      length: 6,
-      vsync: this,
-      initialIndex: widget.initialIndex,
-    );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
-    final isOwner = role == 'owner';
-    final repo = ref.watch(inventoryRepositoryProvider);
-
-    return Scaffold(
-      appBar: ScalarioAppBar(
-        title: 'Inventaire',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.inventory_2_outlined),
-            tooltip: 'Produits & Stock',
-            onPressed: () => showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              builder: (_) => FractionallySizedBox(
-                heightFactor: 0.92,
-                child: _ProductListSheet(isOwner: isOwner),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabs: _tabs,
-        ),
-      ),
-      floatingActionButton: isOwner
-          ? FloatingActionButton(
-              heroTag: 'inventory_fab',
-              tooltip: 'Nouveau produit',
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) => const ProductFormDialog(submitToCatalog: true),
-              ).then((_) => ref.invalidate(catalogProvider)),
-              child: const Icon(Icons.add),
-            )
-          : null,
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          SingleChildScrollView(child: DeliveryForm(repository: repo)),
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                TransferOutForm(repository: repo),
-                const SizedBox(height: 16),
-                TransferPendingScreen(repository: repo),
-              ],
-            ),
-          ),
-          SingleChildScrollView(child: LossDeclarationForm(repository: repo)),
-          PartialInventoryScreen(repository: repo, embedded: true),
-          const PurchaseOrdersScreen(),
-          const FreshnessScreen(),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Product list sheet ────────────────────────────────────────────────────────
-
-class _ProductListSheet extends ConsumerStatefulWidget {
-  final bool isOwner;
-  const _ProductListSheet({required this.isOwner});
-
-  @override
-  ConsumerState<_ProductListSheet> createState() => _ProductListSheetState();
-}
-
-class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
+class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final _searchController = TextEditingController();
   String _search = '';
-  String? _activeFilter; // null | 'low_stock'
+  String? _activeFilter;
 
   @override
   void dispose() {
@@ -170,149 +62,148 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
     return result;
   }
 
-  void _toggleFilter(String filter) {
-    setState(() => _activeFilter = _activeFilter == filter ? null : filter);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isOwner = widget.isOwner;
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
+    final isOwner = role == 'owner';
     final itemsAsync = ref.watch(catalogProvider);
     final lowStockCount = ref.watch(lowStockCountProvider).valueOrNull ?? 0;
     final expiringCount = ref.watch(urgentBatchCountProvider).valueOrNull ?? 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Sheet header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
-          child: Row(
-            children: [
-              Expanded(
+    return Scaffold(
+      appBar: ScalarioAppBar(
+        title: 'Produits & Stock',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Actualiser',
+            onPressed: () => ref.invalidate(catalogProvider),
+          ),
+          if (isOwner)
+            IconButton(
+              icon: const Icon(Icons.category_outlined),
+              tooltip: 'Catégories',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+              ),
+            ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      floatingActionButton: isOwner
+          ? FloatingActionButton(
+              heroTag: 'inventory_fab',
+              tooltip: 'Nouveau produit',
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => const ProductFormDialog(submitToCatalog: true),
+              ).then((_) => ref.invalidate(catalogProvider)),
+              child: const Icon(Icons.add),
+            )
+          : null,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SummaryRow(
+            totalCount: itemsAsync.valueOrNull?.length ?? 0,
+            lowStockCount: lowStockCount,
+            expiringCount: expiringCount,
+            activeFilter: _activeFilter,
+            onTapLowStock: () => setState(
+              () => _activeFilter =
+                  _activeFilter == 'low_stock' ? null : 'low_stock',
+            ),
+            onTapExpiring: () => _openFreshnessSheet(context),
+          ),
+          const _ActionChipsRow(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Rechercher un produit...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+              onChanged: (v) => setState(() => _search = v),
+            ),
+          ),
+          Expanded(
+            child: itemsAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(
                 child: Text(
-                  'Produits & Stock',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  'Erreur : $err',
+                  style: const TextStyle(color: AppColors.error),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Actualiser',
-                onPressed: () => ref.invalidate(catalogProvider),
-              ),
-              if (isOwner)
-                IconButton(
-                  icon: const Icon(Icons.category_outlined),
-                  tooltip: 'Catégories',
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CategoriesScreen()),
-                  ),
-                ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        _SummaryRow(
-          totalCount: itemsAsync.valueOrNull?.length ?? 0,
-          lowStockCount: lowStockCount,
-          expiringCount: expiringCount,
-          activeFilter: _activeFilter,
-          onTapLowStock: () => _toggleFilter('low_stock'),
-          onTapExpiring: () => _openFreshnessSheet(context),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(
-              hintText: 'Rechercher un produit...',
-              prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 10),
-            ),
-            onChanged: (v) => setState(() => _search = v),
-          ),
-        ),
-        Expanded(
-          child: itemsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(
-              child: Text(
-                'Erreur : $err',
-                style: const TextStyle(color: AppColors.error),
-              ),
-            ),
-            data: (items) {
-              final filtered = _applyFilter(items);
-              if (filtered.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 48,
-                        color: AppColors.textSecondary,
-                      ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Aucun produit',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                    ],
+              data: (items) {
+                final filtered = _applyFilter(items);
+                if (filtered.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 48,
+                          color: AppColors.textSecondary,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Aucun produit',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async => ref.invalidate(catalogProvider),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, i) {
+                      final item = filtered[i];
+                      final id = item['id']?.toString() ?? '$i';
+                      return _ProductTile(
+                        key: Key('inv_product_$id'),
+                        item: item,
+                        isOwner: isOwner,
+                        onTap: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          useSafeArea: true,
+                          builder: (_) => FractionallySizedBox(
+                            heightFactor: 0.90,
+                            child: _ProductDetailPage(
+                              item: item,
+                              isOwner: isOwner,
+                            ),
+                          ),
+                        ).then((_) => ref.invalidate(catalogProvider)),
+                        onMenuTap: isOwner
+                            ? () => _showOwnerMenu(context, item)
+                            : null,
+                      );
+                    },
                   ),
                 );
-              }
-              return RefreshIndicator(
-                onRefresh: () async => ref.invalidate(catalogProvider),
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, i) {
-                    final item = filtered[i];
-                    final id = item['id']?.toString() ?? '$i';
-                    return _ProductTile(
-                      key: Key('inv_product_$id'),
-                      item: item,
-                      isOwner: isOwner,
-                      onTap: () => showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        useSafeArea: true,
-                        builder: (_) => FractionallySizedBox(
-                          heightFactor: 0.90,
-                          child: _ProductDetailPage(
-                            item: item,
-                            isOwner: isOwner,
-                          ),
-                        ),
-                      ).then((_) => ref.invalidate(catalogProvider)),
-                      onMenuTap: isOwner
-                          ? () => _showOwnerMenu(context, ref, item)
-                          : null,
-                    );
-                  },
-                ),
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  void _showOwnerMenu(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic> item,
-  ) {
+  void _showOwnerMenu(BuildContext context, Map<String, dynamic> item) {
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -324,18 +215,19 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
               title: const Text('Modifier'),
               onTap: () {
                 Navigator.pop(ctx);
-                _showEditDialog(context, ref, item);
+                _showEditDialog(context, item);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              leading:
+                  const Icon(Icons.delete_outline, color: AppColors.error),
               title: const Text(
                 'Supprimer',
                 style: TextStyle(color: AppColors.error),
               ),
               onTap: () {
                 Navigator.pop(ctx);
-                _confirmDelete(context, ref, item);
+                _confirmDelete(context, item);
               },
             ),
           ],
@@ -344,15 +236,12 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
     );
   }
 
-  void _showEditDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Map<String, dynamic> item,
-  ) {
+  void _showEditDialog(BuildContext context, Map<String, dynamic> item) {
     final product = Product()
       ..remoteId = item['id']?.toString()
       ..name = item['name']?.toString() ?? ''
-      ..price = (item['price'] is num) ? (item['price'] as num).toDouble() : 0.0
+      ..price =
+          (item['price'] is num) ? (item['price'] as num).toDouble() : 0.0
       ..barcode = item['barcode']?.toString()
       ..categoryId = item['categoryId']?.toString()
       ..minStockLevel = (item['minStockLevel'] is num)
@@ -367,7 +256,6 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
 
   Future<void> _confirmDelete(
     BuildContext context,
-    WidgetRef ref,
     Map<String, dynamic> item,
   ) async {
     final name = item['name']?.toString() ?? 'ce produit';
@@ -402,9 +290,9 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
           .deleteItem(id: id, tenantId: tenantId);
       ref.invalidate(catalogProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Produit supprimé')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Produit supprimé')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -416,6 +304,83 @@ class _ProductListSheetState extends ConsumerState<_ProductListSheet> {
         );
       }
     }
+  }
+}
+
+// ── Action chips row ──────────────────────────────────────────────────────────
+
+class _ActionChipsRow extends ConsumerWidget {
+  const _ActionChipsRow();
+
+  void _openSheet(BuildContext context, Widget child) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.92,
+        child: SingleChildScrollView(child: child),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(inventoryRepositoryProvider);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          ActionChip(
+            avatar: const Icon(Icons.download_outlined, size: 16),
+            label: const Text('Réception'),
+            onPressed: () => _openSheet(context, DeliveryForm(repository: repo)),
+          ),
+          const SizedBox(width: 8),
+          ActionChip(
+            avatar: const Icon(Icons.swap_horiz, size: 16),
+            label: const Text('Transfert'),
+            onPressed: () => _openSheet(
+              context,
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TransferOutForm(repository: repo),
+                  const SizedBox(height: 16),
+                  TransferPendingScreen(repository: repo),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ActionChip(
+            avatar: const Icon(Icons.remove_circle_outline, size: 16),
+            label: const Text('Perte'),
+            onPressed: () =>
+                _openSheet(context, LossDeclarationForm(repository: repo)),
+          ),
+          const SizedBox(width: 8),
+          ActionChip(
+            avatar: const Icon(Icons.fact_check_outlined, size: 16),
+            label: const Text('Comptage'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PartialInventoryScreen(repository: repo),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ActionChip(
+            avatar: const Icon(Icons.eco_outlined, size: 16),
+            label: const Text('Fraîcheur'),
+            onPressed: () => _openFreshnessSheet(context),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -588,7 +553,6 @@ void _openFreshnessSheet(BuildContext context) {
   );
 }
 
-
 // ── Zone 3: Product tile ──────────────────────────────────────────────────────
 
 class _ProductTile extends StatelessWidget {
@@ -608,9 +572,8 @@ class _ProductTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = item['name']?.toString() ?? '';
-    final price = (item['price'] is num)
-        ? (item['price'] as num).toDouble()
-        : 0.0;
+    final price =
+        (item['price'] is num) ? (item['price'] as num).toDouble() : 0.0;
     final stock = (item['stockQuantity'] is num)
         ? (item['stockQuantity'] as num).toDouble()
         : 0.0;
@@ -693,8 +656,8 @@ class _ProductTile extends StatelessWidget {
                     color: isRupture
                         ? AppColors.error
                         : isLowStock
-                        ? AppColors.warning
-                        : AppColors.success,
+                            ? AppColors.warning
+                            : AppColors.success,
                     fontSize: 13,
                   ),
                 ),
@@ -759,7 +722,6 @@ class _ProductDetailPageState extends ConsumerState<_ProductDetailPage>
 
     return Column(
       children: [
-        // Drag handle
         const SizedBox(height: 12),
         Center(
           child: Container(
@@ -771,7 +733,6 @@ class _ProductDetailPageState extends ConsumerState<_ProductDetailPage>
             ),
           ),
         ),
-        // Title row
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
           child: Row(
@@ -792,7 +753,8 @@ class _ProductDetailPageState extends ConsumerState<_ProductDetailPage>
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Actualiser',
-                onPressed: () => ref.invalidate(stockHistoryByItemProvider(id)),
+                onPressed: () =>
+                    ref.invalidate(stockHistoryByItemProvider(id)),
               ),
             ],
           ),
@@ -822,36 +784,34 @@ class _ProductDetailPageState extends ConsumerState<_ProductDetailPage>
   }
 
   void _showEdit(BuildContext context) {
-    final item = widget.item;
     final product = Product()
-      ..remoteId = item['id']?.toString()
-      ..name = item['name']?.toString() ?? ''
-      ..price = (item['price'] is num) ? (item['price'] as num).toDouble() : 0.0
-      ..barcode = item['barcode']?.toString()
-      ..categoryId = item['categoryId']?.toString()
-      ..minStockLevel = (item['minStockLevel'] is num)
-          ? (item['minStockLevel'] as num).toDouble()
+      ..remoteId = widget.item['id']?.toString()
+      ..name = widget.item['name']?.toString() ?? ''
+      ..price = (widget.item['price'] is num)
+          ? (widget.item['price'] as num).toDouble()
+          : 0.0
+      ..barcode = widget.item['barcode']?.toString()
+      ..categoryId = widget.item['categoryId']?.toString()
+      ..minStockLevel = (widget.item['minStockLevel'] is num)
+          ? (widget.item['minStockLevel'] as num).toDouble()
           : null;
     showDialog<void>(
       context: context,
-      builder: (_) =>
-          ProductFormDialog(submitToCatalog: true, product: product),
-    ).then((_) {
-      if (mounted) ref.invalidate(catalogProvider);
-    });
+      builder: (_) => ProductFormDialog(submitToCatalog: true, product: product),
+    ).then((_) => ref.invalidate(catalogProvider));
   }
 }
 
-// ── Stock section ─────────────────────────────────────────────────────────────
+// ── Stock section (in product detail) ────────────────────────────────────────
 
 class _StockSection extends ConsumerWidget {
   final Map<String, dynamic> item;
-
   const _StockSection({required this.item});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final id = item['id']?.toString() ?? '';
+    final historyAsync = ref.watch(stockHistoryByItemProvider(id));
     final stock = (item['stockQuantity'] is num)
         ? (item['stockQuantity'] as num).toDouble()
         : 0.0;
@@ -860,155 +820,42 @@ class _StockSection extends ConsumerWidget {
         : null;
     final unitType = item['unitType']?.toString() ?? 'piece';
     final unit = item['weightUnit']?.toString() ?? unitType;
-    final expiryDays = item['expiryDays'] as int?;
 
-    final isRupture = stock <= 0;
-    final isLowStock = !isRupture && minStock != null && stock < minStock;
-
-    final stockColor = isRupture
-        ? AppColors.error
-        : isLowStock
-        ? AppColors.warning
-        : AppColors.success;
-
-    final stockStr = unitType == 'piece'
+    final stockLabel = unitType == 'piece'
         ? stock.toStringAsFixed(stock.truncateToDouble() == stock ? 0 : 1)
         : '${stock.toStringAsFixed(stock.truncateToDouble() == stock ? 0 : 1)} $unit';
-
-    final movementsAsync = ref.watch(stockHistoryByItemProvider(id));
-    final dateRange = ref.watch(stockHistoryDateRangeProvider);
-    final fmt = DateFormat('dd/MM/yy');
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Current stock card
-        Card(
-          color: stockColor.withValues(alpha: 0.07),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: stockColor.withValues(alpha: 0.4)),
+        _InfoRow(label: 'Stock actuel', value: stockLabel),
+        if (minStock != null)
+          _InfoRow(
+            label: 'Seuil minimum',
+            value: minStock
+                .toStringAsFixed(minStock.truncateToDouble() == minStock ? 0 : 1),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Stock actuel',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isRupture ? 'Rupture de stock' : stockStr,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: stockColor,
-                  ),
-                ),
-                if (minStock != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Seuil alerte : ${minStock.toStringAsFixed(0)} $unit',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
-                if (expiryDays != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Fraîcheur : $expiryDays jours',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        // Movements header + date filter
-        Row(
-          children: [
-            const Text(
-              'Mouvements',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            if (dateRange != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: InputChip(
-                  label: Text(
-                    '${fmt.format(dateRange.start)} – ${fmt.format(dateRange.end)}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  onDeleted: () {
-                    ref.read(stockHistoryDateRangeProvider.notifier).state =
-                        null;
-                  },
-                ),
-              ),
-            IconButton(
-              icon: Icon(
-                Icons.filter_list,
-                color: dateRange != null
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
-              ),
-              tooltip: 'Filtrer par date',
-              onPressed: () async {
-                final now = DateTime.now();
-                final start = await showDatePicker(
-                  context: context,
-                  initialDate: dateRange?.start ?? now,
-                  firstDate: DateTime(2020),
-                  lastDate: now,
-                  helpText: 'Date de début',
-                );
-                if (start == null || !context.mounted) return;
-                final end = await showDatePicker(
-                  context: context,
-                  initialDate:
-                      dateRange?.end != null && dateRange!.end.isAfter(start)
-                          ? dateRange.end
-                          : start,
-                  firstDate: start,
-                  lastDate: now,
-                  helpText: 'Date de fin',
-                );
-                if (end == null) return;
-                ref.read(stockHistoryDateRangeProvider.notifier).state =
-                    DateTimeRange(start: start, end: end);
-              },
-            ),
-          ],
+        const SizedBox(height: 16),
+        Text(
+          'Mouvements récents',
+          style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
-        movementsAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (err, _) => Text(
-            'Erreur : $err',
-            style: const TextStyle(color: AppColors.error),
-          ),
+        historyAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Text('Erreur : $e',
+              style: const TextStyle(color: AppColors.error)),
           data: (movements) {
             if (movements.isEmpty) {
               return const Text(
-                'Aucun mouvement enregistré',
+                'Aucun mouvement',
                 style: TextStyle(color: AppColors.textSecondary),
               );
             }
-            final list =
-                dateRange != null ? movements : movements.take(20).toList();
             return Column(
-              children: list
-                  .map((m) => _MovementTile(m: m as Map<String, dynamic>))
+              children: movements
+                  .take(10)
+                  .map((m) => _MovementTile(movement: m))
                   .toList(),
             );
           },
@@ -1019,100 +866,50 @@ class _StockSection extends ConsumerWidget {
 }
 
 class _MovementTile extends StatelessWidget {
-  final Map<String, dynamic> m;
-
-  const _MovementTile({required this.m});
+  final dynamic movement;
+  const _MovementTile({required this.movement});
 
   @override
   Widget build(BuildContext context) {
-    final type = m['type']?.toString() ?? '';
-    final rawQty = m['quantity'];
-    final qty = rawQty is num
-        ? rawQty.toDouble()
-        : double.tryParse(rawQty?.toString() ?? '') ?? 0;
-    final reason = m['reason']?.toString();
-    final createdAt = m['createdAt']?.toString();
-    final date = createdAt != null ? DateTime.tryParse(createdAt) : null;
-    final dateStr = date != null
-        ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}h${date.minute.toString().padLeft(2, '0')}'
-        : '—';
+    final m = movement as Map<String, dynamic>;
+    final type = m['type'] as String? ?? '';
+    final qty = double.tryParse(m['quantity']?.toString() ?? '0') ?? 0.0;
+    final rawDate = m['createdAt'] as String?;
+    final date = rawDate != null ? DateTime.tryParse(rawDate) : null;
 
-    final isPositive =
-        type == 'DELIVERY' || type == 'TRANSFER_IN' || type == 'ADJUSTMENT';
-    final sign = isPositive ? '+' : '−';
-    final color = isPositive ? AppColors.success : AppColors.error;
+    final isIn = type == 'DELIVERY' || type == 'TRANSFER_IN' ||
+        type == 'ADJUSTMENT' || type == 'RETURN';
+    final color = isIn ? AppColors.success : AppColors.error;
+    final sign = isIn ? '+' : '-';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _typeLabel(type),
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (reason != null && reason.isNotEmpty)
-                  Text(
-                    reason,
-                    style: AppTextStyles.bodySmall,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            '$sign${qty.toStringAsFixed(qty.truncateToDouble() == qty ? 0 : 1)}',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            dateStr,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        isIn ? Icons.add_circle_outline : Icons.remove_circle_outline,
+        color: color,
+        size: 20,
+      ),
+      title: Text(type, style: const TextStyle(fontSize: 13)),
+      subtitle: date != null
+          ? Text(
+              '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}',
+              style: const TextStyle(fontSize: 11),
+            )
+          : null,
+      trailing: Text(
+        '$sign$qty',
+        style: TextStyle(color: color, fontWeight: FontWeight.bold),
       ),
     );
   }
-
-  String _typeLabel(String type) {
-    switch (type) {
-      case 'DELIVERY':
-        return 'Réception';
-      case 'SALE':
-        return 'Vente';
-      case 'LOSS':
-        return 'Perte';
-      case 'TRANSFER_OUT':
-        return 'Transfert sortant';
-      case 'TRANSFER_IN':
-        return 'Transfert entrant';
-      case 'ADJUSTMENT':
-        return 'Ajustement';
-      default:
-        return type;
-    }
-  }
 }
 
-// ── Product card (owner only) ─────────────────────────────────────────────────
+// ── Product card (fiche) ──────────────────────────────────────────────────────
 
 class _ProductCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onEdit;
-
   const _ProductCard({required this.item, required this.onEdit});
 
   @override
@@ -1120,66 +917,20 @@ class _ProductCard extends StatelessWidget {
     final price = (item['price'] is num)
         ? (item['price'] as num).toDouble()
         : 0.0;
-    final unitType = item['unitType']?.toString() ?? 'piece';
-    final unit = item['weightUnit']?.toString() ?? unitType;
     final barcode = item['barcode']?.toString();
-    final expiryDays = item['expiryDays'] as int?;
-    final minStock = item['minStockLevel'];
-    final hasVariants = item['hasVariants'] == true;
-    final trackSN = item['trackSerialNumbers'] == true;
-    final dynamicPricing = item['dynamicPricing'] == true;
-
-    final priceLabel = unitType == 'piece'
-        ? _fcfa.format(price)
-        : '${_fcfa.format(price)}/$unit';
+    final category = item['categoryName']?.toString();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppColors.border),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _InfoRow(label: 'Prix', value: priceLabel),
-                _InfoRow(label: 'Unité', value: unit),
-                if (barcode != null)
-                  _InfoRow(label: 'Code-barres', value: barcode),
-                if (minStock != null)
-                  _InfoRow(
-                    label: 'Seuil alerte',
-                    value:
-                        '${(minStock as num).toDouble().toStringAsFixed(0)} $unit',
-                  ),
-                if (expiryDays != null)
-                  _InfoRow(label: 'Fraîcheur', value: '$expiryDays jours'),
-                if (hasVariants) _InfoRow(label: 'Variantes', value: 'Oui'),
-                if (trackSN) _InfoRow(label: 'N° de série', value: 'Activé'),
-                if (dynamicPricing)
-                  _InfoRow(label: 'Prix dynamique', value: 'Activé'),
-              ],
-            ),
-          ),
-        ),
+        _InfoRow(label: 'Prix', value: _fcfa.format(price)),
+        if (barcode != null) _InfoRow(label: 'Code-barres', value: barcode),
+        if (category != null) _InfoRow(label: 'Catégorie', value: category),
         const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Modifier ce produit'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            onPressed: onEdit,
-          ),
+        OutlinedButton.icon(
+          onPressed: onEdit,
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Modifier ce produit'),
         ),
       ],
     );
@@ -1189,31 +940,24 @@ class _ProductCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
-
   const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
+          Expanded(
+            flex: 2,
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            ),
+            flex: 3,
+            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
           ),
         ],
       ),

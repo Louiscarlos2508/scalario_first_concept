@@ -111,9 +111,9 @@ final _allNavScreens = <_NavScreenPair>[
   ),
   (
     navItem: const NavItem(
-        icon: Icons.history_outlined,
-        selectedIcon: Icons.history,
-        label: 'Historique',
+        icon: Icons.receipt_long_outlined,
+        selectedIcon: Icons.receipt_long,
+        label: 'Ventes',
         moduleCode: 'transactions'),
     screen: const SalesHistoryScreen(),
   ),
