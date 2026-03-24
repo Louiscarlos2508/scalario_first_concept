@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Query, Req } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { Roles } from '../../kernel/rbac/roles.decorator';
 
@@ -42,6 +42,15 @@ export class NotificationsController {
   async markAsRead(@Param('id') id: string, @Req() req: any) {
     const userId: string = req.user?.sub;
     await this.service.markAsRead(id, userId);
+    return { success: true };
+  }
+
+  // PATCH /notifications/read-all?tenantId=
+  @Patch('read-all')
+  @Roles('owner', 'manager')
+  async markAllRead(@Req() req: any, @Query('tenantId') tenantId: string) {
+    const userId: string = req.user?.sub;
+    await this.service.markAllRead(userId, tenantId);
     return { success: true };
   }
 }

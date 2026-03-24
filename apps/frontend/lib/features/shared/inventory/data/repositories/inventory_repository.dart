@@ -186,6 +186,28 @@ class InventoryRepository {
     );
   }
 
+  /// DELETE /inventory/transfers/:referenceId?tenantId=
+  Future<void> cancelTransfer({
+    required String referenceId,
+    required String tenantId,
+    String? token,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}/inventory/transfers/$referenceId',
+    ).replace(queryParameters: {'tenantId': tenantId});
+
+    final response = await _httpClient.delete(
+      uri,
+      headers: _authHeaders(tenantId: tenantId, token: token),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) return;
+
+    throw Exception(
+      'cancelTransfer failed: ${response.statusCode} — ${response.body}',
+    );
+  }
+
   // ─── Local (Isar) methods ────────────────────────────────────────────────
 
   Future<void> saveLocal(InventoryMovementLocal movement) async {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/product_autocomplete.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
 import 'package:frontend/features/shared/inventory/data/models/inventory_movement_local.dart';
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
@@ -14,10 +15,20 @@ import 'package:frontend/features/retail/pos/presentation/providers/pos_provider
 /// Used by TransferPendingScreen / TransferConfirmForm to pre-populate.
 final transferPendingReferenceIdProvider = StateProvider<String?>((ref) => null);
 
+/// Autocomplete suggestions for destination — built from previously used values
+/// in this session (Option A: texte libre avec suggestions).
+final transferDestinationSuggestionsProvider =
+    StateProvider<List<String>>((ref) => []);
+
 class TransferOutForm extends ConsumerStatefulWidget {
   final InventoryRepository repository;
+  final BusinessTypeConfig? config;
 
-  const TransferOutForm({super.key, required this.repository});
+  const TransferOutForm({
+    super.key,
+    required this.repository,
+    this.config,
+  });
 
   @override
   ConsumerState<TransferOutForm> createState() => _TransferOutFormState();
@@ -26,6 +37,7 @@ class TransferOutForm extends ConsumerStatefulWidget {
 class _TransferOutFormState extends ConsumerState<TransferOutForm> {
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController();
+  final _destinationController = TextEditingController();
   final _notesController = TextEditingController();
 
   Product? _selectedProduct;
@@ -34,6 +46,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
   @override
   void dispose() {
     _quantityController.dispose();
+    _destinationController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -53,14 +66,19 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
 
     final tenantId = ref.read(activeTenantProvider) ?? '';
     final quantity = int.parse(_quantityController.text);
+    final destination = _destinationController.text.trim();
     final notes = _notesController.text.trim();
+    final reason = [
+      if (destination.isNotEmpty) '→ $destination',
+      if (notes.isNotEmpty) notes,
+    ].join(' · ');
 
     // Save locally first (offline-first outbox pattern)
     final movement = InventoryMovementLocal()
       ..type = 'TRANSFER_OUT'
       ..catalogItemId = _selectedProduct!.remoteId!
       ..quantity = quantity
-      ..reason = notes.isEmpty ? null : notes
+      ..reason = reason.isEmpty ? null : reason
       ..tenantId = tenantId
       ..createdAt = DateTime.now()
       ..syncStatus = 'pending';
@@ -69,6 +87,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
     void reset() {
       _selectedProduct = null;
       _quantityController.clear();
+      _destinationController.clear();
       _notesController.clear();
       _isSubmitting = false;
     }
@@ -78,7 +97,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
         type: 'TRANSFER_OUT',
         catalogItemId: _selectedProduct!.remoteId!,
         quantity: quantity,
-        reason: notes.isEmpty ? null : notes,
+        reason: reason.isEmpty ? null : reason,
         tenantId: tenantId,
       );
       await widget.repository.markSynced(movement.id, result['id'] as String);
@@ -87,11 +106,22 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
       final referenceId = result['referenceId'] as String?;
       ref.read(transferPendingReferenceIdProvider.notifier).state = referenceId;
 
+      // Persist destination as autocomplete suggestion
+      if (destination.isNotEmpty) {
+        final current = ref.read(transferDestinationSuggestionsProvider);
+        if (!current.contains(destination)) {
+          ref.read(transferDestinationSuggestionsProvider.notifier).state = [
+            destination,
+            ...current,
+          ];
+        }
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Sortie déclarée${referenceId != null ? ' — Réf. ${referenceId.substring(0, 8)}…' : ''}',
+              '${widget.config?.sendAction ?? 'Envoi de stock'} enregistré${referenceId != null ? ' — Réf. ${referenceId.substring(0, 8)}…' : ''}',
             ),
           ),
         );
@@ -127,6 +157,8 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
       data: (data) => (data['items'] as List).cast<Product>(),
       orElse: () => <Product>[],
     );
+    final suggestions = ref.watch(transferDestinationSuggestionsProvider);
+    final config = widget.config ?? BusinessTypeConfig.fallback;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -136,7 +168,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Déclarer une sortie de stock',
+              config.sendAction,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
@@ -145,7 +177,8 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
             ProductAutocomplete(
               products: products,
               fieldKey: const Key('transfer_out_product_field'),
-              onSelected: (product) => setState(() => _selectedProduct = product),
+              onSelected: (product) =>
+                  setState(() => _selectedProduct = product),
               validator: (_) =>
                   _selectedProduct == null ? 'Sélectionnez un produit' : null,
             ),
@@ -158,7 +191,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                labelText: 'Quantité déclarée *',
+                labelText: 'Quantité *',
                 border: OutlineInputBorder(),
               ),
               validator: (v) {
@@ -168,6 +201,38 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
                 return null;
               },
               onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+
+            // Destination (texte libre avec suggestions de session)
+            Autocomplete<String>(
+              optionsBuilder: (textValue) {
+                if (textValue.text.isEmpty) return suggestions;
+                return suggestions.where((s) =>
+                    s.toLowerCase().contains(textValue.text.toLowerCase()));
+              },
+              fieldViewBuilder:
+                  (ctx, fieldController, focusNode, onSubmitted) {
+                // Keep our controller in sync with autocomplete's internal controller
+                fieldController.text = _destinationController.text;
+                fieldController.addListener(() {
+                  if (_destinationController.text != fieldController.text) {
+                    _destinationController.text = fieldController.text;
+                  }
+                });
+                return TextField(
+                  controller: fieldController,
+                  focusNode: focusNode,
+                  decoration: InputDecoration(
+                    labelText: config.toLabel,
+                    hintText: 'ex. Rayon 1, Comptoir…',
+                    border: const OutlineInputBorder(),
+                  ),
+                );
+              },
+              onSelected: (value) {
+                _destinationController.text = value;
+              },
             ),
             const SizedBox(height: 12),
 
@@ -193,7 +258,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Déclarer la sortie'),
+                    : Text(config.sendButton),
               ),
             ),
           ],

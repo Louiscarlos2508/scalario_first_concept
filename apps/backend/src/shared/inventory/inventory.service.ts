@@ -369,6 +369,24 @@ export class InventoryService {
     }
   }
 
+  async cancelTransfer(referenceId: string, tenantId: string, userId: string | null) {
+    const movement = await this.prisma.inventoryMovement.findFirst({
+      where: { referenceId, type: 'TRANSFER_OUT', tenantId },
+    });
+    if (!movement) {
+      throw new Error(`No pending transfer found: ${referenceId}`);
+    }
+    await this.prisma.inventoryMovement.delete({ where: { id: movement.id } });
+    await this.auditLog.log({
+      tenantId,
+      userId,
+      action: 'DELETE',
+      entity: 'InventoryMovement',
+      entityId: movement.id,
+      after: { cancelled: true, referenceId },
+    });
+  }
+
   @OnEvent('transaction.created')
   async handleTransactionCreated(payload: { transactionId: string; tenantId: string }) {
     const tx = await this.prisma.transaction.findUnique({

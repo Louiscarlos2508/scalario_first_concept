@@ -2,15 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
+import 'package:frontend/features/shared/inventory/presentation/widgets/transfer_confirm_form.dart';
 import 'package:intl/intl.dart';
 
+enum TransferPendingMode { confirm, cancel }
+
 /// Shows pending TRANSFER_OUT movements (those without a matching TRANSFER_IN)
-/// and provides a "Confirmer la réception" button per transfer.
+/// and provides a role-appropriate action per transfer:
+///   - [TransferPendingMode.confirm] → ✅ Confirmer (commercial / POS)
+///   - [TransferPendingMode.cancel]  → ❌ Annuler   (owner / manager / backoffice)
 class TransferPendingScreen extends ConsumerStatefulWidget {
   final InventoryRepository repository;
+  final TransferPendingMode mode;
 
-  const TransferPendingScreen({super.key, required this.repository});
+  const TransferPendingScreen({
+    super.key,
+    required this.repository,
+    this.mode = TransferPendingMode.confirm,
+  });
 
   @override
   ConsumerState<TransferPendingScreen> createState() =>
@@ -110,11 +122,23 @@ class _TransferPendingScreenState
             leading: const Icon(Icons.swap_horiz, color: AppColors.primary),
             title: Text('Qté déclarée : $quantity'),
             subtitle: Text('Réf. $refShort… · $dateLabel'),
-            trailing: ElevatedButton(
-              key: Key('transfer_confirm_button_$referenceId'),
-              onPressed: () => _showConfirmDialog(context, transfer),
-              child: const Text('Confirmer'),
-            ),
+            trailing: widget.mode == TransferPendingMode.cancel
+                ? OutlinedButton.icon(
+                    key: Key('transfer_cancel_button_$referenceId'),
+                    icon: const Icon(Icons.close, color: AppColors.error),
+                    label: const Text('Annuler',
+                        style: TextStyle(color: AppColors.error)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                    ),
+                    onPressed: () =>
+                        _showCancelConfirmDialog(context, transfer),
+                  )
+                : ElevatedButton(
+                    key: Key('transfer_confirm_button_$referenceId'),
+                    onPressed: () => _showConfirmDialog(context, transfer),
+                    child: const Text('Confirmer'),
+                  ),
           ),
         );
       },
@@ -130,51 +154,83 @@ class _TransferPendingScreenState
     final declaredQty = transfer['quantity'] is int
         ? transfer['quantity'] as int
         : int.tryParse(transfer['quantity'].toString()) ?? 0;
+    final config = ref.read(businessTypeConfigProvider).valueOrNull
+        ?? BusinessTypeConfig.fallback;
 
-    showDialog<void>(
+    showModalBottomSheet<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Confirmer la réception'),
-        content: Text('Référence : $referenceId\nQté déclarée : $declaredQty'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _confirm(referenceId, catalogItemId, declaredQty);
-            },
-            child: const Text('Confirmer'),
-          ),
-        ],
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: TransferConfirmForm(
+          repository: widget.repository,
+          referenceId: referenceId,
+          catalogItemId: catalogItemId,
+          declaredQuantity: declaredQty,
+          confirmButton: config.confirmButton,
+          onSuccess: () {
+            Navigator.pop(context);
+            _load();
+          },
+        ),
       ),
     );
   }
 
-  Future<void> _confirm(
-    String referenceId,
-    String? catalogItemId,
-    int quantity,
+  Future<void> _showCancelConfirmDialog(
+    BuildContext context,
+    Map<String, dynamic> transfer,
   ) async {
+    final referenceId = transfer['referenceId'] as String? ?? '';
+    final quantity = transfer['quantity'];
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Annuler le transfert'),
+        content: Text(
+          'Annuler le transfert de $quantity unité(s) ?\n'
+          'Le stock sera restitué.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
     try {
       final tenantId = ref.read(activeTenantProvider) ?? '';
-      await widget.repository.confirmTransfer(
+      await widget.repository.cancelTransfer(
         referenceId: referenceId,
-        catalogItemId: catalogItemId,
-        quantity: quantity,
         tenantId: tenantId,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Réception confirmée')),
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Transfert annulé')),
         );
         _load();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Erreur : $e'),
             backgroundColor: AppColors.error,

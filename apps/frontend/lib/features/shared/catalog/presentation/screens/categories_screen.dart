@@ -7,11 +7,80 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 
 class CategoriesScreen extends ConsumerWidget {
-  const CategoriesScreen({super.key});
+  /// When [embedded] is true the Scaffold/AppBar are omitted so the widget
+  /// can live inside a BottomSheet or Dialog without double-shell.
+  final bool embedded;
+
+  const CategoriesScreen({super.key, this.embedded = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
+
+    final body = categoriesAsync.when(
+      data: (categories) {
+        if (categories.isEmpty) {
+          return const Center(
+            child: Text(
+              'Aucune catégorie.\nAppuyez sur + pour en ajouter une.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+            ),
+          );
+        }
+        return ListView.builder(
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            return ListTile(
+              title: Text(category.name),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete, color: AppColors.error),
+                onPressed: () => _confirmDelete(context, ref, category),
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur : $err')),
+    );
+
+    if (embedded) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Catégories',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Actualiser',
+                  onPressed: () => ref.refresh(categoriesProvider),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Nouvelle catégorie',
+                  onPressed: () => _showAddCategoryDialog(context, ref),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(child: body),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: ScalarioAppBar(
@@ -27,34 +96,7 @@ class CategoriesScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: categoriesAsync.when(
-        data: (categories) {
-          if (categories.isEmpty) {
-            return const Center(
-              child: Text(
-                'Aucune catégorie.\nAppuyez sur + pour en ajouter une.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-              ),
-            );
-          }
-          return ListView.builder(
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return ListTile(
-                title: Text(category.name),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: AppColors.error),
-                  onPressed: () => _confirmDelete(context, ref, category),
-                ),
-              );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Erreur : $err')),
-      ),
+      body: body,
     );
   }
 

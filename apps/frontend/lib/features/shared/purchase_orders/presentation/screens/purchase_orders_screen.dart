@@ -52,7 +52,7 @@ class PurchaseOrdersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: ScalarioAppBar(
-        title: 'Commandes fournisseurs',
+        title: 'Achats',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

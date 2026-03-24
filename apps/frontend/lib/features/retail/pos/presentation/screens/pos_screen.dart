@@ -282,7 +282,10 @@ void _showCommercialMenu(
           if (screens.contains('transfers'))
             ListTile(
               leading: const Icon(Icons.swap_horiz),
-              title: const Text('Confirmer un transfert'),
+              title: Text(
+                ref.read(businessTypeConfigProvider).valueOrNull?.confirmAction
+                    ?? 'Réception de stock interne',
+              ),
               onTap: () => go(const TransferConfirmPage()),
             ),
           if (screens.contains('stock_view'))

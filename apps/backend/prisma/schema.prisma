@@ -103,6 +103,8 @@ model BusinessTypeDefinition {
   documentType        String   @default("receipt") @map("document_type")
   // Epic 30 — FR112: screen access per role (e.g. {"commercial": ["pos","losses","stock_view"]})
   roleScreenAccess    Json     @default("{}") @map("role_screen_access")
+  // Labels métier pour les transferts (sendAction, sendButton, confirmAction, confirmButton, fromLabel, toLabel)
+  transferLabels      Json     @default("{}") @map("transfer_labels")
   // Phase 3+ — vertical discriminator: 'retail' | 'artisan' | 'restaurant' | 'services'
   vertical            String   @default("retail")
   createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)

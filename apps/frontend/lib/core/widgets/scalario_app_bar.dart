@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/features/shared/notifications/presentation/widgets/notification_bell.dart';
 import '../theme/app_logos.dart';
 
 /// App bar Scalario (Material 3, hauteur 56 dp + bottom optionnel).
@@ -7,7 +10,10 @@ import '../theme/app_logos.dart';
 /// Leading : monogramme `scalario-monogram-dark.svg` 24×24 dp (ou [leadingOverride]).
 /// Titre   : [title] centré en texte.
 /// Thème   : fond et couleurs adaptés à la luminosité courante.
-class ScalarioAppBar extends StatelessWidget implements PreferredSizeWidget {
+///
+/// Pour les rôles owner et manager, la cloche de notifications est automatiquement
+/// ajoutée en dernière action.
+class ScalarioAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const ScalarioAppBar({
     super.key,
     required this.title,
@@ -34,10 +40,18 @@ class ScalarioAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF2B2B2B) : const Color(0xFFFFFFFF);
     final iconColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
+
+    final role = ref.watch(userProfileProvider).valueOrNull?.role;
+    final showBell = role == 'owner' || role == 'manager';
+
+    final List<Widget> allActions = [
+      ...(actions ?? const <Widget>[]),
+      if (showBell) const NotificationBell(),
+    ];
 
     return AppBar(
       backgroundColor: bgColor,
@@ -69,7 +83,7 @@ class ScalarioAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: true,
-      actions: actions,
+      actions: allActions.isEmpty ? null : allActions,
       bottom: bottom,
     );
   }

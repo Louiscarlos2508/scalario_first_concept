@@ -12,6 +12,10 @@ class TransferConfirmForm extends ConsumerStatefulWidget {
   final String referenceId;
   final String? catalogItemId;
   final int declaredQuantity;
+  /// Called after a successful confirmation so the caller can close the sheet.
+  final VoidCallback? onSuccess;
+  /// Label for the confirm button (from business type config).
+  final String confirmButton;
 
   const TransferConfirmForm({
     super.key,
@@ -19,6 +23,8 @@ class TransferConfirmForm extends ConsumerStatefulWidget {
     required this.referenceId,
     required this.catalogItemId,
     required this.declaredQuantity,
+    this.onSuccess,
+    this.confirmButton = 'Confirmer la réception',
   });
 
   @override
@@ -29,7 +35,6 @@ class TransferConfirmForm extends ConsumerStatefulWidget {
 class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
   late final TextEditingController _quantityController;
   bool _isSubmitting = false;
-  Map<String, dynamic>? _result;
 
   @override
   void initState() {
@@ -58,7 +63,7 @@ class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
     final variance = (quantity - widget.declaredQuantity).abs();
 
     try {
-      final result = await widget.repository.confirmTransfer(
+      await widget.repository.confirmTransfer(
         referenceId: widget.referenceId,
         catalogItemId: widget.catalogItemId,
         quantity: quantity,
@@ -66,19 +71,13 @@ class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
       );
 
       if (mounted) {
-        setState(() {
-          _result = result;
-          _isSubmitting = false;
-        });
-        if (variance == 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Réception confirmée — aucun écart')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Réception confirmée — écart : $variance')),
-          );
-        }
+        final msg = variance == 0
+            ? 'Réception confirmée — aucun écart'
+            : 'Réception confirmée — écart : $variance';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+        widget.onSuccess?.call();
       }
     } catch (e) {
       if (mounted) {
@@ -95,9 +94,6 @@ class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
 
   @override
   Widget build(BuildContext context) {
-    final received = int.tryParse(_quantityController.text) ?? 0;
-    final variance = (received - widget.declaredQuantity).abs();
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -128,23 +124,6 @@ class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
           ),
           const SizedBox(height: 12),
 
-          // Variance label — shown after submit
-          if (_result != null) ...[
-            if (variance == 0)
-              const Text(
-                'Aucun écart',
-                key: Key('variance_label_zero'),
-                style: TextStyle(color: Colors.green),
-              )
-            else
-              Text(
-                'Écart : $variance',
-                key: const Key('variance_label_nonzero'),
-                style: const TextStyle(color: Colors.red),
-              ),
-            const SizedBox(height: 12),
-          ],
-
           SizedBox(
             height: 48,
             child: ElevatedButton(
@@ -156,7 +135,7 @@ class _TransferConfirmFormState extends ConsumerState<TransferConfirmForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Confirmer la réception'),
+                  : Text(widget.confirmButton),
             ),
           ),
         ],

@@ -8,7 +8,7 @@ import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/product_stock_screen.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -35,12 +35,12 @@ Widget _buildScreen(InventoryRepository repo) {
       syncServiceProvider.overrideWithValue(_StubSyncService()),
       inventoryRepositoryProvider.overrideWithValue(repo),
     ],
-    child: const MaterialApp(home: InventoryScreen()),
+    child: const MaterialApp(home: ProductStockScreen()),
   );
 }
 
 void main() {
-  group('InventoryScreen — action chips (pas de TabBar)', () {
+  group('ProductStockScreen — action chips (pas de TabBar)', () {
     testWidgets('pas de TabBar — les 4 action chips sont présents', (
       tester,
     ) async {

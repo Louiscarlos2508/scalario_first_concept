@@ -87,19 +87,46 @@ class LineChartWidget extends ConsumerWidget {
                             if (index < 0 || index >= stats.length) {
                               return const SizedBox();
                             }
+                            // Noms de jours FR abrégés (lundi=1 … dimanche=7).
+                            const dayAbbr = [
+                              'lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim'
+                            ];
+                            final label = stats.length <= 7
+                                ? dayAbbr[
+                                    stats[index].day.weekday - 1]
+                                : DateFormat('dd/MM').format(stats[index].day);
                             return Padding(
                               padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                DateFormat('dd/MM').format(stats[index].day),
-                                style: AppTextStyles.labelSmall,
-                              ),
+                              child: Text(label, style: AppTextStyles.labelSmall),
                             );
                           },
                           interval: 1,
                         ),
                       ),
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 48,
+                          getTitlesWidget: (value, meta) {
+                            // N'afficher que min et max auto calculés par fl_chart.
+                            if (value == meta.min || value == meta.max) {
+                              return const SizedBox();
+                            }
+                            final label = value >= 1000000
+                                ? '${(value / 1000000).toStringAsFixed(1)}M'
+                                : value >= 1000
+                                    ? '${(value / 1000).toStringAsFixed(0)}k'
+                                    : value.toStringAsFixed(0);
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: Text(
+                                label,
+                                style: AppTextStyles.labelSmall,
+                                textAlign: TextAlign.right,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                       topTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
@@ -134,7 +161,7 @@ class LineChartWidget extends ConsumerWidget {
               height: 200,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
         ],
       ),

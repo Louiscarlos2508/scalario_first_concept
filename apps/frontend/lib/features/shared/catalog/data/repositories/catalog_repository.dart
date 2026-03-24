@@ -78,7 +78,6 @@ class CatalogRepository {
   }
 
   /// Reads products from local Isar database filtered by tenantId.
-  /// Returns a list of maps with keys: id, name, price, barcode, stockQuantity.
   Future<List<Map<String, dynamic>>> getProducts({
     required String tenantId,
   }) async {
@@ -96,6 +95,14 @@ class CatalogRepository {
             'stockQuantity': p.stockQuantity,
             'categoryId': p.categoryId,
             'tenantId': p.tenantId,
+            'minStockLevel': p.minStockLevel,
+            'unitType': p.unitType,
+            'weightUnit': p.weightUnit,
+            'expiryDays': p.expiryDays,
+            'hasVariants': p.hasVariants,
+            'isUnique': p.isUnique,
+            'trackSerialNumbers': p.trackSerialNumbers,
+            'itemType': p.itemType,
           },
         )
         .toList();

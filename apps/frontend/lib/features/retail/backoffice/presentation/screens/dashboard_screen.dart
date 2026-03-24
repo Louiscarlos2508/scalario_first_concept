@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/inventory_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/product_stock_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
@@ -17,6 +17,13 @@ import 'package:frontend/features/shared/business_type/data/business_type_config
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/expenses/presentation/screens/expenses_screen.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
+import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
+import 'package:frontend/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart'
+    show lowStockCountProvider;
 import 'package:frontend/features/shared/promotions/presentation/screens/promotions_screen.dart';
 import 'package:frontend/features/shared/reservations/presentation/screens/reservations_screen.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_orders_screen.dart';
@@ -51,13 +58,13 @@ final _allNavScreens = <_NavScreenPair>[
         selectedIcon: Icons.inventory_2,
         label: 'Produits & Stock',
         moduleCode: 'inventory'),
-    screen: const InventoryScreen(),
+    screen: const ProductStockScreen(),
   ),
   (
     navItem: const NavItem(
-        icon: Icons.shopping_cart_outlined,
-        selectedIcon: Icons.shopping_cart,
-        label: 'Commandes',
+        icon: Icons.call_received_outlined,
+        selectedIcon: Icons.call_received,
+        label: 'Achats',
         moduleCode: 'purchase_orders'),
     screen: const PurchaseOrdersScreen(),
   ),
@@ -103,8 +110,8 @@ final _allNavScreens = <_NavScreenPair>[
   ),
   (
     navItem: const NavItem(
-        icon: Icons.assignment_outlined,
-        selectedIcon: Icons.assignment,
+        icon: Icons.shopping_bag_outlined,
+        selectedIcon: Icons.shopping_bag,
         label: 'Commandes',
         moduleCode: 'retail'),
     screen: const ClientOrdersScreen(),
@@ -242,18 +249,13 @@ class OverviewScreen extends ConsumerStatefulWidget {
 }
 
 class _OverviewScreenState extends ConsumerState<OverviewScreen> {
-  // ignore: unused_field
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) {
-        ref.invalidate(salesStatsProvider);
-        ref.invalidate(activeSessionsProvider);
-        ref.invalidate(expensesProvider);
-      }
+      if (mounted) _invalidateAll();
     });
   }
 
@@ -263,40 +265,99 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
     super.dispose();
   }
 
+  void _invalidateAll() {
+    ref.invalidate(salesStatsProvider);
+    ref.invalidate(activeSessionsProvider);
+    ref.invalidate(expensesProvider);
+    ref.invalidate(stockAlertCountProvider);
+    ref.invalidate(lowStockCountProvider);
+    ref.invalidate(urgentBatchCountProvider);
+    ref.invalidate(purchaseOrderStatsProvider);
+    ref.invalidate(reservationsKpiProvider);
+    ref.invalidate(clientOrderKpisProvider);
+  }
+
+  Future<void> _onRefresh() async {
+    _invalidateAll();
+  }
+
+  void _showPeriodMenu(BuildContext context) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final periods = <(String, DateTimeRange?)>[
+      ("Aujourd'hui", DateTimeRange(start: today, end: today)),
+      ('7 derniers jours',
+          DateTimeRange(start: today.subtract(const Duration(days: 6)), end: today)),
+      ('30 derniers jours',
+          DateTimeRange(start: today.subtract(const Duration(days: 29)), end: today)),
+      ('Ce mois', DateTimeRange(
+          start: DateTime(now.year, now.month, 1),
+          end: today)),
+      ('Personnalisé', null),
+    ];
+
+    final RenderBox button = context.findRenderObject()! as RenderBox;
+    final RenderBox overlay =
+        Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    final selected = await showMenu<(String, DateTimeRange?)>(
+      context: context,
+      position: position,
+      items: periods
+          .map((p) => PopupMenuItem(value: p, child: Text(p.$1)))
+          .toList(),
+    );
+
+    if (selected == null || !mounted) return;
+
+    if (selected.$2 != null) {
+      ref.read(salesStatsDateRangeProvider.notifier).state = selected.$2;
+      return;
+    }
+
+    // Personnalisé → DateRangePicker natif
+    if (!mounted || !context.mounted) return;
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      initialDateRange: ref.read(salesStatsDateRangeProvider),
+    );
+    if (picked != null && mounted) {
+      ref.read(salesStatsDateRangeProvider.notifier).state = picked;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateRange = ref.watch(salesStatsDateRangeProvider);
+    final periodLabel = dateRange == null
+        ? '7 derniers jours'
+        : '${DateFormat('dd/MM').format(dateRange.start)} – ${DateFormat('dd/MM').format(dateRange.end)}';
 
     return Scaffold(
       appBar: ScalarioAppBar(
         title: 'Tableau de bord',
         actions: [
-          TextButton.icon(
-            onPressed: () async {
-              final picked = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-                initialDateRange: dateRange,
-              );
-              if (picked != null) {
-                ref.read(salesStatsDateRangeProvider.notifier).state = picked;
-              }
-            },
-            icon: const Icon(Icons.date_range),
-            label: Text(
-              dateRange == null
-                  ? '7 derniers jours'
-                  : '${DateFormat('dd/MM').format(dateRange.start)} – ${DateFormat('dd/MM').format(dateRange.end)}',
+          Builder(
+            builder: (ctx) => TextButton.icon(
+              onPressed: () => _showPeriodMenu(ctx),
+              icon: const Icon(Icons.date_range),
+              label: Text(periodLabel),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(salesStatsProvider);
-              ref.invalidate(activeSessionsProvider);
-              ref.invalidate(expensesProvider);
-            },
+            onPressed: _invalidateAll,
           ),
           const SizedBox(width: 16),
         ],
@@ -317,7 +378,10 @@ class _OverviewScreenState extends ConsumerState<OverviewScreen> {
       loading: () => SduiLayout.dashboardDefault(),
       error: (_, _) => SduiLayout.dashboardDefault(),
     );
-    return SduiRenderer(layout: layout);
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: SduiRenderer(layout: layout),
+    );
   }
 }
 

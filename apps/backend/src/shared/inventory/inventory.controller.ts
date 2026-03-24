@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, Req } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post, Body, Query, Req } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { RequiresModule } from '../../kernel/modules/module.decorator';
 import { Roles } from '../../kernel/rbac/roles.decorator';
@@ -48,6 +48,19 @@ export class InventoryController {
       currentStock,
       computedAt: new Date().toISOString(),
     };
+  }
+
+  // DELETE /inventory/transfers/:referenceId — Owner + Manager only (cancel a pending TRANSFER_OUT)
+  @Delete('transfers/:referenceId')
+  @Roles('owner', 'manager')
+  async cancelTransfer(
+    @Param('referenceId') referenceId: string,
+    @Query('tenantId') tenantId: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.sub ?? null;
+    await this.inventoryService.cancelTransfer(referenceId, tenantId, userId);
+    return { success: true };
   }
 
   @Get('movements')

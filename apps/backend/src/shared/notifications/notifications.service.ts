@@ -87,4 +87,84 @@ export class NotificationsService {
       where: { userId, tenantId, isRead: false },
     });
   }
+
+  async markAllRead(userId: string, tenantId: string): Promise<void> {
+    await this.prisma.notification.updateMany({
+      where: { userId, tenantId, isRead: false },
+      data: { isRead: true },
+    });
+  }
+
+  @OnEvent('transfer.created')
+  async onTransferCreated(payload: {
+    referenceId: string;
+    tenantId: string;
+    status: string;
+  }) {
+    const { tenantId, referenceId } = payload;
+
+    const roles = await this.prisma.role.findMany({
+      where: { name: { in: ['owner', 'manager'] }, vertical: 'retail' },
+      select: { id: true },
+    });
+    const members = await this.prisma.organizationMember.findMany({
+      where: { organizationId: tenantId, roleId: { in: roles.map((r) => r.id) } },
+      select: { userId: true },
+    });
+    if (members.length === 0) return;
+
+    const refShort = referenceId.length > 8 ? referenceId.substring(0, 8) : referenceId;
+
+    await this.prisma.notification.createMany({
+      data: members.map((m) => ({
+        tenantId,
+        userId: m.userId,
+        type: 'transfer_pending',
+        title: 'Transfert en attente',
+        body: `Réf. ${refShort}… — confirmez la réception`,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  @OnEvent('session.closed')
+  async onSessionClosed(payload: {
+    sessionId: string;
+    tenantId: string;
+    userId: string;
+    variance: number;
+    closedAt: string;
+  }) {
+    const { tenantId, variance, sessionId } = payload;
+
+    const ownerRole = await this.prisma.role.findUnique({
+      where: { name_vertical: { name: 'owner', vertical: 'retail' } },
+    });
+    if (!ownerRole) return;
+
+    const members = await this.prisma.organizationMember.findMany({
+      where: { organizationId: tenantId, roleId: ownerRole.id },
+      select: { userId: true },
+    });
+    if (members.length === 0) return;
+
+    const hasVariance = variance !== 0;
+    const type = hasVariance ? 'session_variance' : 'session_closed';
+    const title = hasVariance ? 'Variance de caisse' : 'Session fermée';
+    const body = hasVariance
+      ? `Écart de ${variance > 0 ? '+' : ''}${variance} FCFA — vérifiez la caisse`
+      : 'La session a été clôturée avec succès';
+
+    await this.prisma.notification.createMany({
+      data: members.map((m) => ({
+        tenantId,
+        userId: m.userId,
+        type,
+        title,
+        body,
+        targetId: sessionId,
+      })),
+      skipDuplicates: true,
+    });
+  }
 }

@@ -9,7 +9,7 @@ import 'package:frontend/core/auth/user_profile.dart';
 import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/partial_inventory_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/inventory_count_screen.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:http/http.dart' as http;
@@ -61,13 +61,13 @@ Widget _buildScreen(InventoryRepository repo) {
       ),
     ],
     child: MaterialApp(
-      home: PartialInventoryScreen(repository: repo),
+      home: InventoryCountScreen(repository: repo),
     ),
   );
 }
 
 void main() {
-  group('PartialInventoryScreen — product selection', () {
+  group('InventoryCountScreen — product selection', () {
     testWidgets('shows product list with checkboxes', (tester) async {
       final repo = InventoryRepository(
         httpClient: MockClient((_) async => http.Response('{}', 200)),

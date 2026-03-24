@@ -23,6 +23,8 @@ class BusinessTypeConfig {
   final String documentType;
   // Epic 30 — FR112: screen access per role
   final Map<String, List<String>> roleScreenAccess;
+  // Labels métier pour les transferts de stock
+  final Map<String, String> transferLabels;
 
   const BusinessTypeConfig({
     required this.code,
@@ -33,7 +35,30 @@ class BusinessTypeConfig {
     this.roleLabels = const {},
     this.documentType = 'receipt',
     this.roleScreenAccess = const {},
+    this.transferLabels = const {},
   });
+
+  // ── Transfer label getters (with fallbacks) ──────────────────────────────
+
+  bool get hasTransfers => visibleSections.contains('transfers');
+
+  String get sendAction =>
+      transferLabels['sendAction'] ?? 'Envoi de stock';
+
+  String get sendButton =>
+      transferLabels['sendButton'] ?? 'Envoyer';
+
+  String get confirmAction =>
+      transferLabels['confirmAction'] ?? 'Réception de stock interne';
+
+  String get confirmButton =>
+      transferLabels['confirmButton'] ?? 'Confirmer la réception';
+
+  String get fromLabel =>
+      transferLabels['fromLabel'] ?? 'Magasin';
+
+  String get toLabel =>
+      transferLabels['toLabel'] ?? 'Emplacement';
 
   /// Returns the list of allowed screens for [role].
   /// Falls back to sensible defaults if roleScreenAccess is not configured.
@@ -70,6 +95,8 @@ class BusinessTypeConfig {
       roleLabels: (json['roleLabels'] as Map<String, dynamic>?) ?? {},
       documentType: json['documentType'] as String? ?? 'receipt',
       roleScreenAccess: roleScreenAccess,
+      transferLabels: ((json['transferLabels'] as Map<String, dynamic>?) ?? {})
+          .map((k, v) => MapEntry(k, v as String)),
     );
   }
 
@@ -82,6 +109,7 @@ class BusinessTypeConfig {
         roleLabels: {},
         documentType: 'receipt',
         roleScreenAccess: {},
+        transferLabels: {},
       );
 }
 

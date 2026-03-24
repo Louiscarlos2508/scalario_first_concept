@@ -33,7 +33,7 @@ const _kAllModules = [
   ('variants', 'Variantes Produit'),
   ('pricing', 'Multi-Tarifs'),
   ('promotions', 'Promotions & Remises'),
-  ('purchase_orders', 'Commandes Fournisseurs'),
+  ('purchase_orders', 'Achats'),
   ('batches', 'Lots & Fraîcheur'),
   ('client_orders', 'Commandes Clients'),
 ];

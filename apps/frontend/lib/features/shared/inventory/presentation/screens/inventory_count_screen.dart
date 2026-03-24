@@ -16,26 +16,25 @@ enum _Phase { selection, counting }
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
-class PartialInventoryScreen extends ConsumerStatefulWidget {
+class InventoryCountScreen extends ConsumerStatefulWidget {
   final InventoryRepository repository;
 
-  /// When [embedded] is true (used as a tab inside InventoryScreen), the
-  /// Scaffold/AppBar wrapper is omitted to avoid a double AppBar.
+  /// When [embedded] is true (used as a bottomsheet inside ProductStockScreen),
+  /// the Scaffold/AppBar wrapper is omitted to avoid a double AppBar.
   final bool embedded;
 
-  const PartialInventoryScreen({
+  const InventoryCountScreen({
     super.key,
     required this.repository,
     this.embedded = false,
   });
 
   @override
-  ConsumerState<PartialInventoryScreen> createState() =>
-      _PartialInventoryScreenState();
+  ConsumerState<InventoryCountScreen> createState() =>
+      _InventoryCountScreenState();
 }
 
-class _PartialInventoryScreenState
-    extends ConsumerState<PartialInventoryScreen> {
+class _InventoryCountScreenState extends ConsumerState<InventoryCountScreen> {
   _Phase _phase = _Phase.selection;
 
   // ── Selection phase state ──
@@ -206,7 +205,7 @@ class _PartialInventoryScreenState
     );
 
     final phaseTitle = _phase == _Phase.selection
-        ? 'Inventaire partiel — Sélection'
+        ? 'Comptage inventaire — Sélection'
         : 'Feuille de comptage';
 
     final body = _phase == _Phase.selection
@@ -388,11 +387,6 @@ class _CountingView extends StatelessWidget {
             final isLoading = loadingStock[id] ?? false;
             final countedVal = counted[id];
 
-            bool? isOk;
-            if (countedVal != null && system != null) {
-              isOk = countedVal == system;
-            }
-
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
@@ -411,7 +405,8 @@ class _CountingView extends StatelessWidget {
                           const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2),
                           )
                         else
                           Text(
@@ -443,19 +438,13 @@ class _CountingView extends StatelessWidget {
                             },
                           ),
                         ),
-                        if (isOk != null) ...[
+                        if (countedVal != null && system != null) ...[
                           const SizedBox(width: 12),
-                          isOk
-                              ? Icon(
-                                  key: Key('variance_ok_$id'),
-                                  Icons.check_circle,
-                                  color: AppColors.success,
-                                )
-                              : Icon(
-                                  key: Key('variance_error_$id'),
-                                  Icons.error,
-                                  color: AppColors.error,
-                                ),
+                          _VarianceBadge(
+                            variance: countedVal - system,
+                            okKey: Key('variance_ok_$id'),
+                            errKey: Key('variance_error_$id'),
+                          ),
                         ],
                       ],
                     ),
@@ -501,6 +490,53 @@ class _CountingView extends StatelessWidget {
   }
 }
 
+// ── Variance badge ─────────────────────────────────────────────────────────────
+
+class _VarianceBadge extends StatelessWidget {
+  final int variance;
+  final Key? okKey;
+  final Key? errKey;
+
+  const _VarianceBadge({required this.variance, this.okKey, this.errKey});
+
+  @override
+  Widget build(BuildContext context) {
+    if (variance == 0) {
+      return Row(
+        key: okKey,
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.check_circle, color: AppColors.success, size: 18),
+          SizedBox(width: 4),
+          Text('0',
+              style: TextStyle(
+                  color: AppColors.success, fontWeight: FontWeight.bold)),
+        ],
+      );
+    }
+    final sign = variance > 0 ? '+' : '';
+    return Row(
+      key: errKey,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          variance > 0 ? Icons.arrow_upward : Icons.arrow_downward,
+          color: variance > 0 ? AppColors.success : AppColors.error,
+          size: 18,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          '$sign$variance',
+          style: TextStyle(
+            color: variance > 0 ? AppColors.success : AppColors.error,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Phase header (embedded mode) ──────────────────────────────────────────────
 
 class _PhaseHeader extends StatelessWidget {
@@ -525,7 +561,8 @@ class _PhaseHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ],
