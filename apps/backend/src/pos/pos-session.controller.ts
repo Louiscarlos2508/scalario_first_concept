@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Get, Query, Param, Request, ForbiddenException } from '@nestjs/common';
 import { RequiresModule } from '../kernel/modules/module.decorator';
+import { Roles } from '../kernel/rbac/roles.decorator';
 import { PosSessionService } from './pos-session.service';
 
 @Controller('pos/sessions')
@@ -8,11 +9,13 @@ export class PosSessionController {
     constructor(private readonly posSessionService: PosSessionService) { }
 
     @Post('open')
+    @Roles('owner', 'commercial', 'cashier')
     async openSession(@Body() data: { userId: string; tenantId: string; openingBalance: number }) {
         return this.posSessionService.openSession(data);
     }
 
     @Post('close/:id')
+    @Roles('owner', 'commercial', 'cashier')
     async closeSession(
         @Param('id') id: string,
         @Body() data: { closingBalance: number },

@@ -10,7 +10,7 @@ export class RetailSessionController {
 
   // AC2 — POST /retail/sessions/open
   @Post('open')
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'commercial', 'cashier')
   async openSession(
     @Body() body: { userId?: string; tenantId: string; openingBalance: number; deviceId?: string },
     @Req() req: any,
@@ -26,7 +26,7 @@ export class RetailSessionController {
 
   // AC3 — POST /retail/sessions/close/:id
   @Post('close/:id')
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'commercial', 'cashier')
   async closeSession(
     @Param('id') id: string,
     @Body() body: { closingBalance: number; varianceExplanation?: string },
