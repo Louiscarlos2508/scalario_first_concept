@@ -11,6 +11,7 @@ import 'package:frontend/core/providers/active_modules_provider.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
@@ -82,6 +83,18 @@ final _managerProfile = UserProfile(
   ],
 );
 
+final _commercialProfile = UserProfile(
+  id: 'u-commercial-1',
+  email: 'commercial@settings.test',
+  memberships: [
+    TenantMembership(
+      tenantId: 'tenant-settings',
+      role: 'commercial',
+      tenantName: 'Demo Store',
+    ),
+  ],
+);
+
 final _mockTenantInfo = {
   'id': 'tenant-settings',
   'name': 'Demo Store',
@@ -133,6 +146,9 @@ Widget _buildScreen(
       activeModulesProvider.overrideWith(
         (ref) => Future.value({'catalog', 'clients', 'inventory',
             'transactions', 'expenses', 'reports', 'retail'}),
+      ),
+      unreadNotificationCountProvider.overrideWith(
+        (ref) => Stream.value(0),
       ),
       if (withBillingAndUsers) ...[
         tenantBillingProvider.overrideWith(
@@ -205,7 +221,7 @@ void main() {
     // Absentes pour manager
     expect(find.text('Mon abonnement'), findsNothing);
     expect(find.text('Utilisateurs'), findsNothing);
-    expect(find.text('Modules actifs'), findsNothing);
+    expect(find.text('Méthodes de paiement'), findsNothing);
     expect(find.text('Reçu'), findsNothing);
   });
 
@@ -304,5 +320,75 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(find.text('Propriétaire'), findsAtLeastNWidgets(1));
+  });
+
+  // ── T8 : manager voit Boutique + Équipe + Modules ─────────────────────────
+  testWidgets('Manager : sections attendues présentes', (tester) async {
+    final syncService = _StubSyncService();
+    await tester.pumpWidget(
+        _buildScreen(syncService, profile: _managerProfile));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Boutique'), findsOneWidget);
+    expect(find.text('Équipe'), findsOneWidget);
+    expect(find.text('Modules actifs'), findsOneWidget);
+    expect(find.text('Synchronisation'), findsOneWidget);
+    expect(find.text('Application'), findsOneWidget);
+
+    // Sections owner-only absentes
+    expect(find.text('Mon abonnement'), findsNothing);
+    expect(find.text('Utilisateurs'), findsNothing);
+    expect(find.text('Méthodes de paiement'), findsNothing);
+    expect(find.text('Reçu'), findsNothing);
+    expect(find.text('Type de commerce'), findsNothing);
+  });
+
+  // ── T9 : manager boutique en lecture seule ────────────────────────────────
+  testWidgets('Manager : Boutique en lecture seule', (tester) async {
+    final syncService = _StubSyncService();
+    await tester.pumpWidget(
+        _buildScreen(syncService, profile: _managerProfile));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Pas de champs éditables ni de bouton Save
+    expect(find.byType(TextField), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Enregistrer les modifications'),
+        findsNothing);
+    // Nom de la boutique affiché en lecture seule
+    expect(find.text('Demo Store'), findsAtLeastNWidgets(1));
+  });
+
+  // ── T10 : commercial voit seulement Compte + Sync + App ───────────────────
+  testWidgets('Commercial : sections minimales seulement', (tester) async {
+    final syncService = _StubSyncService();
+    await tester.pumpWidget(
+        _buildScreen(syncService,
+            profile: _commercialProfile, withBillingAndUsers: false));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Compte'), findsOneWidget);
+    expect(find.text('Synchronisation'), findsOneWidget);
+    expect(find.text('Application'), findsOneWidget);
+
+    // Sections non visibles pour commercial
+    expect(find.text('Boutique'), findsNothing);
+    expect(find.text('Équipe'), findsNothing);
+    expect(find.text('Mon abonnement'), findsNothing);
+    expect(find.text('Modules actifs'), findsNothing);
+    expect(find.text('Type de commerce'), findsNothing);
+  });
+
+  // ── T11 : owner voit Type de commerce ────────────────────────────────────
+  testWidgets('Owner : section Type de commerce présente', (tester) async {
+    final syncService = _StubSyncService();
+    await tester.pumpWidget(_buildScreen(syncService));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Type de commerce'), findsOneWidget);
+    expect(find.text('Épicerie & Alimentation'), findsAtLeastNWidgets(1));
   });
 }

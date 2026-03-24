@@ -299,7 +299,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             orElse: () => profile.memberships.first,
           );
     final role = activeMembership?.role ?? '';
-    final isOwner = role == 'owner';
+    final isOwner   = role == 'owner';
+    final isManager = role == 'manager';
     final roleLabel = getRoleLabel(role, roleLabels);
 
     // Pre-fill boutique controllers from API data (once)
@@ -350,8 +351,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
 
             // ── 3. Boutique ──────────────────────────────────────────────────
-            const SizedBox(height: 16),
-            _buildBoutiqueSection(isOwner, tenantInfo),
+            if (isOwner || isManager) ...[
+              const SizedBox(height: 16),
+              _buildBoutiqueSection(isOwner, tenantInfo),
+            ],
+
+            // ── 3b. Type de commerce (owner : lecture seule) ─────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildBusinessTypeSection(tenantInfo),
+            ],
+
+            // ── 3c. Équipe (manager : lecture seule) ─────────────────────────
+            if (isManager) ...[
+              const SizedBox(height: 16),
+              _buildTeamSection(roleLabels),
+            ],
 
             // ── 4. Utilisateurs (owner seulement) ────────────────────────────
             if (isOwner) ...[
@@ -359,8 +374,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildUsersSection(roleLabels),
             ],
 
-            // ── 5. Modules actifs (owner seulement) ──────────────────────────
-            if (isOwner) ...[
+            // ── 5. Modules actifs (owner + manager) ──────────────────────────
+            if (isOwner || isManager) ...[
               const SizedBox(height: 16),
               _buildModulesSection(activeModules),
             ],
@@ -558,6 +573,98 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }).toList(),
           );
         },
+      ),
+    ]);
+  }
+
+  Widget _buildTeamSection(Map<String, dynamic> roleLabels) {
+    final usersAsync = ref.watch(tenantUsersProvider);
+    return _section('Équipe', [
+      usersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => Text(
+          'Données indisponibles',
+          style: AppTextStyles.bodySmall
+              .copyWith(color: AppColors.textSecondary),
+        ),
+        data: (users) {
+          if (users.isEmpty) {
+            return Text(
+              'Aucun membre.',
+              style: AppTextStyles.bodySmall
+                  .copyWith(color: AppColors.textSecondary),
+            );
+          }
+          return Column(
+            children: users.map((u) {
+              final email = u['email'] as String? ?? '—';
+              final fullName = u['fullName'] as String?;
+              final userRole = u['role'] as String? ?? '';
+              final label = getRoleLabel(userRole, roleLabels);
+              final displayName = (fullName != null && fullName.isNotEmpty)
+                  ? fullName
+                  : email;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(Icons.person_outline,
+                          size: 16, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(displayName, style: AppTextStyles.bodySmall),
+                          if (fullName != null && fullName.isNotEmpty)
+                            Text(
+                              email,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.primary),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    ]);
+  }
+
+  Widget _buildBusinessTypeSection(
+      AsyncValue<Map<String, dynamic>> tenantInfo) {
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final info = tenantInfo.valueOrNull ?? {};
+    final btName = config?.name ??
+        info['businessTypeName'] as String? ??
+        '—';
+    final btCode =
+        config?.code ?? info['businessType'] as String? ?? '—';
+
+    return _section('Type de commerce', [
+      _infoRow('Type', btName),
+      _infoRow('Code', btCode),
+      const SizedBox(height: 8),
+      Text(
+        'Pour changer le type de commerce, contactez votre administrateur.',
+        style: AppTextStyles.bodySmall.copyWith(
+          fontStyle: FontStyle.italic,
+          color: AppColors.textSecondary,
+        ),
       ),
     ]);
   }
