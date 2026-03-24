@@ -9,6 +9,8 @@ import 'package:frontend/core/constants/api_constants.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/return_search_sheet.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 
 String _fcfa(double v) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -86,7 +88,11 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   Future<void> _loadUsers() async {
     final profile = ref.read(userProfileProvider).valueOrNull;
     final role = profile?.role ?? '';
-    if (role != 'owner' && role != 'manager') return;
+    final config = ref.read(businessTypeConfigProvider).valueOrNull;
+    final hasFullAccess =
+        canAccessScreen(role, 'backoffice', config) ||
+        canAccessScreen(role, 'backoffice_restricted', config);
+    if (!hasFullAccess) return;
 
     try {
       final tenantId = ref.read(activeTenantProvider) ?? '';
@@ -145,9 +151,13 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
       final tenantId = ref.read(activeTenantProvider) ?? '';
       final profile = ref.read(userProfileProvider).valueOrNull;
       final role = profile?.role ?? '';
+      final config = ref.read(businessTypeConfigProvider).valueOrNull;
+      final showAll =
+          canAccessScreen(role, 'backoffice', config) ||
+          canAccessScreen(role, 'backoffice_restricted', config);
 
       final effectiveUserId = widget.fixedUserId ??
-          (role == 'commercial' ? profile?.id : _cashierId);
+          (showAll ? _cashierId : profile?.id);
 
       // Snapshot filter state so the closure is stable across the await
       final snapshotMethod = _method;
@@ -240,8 +250,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   Widget build(BuildContext context) {
     final profile = ref.read(userProfileProvider).valueOrNull;
     final role = profile?.role ?? '';
-    // Manager can view but not initiate returns
-    final canReturn = role != 'manager';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    // Only owner (full backoffice access) can cancel/return a sale.
+    final canReturn = canAccessScreen(role, 'backoffice', config);
 
     final rawItems = (_data?['items'] as List<dynamic>?) ?? [];
 

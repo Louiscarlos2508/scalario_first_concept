@@ -13,6 +13,7 @@ import 'package:frontend/features/shared/freshness/presentation/providers/freshn
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart'
     show lowStockCountProvider;
 
@@ -39,14 +40,26 @@ class KpiCardGrid extends ConsumerWidget {
     final reservationsKpiAsync = ref.watch(reservationsKpiProvider);
     final clientOrderKpisAsync = ref.watch(clientOrderKpisProvider);
     final lowStockCountAsync = ref.watch(lowStockCountProvider);
-    final role = ref.watch(userProfileProvider).valueOrNull?.role;
-    final canSeeAlerts = role == 'owner' || role == 'manager';
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
     final businessConfig = ref.watch(businessTypeConfigProvider).valueOrNull;
     final visibleSections = businessConfig?.visibleSections ?? [];
     final freshnessRelevant = visibleSections.isEmpty ||
         visibleSections.contains('freshness') ||
         visibleSections.contains('expiry');
     final isDistribution = businessConfig?.documentType == 'delivery_note';
+
+    // Access flags derived from businessType config (or fallback defaults).
+    final canSeeExpenses = canAccessScreen(role, 'expenses', businessConfig) ||
+        canAccessScreen(role, 'backoffice', businessConfig) ||
+        canAccessScreen(role, 'backoffice_restricted', businessConfig);
+    // Stock alerts: owner/manager AND commercial with stock_view access.
+    final canSeeStockAlerts =
+        canAccessScreen(role, 'stock_view', businessConfig) ||
+            canAccessScreen(role, 'backoffice', businessConfig);
+    // Admin/business alerts: owner and manager only.
+    final canSeeAdminAlerts =
+        canAccessScreen(role, 'backoffice', businessConfig) ||
+            canAccessScreen(role, 'backoffice_restricted', businessConfig);
 
     return statsAsync.when(
       data: (stats) {
@@ -89,6 +102,7 @@ class KpiCardGrid extends ConsumerWidget {
                           netProfit: netProfit,
                           totalExpenses: totalExpenses,
                           fcfa: fcfa,
+                          showExpenses: canSeeExpenses,
                         )
                       : _MobileKpiGrid(
                           totalRevenue: totalRevenue,
@@ -96,11 +110,12 @@ class KpiCardGrid extends ConsumerWidget {
                           netProfit: netProfit,
                           totalExpenses: totalExpenses,
                           fcfa: fcfa,
+                          showExpenses: canSeeExpenses,
                         ),
                 ),
 
                 // ── Zone B : Alertes conditionnelles (si > 0) ────────────
-                if (canSeeAlerts)
+                if (canSeeStockAlerts || canSeeAdminAlerts)
                   _AlertsSection(
                     ref: ref,
                     stockAlertCount: stockAlertCount,
@@ -111,6 +126,8 @@ class KpiCardGrid extends ConsumerWidget {
                     reservationsPending: reservationsPending,
                     clientOrdersInProgress: clientOrdersInProgress,
                     isDistribution: isDistribution,
+                    canSeeStockAlerts: canSeeStockAlerts,
+                    canSeeAdminAlerts: canSeeAdminAlerts,
                   ),
               ],
             );
@@ -134,6 +151,7 @@ class _TabletKpiRow extends StatelessWidget {
   final double netProfit;
   final double totalExpenses;
   final NumberFormat fcfa;
+  final bool showExpenses;
 
   const _TabletKpiRow({
     required this.totalRevenue,
@@ -141,6 +159,7 @@ class _TabletKpiRow extends StatelessWidget {
     required this.netProfit,
     required this.totalExpenses,
     required this.fcfa,
+    required this.showExpenses,
   });
 
   @override
@@ -178,16 +197,18 @@ class _TabletKpiRow extends StatelessWidget {
             valueColor: netProfit < 0 ? AppColors.error : null,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _KpiCard(
-            key: const Key('kpi_depenses'),
-            icon: Icons.money_off,
-            label: 'Dépenses',
-            value: fcfa.format(totalExpenses),
-            iconColor: AppColors.warning,
+        if (showExpenses) ...[
+          const SizedBox(width: 12),
+          Expanded(
+            child: _KpiCard(
+              key: const Key('kpi_depenses'),
+              icon: Icons.money_off,
+              label: 'Dépenses',
+              value: fcfa.format(totalExpenses),
+              iconColor: AppColors.warning,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -201,6 +222,7 @@ class _MobileKpiGrid extends StatelessWidget {
   final double netProfit;
   final double totalExpenses;
   final NumberFormat fcfa;
+  final bool showExpenses;
 
   const _MobileKpiGrid({
     required this.totalRevenue,
@@ -208,6 +230,7 @@ class _MobileKpiGrid extends StatelessWidget {
     required this.netProfit,
     required this.totalExpenses,
     required this.fcfa,
+    required this.showExpenses,
   });
 
   @override
@@ -250,16 +273,18 @@ class _MobileKpiGrid extends StatelessWidget {
                 valueColor: netProfit < 0 ? AppColors.error : null,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _KpiCard(
-                key: const Key('kpi_depenses'),
-                icon: Icons.money_off,
-                label: 'Dépenses',
-                value: fcfa.format(totalExpenses),
-                iconColor: AppColors.warning,
+            if (showExpenses) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: _KpiCard(
+                  key: const Key('kpi_depenses'),
+                  icon: Icons.money_off,
+                  label: 'Dépenses',
+                  value: fcfa.format(totalExpenses),
+                  iconColor: AppColors.warning,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -279,6 +304,8 @@ class _AlertsSection extends StatelessWidget {
   final int reservationsPending;
   final int clientOrdersInProgress;
   final bool isDistribution;
+  final bool canSeeStockAlerts;
+  final bool canSeeAdminAlerts;
 
   const _AlertsSection({
     required this.ref,
@@ -290,13 +317,15 @@ class _AlertsSection extends StatelessWidget {
     required this.reservationsPending,
     required this.clientOrdersInProgress,
     required this.isDistribution,
+    required this.canSeeStockAlerts,
+    required this.canSeeAdminAlerts,
   });
 
   @override
   Widget build(BuildContext context) {
     final alerts = <_AlertBannerData>[];
 
-    if (stockAlertCount > 0) {
+    if (canSeeStockAlerts && stockAlertCount > 0) {
       final n = stockAlertCount;
       alerts.add(_AlertBannerData(
         icon: Icons.warning_amber_rounded,
@@ -305,7 +334,7 @@ class _AlertsSection extends StatelessWidget {
             '$n produit${n > 1 ? 's' : ''} en stock critique',
         moduleCode: 'inventory',
       ));
-    } else if (lowStockCount > 0) {
+    } else if (canSeeStockAlerts && lowStockCount > 0) {
       final n = lowStockCount;
       alerts.add(_AlertBannerData(
         icon: Icons.inventory_2,
@@ -315,7 +344,7 @@ class _AlertsSection extends StatelessWidget {
       ));
     }
 
-    if (freshnessRelevant && urgentBatchCount > 0) {
+    if (canSeeStockAlerts && freshnessRelevant && urgentBatchCount > 0) {
       final n = urgentBatchCount;
       alerts.add(_AlertBannerData(
         icon: Icons.eco_outlined,
@@ -325,7 +354,7 @@ class _AlertsSection extends StatelessWidget {
       ));
     }
 
-    if (pendingPurchaseOrders > 0) {
+    if (canSeeAdminAlerts && pendingPurchaseOrders > 0) {
       final n = pendingPurchaseOrders;
       alerts.add(_AlertBannerData(
         icon: Icons.call_received_outlined,
@@ -336,7 +365,7 @@ class _AlertsSection extends StatelessWidget {
       ));
     }
 
-    if (reservationsPending > 0) {
+    if (canSeeAdminAlerts && reservationsPending > 0) {
       final n = reservationsPending;
       alerts.add(_AlertBannerData(
         icon: Icons.bookmark_outline,
@@ -346,7 +375,7 @@ class _AlertsSection extends StatelessWidget {
       ));
     }
 
-    if (clientOrdersInProgress > 0) {
+    if (canSeeAdminAlerts && clientOrdersInProgress > 0) {
       final n = clientOrdersInProgress;
       alerts.add(_AlertBannerData(
         icon: isDistribution

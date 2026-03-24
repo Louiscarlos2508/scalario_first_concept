@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/session_history_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
@@ -46,6 +49,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       );
     }
 
+    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final canSeeFullHistory = canAccessScreen(role, 'daily_sales', config) ||
+        canAccessScreen(role, 'backoffice', config);
+    final canSeeSessionHistory = canAccessScreen(role, 'pos', config);
+    final canSeeAnalytics = canAccessScreen(role, 'backoffice', config);
+
     final reportAsync = ref.watch(salesReportProvider);
     final dateRange = ref.watch(salesReportDateRangeProvider);
 
@@ -80,14 +90,24 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ],
       ),
       body: reportAsync.when(
-        data: (data) => _buildReportBody(data),
+        data: (data) => _buildReportBody(
+          data,
+          canSeeFullHistory: canSeeFullHistory,
+          canSeeSessionHistory: canSeeSessionHistory,
+          canSeeAnalytics: canSeeAnalytics,
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Erreur : $err')),
       ),
     );
   }
 
-  Widget _buildReportBody(Map<String, dynamic> data) {
+  Widget _buildReportBody(
+    Map<String, dynamic> data, {
+    required bool canSeeFullHistory,
+    required bool canSeeSessionHistory,
+    required bool canSeeAnalytics,
+  }) {
     final productSales = (data['productSales'] as List<dynamic>?) ?? [];
     final paymentMethodStats =
         (data['paymentMethodStats'] as List<dynamic>?) ?? [];
@@ -97,17 +117,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSalesHistoryCard(),
-          const SizedBox(height: 16),
-          _buildSessionHistoryCard(),
-          const SizedBox(height: 24),
-          _buildSectionTitle('Ventes par produit'),
-          const SizedBox(height: 16),
-          _buildProductSalesTable(productSales),
-          const SizedBox(height: 40),
-          _buildSectionTitle('Ventes par méthode de paiement'),
-          const SizedBox(height: 16),
-          _buildPaymentMethodChart(paymentMethodStats),
+          if (canSeeFullHistory) _buildSalesHistoryCard(),
+          if (canSeeFullHistory) const SizedBox(height: 16),
+          if (canSeeSessionHistory) _buildSessionHistoryCard(),
+          if (canSeeAnalytics) ...[
+            const SizedBox(height: 24),
+            _buildSectionTitle('Ventes par produit'),
+            const SizedBox(height: 16),
+            _buildProductSalesTable(productSales),
+            const SizedBox(height: 40),
+            _buildSectionTitle('Ventes par méthode de paiement'),
+            const SizedBox(height: 16),
+            _buildPaymentMethodChart(paymentMethodStats),
+          ],
         ],
       ),
     );

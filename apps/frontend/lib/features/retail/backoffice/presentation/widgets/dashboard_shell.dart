@@ -6,6 +6,8 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/sync_status_indicator.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 
 /// Navigation destination item.
 /// [moduleCode] null = always visible; non-null = visible only when module is active.
@@ -79,6 +81,9 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     final colorScheme = Theme.of(context).colorScheme;
     final activeTenantId = ref.watch(activeTenantProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
+    final role = userProfileAsync.valueOrNull?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final canOpenPos = canAccessScreen(role, 'backoffice', config);
 
     return Scaffold(
       body: Row(
@@ -192,7 +197,7 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (ref.watch(userProfileProvider).valueOrNull?.role == 'owner')
+                  if (canOpenPos)
                     IconButton(
                       icon: const Icon(Icons.point_of_sale),
                       tooltip: 'Ouvrir la caisse',
