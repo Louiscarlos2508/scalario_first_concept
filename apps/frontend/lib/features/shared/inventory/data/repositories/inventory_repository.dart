@@ -36,6 +36,8 @@ class InventoryRepository {
     List<String>? serialNumbers,
     DateTime? expiresAt,
     DateTime? bestBeforeDate,
+    String? fromLocation,
+    String? toLocation,
   }) async {
     final body = <String, dynamic>{
       'type': type,
@@ -50,6 +52,10 @@ class InventoryRepository {
       if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
       if (bestBeforeDate != null)
         'bestBeforeDate': bestBeforeDate.toIso8601String(),
+      if (fromLocation != null && fromLocation.isNotEmpty)
+        'fromLocation': fromLocation,
+      if (toLocation != null && toLocation.isNotEmpty)
+        'toLocation': toLocation,
     };
 
     final response = await _httpClient.post(

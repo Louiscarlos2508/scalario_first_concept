@@ -37,6 +37,7 @@ class TransferOutForm extends ConsumerStatefulWidget {
 class _TransferOutFormState extends ConsumerState<TransferOutForm> {
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController();
+  final _fromController = TextEditingController();
   final _destinationController = TextEditingController();
   final _notesController = TextEditingController();
 
@@ -46,6 +47,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
   @override
   void dispose() {
     _quantityController.dispose();
+    _fromController.dispose();
     _destinationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -66,10 +68,18 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
 
     final tenantId = ref.read(activeTenantProvider) ?? '';
     final quantity = int.parse(_quantityController.text);
+    final source = _fromController.text.trim();
     final destination = _destinationController.text.trim();
     final notes = _notesController.text.trim();
+    final locationPart = source.isNotEmpty && destination.isNotEmpty
+        ? '$source → $destination'
+        : source.isNotEmpty
+            ? source
+            : destination.isNotEmpty
+                ? '→ $destination'
+                : '';
     final reason = [
-      if (destination.isNotEmpty) '→ $destination',
+      if (locationPart.isNotEmpty) locationPart,
       if (notes.isNotEmpty) notes,
     ].join(' · ');
 
@@ -87,6 +97,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
     void reset() {
       _selectedProduct = null;
       _quantityController.clear();
+      _fromController.clear();
       _destinationController.clear();
       _notesController.clear();
       _isSubmitting = false;
@@ -99,6 +110,8 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
         quantity: quantity,
         reason: reason.isEmpty ? null : reason,
         tenantId: tenantId,
+        fromLocation: source.isNotEmpty ? source : null,
+        toLocation: destination.isNotEmpty ? destination : null,
       );
       await widget.repository.markSynced(movement.id, result['id'] as String);
 
@@ -204,7 +217,20 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
             ),
             const SizedBox(height: 12),
 
-            // Destination (texte libre avec suggestions de session)
+            // Source (fromLabel — texte libre, optionnel)
+            TextFormField(
+              key: const Key('transfer_from_field'),
+              controller: _fromController,
+              decoration: InputDecoration(
+                labelText: config.fromLabel,
+                hintText: config.fromLabel,
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+
+            // Destination (toLabel — texte libre avec suggestions de session)
             Autocomplete<String>(
               optionsBuilder: (textValue) {
                 if (textValue.text.isEmpty) return suggestions;

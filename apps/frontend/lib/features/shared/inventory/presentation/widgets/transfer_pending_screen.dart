@@ -87,6 +87,8 @@ class _TransferPendingScreenState
       );
     }
 
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull ??
+        BusinessTypeConfig.fallback;
     final pending = _pending ?? [];
 
     if (pending.isEmpty) {
@@ -99,49 +101,80 @@ class _TransferPendingScreenState
       );
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: pending.length,
-      padding: const EdgeInsets.all(8),
-      itemBuilder: (context, i) {
-        final transfer = pending[i];
-        final referenceId = transfer['referenceId'] as String? ?? '';
-        final quantity = transfer['quantity'];
-        final createdAt = transfer['createdAt'] as String?;
-        final dateLabel = createdAt != null
-            ? DateFormat('dd/MM HH:mm')
-                .format(DateTime.parse(createdAt).toLocal())
-            : '—';
-        final refShort =
-            referenceId.length > 8 ? referenceId.substring(0, 8) : referenceId;
-
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          child: ListTile(
-            leading: const Icon(Icons.swap_horiz, color: AppColors.primary),
-            title: Text('Qté déclarée : $quantity'),
-            subtitle: Text('Réf. $refShort… · $dateLabel'),
-            trailing: widget.mode == TransferPendingMode.cancel
-                ? OutlinedButton.icon(
-                    key: Key('transfer_cancel_button_$referenceId'),
-                    icon: const Icon(Icons.close, color: AppColors.error),
-                    label: const Text('Annuler',
-                        style: TextStyle(color: AppColors.error)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.error),
-                    ),
-                    onPressed: () =>
-                        _showCancelConfirmDialog(context, transfer),
-                  )
-                : ElevatedButton(
-                    key: Key('transfer_confirm_button_$referenceId'),
-                    onPressed: () => _showConfirmDialog(context, transfer),
-                    child: const Text('Confirmer'),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            config.confirmAction,
+            key: const Key('transfer_pending_title'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-        );
-      },
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: pending.length,
+          padding: const EdgeInsets.all(8),
+          itemBuilder: (context, i) {
+            final transfer = pending[i];
+            final referenceId = transfer['referenceId'] as String? ?? '';
+            final quantity = transfer['quantity'];
+            final createdAt = transfer['createdAt'] as String?;
+            final dateLabel = createdAt != null
+                ? DateFormat('dd/MM HH:mm')
+                    .format(DateTime.parse(createdAt).toLocal())
+                : '—';
+            final refShort = referenceId.length > 8
+                ? referenceId.substring(0, 8)
+                : referenceId;
+            final fromLocation = transfer['fromLocation'] as String?;
+            final toLocation = transfer['toLocation'] as String?;
+
+            final locationLabel = fromLocation != null && toLocation != null
+                ? '${config.fromLabel} : $fromLocation → ${config.toLabel} : $toLocation'
+                : fromLocation != null
+                    ? '${config.fromLabel} : $fromLocation'
+                    : toLocation != null
+                        ? '${config.toLabel} : $toLocation'
+                        : null;
+
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: ListTile(
+                leading:
+                    const Icon(Icons.swap_horiz, color: AppColors.primary),
+                title: Text('Qté déclarée : $quantity'),
+                subtitle: Text(
+                  [
+                    'Réf. $refShort… · $dateLabel',
+                    ?locationLabel,
+                  ].join('\n'),
+                ),
+                trailing: widget.mode == TransferPendingMode.cancel
+                    ? OutlinedButton.icon(
+                        key: Key('transfer_cancel_button_$referenceId'),
+                        icon: const Icon(Icons.close, color: AppColors.error),
+                        label: const Text('Annuler',
+                            style: TextStyle(color: AppColors.error)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.error),
+                        ),
+                        onPressed: () =>
+                            _showCancelConfirmDialog(context, transfer),
+                      )
+                    : ElevatedButton(
+                        key: Key('transfer_confirm_button_$referenceId'),
+                        onPressed: () => _showConfirmDialog(context, transfer),
+                        child: Text(config.confirmButton),
+                      ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
