@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -53,6 +54,26 @@ class ScalarioApp extends ConsumerStatefulWidget {
 
 class _ScalarioAppState extends ConsumerState<ScalarioApp> {
   bool _splashDone = false;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) {
+        if (data.event == AuthChangeEvent.tokenRefreshed) {
+          final newToken = data.session?.accessToken;
+          ref.read(syncServiceProvider).updateToken(newToken);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

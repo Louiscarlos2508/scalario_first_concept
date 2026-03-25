@@ -16,7 +16,7 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  @Roles('owner', 'commercial')
+  @Roles('owner', 'commercial', 'cashier')
   async createTransaction(@Body() body: any, @Req() req: any) {
     const userId = req.user?.sub ?? null;
     return this.transactionsService.createTransaction(body, userId);

@@ -114,6 +114,13 @@ class IsarService {
     });
   }
 
+  Future<void> cleanCustomers() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.customers.clear();
+    });
+  }
+
   Future<void> incrementCustomerBalance(String remoteId, double amount) async {
     final isar = await db;
     await isar.writeTxn(() async {

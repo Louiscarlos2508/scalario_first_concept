@@ -21,7 +21,8 @@
     "seed:superadmin": "ts-node prisma/seed-superadmin.ts",
     "fix:admin-memberships": "ts-node prisma/fix-admin-memberships.ts",
     "fix:modules": "ts-node prisma/fix-modules.ts",
-    "fix:rename-contacts": "ts-node prisma/fix-rename-contacts-to-clients.ts"
+    "fix:rename-contacts": "ts-node prisma/fix-rename-contacts-to-clients.ts",
+    "db:reset-tenant": "ts-node -r tsconfig-paths/register prisma/reset-tenant-data.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -78,6 +78,11 @@ class ContactSyncAdapter implements SyncAdapter {
         final List<dynamic> data = jsonDecode(response.body);
         final customers = data.map((j) => Customer.fromJson(j)).toList();
 
+        // Full sync (since == null) : remplacer tout le cache local
+        if (since == null) {
+          await _customerRepo.clearLocalCustomers();
+        }
+
         if (customers.isNotEmpty) {
           await _customerRepo.upsertCustomers(customers);
           print('[ContactAdapter] Upserted ${customers.length} customers');

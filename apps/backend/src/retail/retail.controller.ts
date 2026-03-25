@@ -10,7 +10,7 @@ export class RetailController {
 
   // AC2 — POST /retail/sales: atomic sale (Transaction + RetailSale + events)
   @Post()
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async createSale(
     @Body()
     body: {

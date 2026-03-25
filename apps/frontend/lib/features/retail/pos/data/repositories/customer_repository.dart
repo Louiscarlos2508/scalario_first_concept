@@ -115,6 +115,10 @@ class CustomerRepository {
     });
   }
 
+  Future<void> clearLocalCustomers() async {
+    await _isarService.cleanCustomers();
+  }
+
   Future<void> upsertCustomers(List<Customer> customers) async {
     final isar = await _isarService.db;
     await isar.writeTxn(() async {

@@ -5,7 +5,6 @@ import '../../data/models/pos_session.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/services/device_identity_service.dart';
 import 'package:frontend/core/theme/app_theme.dart';
-import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 
@@ -34,34 +33,35 @@ class SessionGuard extends ConsumerWidget {
         final hasPosAccess = canAccessScreen(profile.role, 'pos', config);
 
         if (!hasPosAccess) {
-          return Scaffold(
-            appBar: const ScalarioAppBar(title: 'Caisse'),
-            body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.lock_outline,
-                      size: 64, color: AppColors.textSecondary),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Accès non autorisé',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Votre rôle ne permet pas d\'accéder à la caisse.',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.textSecondary),
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Accès non autorisé',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    "Votre rôle ne permet pas d'accéder à la caisse.",
+                    style: TextStyle(color: AppColors.textSecondary),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Retour'),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Retour'),
+                ),
+              ],
             ),
           );
         }

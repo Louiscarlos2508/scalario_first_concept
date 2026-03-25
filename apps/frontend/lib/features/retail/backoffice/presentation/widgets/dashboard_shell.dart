@@ -83,7 +83,7 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     final userProfileAsync = ref.watch(userProfileProvider);
     final role = userProfileAsync.valueOrNull?.role ?? '';
     final config = ref.watch(businessTypeConfigProvider).valueOrNull;
-    final canOpenPos = canAccessScreen(role, 'backoffice', config);
+    final canOpenPos = canAccessScreen(role, 'pos', config);
 
     return Scaffold(
       body: Row(

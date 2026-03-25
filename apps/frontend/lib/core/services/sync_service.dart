@@ -112,6 +112,10 @@ class SyncService {
     _sendPort?.send('sync_now');
   }
 
+  void updateToken(String? token) {
+    _sendPort?.send(_TokenUpdate(token));
+  }
+
   // --- Isolate Entry Point ---
 
   static void _syncIsolateEntryPoint(_SyncIsolateConfig config) async {
@@ -144,6 +148,7 @@ class SyncService {
     const baseDelay = Duration(seconds: 30);
     const maxDelay = Duration(minutes: 5);
     bool isFirstPass = true;
+    String? currentToken = config.authToken; // mutable — mis à jour via _TokenUpdate
 
     Timer? periodicTimer;
 
@@ -163,7 +168,7 @@ class SyncService {
           inventoryAdapter: inventoryAdapter,
           baseUrl: config.baseUrl,
           tenantId: config.tenantId,
-          authToken: config.authToken,
+          authToken: currentToken,
           deviceId: config.deviceId,
           sessionRepo: sessionRepo,
           forceFullCatalogPull: isFirstPass,
@@ -191,8 +196,13 @@ class SyncService {
       print('[SyncIsolate] Next sync scheduled in ${nextDelay.inSeconds}s');
     }
 
-    receivePort.listen((message) {
+    receivePort.listen((message) async {
       if (message == 'sync_now') {
+        runSyncPass();
+      } else if (message is _TokenUpdate) {
+        currentToken = message.token;
+        print('[SyncIsolate] Auth token refreshed — resetting error orders');
+        await orderRepo.resetErrorOrders();
         runSyncPass();
       }
     });
@@ -247,7 +257,9 @@ class SyncService {
     );
 
     if (tenantId != null) {
-      final lastCustomerSync = await sessionRepo.getLastSync('customers');
+      final lastCustomerSync = forceFullCatalogPull
+          ? null
+          : await sessionRepo.getLastSync('customers');
       await contactAdapter.pullDelta(
         baseUrl,
         tenantId,
@@ -300,6 +312,11 @@ class _SyncIsolateConfig {
     this.authToken,
     this.deviceId,
   });
+}
+
+class _TokenUpdate {
+  final String? token;
+  _TokenUpdate(this.token);
 }
 
 /// Special IsarService for the isolate — opens DB using pre-resolved directory path

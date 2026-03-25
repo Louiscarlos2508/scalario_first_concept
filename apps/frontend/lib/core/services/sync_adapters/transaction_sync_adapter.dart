@@ -53,15 +53,21 @@ class TransactionSyncAdapter implements SyncAdapter {
         if (response.statusCode == 200 || response.statusCode == 201) {
           await _orderRepo.markAsSynced(order.uuid);
           print('[TransactionAdapter] Order ${order.uuid} synced');
+        } else if (response.statusCode == 401 || response.statusCode == 403) {
+          // Auth error — token expiré ou rôle insuffisant temporaire.
+          // Garder en pending : le token sera rafraîchi et le retry réussira.
+          print('[TransactionAdapter] Auth error ${response.statusCode} '
+              'for order ${order.uuid} — keeping pending for retry');
+          return; // stop pushing remaining orders, attendre le prochain token
         } else if (response.statusCode >= 400 && response.statusCode < 500) {
-          // 4xx = client error (auth, validation) — won't self-resolve, stop retrying.
+          // Autres 4xx (400, 422) = données invalides — stop retrying.
           await _orderRepo.markAsError(order.uuid);
-          print(
-              '[TransactionAdapter] Order ${order.uuid} marked error (${response.statusCode}): ${response.body}');
+          print('[TransactionAdapter] Order ${order.uuid} marked error '
+              '(${response.statusCode}): ${response.body}');
         } else {
-          // 5xx or unexpected — keep pending, will retry next cycle.
-          print(
-              '[TransactionAdapter] Server error for order ${order.uuid} (${response.statusCode}), will retry');
+          // 5xx ou inattendu — garder en pending, retry au prochain cycle.
+          print('[TransactionAdapter] Server error for order ${order.uuid} '
+              '(${response.statusCode}), will retry');
         }
       } catch (e) {
         print('[TransactionAdapter] Failed to push order ${order.uuid}: $e');

@@ -47,6 +47,22 @@ class OrderRepository {
     });
   }
 
+  /// Remet en pending les ordres bloqués en error (ex : 401/403 temporaire).
+  /// Appelé au refresh de token pour relancer le retry.
+  Future<void> resetErrorOrders() async {
+    final isar = await _isarService.db;
+    await isar.writeTxn(() async {
+      final errorOrders = await isar.orders
+          .filter()
+          .syncStatusEqualTo(SyncStatus.error)
+          .findAll();
+      for (final order in errorOrders) {
+        order.syncStatus = SyncStatus.pending;
+        await isar.orders.put(order);
+      }
+    });
+  }
+
   Future<List<Order>> getOrdersBySession(String sessionId) async {
     final isar = await _isarService.db;
     return await isar.orders.filter().sessionIdEqualTo(sessionId).findAll();
