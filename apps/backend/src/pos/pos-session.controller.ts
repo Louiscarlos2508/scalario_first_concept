@@ -29,11 +29,13 @@ export class PosSessionController {
     }
 
     @Get('summary/:id')
+    @Roles('manager', 'owner')
     async getSessionSummary(@Param('id') id: string) {
         return this.posSessionService.getSessionSummary(id);
     }
 
     @Get('active')
+    @Roles('commercial', 'cashier', 'manager', 'owner')
     async getActiveSession(@Query('userId') userId: string, @Query('tenantId') tenantId: string) {
         return this.posSessionService.getActiveSession(userId, tenantId);
     }
