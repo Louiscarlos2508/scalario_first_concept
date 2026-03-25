@@ -29,6 +29,7 @@ class InventoryRepository {
     required String catalogItemId,
     required int quantity,
     String? reason,
+    String? location,
     String? referenceId,
     required String tenantId,
     String? token,
@@ -45,6 +46,7 @@ class InventoryRepository {
       'quantity': quantity,
       'tenantId': tenantId,
       if (reason != null && reason.isNotEmpty) 'reason': reason,
+      if (location != null && location.isNotEmpty) 'location': location,
       'referenceId': ?referenceId,
       'variantId': ?variantId,
       if (serialNumbers != null && serialNumbers.isNotEmpty)

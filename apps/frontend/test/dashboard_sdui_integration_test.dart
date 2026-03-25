@@ -16,6 +16,21 @@ import 'package:frontend/features/retail/backoffice/presentation/screens/dashboa
 import 'package:frontend/features/shared/reports/presentation/widgets/kpi_card_grid.dart';
 import 'package:frontend/features/shared/reports/presentation/widgets/line_chart_widget.dart';
 import 'package:frontend/features/shared/reports/presentation/widgets/terminal_status_list.dart';
+import 'package:frontend/core/auth/user_profile.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart'
+    show BusinessTypeConfig;
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart'
+    show lowStockCountProvider;
+import 'package:frontend/features/shared/client_orders/domain/models/client_order.dart'
+    show ClientOrderKpis;
+import 'package:frontend/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart';
+import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
+import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
+import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart'
+    show unreadNotificationCountProvider;
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -46,6 +61,31 @@ Widget _buildOverviewScreen({Future<SduiLayout>? layoutResult}) {
       sduiLayoutProvider('dashboard').overrideWith(
         (ref) => layoutResult ?? Future.value(SduiLayout.dashboardDefault()),
       ),
+      unreadNotificationCountProvider.overrideWith((ref) => Stream.value(0)),
+      purchaseOrderStatsProvider.overrideWith(
+        (ref) => Future.value({'pendingCount': 0}),
+      ),
+      stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
+      urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
+      reservationsKpiProvider.overrideWith(
+        (ref) => Future.value({'pendingCount': 0, 'totalDepositAmount': 0}),
+      ),
+      clientOrderKpisProvider.overrideWith(
+        (ref) => Future.value(ClientOrderKpis.zero),
+      ),
+      lowStockCountProvider.overrideWith((ref) => Future.value(0)),
+      businessTypeConfigProvider.overrideWith(
+        (ref) => Future.value(BusinessTypeConfig.fallback),
+      ),
+      userProfileProvider.overrideWith(
+        (ref) => Future.value(UserProfile(
+          id: 'test-owner',
+          email: 'owner@test.com',
+          memberships: [
+            TenantMembership(tenantId: 'tenant-1', role: 'owner'),
+          ],
+        )),
+      ),
     ],
     child: const MaterialApp(home: OverviewScreen()),
   );
@@ -59,6 +99,30 @@ Widget _buildRendererAt(double width, SduiLayout layout) {
       terminalStatusProvider
           .overrideWith((ref) => Future.value(_mockTerminals)),
       activeSessionsProvider.overrideWith((ref) => Future.value([])),
+      purchaseOrderStatsProvider.overrideWith(
+        (ref) => Future.value({'pendingCount': 0}),
+      ),
+      stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
+      urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
+      reservationsKpiProvider.overrideWith(
+        (ref) => Future.value({'pendingCount': 0, 'totalDepositAmount': 0}),
+      ),
+      clientOrderKpisProvider.overrideWith(
+        (ref) => Future.value(ClientOrderKpis.zero),
+      ),
+      lowStockCountProvider.overrideWith((ref) => Future.value(0)),
+      businessTypeConfigProvider.overrideWith(
+        (ref) => Future.value(BusinessTypeConfig.fallback),
+      ),
+      userProfileProvider.overrideWith(
+        (ref) => Future.value(UserProfile(
+          id: 'test-owner',
+          email: 'owner@test.com',
+          memberships: [
+            TenantMembership(tenantId: 'tenant-1', role: 'owner'),
+          ],
+        )),
+      ),
     ],
     child: MaterialApp(
       home: Scaffold(
@@ -97,8 +161,8 @@ void main() {
       await tester.pump(); // resolve futures
       await tester.pump();
 
-      expect(find.text('Ventes (période)'), findsOneWidget);
-      expect(find.text('État des caisses'), findsOneWidget);
+      expect(find.text('CA'), findsOneWidget);
+      expect(find.text('Ventes'), findsOneWidget);
     });
   });
 
@@ -112,7 +176,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('Ventes (période)'), findsOneWidget);
+      expect(find.text('CA'), findsOneWidget);
     });
   });
 
@@ -128,7 +192,7 @@ void main() {
 
       // 15000 + 22500 = 37500 FCFA
       expect(find.textContaining('FCFA'), findsWidgets);
-      expect(find.text('Transactions'), findsOneWidget);
+      expect(find.text('Ventes'), findsOneWidget);
     });
   });
 
@@ -191,7 +255,7 @@ void main() {
       await tester.pump(); // layout never resolves → falls back to dashboardDefault
       await tester.pump(); // salesStatsProvider resolves
 
-      expect(find.text('Ventes (période)'), findsOneWidget);
+      expect(find.text('CA'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
@@ -208,6 +272,31 @@ void main() {
           activeTenantProvider.overrideWith((ref) => 'tenant-1'),
           salesStatsProvider.overrideWith((ref) => Future.value(stats)),
           expensesProvider.overrideWith((ref) => Future.value(expenses)),
+          purchaseOrderStatsProvider.overrideWith(
+            (ref) => Future.value({'pendingCount': 0}),
+          ),
+          stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
+          urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
+          reservationsKpiProvider.overrideWith(
+            (ref) =>
+                Future.value({'pendingCount': 0, 'totalDepositAmount': 0}),
+          ),
+          clientOrderKpisProvider.overrideWith(
+            (ref) => Future.value(ClientOrderKpis.zero),
+          ),
+          lowStockCountProvider.overrideWith((ref) => Future.value(0)),
+          businessTypeConfigProvider.overrideWith(
+            (ref) => Future.value(BusinessTypeConfig.fallback),
+          ),
+          userProfileProvider.overrideWith(
+            (ref) => Future.value(UserProfile(
+              id: 'test-owner',
+              email: 'owner@test.com',
+              memberships: [
+                TenantMembership(tenantId: 'tenant-1', role: 'owner'),
+              ],
+            )),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(body: KpiCardGrid()),
@@ -215,7 +304,7 @@ void main() {
       );
     }
 
-    testWidgets('shows Dépenses (période) and Bénéfice net labels',
+    testWidgets('shows Dépenses and Bénéfice net labels',
         (tester) async {
       final stats = [
         SalesStat(day: DateTime(2026, 3, 1), revenue: 100000, orderCount: 5),
@@ -235,11 +324,11 @@ void main() {
       await tester.pumpWidget(buildKpiGrid(stats: stats, expenses: expenses));
       await tester.pump();
 
-      expect(find.text('Dépenses (période)'), findsOneWidget);
+      expect(find.text('Dépenses'), findsOneWidget);
       expect(find.text('Bénéfice net'), findsOneWidget);
     });
 
-    testWidgets('shows warning icon when net profit is negative', (tester) async {
+    testWidgets('shows trending_down icon when net profit is negative', (tester) async {
       final stats = [
         SalesStat(day: DateTime(2026, 3, 1), revenue: 100000, orderCount: 5),
       ];
@@ -258,11 +347,11 @@ void main() {
       await tester.pumpWidget(buildKpiGrid(stats: stats, expenses: expenses));
       await tester.pump();
 
-      // net profit = 100 000 - 150 000 = -50 000 → warning icon must be visible
-      expect(find.byIcon(Icons.warning), findsOneWidget);
+      // net profit = 100 000 - 150 000 = -50 000 → trending_down icon visible
+      expect(find.byIcon(Icons.trending_down), findsOneWidget);
     });
 
-    testWidgets('no warning icon when net profit is non-negative', (tester) async {
+    testWidgets('no trending_down icon when net profit is non-negative', (tester) async {
       final stats = [
         SalesStat(day: DateTime(2026, 3, 1), revenue: 200000, orderCount: 10),
       ];
@@ -281,8 +370,8 @@ void main() {
       await tester.pumpWidget(buildKpiGrid(stats: stats, expenses: expenses));
       await tester.pump();
 
-      // net profit = 200 000 - 50 000 = 150 000 ≥ 0 → no warning
-      expect(find.byIcon(Icons.warning), findsNothing);
+      // net profit = 200 000 - 50 000 = 150 000 ≥ 0 → no trending_down
+      expect(find.byIcon(Icons.trending_down), findsNothing);
     });
   });
 }

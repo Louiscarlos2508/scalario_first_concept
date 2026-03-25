@@ -12,6 +12,8 @@ import 'package:frontend/features/shared/inventory/presentation/widgets/loss_dec
 import 'package:frontend/features/shared/inventory/presentation/widgets/transfer_out_form.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/transfer_pending_screen.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/inventory_count_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/internal_requests_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/providers/internal_requests_provider.dart';
 
 void openFreshnessSheet(BuildContext context) {
   showModalBottomSheet<void>(
@@ -94,6 +96,14 @@ class StockActionChipsRow extends ConsumerWidget {
         visibleSections.contains('freshness') ||
         visibleSections.contains('expiry');
 
+    // FR88 — visible pour tous les rôles : commercial, manager, owner
+    final canReappro =
+        role == 'commercial' || role == 'manager' || role == 'owner';
+    // Badge : nombre de demandes en attente d'action selon le rôle
+    final pendingCountAsync = canReappro
+        ? ref.watch(internalRequestsPendingCountProvider(role))
+        : const AsyncData(0);
+
     final chips = <Widget>[];
 
     if (canDelivery) {
@@ -168,6 +178,29 @@ class StockActionChipsRow extends ConsumerWidget {
         label: const Text('Ajustement'),
         onPressed: () =>
             _openSheet(context, AdjustmentForm(repository: repo)),
+      ));
+    }
+
+    if (canReappro) {
+      final pendingCount = pendingCountAsync.valueOrNull ?? 0;
+      chips.add(ActionChip(
+        avatar: const Icon(Icons.move_down_outlined, size: 16),
+        label: pendingCount > 0
+            ? Badge.count(
+                count: pendingCount,
+                child: const Text('Réappro.'),
+              )
+            : const Text('Réappro.'),
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          showDragHandle: true,
+          builder: (_) => const FractionallySizedBox(
+            heightFactor: 0.95,
+            child: InternalRequestsScreen(),
+          ),
+        ),
       ));
     }
 

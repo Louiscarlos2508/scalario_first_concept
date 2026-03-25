@@ -18,6 +18,7 @@ export class InventoryService {
     quantity: number;
     type: string;
     reason?: string | null;
+    location?: string | null;    // FR87 — emplacement de la perte (LOSS uniquement)
     tenantId: string;
     userId?: string | null;
     referenceId?: string | null;
@@ -50,6 +51,19 @@ export class InventoryService {
       throw new BadRequestException('reason is required for LOSS movements');
     }
 
+    // FR87 — location is mandatory for LOSS when tenant has configured loss locations
+    if (data.type === 'LOSS' && (!data.location || data.location.trim() === '')) {
+      const tenantForLoc = await this.prisma.tenant.findUnique({
+        where: { id: data.tenantId },
+        select: { lossLocations: true },
+      });
+      if (tenantForLoc?.lossLocations && tenantForLoc.lossLocations.length > 0) {
+        throw new BadRequestException(
+          'location is required for LOSS when tenant has configured loss locations',
+        );
+      }
+    }
+
     // AC2 (Story 26-6) — isUnique items: stock cap ≤ 1 for inbound movements
     const isInbound =
       data.type === 'DELIVERY' ||
@@ -74,6 +88,7 @@ export class InventoryService {
         quantity: data.quantity,
         type: data.type,
         reason: resolvedReason,
+        location: data.location ?? null,
         tenantId: data.tenantId,
         userId: data.userId ?? null,
         referenceId: data.referenceId ?? null,

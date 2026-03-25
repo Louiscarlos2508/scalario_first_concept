@@ -24,6 +24,7 @@ import { ReturnsModule } from './shared/returns/returns.module';
 import { ReservationsModule } from './shared/reservations/reservations.module';
 import { ClientOrdersModule } from './shared/client-orders/client-orders.module';
 import { TenantModule } from './tenant/tenant.module';
+import { InternalRequestsModule } from './shared/internal-requests/internal-requests.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { TenantModule } from './tenant/tenant.module';
     ReturnsModule.register(),
     ReservationsModule.register(),
     ClientOrdersModule.register(),
+    InternalRequestsModule.register(),
     TenantModule,
   ],
   controllers: [AppController],

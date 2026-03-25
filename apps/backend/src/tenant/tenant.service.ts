@@ -72,6 +72,23 @@ export class TenantService {
     };
   }
 
+  // FR87 — loss locations
+  async getLossLocations(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { lossLocations: true },
+    });
+    return { locations: tenant?.lossLocations ?? [] };
+  }
+
+  async updateLossLocations(tenantId: string, locations: string[]) {
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { lossLocations: locations },
+    });
+    return { success: true };
+  }
+
   async getPaymentMethods(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     const t = tenant as any;

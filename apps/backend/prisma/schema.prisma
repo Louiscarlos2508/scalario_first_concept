@@ -55,6 +55,12 @@ model Tenant {
   /// Epic 29 — Vertical (retail | artisan | restaurant | services — Phase 3+)
   vertical                 String            @default("retail")
 
+  /// Epic 31 — FR87: emplacements de perte configurables (tableau de strings)
+  lossLocations            String[]          @default([]) @map("loss_locations")
+
+  /// Epic 31 — FR88: si true, l'étape Manager est sautée (Commercial → Owner direct)
+  skipManagerApproval      Boolean           @default(false) @map("skip_manager_approval")
+
   /// Epic 28 — Billing (FR100–FR103)
   plan                     String            @default("free")
   maxUsers                 Int               @default(1) @map("max_users")
@@ -78,6 +84,7 @@ model Tenant {
   terminalStatuses      TerminalStatus[]
   tenantModules         TenantModule[]
   expenses              Expense[]
+  internalRequests      InternalRequest[]
 
   @@map("tenants")
   @@schema("kernel")
@@ -308,6 +315,7 @@ model CatalogItem {
   priceLevels         PriceLevel[]
   serialRecords       SerialRecord[]
   priceHistory        PriceHistory[]
+  internalRequests    InternalRequest[]
 
   @@index([tenantId, updatedAt])
   @@index([tenantId, categoryId])
@@ -515,6 +523,7 @@ model InventoryMovement {
   type          String
   quantity      Decimal  @db.Decimal(10, 2)
   reason        String?
+  location      String?  /// FR87 — emplacement de la perte (LOSS uniquement)
   tenantId      String   @map("tenant_id") @db.Uuid
   userId        String?  @map("user_id") @db.Uuid
   referenceId   String?  @map("reference_id") @db.Uuid
@@ -742,4 +751,29 @@ model RetailSale {
   @@index([cashierId])
   @@map("retail_sales")
   @@schema("retail")
+}
+
+// Epic 31 — FR88: Circuit demande de réapprovisionnement interne
+model InternalRequest {
+  id            String      @id @default(uuid()) @db.Uuid
+  tenantId      String      @map("tenant_id") @db.Uuid
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  catalogItemId String      @map("catalog_item_id") @db.Uuid
+  catalogItem   CatalogItem @relation(fields: [catalogItemId], references: [id])
+  quantity      Decimal     @db.Decimal(10, 2)
+  // pending | prepared | approved | fulfilled | rejected
+  status        String      @default("pending")
+  // normal | urgent
+  urgency       String      @default("normal")
+  requestedBy   String      @map("requested_by") @db.Uuid
+  preparedBy    String?     @map("prepared_by") @db.Uuid
+  approvedBy    String?     @map("approved_by") @db.Uuid
+  reason        String?
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId, status])
+  @@index([tenantId, urgency])
+  @@map("internal_requests")
+  @@schema("shared")
 }

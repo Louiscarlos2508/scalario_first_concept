@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req } from '@nestjs/common';
 import { Roles } from '../kernel/rbac/roles.decorator';
 import { CurrentTenant } from '../kernel/tenancy/tenant.decorator';
 import { TenantService, UpdateMyInfoDto } from './tenant.service';
@@ -35,5 +35,21 @@ export class TenantController {
   @Roles('owner', 'manager')
   getMyUsers(@CurrentTenant() tenantId: string) {
     return this.tenantService.getMyUsers(tenantId);
+  }
+
+  /** GET /tenant/loss-locations — FR87: all roles (needed by POS loss form) */
+  @Get('loss-locations')
+  getLossLocations(@CurrentTenant() tenantId: string) {
+    return this.tenantService.getLossLocations(tenantId);
+  }
+
+  /** PATCH /tenant/loss-locations — FR87: owner only */
+  @Patch('loss-locations')
+  @Roles('owner')
+  updateLossLocations(
+    @CurrentTenant() tenantId: string,
+    @Body() body: { locations: string[] },
+  ) {
+    return this.tenantService.updateLossLocations(tenantId, body.locations);
   }
 }

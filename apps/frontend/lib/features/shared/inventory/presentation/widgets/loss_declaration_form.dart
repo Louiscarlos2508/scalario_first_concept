@@ -9,6 +9,7 @@ import 'package:frontend/features/shared/inventory/data/models/inventory_movemen
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/shared/inventory/presentation/providers/loss_locations_provider.dart';
 
 const List<String> _lossReasons = [
   'Casse',
@@ -35,6 +36,7 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
 
   Product? _selectedProduct;
   String? _selectedReason;
+  String? _selectedLocation;
   bool _isSubmitting = false;
 
   @override
@@ -52,6 +54,8 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
     if (qty == null || qty <= 0) return false;
     if (_selectedReason == null) return false;
     if (_isAutre && _autreController.text.trim().isEmpty) return false;
+    final locations = ref.read(lossLocationsProvider).valueOrNull ?? [];
+    if (locations.isNotEmpty && _selectedLocation == null) return false;
     return !_isSubmitting;
   }
 
@@ -75,6 +79,7 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
       ..catalogItemId = _selectedProduct!.remoteId!
       ..quantity = quantity
       ..reason = _reasonLabel
+      ..location = _selectedLocation
       ..tenantId = tenantId
       ..createdAt = DateTime.now()
       ..syncStatus = 'pending';
@@ -83,6 +88,7 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
     void reset() {
       _selectedProduct = null;
       _selectedReason = null;
+      _selectedLocation = null;
       _quantityController.clear();
       _autreController.clear();
       _isSubmitting = false;
@@ -94,6 +100,7 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
         catalogItemId: _selectedProduct!.remoteId!,
         quantity: quantity,
         reason: _reasonLabel,
+        location: _selectedLocation,
         tenantId: tenantId,
       );
       await widget.repository.markSynced(movement.id, result['id'] as String);
@@ -134,6 +141,9 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
       data: (data) => (data['items'] as List).cast<Product>(),
       orElse: () => <Product>[],
     );
+
+    final locations = ref.watch(lossLocationsProvider).valueOrNull ?? [];
+    final hasLocations = locations.isNotEmpty;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -214,6 +224,27 @@ class _LossDeclarationFormState extends ConsumerState<LossDeclarationForm> {
                         ? 'Veuillez préciser le motif'
                         : null,
                 onChanged: (_) => setState(() {}),
+              ),
+            ],
+
+            // FR87 — Emplacement (conditionnel : visible seulement si le tenant a des emplacements configurés)
+            if (hasLocations) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: const Key('loss_location_field'),
+                initialValue: _selectedLocation,
+                decoration: const InputDecoration(
+                  labelText: 'Emplacement *',
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text('Sélectionner un emplacement'),
+                items: locations
+                    .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedLocation = v),
+                validator: (_) => _selectedLocation == null
+                    ? 'Emplacement obligatoire'
+                    : null,
               ),
             ],
             const SizedBox(height: 20),

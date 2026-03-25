@@ -18,6 +18,7 @@ class InventoryMovementLocal {
   late String catalogItemId;
   late int quantity;
   String? reason;
+  String? location; // FR87 — emplacement de la perte (LOSS uniquement)
 
   /// Used for TRANSFER_OUT / TRANSFER_IN chain-of-custody.
   String? referenceId;
