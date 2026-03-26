@@ -36,6 +36,8 @@ class _FakeSessionNotifier extends SessionNotifier {
           SessionRepository(_StubIsarService()),
           OrderRepository(_StubIsarService()),
           userId: 'user-1',
+          tenantId: 'tenant-1',
+          tokenGetter: () => null,
         ) {
     state = AsyncValue.data(_seed);
   }

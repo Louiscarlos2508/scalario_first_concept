@@ -66,6 +66,17 @@ export class PurchaseOrdersController {
     return this.service.updateStatus(id, body.status, tenantId, userId);
   }
 
+  // PATCH /purchase-orders/:id/details — edit draft header (notes, expectedDate)
+  @Patch(':id/details')
+  @Roles('owner', 'manager')
+  async updateDetails(
+    @Param('id') id: string,
+    @Body() body: { notes?: string | null; expectedDate?: string | null },
+    @Query('tenantId') tenantId?: string,
+  ) {
+    return this.service.updateDraft(id, body, tenantId);
+  }
+
   // POST /purchase-orders/:id/receive
   @Post(':id/receive')
   @Roles('owner', 'manager')

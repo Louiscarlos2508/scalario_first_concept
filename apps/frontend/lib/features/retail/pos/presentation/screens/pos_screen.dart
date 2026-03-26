@@ -235,9 +235,80 @@ class PosScreen extends ConsumerWidget {
 
       if (confirmed == true) {
         final theoretical = (summary['theoreticalCash'] as double?) ?? 0.0;
-        await ref.read(sessionProvider.notifier).closeSession(physicalAmount, theoretical);
+        final variance = physicalAmount - theoretical;
+        String? varianceExplanation;
+
+        if (variance != 0 && context.mounted) {
+          varianceExplanation =
+              await _showVarianceExplanationDialog(context, variance);
+          // null = annulé par l'utilisateur
+          if (varianceExplanation == null) return;
+        }
+
+        await ref.read(sessionProvider.notifier).closeSession(
+              physicalAmount,
+              theoretical,
+              varianceExplanation: varianceExplanation,
+            );
       }
     }
+  }
+
+  Future<String?> _showVarianceExplanationDialog(
+      BuildContext context, double variance) async {
+    final controller = TextEditingController();
+    final isPositive = variance > 0;
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Expliquer l\'écart'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Écart détecté : ${isPositive ? '+' : ''}${variance.toStringAsFixed(0)} FCFA',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isPositive ? Colors.orange : Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    maxLines: 2,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Raison de l\'écart',
+                      hintText: 'Ex: erreur de rendu, billet manquant…',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: controller.text.trim().isEmpty
+                      ? null
+                      : () =>
+                          Navigator.of(context).pop(controller.text.trim()),
+                  child: const Text('Confirmer la fermeture'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }
 

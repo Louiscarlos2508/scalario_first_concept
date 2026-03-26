@@ -44,6 +44,38 @@ class ClientOrderRepository {
     throw Exception('Erreur chargement commandes : ${response.statusCode}');
   }
 
+  /// PATCH /client-orders/:id/details — edit draft header fields.
+  Future<ClientOrder> updateDraft(
+    String id, {
+    required String tenantId,
+    String? notes,
+    double? depositAmount,
+    DateTime? desiredDeliveryDate,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/client-orders/$id/details')
+        .replace(queryParameters: {'tenantId': tenantId});
+
+    final body = <String, dynamic>{
+      'notes': ?notes,
+      'depositAmount': ?depositAmount,
+      if (desiredDeliveryDate != null)
+        'desiredDeliveryDate': desiredDeliveryDate.toIso8601String(),
+    };
+
+    final response = await _httpClient.patch(
+      uri,
+      headers: _headers(tenantId: tenantId),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      return ClientOrder.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception(
+        'updateDraft failed: ${response.statusCode} — ${response.body}');
+  }
+
   Future<void> confirmOrder(String id, {required String tenantId}) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/client-orders/$id/confirm')
         .replace(queryParameters: {'tenantId': tenantId});

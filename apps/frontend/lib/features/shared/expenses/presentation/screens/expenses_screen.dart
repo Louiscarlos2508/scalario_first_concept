@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
+import 'package:frontend/features/shared/expenses/data/models/expense.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/expenses/presentation/widgets/expense_form.dart';
 import 'package:frontend/features/shared/expenses/presentation/widgets/expense_list_tile.dart';
@@ -63,6 +64,7 @@ class ExpensesScreen extends ConsumerWidget {
               final expense = expenses[index];
               return ExpenseListTile(
                 expense: expense,
+                onEdit: () => _openForm(context, existing: expense),
                 onDelete: () => _confirmDelete(context, ref, expense.id),
               );
             },
@@ -72,14 +74,14 @@ class ExpensesScreen extends ConsumerWidget {
     );
   }
 
-  void _openForm(BuildContext context) {
+  void _openForm(BuildContext context, {Expense? existing}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => const ExpenseForm(),
+      builder: (_) => ExpenseForm(existing: existing),
     );
   }
 

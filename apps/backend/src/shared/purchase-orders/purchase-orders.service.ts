@@ -157,6 +157,31 @@ export class PurchaseOrdersService {
     };
   }
 
+  async updateDraft(
+    id: string,
+    data: { notes?: string | null; expectedDate?: string | null },
+    tenantId?: string,
+  ) {
+    const po = await this.prisma.purchaseOrder.findFirst({
+      where: { id, ...(tenantId ? { tenantId } : {}) },
+    });
+    if (!po) throw new NotFoundException(`PurchaseOrder ${id} not found`);
+    if (po.status !== 'draft') {
+      throw new BadRequestException('Only draft purchase orders can be edited');
+    }
+
+    return this.prisma.purchaseOrder.update({
+      where: { id },
+      data: {
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.expectedDate !== undefined && {
+          expectedDate: data.expectedDate ? new Date(data.expectedDate) : null,
+        }),
+      },
+      include: { lines: true, supplier: true },
+    });
+  }
+
   async updateStatus(id: string, newStatus: string, tenantId?: string, userId?: string | null) {
     const po = await this.prisma.purchaseOrder.findFirst({
       where: { id, ...(tenantId ? { tenantId } : {}) },

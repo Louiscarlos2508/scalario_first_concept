@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InventoryService } from '../inventory/inventory.service';
@@ -108,6 +108,30 @@ export class ClientOrdersService {
   }
 
   // ── /confirm ──────────────────────────────────────────────────────────────
+
+  async updateDraft(
+    id: string,
+    tenantId: string,
+    data: { notes?: string | null; depositAmount?: number; desiredDeliveryDate?: string | null },
+  ) {
+    const order = await this.prisma.clientOrder.findFirst({ where: { id, tenantId } });
+    if (!order) throw new NotFoundException(`ClientOrder ${id} not found`);
+    if (order.status !== 'draft') {
+      throw new BadRequestException('Only draft client orders can be edited');
+    }
+
+    return this.prisma.clientOrder.update({
+      where: { id },
+      data: {
+        ...(data.notes !== undefined && { notes: data.notes }),
+        ...(data.depositAmount !== undefined && { depositAmount: data.depositAmount }),
+        ...(data.desiredDeliveryDate !== undefined && {
+          desiredDeliveryDate: data.desiredDeliveryDate ? new Date(data.desiredDeliveryDate) : null,
+        }),
+      },
+      include: { lines: true },
+    });
+  }
 
   async confirmOrder(id: string, tenantId: string, userId: string) {
     const order = await this.prisma.clientOrder.findFirst({

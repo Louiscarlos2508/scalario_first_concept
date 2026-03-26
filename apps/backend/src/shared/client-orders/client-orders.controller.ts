@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Req, HttpCode } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, HttpCode } from '@nestjs/common';
 import { ClientOrdersService } from './client-orders.service';
 import { CreateClientOrderDto } from './dto/create-client-order.dto';
 import { Roles } from '../../kernel/rbac/roles.decorator';
@@ -50,6 +50,18 @@ export class ClientOrdersController {
   @Roles('owner', 'manager', 'commercial')
   async getOne(@Param('id') id: string, @Query('tenantId') tenantId: string) {
     return this.service.getOrder(id, tenantId);
+  }
+
+  // PATCH /client-orders/:id/details — edit draft header
+  @Patch(':id/details')
+  @Roles('owner', 'manager')
+  async updateDetails(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+    @Body()
+    body: { notes?: string | null; depositAmount?: number; desiredDeliveryDate?: string | null },
+  ) {
+    return this.service.updateDraft(id, tenantId, body);
   }
 
   // POST /client-orders/:id/confirm

@@ -124,6 +124,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _receiptHeaderCtrl = TextEditingController();
   final _receiptFooterCtrl = TextEditingController();
 
+  // Freshness thresholds (FR84)
+  final _greenThresholdCtrl = TextEditingController();
+  final _orangeThresholdCtrl = TextEditingController();
+  bool _savingFreshness = false;
+
+  // Daily summary notifications (FR86)
+  bool _dailySummaryEnabled = false;
+  final _dailySummaryTimeCtrl = TextEditingController(text: '18:00');
+  bool _savingNotification = false;
+
+  // Return policy (FR98)
+  final _returnPolicyDaysCtrl = TextEditingController();
+  bool _requiresReason = true;
+  bool _requiresApproval = false;
+  bool _savingReturnPolicy = false;
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +155,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _shopAddressCtrl.dispose();
     _receiptHeaderCtrl.dispose();
     _receiptFooterCtrl.dispose();
+    _greenThresholdCtrl.dispose();
+    _orangeThresholdCtrl.dispose();
+    _dailySummaryTimeCtrl.dispose();
+    _returnPolicyDaysCtrl.dispose();
     super.dispose();
   }
 
@@ -150,6 +170,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _shopNameCtrl.text = info['name'] as String? ?? '';
     _shopAddressCtrl.text = info['address'] as String? ?? '';
     _shopPhoneCtrl.text = info['phone'] as String? ?? '';
+    // Freshness thresholds (FR84)
+    _greenThresholdCtrl.text = (info['freshnessGreenThreshold'] ?? 50).toString();
+    _orangeThresholdCtrl.text = (info['freshnessOrangeThreshold'] ?? 20).toString();
+    // Daily summary (FR86)
+    _dailySummaryTimeCtrl.text = info['dailySummaryTime'] as String? ?? '18:00';
+    // Return policy (FR98)
+    _returnPolicyDaysCtrl.text = (info['returnPolicyDays'] ?? 30).toString();
+    setState(() {
+      _dailySummaryEnabled = info['dailySummaryEnabled'] as bool? ?? false;
+      _requiresReason = info['returnRequiresReason'] as bool? ?? true;
+      _requiresApproval = info['returnRequiresApproval'] as bool? ?? false;
+    });
   }
 
   Future<void> _loadReceiptPrefs() async {
@@ -216,6 +248,112 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _saveFreshnessThresholds() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _savingFreshness = true);
+    try {
+      final green = int.tryParse(_greenThresholdCtrl.text.trim()) ?? 50;
+      final orange = int.tryParse(_orangeThresholdCtrl.text.trim()) ?? 20;
+      final response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}/organizations/freshness-thresholds'),
+        headers: ApiConstants.headers(tenantId: tenantId, token: _token()),
+        body: jsonEncode({'greenThreshold': green, 'orangeThreshold': orange}),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ref.invalidate(tenantInfoProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Seuils de fraîcheur enregistrés')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur : ${response.statusCode}'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: AppColors.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _savingFreshness = false);
+    }
+  }
+
+  Future<void> _saveNotificationSettings() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _savingNotification = true);
+    try {
+      final response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}/organizations/notification-settings'),
+        headers: ApiConstants.headers(tenantId: tenantId, token: _token()),
+        body: jsonEncode({
+          'dailySummaryEnabled': _dailySummaryEnabled,
+          'dailySummaryTime': _dailySummaryTimeCtrl.text.trim(),
+        }),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ref.invalidate(tenantInfoProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifications enregistrées')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur : ${response.statusCode}'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: AppColors.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _savingNotification = false);
+    }
+  }
+
+  Future<void> _saveReturnPolicy() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _savingReturnPolicy = true);
+    try {
+      final days = int.tryParse(_returnPolicyDaysCtrl.text.trim()) ?? 30;
+      final response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}/organizations/return-policy'),
+        headers: ApiConstants.headers(tenantId: tenantId, token: _token()),
+        body: jsonEncode({
+          'returnPolicyDays': days,
+          'returnRequiresReason': _requiresReason,
+          'returnRequiresApproval': _requiresApproval,
+        }),
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        ref.invalidate(tenantInfoProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Politique retours enregistrée')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur : ${response.statusCode}'),
+          backgroundColor: AppColors.error,
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur : $e'),
+        backgroundColor: AppColors.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _savingReturnPolicy = false);
+    }
+  }
+
   Future<void> _confirmLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -275,6 +413,185 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _showInviteDialog(String tenantId) async {
+    final emailCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    String selectedRole = 'commercial';
+    bool sending = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Inviter un membre'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email *'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                decoration:
+                    const InputDecoration(labelText: 'Nom complet (optionnel)'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                decoration: const InputDecoration(labelText: 'Rôle'),
+                items: const [
+                  DropdownMenuItem(value: 'manager', child: Text('Manager')),
+                  DropdownMenuItem(
+                      value: 'commercial', child: Text('Commercial')),
+                ],
+                onChanged: (v) =>
+                    setDialogState(() => selectedRole = v ?? selectedRole),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: sending
+                  ? null
+                  : () async {
+                      final email = emailCtrl.text.trim();
+                      if (email.isEmpty) return;
+                      setDialogState(() => sending = true);
+                      try {
+                        final body = <String, dynamic>{
+                          'email': email,
+                          'role': selectedRole,
+                        };
+                        if (nameCtrl.text.trim().isNotEmpty) {
+                          body['fullName'] = nameCtrl.text.trim();
+                        }
+                        final response = await http.post(
+                          Uri.parse(
+                              '${ApiConstants.baseUrl}/organizations/$tenantId/invite'),
+                          headers: ApiConstants.headers(
+                              tenantId: tenantId, token: _token()),
+                          body: jsonEncode(body),
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.of(ctx).pop();
+                        if (response.statusCode == 200 ||
+                            response.statusCode == 201) {
+                          ref.invalidate(tenantUsersProvider);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Invitation envoyée')),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Erreur : ${response.statusCode}'),
+                              backgroundColor: AppColors.error,
+                            ));
+                          }
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Erreur : $e'),
+                            backgroundColor: AppColors.error,
+                          ));
+                        }
+                      }
+                    },
+              child: const Text('Inviter'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showChangeRoleDialog(
+      String tenantId, String userId, String currentRole) async {
+    String selectedRole =
+        currentRole == 'owner' ? 'manager' : currentRole;
+    bool saving = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Changer le rôle'),
+          content: DropdownButtonFormField<String>(
+            value: selectedRole,
+            decoration: const InputDecoration(labelText: 'Nouveau rôle'),
+            items: const [
+              DropdownMenuItem(value: 'manager', child: Text('Manager')),
+              DropdownMenuItem(
+                  value: 'commercial', child: Text('Commercial')),
+            ],
+            onChanged: (v) =>
+                setDialogState(() => selectedRole = v ?? selectedRole),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      setDialogState(() => saving = true);
+                      try {
+                        final response = await http.patch(
+                          Uri.parse(
+                              '${ApiConstants.baseUrl}/organizations/$tenantId/members/$userId'),
+                          headers: ApiConstants.headers(
+                              tenantId: tenantId, token: _token()),
+                          body: jsonEncode({'role': selectedRole}),
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.of(ctx).pop();
+                        if (response.statusCode == 200 ||
+                            response.statusCode == 204) {
+                          ref.invalidate(tenantUsersProvider);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Rôle mis à jour')),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Erreur : ${response.statusCode}'),
+                              backgroundColor: AppColors.error,
+                            ));
+                          }
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text('Erreur : $e'),
+                            backgroundColor: AppColors.error,
+                          ));
+                        }
+                      }
+                    },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Build ───────────────────────────────────────────────────────────────────
@@ -373,6 +690,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildUsersSection(roleLabels),
+            ],
+
+            // ── 4b. Fraîcheur (owner seulement) ──────────────────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildFreshnessSection(),
+            ],
+
+            // ── 4c. Récapitulatif journalier (owner seulement) ────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildNotificationSection(),
+            ],
+
+            // ── 4d. Politique de retours (owner seulement) ───────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildReturnPolicySection(),
             ],
 
             // ── 5. Modules actifs (owner + manager) ──────────────────────────
@@ -515,6 +850,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildUsersSection(Map<String, dynamic> roleLabels) {
+    final tenantId = ref.read(activeTenantProvider) ?? '';
     final usersAsync = ref.watch(tenantUsersProvider);
     return _section('Utilisateurs', [
       usersAsync.when(
@@ -525,59 +861,194 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               .copyWith(color: AppColors.textSecondary),
         ),
         data: (users) {
-          if (users.isEmpty) {
-            return Text(
-              'Aucun utilisateur trouvé.',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondary),
-            );
-          }
           return Column(
-            children: users.map((u) {
-              final email = u['email'] as String? ?? '—';
-              final fullName = u['fullName'] as String?;
-              final userRole = u['role'] as String? ?? '';
-              final label = getRoleLabel(userRole, roleLabels);
-              final displayName = (fullName != null && fullName.isNotEmpty)
-                  ? fullName
-                  : email;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 2),
-                      child: Icon(Icons.person_outline,
-                          size: 16, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(displayName, style: AppTextStyles.bodySmall),
-                          if (fullName != null && fullName.isNotEmpty)
-                            Text(
-                              email,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      label,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ],
+            children: [
+              if (users.isEmpty)
+                Text(
+                  'Aucun utilisateur trouvé.',
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.textSecondary),
                 ),
-              );
-            }).toList(),
+              ...users.map((u) {
+                final email = u['email'] as String? ?? '—';
+                final fullName = u['fullName'] as String?;
+                final userId = u['userId'] as String? ?? '';
+                final userRole = u['role'] as String? ?? '';
+                final label = getRoleLabel(userRole, roleLabels);
+                final displayName = (fullName != null && fullName.isNotEmpty)
+                    ? fullName
+                    : email;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.person_outline,
+                            size: 16, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(displayName, style: AppTextStyles.bodySmall),
+                            if (fullName != null && fullName.isNotEmpty)
+                              Text(
+                                email,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        label,
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.primary),
+                      ),
+                      if (userRole != 'owner')
+                        PopupMenuButton<String>(
+                          iconSize: 18,
+                          padding: EdgeInsets.zero,
+                          tooltip: 'Actions',
+                          onSelected: (action) {
+                            if (action == 'change_role') {
+                              _showChangeRoleDialog(tenantId, userId, userRole);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(
+                              value: 'change_role',
+                              child: Text('Changer le rôle'),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.person_add_outlined),
+                  label: const Text('Inviter un membre'),
+                  onPressed: () => _showInviteDialog(tenantId),
+                ),
+              ),
+            ],
           );
         },
+      ),
+    ]);
+  }
+
+  Widget _buildFreshnessSection() {
+    return _section('Seuils de fraîcheur (Lots)', [
+      const Text(
+        'Définissez les seuils de stock pour les alertes de fraîcheur.',
+        style: TextStyle(fontSize: 12, color: Colors.grey),
+      ),
+      const SizedBox(height: 12),
+      _field(
+        controller: _greenThresholdCtrl,
+        label: 'Seuil vert (unités)',
+        hint: '50',
+        keyboardType: TextInputType.number,
+      ),
+      const SizedBox(height: 12),
+      _field(
+        controller: _orangeThresholdCtrl,
+        label: 'Seuil orange (unités)',
+        hint: '20',
+        keyboardType: TextInputType.number,
+      ),
+      const SizedBox(height: 16),
+      Align(
+        alignment: Alignment.centerRight,
+        child: FilledButton(
+          onPressed: _savingFreshness ? null : _saveFreshnessThresholds,
+          child: _savingFreshness
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Enregistrer'),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildNotificationSection() {
+    return _section('Récapitulatif journalier', [
+      SwitchListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Activer le récapitulatif quotidien'),
+        value: _dailySummaryEnabled,
+        onChanged: (v) => setState(() => _dailySummaryEnabled = v),
+      ),
+      if (_dailySummaryEnabled) ...[
+        const SizedBox(height: 8),
+        _field(
+          controller: _dailySummaryTimeCtrl,
+          label: "Heure d'envoi (HH:mm)",
+          hint: '18:00',
+        ),
+      ],
+      const SizedBox(height: 12),
+      Align(
+        alignment: Alignment.centerRight,
+        child: FilledButton(
+          onPressed: _savingNotification ? null : _saveNotificationSettings,
+          child: _savingNotification
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Enregistrer'),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildReturnPolicySection() {
+    return _section('Politique de retours', [
+      _field(
+        controller: _returnPolicyDaysCtrl,
+        label: 'Délai de retour (jours)',
+        hint: '30',
+        keyboardType: TextInputType.number,
+      ),
+      const SizedBox(height: 8),
+      SwitchListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Motif obligatoire'),
+        value: _requiresReason,
+        onChanged: (v) => setState(() => _requiresReason = v),
+      ),
+      SwitchListTile(
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Approbation requise'),
+        value: _requiresApproval,
+        onChanged: (v) => setState(() => _requiresApproval = v),
+      ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: FilledButton(
+          onPressed: _savingReturnPolicy ? null : _saveReturnPolicy,
+          child: _savingReturnPolicy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Enregistrer'),
+        ),
       ),
     ]);
   }

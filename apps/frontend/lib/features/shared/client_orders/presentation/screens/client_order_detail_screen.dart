@@ -201,6 +201,24 @@ class ClientOrderDetailScreen extends ConsumerWidget {
       actions.add(_actionBtn('Encaisser', Colors.green, () => callTransition(
             () => repo.payOrder(order.id, tenantId: tenantId))));
     }
+    if (order.status == 'draft' && isOwnerOrManager) {
+      actions.add(_actionBtn('Modifier', Colors.grey.shade700, () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          builder: (_) => _EditClientOrderSheet(
+            order: order,
+            onSuccess: () {
+              ref.invalidate(clientOrderDetailProvider(orderId));
+              ref.invalidate(clientOrdersProvider);
+            },
+          ),
+        );
+      }));
+    }
     if ((order.status == 'draft' || order.status == 'confirmed') &&
         isOwnerOrManager) {
       actions.add(_actionBtn('Annuler', Colors.red, () async {
@@ -249,13 +267,132 @@ class ClientOrderDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Text('$label  ',
-              style: const TextStyle(color: Colors.grey)),
+          Text('$label  ', style: const TextStyle(color: Colors.grey)),
           Expanded(
             child: Text(value,
                 style: TextStyle(
                     fontWeight:
                         bold ? FontWeight.bold : FontWeight.normal)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Edit draft client order sheet ─────────────────────────────────────────────
+
+class _EditClientOrderSheet extends ConsumerStatefulWidget {
+  final ClientOrder order;
+  final VoidCallback onSuccess;
+
+  const _EditClientOrderSheet({required this.order, required this.onSuccess});
+
+  @override
+  ConsumerState<_EditClientOrderSheet> createState() =>
+      _EditClientOrderSheetState();
+}
+
+class _EditClientOrderSheetState extends ConsumerState<_EditClientOrderSheet> {
+  late final TextEditingController _notesCtrl;
+  late final TextEditingController _depositCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesCtrl = TextEditingController(text: widget.order.notes ?? '');
+    _depositCtrl = TextEditingController(
+      text: widget.order.depositAmount != null &&
+              widget.order.depositAmount! > 0
+          ? widget.order.depositAmount!.toStringAsFixed(0)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    _depositCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(clientOrderRepositoryProvider);
+      final deposit = double.tryParse(_depositCtrl.text.trim());
+      await repo.updateDraft(
+        widget.order.id,
+        tenantId: tenantId,
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        depositAmount: deposit,
+      );
+      widget.onSuccess();
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande mise à jour'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Modifier la commande',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _notesCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Notes',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _depositCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Acompte (FCFA)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Enregistrer'),
           ),
         ],
       ),

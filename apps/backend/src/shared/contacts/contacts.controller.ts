@@ -2,10 +2,13 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
   Req,
+  HttpCode,
 } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { RequiresModule } from '../../kernel/modules/module.decorator';
@@ -47,6 +50,27 @@ export class ContactsController {
     @Query('contactType') contactType?: string,
   ) {
     return this.contactsService.searchContacts(tenantId, query, contactType);
+  }
+
+  @Patch(':id')
+  @Roles('owner', 'commercial')
+  async updateContact(
+    @Param('id') id: string,
+    @Body() body: { name?: string; phone?: string; email?: string; address?: string },
+    @Req() req: any,
+  ) {
+    const userId = req.user?.sub ?? null;
+    const tenantId = req.tenantId ?? body['tenantId'];
+    return this.contactsService.updateContact(id, body, tenantId, userId);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @Roles('owner')
+  async deleteContact(@Param('id') id: string, @Req() req: any) {
+    const tenantId = req.tenantId;
+    const userId = req.user?.sub ?? null;
+    return this.contactsService.deleteContact(id, tenantId, userId);
   }
 
   @Post(':id/settle')

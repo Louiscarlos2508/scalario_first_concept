@@ -61,6 +61,34 @@ export class ExpenseService {
     });
   }
 
+  async updateExpense(
+    id: string,
+    tenantId: string,
+    data: {
+      label?: string;
+      amount?: number;
+      category?: string;
+      date?: string;
+      notes?: string | null;
+    },
+  ) {
+    const expense = await this.prisma.expense.findFirst({
+      where: { id, tenantId, isDeleted: false },
+    });
+    if (!expense) throw new NotFoundException(`Expense ${id} not found.`);
+
+    return this.prisma.expense.update({
+      where: { id },
+      data: {
+        ...(data.label !== undefined && { label: data.label }),
+        ...(data.amount !== undefined && { amount: new Prisma.Decimal(data.amount) }),
+        ...(data.category !== undefined && { category: data.category }),
+        ...(data.date !== undefined && { date: new Date(data.date) }),
+        ...(data.notes !== undefined && { notes: data.notes }),
+      },
+    });
+  }
+
   async getTotalExpenses(params: {
     tenantId: string;
     from?: string;

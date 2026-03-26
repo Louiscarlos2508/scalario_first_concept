@@ -104,6 +104,59 @@ export class ContactsService {
     return this.prisma.contact.findUnique({ where: { id } });
   }
 
+  async updateContact(
+    id: string,
+    data: { name?: string; phone?: string; email?: string; address?: string },
+    tenantId: string | null,
+    userId: string | null,
+  ) {
+    const before = await this.prisma.contact.findUnique({ where: { id } });
+    const updated = await this.prisma.contact.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.email !== undefined && { email: data.email }),
+        ...(data.address !== undefined && { address: data.address }),
+      },
+    });
+
+    if (tenantId) {
+      await this.auditLog.log({
+        tenantId,
+        userId,
+        action: 'UPDATE',
+        entity: 'Contact',
+        entityId: id,
+        before: { name: before?.name, phone: before?.phone, email: before?.email },
+        after: { name: updated.name, phone: updated.phone, email: updated.email },
+      });
+    }
+
+    return updated;
+  }
+
+  async deleteContact(id: string, tenantId: string | null, userId: string | null) {
+    const updated = await this.prisma.contact.update({
+      where: { id },
+      data: { isDeleted: true },
+    });
+
+    if (tenantId) {
+      await this.auditLog.log({
+        tenantId,
+        userId,
+        action: 'DELETE',
+        entity: 'Contact',
+        entityId: id,
+        before: { name: updated.name },
+        after: { isDeleted: true },
+      });
+    }
+
+    return updated;
+  }
+
   async updateBalance(contactId: string, amount: number) {
     const contact = await this.prisma.contact.update({
       where: { id: contactId },

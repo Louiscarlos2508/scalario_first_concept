@@ -87,6 +87,43 @@ class ExpenseRepository {
     throw Exception('listExpenses failed: ${response.statusCode} — ${response.body}');
   }
 
+  /// PATCH /retail/expenses/:id — updates an expense.
+  Future<Expense> update(
+    String id, {
+    required String tenantId,
+    String? label,
+    double? amount,
+    String? category,
+    DateTime? date,
+    String? notes,
+  }) async {
+    final body = <String, dynamic>{
+      'label': ?label,
+      'amount': ?amount,
+      'category': ?category,
+      if (date != null)
+        'date':
+            '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+      if (notes != null) 'notes': notes.isEmpty ? null : notes,
+    };
+
+    final uri = Uri.parse('${ApiConstants.baseUrl}/retail/expenses/$id')
+        .replace(queryParameters: {'tenantId': tenantId});
+
+    final response = await _httpClient.patch(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      return Expense.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception(
+        'updateExpense failed: ${response.statusCode} — ${response.body}');
+  }
+
   /// DELETE /retail/expenses/:id — soft-deletes an expense.
   Future<void> delete(String id, {required String tenantId}) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/retail/expenses/$id')

@@ -7,7 +7,9 @@ import 'package:frontend/features/shared/expenses/data/models/expense.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 
 class ExpenseForm extends ConsumerStatefulWidget {
-  const ExpenseForm({super.key});
+  final Expense? existing;
+
+  const ExpenseForm({super.key, this.existing});
 
   @override
   ConsumerState<ExpenseForm> createState() => _ExpenseFormState();
@@ -22,6 +24,21 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
   String _category = 'LOYER';
   DateTime _date = DateTime.now();
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _labelController.text = e.label;
+      _amountController.text = e.amount.toString();
+      _notesController.text = e.notes ?? '';
+      _category = e.category;
+      _date = e.date.toLocal();
+    }
+  }
 
   @override
   void dispose() {
@@ -40,25 +57,40 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
     setState(() => _isSubmitting = true);
     try {
       final repo = ref.read(expenseRepositoryProvider);
-      await repo.create(
-        tenantId: tenantId,
-        label: _labelController.text.trim(),
-        amount: double.parse(_amountController.text.trim()),
-        category: _category,
-        date: _date,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
+      final notes = _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim();
+
+      if (_isEditing) {
+        await repo.update(
+          widget.existing!.id,
+          tenantId: tenantId,
+          label: _labelController.text.trim(),
+          amount: double.parse(_amountController.text.trim()),
+          category: _category,
+          date: _date,
+          notes: notes,
+        );
+      } else {
+        await repo.create(
+          tenantId: tenantId,
+          label: _labelController.text.trim(),
+          amount: double.parse(_amountController.text.trim()),
+          category: _category,
+          date: _date,
+          notes: notes,
+        );
+      }
 
       ref.invalidate(expensesProvider);
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            key: Key('snackbar_expense_created'),
-            content: Text('Dépense enregistrée'),
+          SnackBar(
+            key: const Key('snackbar_expense_saved'),
+            content: Text(
+                _isEditing ? 'Dépense modifiée' : 'Dépense enregistrée'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -93,7 +125,10 @@ class _ExpenseFormState extends ConsumerState<ExpenseForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Nouvelle dépense', style: AppTextStyles.titleLarge),
+            Text(
+              _isEditing ? 'Modifier la dépense' : 'Nouvelle dépense',
+              style: AppTextStyles.titleLarge,
+            ),
             const SizedBox(height: 20),
 
             // Label

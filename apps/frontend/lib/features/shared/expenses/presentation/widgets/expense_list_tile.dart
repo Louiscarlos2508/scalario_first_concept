@@ -8,11 +8,13 @@ final _fcfa = NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigi
 class ExpenseListTile extends StatelessWidget {
   final Expense expense;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   const ExpenseListTile({
     super.key,
     required this.expense,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -53,7 +55,13 @@ class ExpenseListTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 4),
+            IconButton(
+              key: Key('expense_edit_${expense.id}'),
+              icon: const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+              tooltip: 'Modifier',
+              onPressed: onEdit,
+            ),
             IconButton(
               key: Key('expense_delete_${expense.id}'),
               icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary),

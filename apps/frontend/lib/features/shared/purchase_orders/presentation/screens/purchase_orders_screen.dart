@@ -332,6 +332,14 @@ class _PurchaseOrderCard extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Modifier la commande'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _openEditSheet(context, ref);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.check_circle_outline,
                   color: Colors.blue),
               title: const Text('Confirmer la commande'),
@@ -342,6 +350,20 @@ class _PurchaseOrderCard extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openEditSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _EditPoSheet(
+        order: order,
+        onSuccess: () => ref.invalidate(purchaseOrdersProvider),
       ),
     );
   }
@@ -372,5 +394,136 @@ class _PurchaseOrderCard extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+// ── Edit draft PO sheet (notes + expected date only) ─────────────────────────
+
+class _EditPoSheet extends ConsumerStatefulWidget {
+  final PurchaseOrderLocal order;
+  final VoidCallback onSuccess;
+
+  const _EditPoSheet({required this.order, required this.onSuccess});
+
+  @override
+  ConsumerState<_EditPoSheet> createState() => _EditPoSheetState();
+}
+
+class _EditPoSheetState extends ConsumerState<_EditPoSheet> {
+  late final TextEditingController _notesCtrl;
+  DateTime? _expectedDate;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesCtrl = TextEditingController(text: widget.order.notes ?? '');
+    _expectedDate = widget.order.expectedDate;
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final tenantId = ref.read(activeTenantProvider);
+    if (tenantId == null) return;
+    setState(() => _saving = true);
+    try {
+      final repo = ref.read(purchaseOrdersRepositoryProvider);
+      await repo.updateDraft(
+        widget.order.id,
+        tenantId: tenantId,
+        notes: _notesCtrl.text.trim(),
+        expectedDate: _expectedDate,
+        clearDate: _expectedDate == null,
+      );
+      widget.onSuccess();
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande mise à jour'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel = _expectedDate != null
+        ? '${_expectedDate!.day.toString().padLeft(2, '0')}/${_expectedDate!.month.toString().padLeft(2, '0')}/${_expectedDate!.year}'
+        : 'Non définie';
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Modifier la commande',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _notesCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Notes',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _expectedDate ?? DateTime.now(),
+                firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+              );
+              if (picked != null) setState(() => _expectedDate = picked);
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                labelText: 'Date prévue',
+                border: OutlineInputBorder(),
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              child: Text(dateLabel),
+            ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
   }
 }

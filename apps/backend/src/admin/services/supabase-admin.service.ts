@@ -53,6 +53,20 @@ export class SupabaseAdminService implements OnModuleInit {
   }
 
   /**
+   * Invites a user by email (sends invitation email, no password needed).
+   * Returns the created/existing user's id.
+   */
+  async inviteUserByEmail(email: string, fullName?: string): Promise<string> {
+    const { data, error } = await this.client.auth.admin.inviteUserByEmail(email, {
+      data: fullName ? { full_name: fullName } : undefined,
+    });
+    if (error || !data.user) {
+      throw new Error(error?.message ?? 'Failed to invite user');
+    }
+    return data.user.id;
+  }
+
+  /**
    * Bans a user by setting banned_until to far future (soft-disable).
    */
   async banUser(userId: string): Promise<void> {

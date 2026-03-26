@@ -91,9 +91,9 @@ class CartPanel extends ConsumerWidget {
                 tooltip: 'Ventes en attente',
               ),
               IconButton(
-                onPressed: isManager
-                    ? () => ref.read(cartProvider.notifier).clearCart()
-                    : () => _showPermissionDenied(context),
+                onPressed: cartState.items.isEmpty
+                    ? null
+                    : () => ref.read(cartProvider.notifier).clearCart(),
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
               ),
             ],
@@ -214,16 +214,14 @@ class CartPanel extends ConsumerWidget {
                                     builder: (context) =>
                                         DiscountDialog(item: item),
                                   )
-                              : () => _showPermissionDenied(context),
+                              : null,
                           tooltip: 'Appliquer une remise',
                         ),
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline),
-                          onPressed: isManager
-                              ? () => ref
-                                  .read(cartProvider.notifier)
-                                  .removeProduct(item.product)
-                              : () => _showPermissionDenied(context),
+                          onPressed: () => ref
+                              .read(cartProvider.notifier)
+                              .removeProduct(item.product),
                         ),
                       ],
                     ],
@@ -569,16 +567,6 @@ class CartPanel extends ConsumerWidget {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showPermissionDenied(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content:
-            Text('Permission refusée : rôle manager requis.'),
-        backgroundColor: Colors.red,
       ),
     );
   }

@@ -104,6 +104,40 @@ class PurchaseOrdersRepository {
         'createOrder failed: ${response.statusCode} — ${response.body}');
   }
 
+  /// PATCH /purchase-orders/:id/details — edit notes/expectedDate on draft POs.
+  Future<PurchaseOrderLocal> updateDraft(
+    String id, {
+    required String tenantId,
+    String? notes,
+    DateTime? expectedDate,
+    bool clearDate = false,
+  }) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}/purchase-orders/$id/details')
+        .replace(queryParameters: {'tenantId': tenantId});
+
+    final body = <String, dynamic>{
+      if (notes != null) 'notes': notes.isEmpty ? null : notes,
+      if (clearDate)
+        'expectedDate': null
+      else if (expectedDate != null)
+        'expectedDate':
+            '${expectedDate.year}-${expectedDate.month.toString().padLeft(2, '0')}-${expectedDate.day.toString().padLeft(2, '0')}',
+    };
+
+    final response = await _httpClient.patch(
+      uri,
+      headers: _authHeaders(tenantId: tenantId),
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 200) {
+      return PurchaseOrderLocal.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw Exception(
+        'updateDraft failed: ${response.statusCode} — ${response.body}');
+  }
+
   /// PATCH /purchase-orders/:id?tenantId=
   Future<PurchaseOrderLocal> updateStatus(
       String id, String status, String tenantId) async {

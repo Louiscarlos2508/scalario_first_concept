@@ -11,7 +11,9 @@ class SessionSyncAdapter implements SyncAdapter {
   SessionSyncAdapter({required SessionRepository sessionRepo})
       : _sessionRepo = sessionRepo;
 
-  /// Push pending sessions (UUID-idempotent upsert).
+  /// Push pending sessions.
+  /// OPEN sessions  → POST /retail/sessions/open  (idempotent via uuid)
+  /// CLOSED sessions → POST /retail/sessions/close/:uuid
   @override
   Future<void> pushPending(String baseUrl, String tenantId,
       {String? token}) async {
@@ -19,6 +21,12 @@ class SessionSyncAdapter implements SyncAdapter {
     if (pendingSessions.isEmpty) return;
 
     print('[SessionAdapter] Pushing ${pendingSessions.length} pending sessions');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'x-tenant-id': tenantId,
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
 
     for (final session in pendingSessions) {
       if (session.uuid.isEmpty ||
@@ -28,23 +36,55 @@ class SessionSyncAdapter implements SyncAdapter {
       }
 
       try {
-        final response = await http
+        // Step 1 — ensure session is opened on server (idempotent)
+        final openResponse = await http
             .post(
-              Uri.parse('$baseUrl/pos/sessions'),
-              headers: {
-                'Content-Type': 'application/json',
-                'x-tenant-id': tenantId,
-                if (token != null) 'Authorization': 'Bearer $token',
-              },
-              body: jsonEncode(session.toJson()),
+              Uri.parse('$baseUrl/retail/sessions/open'),
+              headers: headers,
+              body: jsonEncode({
+                'userId': session.userId,
+                'tenantId': session.tenantId,
+                'openingBalance': session.openingBalance,
+                'deviceId': session.deviceId,
+                'uuid': session.uuid,
+              }),
             )
             .timeout(const Duration(seconds: 10));
 
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          final data = jsonDecode(response.body);
-          await _sessionRepo.markAsSynced(
-              session.id, data['id'] ?? session.uuid);
-          print('[SessionAdapter] Session ${session.uuid} synced');
+        final openOk = openResponse.statusCode == 200 ||
+            openResponse.statusCode == 201 ||
+            openResponse.statusCode == 409; // already exists
+
+        if (!openOk) {
+          print('[SessionAdapter] Open failed for ${session.uuid}: ${openResponse.statusCode}');
+          continue;
+        }
+
+        // Step 2 — if session is CLOSED, push close as well
+        if (session.status == 'CLOSED' && session.closingBalance != null) {
+          final closeResponse = await http
+              .post(
+                Uri.parse('$baseUrl/retail/sessions/close/${session.uuid}'),
+                headers: headers,
+                body: jsonEncode({
+                  'closingBalance': session.closingBalance,
+                  if (session.theoreticalBalance != null)
+                    'theoreticalBalance': session.theoreticalBalance,
+                  if (session.variance != null) 'variance': session.variance,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
+
+          if (closeResponse.statusCode == 200 ||
+              closeResponse.statusCode == 201) {
+            await _sessionRepo.markAsSynced(session.id, session.uuid);
+            print('[SessionAdapter] Session ${session.uuid} closed & synced');
+          } else {
+            print('[SessionAdapter] Close failed for ${session.uuid}: ${closeResponse.statusCode}');
+          }
+        } else {
+          await _sessionRepo.markAsSynced(session.id, session.uuid);
+          print('[SessionAdapter] Session ${session.uuid} opened & synced');
         }
       } catch (e) {
         print('[SessionAdapter] Failed to push session ${session.uuid}: $e');

@@ -89,7 +89,15 @@ final sessionProvider =
       final repo = ref.watch(sessionRepositoryProvider);
       final orderRepo = ref.watch(orderRepositoryProvider);
       final userId = ref.watch(userProfileProvider).valueOrNull?.id ?? '';
-      return SessionNotifier(repo, orderRepo, userId: userId);
+      final tenantId = ref.watch(activeTenantProvider) ?? '';
+      return SessionNotifier(
+        repo,
+        orderRepo,
+        userId: userId,
+        tenantId: tenantId,
+        tokenGetter: () =>
+            Supabase.instance.client.auth.currentSession?.accessToken,
+      );
     });
 
 final syncServiceProvider = Provider<SyncService>((ref) {

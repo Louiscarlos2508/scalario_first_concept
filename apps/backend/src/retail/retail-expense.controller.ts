@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Body,
   Param,
@@ -48,6 +49,24 @@ export class RetailExpenseController {
     @Query('to') to?: string,
   ) {
     return this.expenseService.getExpenses({ tenantId, from, to });
+  }
+
+  // PATCH /retail/expenses/:id
+  @Patch(':id')
+  @Roles('owner', 'manager')
+  async updateExpense(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+    @Body()
+    body: {
+      label?: string;
+      amount?: number;
+      category?: string;
+      date?: string;
+      notes?: string | null;
+    },
+  ) {
+    return this.expenseService.updateExpense(id, tenantId, body);
   }
 
   // DELETE /retail/expenses/:id

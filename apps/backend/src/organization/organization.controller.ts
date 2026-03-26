@@ -47,4 +47,36 @@ export class OrganizationController {
     // Use authenticated tenant context (from TenantGuard), not URL param
     return this.organizationService.addMember(tenantId, userId, role);
   }
+
+  @Patch('return-policy')
+  @Roles('owner')
+  async updateReturnPolicy(
+    @Body() dto: { returnPolicyDays?: number; returnRequiresReason?: boolean; returnRequiresApproval?: boolean },
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.organizationService.updateReturnPolicy(tenantId, dto);
+  }
+
+  @Post(':id/invite')
+  @Roles('owner')
+  async inviteMember(
+    @Param('id') _tenantId: string,
+    @Body() dto: { email: string; role: string; fullName?: string },
+    @CurrentTenant() tenantId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.organizationService.inviteMember(tenantId, dto, user.id);
+  }
+
+  @Patch(':id/members/:userId')
+  @Roles('owner')
+  async changeMemberRole(
+    @Param('id') _tenantId: string,
+    @Param('userId') userId: string,
+    @Body('role') role: string,
+    @CurrentTenant() tenantId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.organizationService.changeMemberRole(tenantId, userId, role, user.id);
+  }
 }

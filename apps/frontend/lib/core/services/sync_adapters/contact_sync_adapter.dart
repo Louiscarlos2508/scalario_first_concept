@@ -31,15 +31,19 @@ class ContactSyncAdapter implements SyncAdapter {
       try {
         final response = await http
             .post(
-              Uri.parse('$baseUrl/pos/customers'),
+              Uri.parse('$baseUrl/contacts'),
               headers: {
                 'Content-Type': 'application/json',
                 'x-tenant-id': tenantId,
                 if (token != null) 'Authorization': 'Bearer $token',
               },
               body: jsonEncode({
+                'name': customer.name,
+                'phone': customer.phone,
+                'email': customer.email,
+                'address': customer.address,
+                'contactType': customer.contactType ?? 'customer',
                 'tenantId': customer.tenantId,
-                'data': customer.toJson(),
               }),
             )
             .timeout(const Duration(seconds: 10));
@@ -63,7 +67,7 @@ class ContactSyncAdapter implements SyncAdapter {
       {String? token}) async {
     final sinceStr = since?.toUtc().toIso8601String() ?? '';
     final url =
-        '$baseUrl/pos/customers?tenantId=$tenantId${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
+        '$baseUrl/contacts?tenantId=$tenantId${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
     final headers = {
       'Content-Type': 'application/json',
       'x-tenant-id': tenantId,
@@ -75,7 +79,10 @@ class ContactSyncAdapter implements SyncAdapter {
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final body = jsonDecode(response.body);
+        // /contacts returns {items, meta}; handle both formats
+        final List<dynamic> data =
+            body is Map ? (body['items'] as List? ?? []) : body as List;
         final customers = data.map((j) => Customer.fromJson(j)).toList();
 
         // Full sync (since == null) : remplacer tout le cache local

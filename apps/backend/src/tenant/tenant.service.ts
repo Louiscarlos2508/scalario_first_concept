@@ -44,6 +44,16 @@ export class TenantService {
       currency: tenant.currency,
       plan: tenant.plan,
       paymentMethods,
+      // FR84 — freshness thresholds
+      freshnessGreenThreshold: t.freshnessGreenThreshold ?? 50,
+      freshnessOrangeThreshold: t.freshnessOrangeThreshold ?? 20,
+      // FR86 — daily summary notifications
+      dailySummaryEnabled: t.dailySummaryEnabled ?? false,
+      dailySummaryTime: t.dailySummaryTime ?? '18:00',
+      // FR98 — return policy
+      returnPolicyDays: t.returnPolicyDays ?? 30,
+      returnRequiresReason: t.returnRequiresReason ?? true,
+      returnRequiresApproval: t.returnRequiresApproval ?? false,
     };
   }
 
