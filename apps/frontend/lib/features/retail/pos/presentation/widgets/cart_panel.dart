@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/retail/pos/presentation/state/cart_state.dart';
-import 'package:frontend/core/services/receipt_service.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/customer_selection_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/parked_carts_dialog.dart';
@@ -14,7 +13,6 @@ import 'package:frontend/features/shared/catalog/presentation/providers/catalog_
 import 'package:frontend/features/shared/catalog/presentation/widgets/serial_input_dialog.dart';
 import 'prescription_input_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart';
-import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 
@@ -33,7 +31,7 @@ class CartPanel extends ConsumerWidget {
     final isManager =
         userProfile?.role == 'manager' || userProfile?.role == 'owner';
 
-    // Listen for errors/success
+    // Listen for errors — success is handled by ReceiptDialog in onPressed
     ref.listen(checkoutControllerProvider, (_, state) {
       state.whenOrNull(
         error: (err, _) => ScaffoldMessenger.of(context).showSnackBar(
@@ -42,9 +40,6 @@ class CartPanel extends ConsumerWidget {
             backgroundColor: Colors.red,
           ),
         ),
-        data: (_) async {
-          _showPostCheckoutDialog(context, ref, cartState);
-        },
       );
     });
 
@@ -661,50 +656,4 @@ class CartPanel extends ConsumerWidget {
     );
   }
 
-  void _showPostCheckoutDialog(
-      BuildContext context, WidgetRef ref, CartState cart) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Icon(Icons.check_circle_outline,
-            color: Colors.green, size: 64),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Vente réussie !',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Total : ${_fcfa(cart.totalAmount)}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('FERMER'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final userProfile = ref.read(userProfileProvider).value;
-              final activeTenantId = ref.read(activeTenantProvider);
-
-              final tenantName = userProfile?.memberships
-                      .where((m) => m.tenantId == activeTenantId)
-                      .firstOrNull
-                      ?.tenantName ??
-                  'Scalario POS';
-              final docType = ref.read(businessTypeConfigProvider).valueOrNull?.documentType ?? 'receipt';
-
-              await ReceiptService.generateAndPrintReceipt(
-                  cart, tenantName, documentType: docType);
-              if (context.mounted) Navigator.pop(context);
-            },
-            icon: const Icon(Icons.print),
-            label: const Text('IMPRIMER LE REÇU'),
-          ),
-        ],
-      ),
-    );
-  }
 }

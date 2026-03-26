@@ -18,6 +18,8 @@ class ZReportService {
     final theoreticalCash = summary['theoreticalCash'] as double;
     final variance = physicalCount - theoreticalCash;
     final totalsByMethod = summary['totalsByMethod'] as Map<String, double>;
+    final countsByMethod =
+        (summary['countsByMethod'] as Map<String, int>?) ?? {};
     final totalSales = summary['totalSales'] as double;
     final orderCount = (summary['orderCount'] as int?) ?? 0;
     final splitCount = (summary['splitCount'] as int?) ?? 0;
@@ -60,8 +62,10 @@ class ZReportService {
                   style: const pw.TextStyle(fontSize: 10)),
               pw.Divider(),
               ...totalsByMethod.entries.map(
-                (e) => row(paymentMethodLabel(e.key),
-                    '${e.value.toStringAsFixed(0)} FCFA'),
+                (e) => row(
+                  '${paymentMethodLabel(e.key)} (${countsByMethod[e.key] ?? 0} tx)',
+                  '${e.value.toStringAsFixed(0)} FCFA',
+                ),
               ),
               if (splitCount > 0)
                 pw.Text(

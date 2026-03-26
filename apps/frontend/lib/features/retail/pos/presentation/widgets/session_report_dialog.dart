@@ -12,11 +12,13 @@ String _fcfa(double amount) =>
 class SessionReportDialog extends ConsumerWidget {
   final Map<String, dynamic> summary;
   final double physicalCount;
+  final String? varianceExplanation;
 
   const SessionReportDialog({
     super.key,
     required this.summary,
     required this.physicalCount,
+    this.varianceExplanation,
   });
 
   @override
@@ -24,9 +26,12 @@ class SessionReportDialog extends ConsumerWidget {
     final theoreticalCash = summary['theoreticalCash'] as double;
     final variance = physicalCount - theoreticalCash;
     final totalsByMethod = summary['totalsByMethod'] as Map<String, double>;
+    final countsByMethod =
+        (summary['countsByMethod'] as Map<String, int>?) ?? {};
     final orderCount = (summary['orderCount'] as int?) ?? 0;
     final splitCount = (summary['splitCount'] as int?) ?? 0;
     final userProfile = ref.watch(userProfileProvider).value;
+    final cashCollected = totalsByMethod['CASH'] ?? 0.0;
 
     return AlertDialog(
       title: Row(
@@ -41,61 +46,108 @@ class SessionReportDialog extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle(
-                '$orderCount vente${orderCount > 1 ? 's' : ''} — Encaissements par méthode'),
-            ...totalsByMethod.entries.map(
-              (e) => _buildRow(paymentMethodLabel(e.key), e.value),
-            ),
-            if (splitCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                child: Text(
-                  'Dont $splitCount paiement${splitCount > 1 ? 's' : ''} mixte${splitCount > 1 ? 's' : ''} (ventilés ci-dessus)',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
+            // ── SECTION 1 : VENTES ──────────────────────────────────────
+            _buildSectionTitle('Ventes de la session'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                '$orderCount vente${orderCount != 1 ? 's' : ''} au total'
+                '${splitCount > 0 ? ' — dont $splitCount mixte${splitCount > 1 ? 's' : ''}' : ''}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey),
               ),
-            const Divider(),
-            // Story 27-3 — 3-line Z-report: gross / returns / net
+            ),
+
+            // Ligne par méthode de paiement
+            ...totalsByMethod.entries
+                .where((e) => e.value > 0)
+                .map((e) => _buildPaymentMethodRow(
+                      method: e.key,
+                      amount: e.value,
+                      count: countsByMethod[e.key] ?? 0,
+                    )),
+
+            // Total ventes
+            const Divider(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total ($orderCount vente${orderCount != 1 ? "s" : ""})',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _fcfa(summary['totalSales'] as double),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+
+            // Retours si présents
             Builder(builder: (context) {
               final returns = summary['returns'] as Map<String, dynamic>?;
               final returnsCount = (returns?['count'] as num?)?.toInt() ?? 0;
-              if (returnsCount > 0) {
-                final grossSales = summary['grossSales'] as Map<String, dynamic>?;
-                final netSales = summary['netSales'] as Map<String, dynamic>?;
-                final grossCount = (grossSales?['count'] as num?)?.toInt() ?? 0;
-                final grossAmount = (grossSales?['amount'] as num?)?.toDouble() ?? (summary['totalSales'] as double);
-                final returnsAmount = (returns?['amount'] as num?)?.toDouble() ?? 0.0;
-                final netAmount = (netSales?['amount'] as num?)?.toDouble() ?? grossAmount;
-                return Column(
-                  children: [
-                    _buildRow('Ventes brutes ($grossCount transactions)', grossAmount),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Retours ($returnsCount retour${returnsCount > 1 ? 's' : ''})'),
-                          Text(
-                            '− ${_fcfa(returnsAmount)}',
-                            style: const TextStyle(color: Colors.red),
+              if (returnsCount == 0) return const SizedBox.shrink();
+
+              final grossSales =
+                  summary['grossSales'] as Map<String, dynamic>?;
+              final netSales = summary['netSales'] as Map<String, dynamic>?;
+              final grossAmount = (grossSales?['amount'] as num?)?.toDouble() ??
+                  (summary['totalSales'] as double);
+              final returnsAmount =
+                  (returns?['amount'] as num?)?.toDouble() ?? 0.0;
+              final netAmount =
+                  (netSales?['amount'] as num?)?.toDouble() ?? grossAmount;
+              final grossCount =
+                  (grossSales?['count'] as num?)?.toInt() ?? orderCount;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                  const SizedBox(height: 4),
+                  _buildRow(
+                      'Ventes brutes ($grossCount transactions)', grossAmount),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Retours ($returnsCount)'),
+                        Text(
+                          '− ${_fcfa(returnsAmount)}',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    _buildRow('Ventes nettes', netAmount, bold: true),
-                  ],
-                );
-              }
-              return _buildRow('Total des ventes', summary['totalSales'] as double, bold: true);
+                  ),
+                  const Divider(height: 8),
+                  _buildRow('Ventes nettes', netAmount, bold: true),
+                ],
+              );
             }),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 16),
+
+            // ── SECTION 2 : RÉCONCILIATION ESPÈCES ─────────────────────
             _buildSectionTitle('Réconciliation espèces'),
-            _buildRow('Fond de caisse', summary['openingBalance'] as double),
-            _buildRow('Espèces théoriques', theoreticalCash,
-                color: Colors.blue),
-            _buildRow('Compte physique', physicalCount,
-                color: Colors.black, bold: true),
-            const Divider(),
+
+            _buildRow('Fond d\'ouverture', summary['openingBalance'] as double),
+            _buildRow('+ Espèces encaissées', cashCollected,
+                color: Colors.green),
+            const Divider(height: 8),
+            _buildRow('= Caisse théorique', theoreticalCash,
+                color: Colors.blue, bold: true),
+
+            const SizedBox(height: 8),
+            _buildRow('Comptage physique', physicalCount, bold: true),
+            const Divider(height: 8),
             _buildRow(
               'Écart',
               variance,
@@ -104,6 +156,31 @@ class SessionReportDialog extends ConsumerWidget {
                   : (variance > 0 ? Colors.orange : Colors.red),
               bold: true,
             ),
+
+            // Explication de l'écart
+            if (variance != 0 && varianceExplanation != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Explication de l\'écart',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(varianceExplanation!),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -132,6 +209,53 @@ class SessionReportDialog extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildPaymentMethodRow({
+    required String method,
+    required double amount,
+    required int count,
+  }) {
+    final icon = _methodIcon(method);
+    final label = paymentMethodLabel(method);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label)),
+          Text(
+            '$count tx',
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _fcfa(amount),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _methodIcon(String method) {
+    switch (method.toUpperCase()) {
+      case 'CASH':
+        return Icons.payments_outlined;
+      case 'MOBILE_MONEY':
+        return Icons.phone_android_outlined;
+      case 'CARD':
+        return Icons.credit_card_outlined;
+      case 'CREDIT':
+        return Icons.account_balance_wallet_outlined;
+      case 'TRANSFER':
+        return Icons.swap_horiz_outlined;
+      case 'SPLIT':
+        return Icons.call_split_outlined;
+      default:
+        return Icons.attach_money;
+    }
   }
 
   Widget _buildSectionTitle(String title) {

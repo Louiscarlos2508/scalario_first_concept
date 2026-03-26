@@ -91,6 +91,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     final orders = await _orderRepository.getOrdersBySession(sessionId);
 
     final Map<String, double> totalsByMethod = {};
+    final Map<String, int> countsByMethod = {};
     double totalSales = 0;
     int orderCount = 0;
     int splitCount = 0;
@@ -109,22 +110,26 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
             final method = entry.key;
             final amount = (entry.value as num).toDouble();
             totalsByMethod[method] = (totalsByMethod[method] ?? 0) + amount;
+            countsByMethod[method] = (countsByMethod[method] ?? 0) + 1;
           }
         } catch (_) {
           // JSON malformé — fallback sur le total brut sous SPLIT
           totalsByMethod['SPLIT'] =
               (totalsByMethod['SPLIT'] ?? 0) + order.totalAmount;
+          countsByMethod['SPLIT'] = (countsByMethod['SPLIT'] ?? 0) + 1;
         }
       } else {
         final method = order.paymentMethod ?? 'CASH';
         totalsByMethod[method] =
             (totalsByMethod[method] ?? 0) + order.totalAmount;
+        countsByMethod[method] = (countsByMethod[method] ?? 0) + 1;
       }
     }
 
     return {
       'openingBalance': currentSession.openingBalance,
       'totalsByMethod': totalsByMethod,
+      'countsByMethod': countsByMethod,
       'totalSales': totalSales,
       'orderCount': orderCount,
       'splitCount': splitCount,
