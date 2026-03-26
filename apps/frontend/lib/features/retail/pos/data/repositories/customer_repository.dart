@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
@@ -15,14 +16,30 @@ class CustomerRepository {
     return _isarService.getAllCustomers();
   }
 
+  /// Returns only contacts of a given type from local Isar.
+  /// Records with null contactType are treated as 'customer'.
+  Future<List<Customer>> getContactsByType(String contactType) async {
+    final all = await _isarService.getAllCustomers();
+    return all
+        .where((c) => (c.contactType ?? 'customer') == contactType)
+        .toList();
+  }
+
   String? get _token =>
       Supabase.instance.client.auth.currentSession?.accessToken;
 
-  Future<List<Customer>> searchRemoteCustomers(String tenantId, String query) async {
+  Future<List<Customer>> searchRemoteCustomers(String tenantId, String query) =>
+      searchRemoteContacts(tenantId, query, contactType: 'customer');
+
+  Future<List<Customer>> searchRemoteContacts(
+    String tenantId,
+    String query, {
+    String contactType = 'customer',
+  }) async {
     try {
       final response = await http.get(
         Uri.parse(
-            '${ApiConstants.baseUrl}/contacts/search?tenantId=$tenantId&q=$query&contactType=customer'),
+            '${ApiConstants.baseUrl}/contacts/search?tenantId=$tenantId&q=$query&contactType=$contactType'),
         headers: ApiConstants.headers(tenantId: tenantId, token: _token),
       );
 
@@ -32,8 +49,32 @@ class CustomerRepository {
       }
       return [];
     } catch (e) {
-      print('Error searching remote customers: $e');
+      debugPrint('Error searching remote contacts: $e');
       return [];
+    }
+  }
+
+  /// Fetches suppliers from the server and caches them locally.
+  Future<List<Customer>> fetchSuppliersFromRemote(String tenantId) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '${ApiConstants.baseUrl}/contacts?tenantId=$tenantId&contactType=supplier'),
+        headers: ApiConstants.headers(tenantId: tenantId, token: _token),
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List<dynamic> data =
+            body is Map ? (body['items'] as List? ?? []) : body as List;
+        final suppliers = data.map((json) => Customer.fromJson(json)).toList();
+        await _isarService.saveCustomers(suppliers);
+        return suppliers;
+      }
+      return getContactsByType('supplier');
+    } catch (e) {
+      debugPrint('Error fetching suppliers: $e');
+      return getContactsByType('supplier');
     }
   }
 
@@ -75,9 +116,9 @@ class CustomerRepository {
       Uri.parse('${ApiConstants.baseUrl}/contacts/$id'),
       headers: ApiConstants.headers(tenantId: tenantId, token: _token),
       body: jsonEncode({
-        if (name != null) 'name': name,
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
+        'name': ?name,
+        'phone': ?phone,
+        'email': ?email,
       }),
     );
 
@@ -131,7 +172,7 @@ class CustomerRepository {
         await _isarService.saveCustomers(customers);
       }
     } catch (e) {
-      print('Error syncing customers: $e');
+      debugPrint('Error syncing customers: $e');
     }
   }
 
@@ -151,7 +192,7 @@ class CustomerRepository {
         throw Exception('Failed to settle debt: ${response.body}');
       }
     } catch (e) {
-      print('Error settling debt: $e');
+      debugPrint('Error settling debt: $e');
       rethrow;
     }
   }

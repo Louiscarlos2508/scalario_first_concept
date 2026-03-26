@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
@@ -23,7 +24,7 @@ class ContactSyncAdapter implements SyncAdapter {
     final pendingCustomers = await _customerRepo.getPendingCustomers();
     if (pendingCustomers.isEmpty) return;
 
-    print('[ContactAdapter] Pushing ${pendingCustomers.length} pending customers');
+    debugPrint('[ContactAdapter] Pushing ${pendingCustomers.length} pending customers');
 
     for (final customer in pendingCustomers) {
       if (customer.tenantId == null || customer.tenantId!.isEmpty) continue;
@@ -56,7 +57,7 @@ class ContactSyncAdapter implements SyncAdapter {
           }
         }
       } catch (e) {
-        print('[ContactAdapter] Failed to push customer ${customer.uuid}: $e');
+        debugPrint('[ContactAdapter] Failed to push customer ${customer.uuid}: $e');
       }
     }
   }
@@ -67,7 +68,7 @@ class ContactSyncAdapter implements SyncAdapter {
       {String? token}) async {
     final sinceStr = since?.toUtc().toIso8601String() ?? '';
     final url =
-        '$baseUrl/contacts?tenantId=$tenantId${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
+        '$baseUrl/contacts?tenantId=$tenantId&contactType=customer${sinceStr.isNotEmpty ? '&since=$sinceStr' : ''}';
     final headers = {
       'Content-Type': 'application/json',
       'x-tenant-id': tenantId,
@@ -92,13 +93,13 @@ class ContactSyncAdapter implements SyncAdapter {
 
         if (customers.isNotEmpty) {
           await _customerRepo.upsertCustomers(customers);
-          print('[ContactAdapter] Upserted ${customers.length} customers');
+          debugPrint('[ContactAdapter] Upserted ${customers.length} customers');
         }
 
         await _sessionRepo.updateLastSync('customers', DateTime.now().toUtc());
       }
     } catch (e) {
-      print('[ContactAdapter] Customer pull failed: $e');
+      debugPrint('[ContactAdapter] Customer pull failed: $e');
       rethrow;
     }
   }

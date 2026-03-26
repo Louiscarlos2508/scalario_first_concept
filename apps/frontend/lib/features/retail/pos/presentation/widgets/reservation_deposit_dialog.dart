@@ -82,7 +82,12 @@ class _ReservationDepositDialogState
       final tenantId = ref.read(activeTenantProvider) ?? '';
       final token = Supabase.instance.client.auth.currentSession?.accessToken;
       final uri = Uri.parse('${ApiConstants.baseUrl}/contacts').replace(
-        queryParameters: {'q': query, 'tenantId': tenantId, 'limit': '10'},
+        queryParameters: {
+          'q': query,
+          'tenantId': tenantId,
+          'limit': '10',
+          'contactType': 'customer',
+        },
       );
       final response = await http.get(
         uri,
