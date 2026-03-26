@@ -36,12 +36,12 @@ export class ReservationsService {
       data: {
         totalAmount: new Decimal(dto.depositAmount),
         itemsJson: dto.items as any,
-        paymentMethod: dto.paymentMethod,
+        paymentMethod: dto.paymentMethod ?? 'CASH',
         transactionType: 'reservation_deposit',
         tenantId,
-        createdBy: userId,
         customerId: dto.customerId,
-      } as any,
+        metadata: { createdBy: userId },
+      },
     });
 
     const reservation = await this.prisma.reservation.create({
@@ -61,7 +61,7 @@ export class ReservationsService {
     return reservation;
   }
 
-  async completeReservation(tenantId: string, id: string, dto: CompleteReservationDto) {
+  async completeReservation(tenantId: string, userId: string, id: string, dto: CompleteReservationDto) {
     const reservation = await this.prisma.reservation.findFirst({
       where: { id, tenantId },
     });
@@ -82,7 +82,8 @@ export class ReservationsService {
         transactionType: 'reservation_completion',
         tenantId,
         customerId: reservation.customerId,
-      } as any,
+        metadata: { createdBy: userId },
+      },
     });
 
     // Decrement stock for each reserved item
@@ -142,7 +143,7 @@ export class ReservationsService {
           transactionType: 'reservation_refund',
           tenantId,
           customerId: reservation.customerId,
-        } as any,
+        },
       });
     }
 
@@ -163,7 +164,7 @@ export class ReservationsService {
     if (status) where.status = status;
     if (customerId) where.customerId = customerId;
 
-    const [items, total] = await Promise.all([
+    const [reservations, total] = await Promise.all([
       this.prisma.reservation.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -172,6 +173,47 @@ export class ReservationsService {
       }),
       this.prisma.reservation.count({ where }),
     ]);
+
+    // Enrich with customer name/phone (no Prisma relation on Reservation)
+    const customerIds = [...new Set(reservations.map((r) => r.customerId).filter(Boolean))];
+    const contacts = customerIds.length
+      ? await this.prisma.contact.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, name: true, phone: true },
+        })
+      : [];
+    const contactMap = new Map(contacts.map((c) => [c.id, c]));
+
+    // Enrich itemsJson with catalog names for legacy rows that lack 'name'
+    const allCatalogIds = [
+      ...new Set(
+        reservations.flatMap((r) => {
+          const raw = Array.isArray(r.itemsJson) ? (r.itemsJson as any[]) : [];
+          return raw.filter((i) => !i.name && i.catalogItemId).map((i) => i.catalogItemId as string);
+        }),
+      ),
+    ];
+    const catalogItems = allCatalogIds.length
+      ? await this.prisma.catalogItem.findMany({
+          where: { id: { in: allCatalogIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const catalogNameMap = new Map(catalogItems.map((c) => [c.id, c.name]));
+
+    const items = reservations.map((r) => {
+      const rawItems = Array.isArray(r.itemsJson) ? (r.itemsJson as any[]) : [];
+      const enrichedItems = rawItems.map((item) => ({
+        ...item,
+        name: item.name ?? catalogNameMap.get(item.catalogItemId) ?? item.catalogItemId,
+      }));
+      return {
+        ...r,
+        itemsJson: enrichedItems,
+        customerName: contactMap.get(r.customerId)?.name ?? null,
+        customerPhone: contactMap.get(r.customerId)?.phone ?? null,
+      };
+    });
 
     return { items, meta: { total, page, limit, hasMore: skip + items.length < total } };
   }

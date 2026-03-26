@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query, Req } from '@nestjs/common';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { CompleteReservationDto } from './dto/complete-reservation.dto';
@@ -19,13 +19,13 @@ export class ReservationsController {
   }
 
   @Get('kpi')
-  @Roles('owner', 'manager')
+  @Roles('owner', 'manager', 'cashier', 'commercial')
   async getKpi(@Query('tenantId') tenantId: string) {
     return this.reservationsService.getKpi(tenantId);
   }
 
   @Get()
-  @Roles('owner', 'manager')
+  @Roles('owner', 'manager', 'cashier', 'commercial')
   async listReservations(
     @Query('tenantId') tenantId: string,
     @Query('status') status?: string,
@@ -46,8 +46,10 @@ export class ReservationsController {
     @Param('id') id: string,
     @Query('tenantId') tenantId: string,
     @Body() dto: CompleteReservationDto,
+    @Req() req: any,
   ) {
-    return this.reservationsService.completeReservation(tenantId, id, dto);
+    const userId = req.user?.sub ?? '';
+    return this.reservationsService.completeReservation(tenantId, userId, id, dto);
   }
 
   @Patch(':id/cancel')

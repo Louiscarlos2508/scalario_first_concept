@@ -13,6 +13,7 @@ import 'package:frontend/features/shared/catalog/presentation/providers/catalog_
 import 'package:frontend/features/shared/catalog/presentation/widgets/serial_input_dialog.dart';
 import 'prescription_input_dialog.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/pos_reservations_sheet.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 
@@ -294,6 +295,24 @@ class CartPanel extends ConsumerWidget {
                       label: const Text(
                         'RÉSERVATION',
                         style: TextStyle(color: Colors.purple),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        showDragHandle: true,
+                        builder: (_) => const FractionallySizedBox(
+                          heightFactor: 0.85,
+                          child: PosReservationsSheet(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.bookmark_added_outlined,
+                          color: Colors.teal),
+                      label: const Text(
+                        'EN COURS',
+                        style: TextStyle(color: Colors.teal),
                       ),
                     ),
                   ],

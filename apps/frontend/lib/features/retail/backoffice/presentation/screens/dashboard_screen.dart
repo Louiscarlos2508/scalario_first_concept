@@ -139,7 +139,7 @@ final _allNavScreens = <_NavScreenPair>[
 /// - 'purchase_orders' always included for manager (if module is active)
 const _roleAllowedModules = <String, Set<String>?>{
   'owner': null,
-  'manager': {'inventory', 'reports', 'transactions', 'purchase_orders'},
+  'manager': {'inventory', 'reports', 'transactions', 'purchase_orders', 'reservations'},
 };
 
 List<_NavScreenPair> _visiblePairs(

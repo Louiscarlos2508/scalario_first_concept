@@ -20,6 +20,22 @@ export class DailySummaryJob {
    */
   @Cron('* * * * *', { name: 'daily-summary-job' })
   async run() {
+    try {
+      await this._run();
+    } catch (err: any) {
+      if (
+        err?.code === 'P2024' ||
+        err?.message?.includes('starting up') ||
+        err?.message?.includes('57P03')
+      ) {
+        this.logger.warn('[DailySummaryJob] DB not ready yet, skipping run');
+        return;
+      }
+      this.logger.error('[DailySummaryJob] Failed:', err?.message);
+    }
+  }
+
+  private async _run() {
     const now = new Date();
     const todayDate = now.toISOString().slice(0, 10); // YYYY-MM-DD
 

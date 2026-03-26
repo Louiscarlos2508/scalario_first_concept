@@ -123,7 +123,7 @@ class _ReservationTile extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  reservation['customerId']?.toString().substring(0, 8) ?? '—',
+                  reservation['customerName']?.toString() ?? '—',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 if (createdAt != null)
@@ -133,7 +133,17 @@ class _ReservationTile extends ConsumerWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            // Items preview
+            ...(reservation['itemsJson'] as List<dynamic>? ?? [])
+                .take(2)
+                .map((item) => Text(
+                      '• ${item['name'] ?? 'Article'}',
+                      style: const TextStyle(
+                          fontSize: 11, color: Colors.grey),
+                      overflow: TextOverflow.ellipsis,
+                    )),
+            const SizedBox(height: 6),
             _row('Total :', _fcfa(totalAmount)),
             _row('Acompte :', _fcfa(depositAmount)),
             _row(
