@@ -14,8 +14,15 @@ String _fcfa(double amount) =>
 
 class ClientOrderFormScreen extends ConsumerStatefulWidget {
   final List<ClientOrderLineValue>? initialItems;
+  final bool isEmbedded;
+  final VoidCallback? onCreated;
 
-  const ClientOrderFormScreen({super.key, this.initialItems});
+  const ClientOrderFormScreen({
+    super.key,
+    this.initialItems,
+    this.isEmbedded = false,
+    this.onCreated,
+  });
 
   @override
   ConsumerState<ClientOrderFormScreen> createState() =>
@@ -33,7 +40,6 @@ class _ClientOrderFormScreenState
   DateTime? _desiredDeliveryDate;
   bool _isSubmitting = false;
 
-  // Each entry: nullable ClientOrderLineValue (null = incomplete line)
   final List<ClientOrderLineValue?> _lineValues = [];
   int _lineCount = 0;
 
@@ -85,8 +91,7 @@ class _ClientOrderFormScreenState
       return;
     }
 
-    final validLines =
-        _lineValues.whereType<ClientOrderLineValue>().toList();
+    final validLines = _lineValues.whereType<ClientOrderLineValue>().toList();
     if (validLines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -104,8 +109,7 @@ class _ClientOrderFormScreenState
 
       await repo.createOrder(
         tenantId: tenantId,
-        customerId:
-            _selectedCustomer!.remoteId ?? _selectedCustomer!.uuid,
+        customerId: _selectedCustomer!.remoteId ?? _selectedCustomer!.uuid,
         lines: validLines.map((l) => l.toJson()).toList(),
         depositAmount: deposit,
         notes: _notesController.text.trim().isEmpty
@@ -114,9 +118,29 @@ class _ClientOrderFormScreenState
         desiredDeliveryDate: _desiredDeliveryDate,
       );
 
-      ref.invalidate(clientOrdersProvider);
+      final userId = ref.read(userProfileProvider).valueOrNull?.id;
+      ref.invalidate(clientOrdersProvider(ClientOrdersFilter(createdBy: userId)));
 
-      if (mounted) {
+      if (!mounted) return;
+
+      if (widget.isEmbedded) {
+        // Reset form so user can create another order
+        setState(() {
+          _lineValues.clear();
+          _lineCount = 0;
+          _selectedCustomer = null;
+          _customerController.clear();
+          _depositController.clear();
+          _notesController.clear();
+          _desiredDeliveryDate = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Commande créée avec succès'),
+              backgroundColor: Colors.green),
+        );
+        widget.onCreated?.call();
+      } else {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -136,165 +160,154 @@ class _ClientOrderFormScreenState
     }
   }
 
+  Widget _buildFormContent(BuildContext context, List products) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── Client selection ──────────────────────────────────────────
+        Text('Client', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        _CustomerAutocomplete(
+          controller: _customerController,
+          onSelected: (c) => setState(() => _selectedCustomer = c),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Lines ─────────────────────────────────────────────────────
+        Row(
+          children: [
+            Text('Articles', style: Theme.of(context).textTheme.titleSmall),
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Ajouter un article'),
+              onPressed: _addLine,
+            ),
+          ],
+        ),
+        ...List.generate(_lineCount, (i) {
+          return ClientOrderLineFormWidget(
+            key: ValueKey('line_$i'),
+            products: List.from(products),
+            onRemove: () => _removeLine(i),
+            onChange: (val) => setState(() => _lineValues[i] = val),
+            initialValue: i < _lineValues.length ? _lineValues[i] : null,
+          );
+        }),
+        if (_lineCount == 0)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Aucun article — tapez "Ajouter un article"',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+        const SizedBox(height: 16),
+
+        // ── Optional fields ───────────────────────────────────────────
+        Text('Options', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.calendar_today_outlined),
+          title: Text(_desiredDeliveryDate == null
+              ? 'Date souhaitée (optionnel)'
+              : 'Date souhaitée : ${DateFormat('dd/MM/yyyy').format(_desiredDeliveryDate!)}'),
+          trailing: _desiredDeliveryDate != null
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () =>
+                      setState(() => _desiredDeliveryDate = null),
+                )
+              : null,
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: DateTime.now().add(const Duration(days: 1)),
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365)),
+            );
+            if (picked != null) {
+              setState(() => _desiredDeliveryDate = picked);
+            }
+          },
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _depositController,
+          decoration: const InputDecoration(
+            labelText: 'Acompte reçu (optionnel)',
+            suffixText: 'FCFA',
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _notesController,
+          decoration: const InputDecoration(
+            labelText: 'Notes (optionnel)',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        const SizedBox(height: 24),
+
+        // ── Total + submit ────────────────────────────────────────────
+        Row(
+          children: [
+            Text(
+              'Total : ${_fcfa(_total)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const Spacer(),
+            FilledButton(
+              onPressed: _isSubmitting ? null : _submit,
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Créer la commande'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productListProvider);
     final products = productsAsync.valueOrNull ?? [];
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle + title
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('Nouvelle commande client',
-                      style:
-                          TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(16),
-              children: [
-            // ── Client selection ────────────────────────────────────────
-            Text('Client', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
-            _CustomerAutocomplete(
-              controller: _customerController,
-              onSelected: (c) => setState(() => _selectedCustomer = c),
-            ),
-            const SizedBox(height: 16),
+    if (widget.isEmbedded) {
+      return Form(
+        key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: _buildFormContent(context, products),
+        ),
+      );
+    }
 
-            // ── Lines ───────────────────────────────────────────────────
-            Row(
-              children: [
-                Text('Articles',
-                    style: Theme.of(context).textTheme.titleSmall),
-                const Spacer(),
-                TextButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Ajouter un article'),
-                  onPressed: _addLine,
-                ),
-              ],
-            ),
-            ...List.generate(_lineCount, (i) {
-              return ClientOrderLineFormWidget(
-                key: ValueKey('line_$i'),
-                products: products,
-                onRemove: () => _removeLine(i),
-                onChange: (val) =>
-                    setState(() => _lineValues[i] = val),
-                initialValue: i < _lineValues.length ? _lineValues[i] : null,
-              );
-            }),
-            if (_lineCount == 0)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'Aucun article — tapez "Ajouter un article"',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            const SizedBox(height: 16),
-
-            // ── Optional fields ─────────────────────────────────────────
-            Text('Options', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 8),
-            // Desired delivery date
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: Text(_desiredDeliveryDate == null
-                  ? 'Date souhaitée (optionnel)'
-                  : 'Date souhaitée : ${DateFormat('dd/MM/yyyy').format(_desiredDeliveryDate!)}'),
-              trailing: _desiredDeliveryDate != null
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () =>
-                          setState(() => _desiredDeliveryDate = null),
-                    )
-                  : null,
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate:
-                      DateTime.now().add(const Duration(days: 1)),
-                  firstDate: DateTime.now(),
-                  lastDate:
-                      DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null) {
-                  setState(() => _desiredDeliveryDate = picked);
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _depositController,
-              decoration: const InputDecoration(
-                labelText: 'Acompte reçu (optionnel)',
-                suffixText: 'FCFA',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optionnel)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-
-            // ── Total + submit ──────────────────────────────────────────
-            Row(
-              children: [
-                Text(
-                  'Total : ${_fcfa(_total)}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Créer la commande'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('Nouvelle commande')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: _buildFormContent(context, products),
         ),
       ),
-    ],
-  ),
-);
+    );
   }
 }
 
@@ -328,8 +341,7 @@ class _CustomerAutocompleteState
     try {
       final tenantId = ref.read(activeTenantProvider) ?? '';
       final repo = ref.read(customerRepositoryProvider);
-      final results =
-          await repo.searchRemoteCustomers(tenantId, query);
+      final results = await repo.searchRemoteCustomers(tenantId, query);
       if (mounted) setState(() => _suggestions = results);
     } catch (_) {
       if (mounted) setState(() => _suggestions = []);

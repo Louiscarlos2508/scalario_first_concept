@@ -12,7 +12,7 @@ class ClientOrderKpis {
   factory ClientOrderKpis.fromJson(Map<String, dynamic> json) {
     return ClientOrderKpis(
       inProgressCount: (json['inProgressCount'] as num?)?.toInt() ?? 0,
-      pendingRevenue: (json['pendingRevenue'] as num?)?.toDouble() ?? 0.0,
+      pendingRevenue: double.tryParse(json['pendingRevenue']?.toString() ?? '0') ?? 0.0,
     );
   }
 
@@ -58,7 +58,9 @@ class ClientOrder {
       customerId: json['customerId'] as String? ?? '',
       customerName: json['customerName'] as String?,
       status: json['status'] as String? ?? 'draft',
-      depositAmount: (json['depositAmount'] as num?)?.toDouble(),
+      depositAmount: json['depositAmount'] != null
+          ? double.tryParse(json['depositAmount'].toString())
+          : null,
       notes: json['notes'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()

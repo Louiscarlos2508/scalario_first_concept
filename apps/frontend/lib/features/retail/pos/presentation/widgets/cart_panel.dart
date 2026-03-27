@@ -17,8 +17,7 @@ import 'package:frontend/features/retail/pos/presentation/widgets/pos_reservatio
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
-import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
-import 'package:frontend/features/shared/client_orders/presentation/widgets/client_order_line_form_widget.dart';
+import 'package:frontend/features/shared/client_orders/presentation/screens/client_orders_pos_sheet.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -325,33 +324,23 @@ class CartPanel extends ConsumerWidget {
                     ),
                     if (canAccessClientOrders)
                       OutlinedButton.icon(
-                        onPressed: () {
-                          final initialItems = cartState.items
-                              .where((i) =>
-                                  !i.isFreeItem && i.product.remoteId != null)
-                              .map((i) => ClientOrderLineValue(
-                                    catalogItemId: i.product.remoteId!,
-                                    variantId: i.variantId,
-                                    quantity: i.quantity,
-                                    unitPrice: i.unitPrice,
-                                  ))
-                              .toList();
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            builder: (_) => ClientOrderFormScreen(
-                              initialItems:
-                                  initialItems.isEmpty ? null : initialItems,
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.assignment_add,
-                            color: Colors.indigo),
-                        label: const Text(
-                          'COMMANDE',
-                          style: TextStyle(color: Colors.indigo),
+                        key: const Key('pos_client_order_button'),
+                        onPressed: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          useSafeArea: true,
+                          showDragHandle: true,
+                          builder: (_) => const FractionallySizedBox(
+                            heightFactor: 0.92,
+                            child: ClientOrdersPosSheet(),
+                          ),
                         ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.indigo,
+                          side: const BorderSide(color: Colors.indigo),
+                        ),
+                        icon: const Icon(Icons.assignment_outlined, size: 18),
+                        label: const Text('Commande'),
                       ),
                   ],
                 ),

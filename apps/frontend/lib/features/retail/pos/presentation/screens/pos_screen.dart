@@ -13,7 +13,6 @@ import '../../../../../core/widgets/barcode_listener.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
-import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_orders_commercial_screen.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/pos_reservations_sheet.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
@@ -39,12 +38,13 @@ class PosScreen extends ConsumerWidget {
     final hasBackoffice = screens.contains('backoffice') ||
         screens.contains('backoffice_restricted');
     final hasExtraScreens = screens
-        .where((s) => s != 'pos' && s != 'backoffice' && s != 'backoffice_restricted')
+        .where((s) =>
+            s != 'pos' &&
+            s != 'backoffice' &&
+            s != 'backoffice_restricted' &&
+            s != 'client_orders')
         .isNotEmpty;
     final hasMenu = hasExtraScreens && !hasBackoffice;
-    final canAccessClientOrders = config != null
-        ? config.canAccess(role, 'client_orders')
-        : (role == 'commercial' || role == 'manager' || role == 'owner' || role == 'cashier');
 
     ref.listen<AsyncValue<ScanEvent>>(scanEventsProvider, (_, next) {
       next.whenData((event) {
@@ -79,17 +79,6 @@ class PosScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           if (sessionOpen) ...[
-            if (canAccessClientOrders)
-              IconButton(
-                icon: const Icon(Icons.assignment_add),
-                onPressed: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  builder: (_) => const ClientOrderFormScreen(),
-                ),
-                tooltip: 'Commande client',
-              ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => _openCameraScanner(context, ref),
@@ -332,13 +321,13 @@ class PosScreen extends ConsumerWidget {
 List<String> _fallbackScreensForRole(String role) {
   switch (role) {
     case 'owner':
-      return ['pos'];
+      return ['backoffice', 'pos'];
     case 'manager':
       return ['backoffice_restricted'];
     case 'commercial':
       return ['pos', 'client_orders', 'reservations', 'losses', 'transfers', 'stock_view', 'daily_sales'];
     case 'cashier':
-      return ['pos'];
+      return ['pos', 'client_orders'];
     default:
       return ['pos'];
   }

@@ -23,9 +23,9 @@ class ClientOrderLine {
       clientOrderId: json['clientOrderId'] as String? ?? '',
       catalogItemId: json['catalogItemId'] as String? ?? '',
       variantId: json['variantId'] as String?,
-      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-      unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0.0,
-      deliveredQty: (json['deliveredQty'] as num?)?.toDouble() ?? 0.0,
+      quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
+      unitPrice: double.tryParse(json['unitPrice']?.toString() ?? '0') ?? 0.0,
+      deliveredQty: double.tryParse(json['deliveredQty']?.toString() ?? '0') ?? 0.0,
     );
   }
 }
