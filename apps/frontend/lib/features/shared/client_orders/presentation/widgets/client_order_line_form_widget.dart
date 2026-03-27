@@ -29,12 +29,14 @@ class ClientOrderLineFormWidget extends StatefulWidget {
   final List<Product> products;
   final VoidCallback onRemove;
   final void Function(ClientOrderLineValue?) onChange;
+  final ClientOrderLineValue? initialValue;
 
   const ClientOrderLineFormWidget({
     super.key,
     required this.products,
     required this.onRemove,
     required this.onChange,
+    this.initialValue,
   });
 
   @override
@@ -47,6 +49,23 @@ class _ClientOrderLineFormWidgetState extends State<ClientOrderLineFormWidget> {
   ProductVariant? _variant;
   final _qtyController = TextEditingController();
   final _priceController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final init = widget.initialValue;
+    if (init != null) {
+      _qtyController.text = init.quantity.toStringAsFixed(
+          init.quantity % 1 == 0 ? 0 : 2);
+      _priceController.text = init.unitPrice.toStringAsFixed(0);
+      // Find the matching product to display its name
+      try {
+        _product = widget.products.firstWhere(
+          (p) => p.remoteId == init.catalogItemId,
+        );
+      } catch (_) {}
+    }
+  }
 
   @override
   void dispose() {

@@ -67,17 +67,27 @@ export class ClientOrdersService {
     tenantId: string;
     status?: string;
     customerId?: string;
+    customerName?: string;
+    createdBy?: string;
     dateFrom?: string;
     dateTo?: string;
     page?: number;
     limit?: number;
   }) {
-    const { tenantId, status, customerId, dateFrom, dateTo, page = 1, limit = 50 } = params;
+    const { tenantId, status, customerId, customerName, createdBy, dateFrom, dateTo, page = 1, limit = 50 } = params;
     const skip = (page - 1) * limit;
 
     const where: any = { tenantId };
     if (status) where.status = status;
     if (customerId) where.customerId = customerId;
+    if (createdBy) where.createdBy = createdBy;
+    if (customerName) {
+      const matchingContacts = await this.prisma.contact.findMany({
+        where: { tenantId, name: { contains: customerName, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      where['customerId'] = { in: matchingContacts.map(c => c.id) };
+    }
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) where.createdAt.gte = new Date(dateFrom);
@@ -95,7 +105,19 @@ export class ClientOrdersService {
       this.prisma.clientOrder.count({ where }),
     ]);
 
-    return { items, meta: { total, page, limit, hasMore: skip + items.length < total } };
+    const customerIds = [...new Set(items.map(o => o.customerId).filter(Boolean))];
+    const contacts = await this.prisma.contact.findMany({
+      where: { id: { in: customerIds } },
+      select: { id: true, name: true, phone: true },
+    });
+    const contactMap = new Map(contacts.map(c => [c.id, c]));
+    const enriched = items.map(o => ({
+      ...o,
+      customerName: contactMap.get(o.customerId)?.name ?? 'Client inconnu',
+      customerPhone: contactMap.get(o.customerId)?.phone ?? null,
+    }));
+
+    return { items: enriched, meta: { total, page, limit, hasMore: skip + items.length < total } };
   }
 
   async getOrder(id: string, tenantId: string) {
@@ -104,7 +126,15 @@ export class ClientOrdersService {
       include: { lines: true },
     });
     if (!order) throw new NotFoundException(`ClientOrder ${id} not found`);
-    return order;
+    const contact = await this.prisma.contact.findFirst({
+      where: { id: order.customerId },
+      select: { name: true, phone: true },
+    });
+    return {
+      ...order,
+      customerName: contact?.name ?? 'Client inconnu',
+      customerPhone: contact?.phone ?? null,
+    };
   }
 
   // ── /confirm ──────────────────────────────────────────────────────────────
@@ -380,13 +410,34 @@ export class ClientOrdersService {
 
   // ── /pay ──────────────────────────────────────────────────────────────────
 
-  async payOrder(id: string, tenantId: string) {
+  async payOrder(id: string, tenantId: string, paymentMethod?: string) {
     const order = await this.getOrder(id, tenantId);
     if (order.status !== 'invoiced') {
       throw new UnprocessableEntityException(
         `Transition invalide : ${order.status} → paid`,
       );
     }
+
+    const totalAmount = order.lines.reduce(
+      (sum, l) => sum + Number(l.quantity) * Number(l.unitPrice),
+      0,
+    );
+
+    await this.prisma.transaction.create({
+      data: {
+        totalAmount,
+        itemsJson: order.lines.map(l => ({
+          catalogItemId: l.catalogItemId,
+          quantity: Number(l.deliveredQty ?? l.quantity),
+          unitPrice: Number(l.unitPrice),
+        })),
+        paymentMethod: paymentMethod ?? 'CASH',
+        transactionType: 'sale',
+        tenantId,
+        customerId: order.customerId,
+      },
+    });
+
     return this.prisma.clientOrder.update({
       where: { id },
       data: { status: 'paid' },

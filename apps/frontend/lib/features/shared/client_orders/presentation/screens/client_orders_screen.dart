@@ -36,7 +36,7 @@ class _ClientOrdersScreenState extends ConsumerState<ClientOrdersScreen> {
 
   ClientOrdersFilter get _filter => ClientOrdersFilter(
         status: _selectedStatus,
-        customerId: _customerController.text.trim().isEmpty
+        customerName: _customerController.text.trim().isEmpty
             ? null
             : _customerController.text.trim(),
         dateFrom: _dateRange?.start,

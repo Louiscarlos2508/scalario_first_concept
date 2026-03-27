@@ -16,6 +16,9 @@ import 'package:frontend/features/retail/pos/presentation/widgets/reservation_de
 import 'package:frontend/features/retail/pos/presentation/widgets/pos_reservations_sheet.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
+import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
+import 'package:frontend/features/shared/client_orders/presentation/widgets/client_order_line_form_widget.dart';
 
 String _fcfa(double amount) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
@@ -31,6 +34,11 @@ class CartPanel extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider).value;
     final isManager =
         userProfile?.role == 'manager' || userProfile?.role == 'owner';
+    final role = userProfile?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final canAccessClientOrders = config != null
+        ? config.canAccess(role, 'client_orders')
+        : (role == 'commercial' || role == 'manager' || role == 'owner' || role == 'cashier');
 
     // Listen for errors — success is handled by ReceiptDialog in onPressed
     ref.listen(checkoutControllerProvider, (_, state) {
@@ -315,6 +323,36 @@ class CartPanel extends ConsumerWidget {
                         style: TextStyle(color: Colors.teal),
                       ),
                     ),
+                    if (canAccessClientOrders)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          final initialItems = cartState.items
+                              .where((i) =>
+                                  !i.isFreeItem && i.product.remoteId != null)
+                              .map((i) => ClientOrderLineValue(
+                                    catalogItemId: i.product.remoteId!,
+                                    variantId: i.variantId,
+                                    quantity: i.quantity,
+                                    unitPrice: i.unitPrice,
+                                  ))
+                              .toList();
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            useSafeArea: true,
+                            builder: (_) => ClientOrderFormScreen(
+                              initialItems:
+                                  initialItems.isEmpty ? null : initialItems,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.assignment_add,
+                            color: Colors.indigo),
+                        label: const Text(
+                          'COMMANDE',
+                          style: TextStyle(color: Colors.indigo),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),

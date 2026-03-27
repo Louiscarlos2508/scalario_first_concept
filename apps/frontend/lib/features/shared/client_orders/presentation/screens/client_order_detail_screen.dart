@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order_line.dart';
@@ -159,17 +160,109 @@ class ClientOrderDetailScreen extends ConsumerWidget {
           );
         }
       } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Erreur : $e'), backgroundColor: Colors.red),
-          );
-        }
+        if (!context.mounted) return;
+        final message = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
       }
     }
 
     final tenantId = ref.read(activeTenantProvider) ?? '';
     final repo = ref.read(clientOrderRepositoryProvider);
+
+    Future<void> showPaymentDialog() async {
+      final enabledMethods =
+          ref.read(enabledPaymentMethodsProvider).valueOrNull ??
+              kDefaultPaymentMethods;
+      final methods = enabledMethods.where((m) => m != 'SPLIT').toList();
+      String paymentMethod =
+          methods.contains('CASH') ? 'CASH' : methods.first;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            title: const Text('Encaisser la commande'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Montant total'),
+                      Text(
+                        _fcfa(order.totalAmount),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Mode de paiement',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: paymentMethod,
+                      isDense: true,
+                      items: methods
+                          .map((m) => DropdownMenuItem(
+                                value: m,
+                                child: Text(paymentMethodLabel(m)),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setState(() => paymentMethod = v!),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Annuler'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Confirmer'),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (confirmed != true) return;
+      await callTransition(
+        () => repo.payOrder(
+          order.id,
+          tenantId: tenantId,
+          paymentMethod: paymentMethod,
+        ),
+      );
+    }
+
     final actions = <Widget>[];
 
     if (order.status == 'confirmed') {
@@ -198,8 +291,7 @@ class ClientOrderDetailScreen extends ConsumerWidget {
             () => repo.invoiceOrder(order.id, tenantId: tenantId))));
     }
     if (order.status == 'invoiced' && isOwnerOrManager) {
-      actions.add(_actionBtn('Encaisser', Colors.green, () => callTransition(
-            () => repo.payOrder(order.id, tenantId: tenantId))));
+      actions.add(_actionBtn('Encaisser', Colors.green, showPaymentDialog));
     }
     if (order.status == 'draft' && isOwnerOrManager) {
       actions.add(_actionBtn('Modifier', Colors.grey.shade700, () {

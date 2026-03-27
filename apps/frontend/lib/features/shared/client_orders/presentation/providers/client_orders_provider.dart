@@ -5,28 +5,31 @@ import 'package:frontend/features/shared/client_orders/domain/models/client_orde
 
 class ClientOrdersFilter {
   final String? status;
-  final String? customerId;
+  final String? customerName;
   final DateTime? dateFrom;
   final DateTime? dateTo;
+  final String? createdBy;
 
   const ClientOrdersFilter({
     this.status,
-    this.customerId,
+    this.customerName,
     this.dateFrom,
     this.dateTo,
+    this.createdBy,
   });
 
   @override
   bool operator ==(Object other) =>
       other is ClientOrdersFilter &&
       other.status == status &&
-      other.customerId == customerId &&
+      other.customerName == customerName &&
       other.dateFrom == dateFrom &&
-      other.dateTo == dateTo;
+      other.dateTo == dateTo &&
+      other.createdBy == createdBy;
 
   @override
   int get hashCode =>
-      Object.hash(status, customerId, dateFrom, dateTo);
+      Object.hash(status, customerName, dateFrom, dateTo, createdBy);
 }
 
 final clientOrderRepositoryProvider = Provider<ClientOrderRepository>((ref) {
@@ -50,7 +53,8 @@ final clientOrdersProvider =
   return repo.getOrders(
     tenantId: tenantId,
     status: filter.status,
-    customerId: filter.customerId?.isEmpty == true ? null : filter.customerId,
+    customerName: filter.customerName?.isEmpty == true ? null : filter.customerName,
+    createdBy: filter.createdBy,
     dateFrom: filter.dateFrom,
     dateTo: filter.dateTo,
   );

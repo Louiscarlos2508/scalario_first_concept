@@ -14,8 +14,11 @@ import '../widgets/sync_status_indicator.dart';
 import 'package:frontend/features/shared/catalog/data/models/product_variant.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
+import 'package:frontend/features/shared/client_orders/presentation/screens/client_orders_commercial_screen.dart';
+import 'package:frontend/features/retail/pos/presentation/widgets/pos_reservations_sheet.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/core/settings/settings_screen.dart';
+import 'package:frontend/core/theme/app_logos.dart';
 import 'loss_declaration_page.dart';
 import 'transfer_confirm_page.dart';
 import 'stock_view_page.dart';
@@ -39,6 +42,9 @@ class PosScreen extends ConsumerWidget {
         .where((s) => s != 'pos' && s != 'backoffice' && s != 'backoffice_restricted')
         .isNotEmpty;
     final hasMenu = hasExtraScreens && !hasBackoffice;
+    final canAccessClientOrders = config != null
+        ? config.canAccess(role, 'client_orders')
+        : (role == 'commercial' || role == 'manager' || role == 'owner' || role == 'cashier');
 
     ref.listen<AsyncValue<ScanEvent>>(scanEventsProvider, (_, next) {
       next.whenData((event) {
@@ -61,20 +67,29 @@ class PosScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scalario POS'),
+        scrolledUnderElevation: 0,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppLogos.wordmark(context, maxWidth: 100),
+            const SizedBox(width: 8),
+            const Text('POS'),
+          ],
+        ),
         centerTitle: false,
         actions: [
           if (sessionOpen) ...[
-            IconButton(
-              icon: const Icon(Icons.assignment_add),
-              onPressed: () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => const ClientOrderFormScreen(),
+            if (canAccessClientOrders)
+              IconButton(
+                icon: const Icon(Icons.assignment_add),
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const ClientOrderFormScreen(),
+                ),
+                tooltip: 'Commande client',
               ),
-              tooltip: 'Commande client',
-            ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: () => _openCameraScanner(context, ref),
@@ -321,7 +336,9 @@ List<String> _fallbackScreensForRole(String role) {
     case 'manager':
       return ['backoffice_restricted'];
     case 'commercial':
-      return ['pos', 'losses', 'transfers', 'stock_view', 'daily_sales'];
+      return ['pos', 'client_orders', 'reservations', 'losses', 'transfers', 'stock_view', 'daily_sales'];
+    case 'cashier':
+      return ['pos'];
     default:
       return ['pos'];
   }
@@ -367,9 +384,25 @@ void _showCommercialMenu(
             ),
           if (screens.contains('client_orders'))
             ListTile(
-              leading: const Icon(Icons.shopping_cart_outlined),
+              leading: const Icon(Icons.assignment_outlined, color: Colors.indigo),
               title: const Text('Commandes clients'),
-              onTap: () => go(const _PlaceholderPage('Commandes clients')),
+              subtitle: const Text('Créer et suivre vos commandes'),
+              onTap: () => go(const ClientOrdersCommercialScreen()),
+            ),
+          if (screens.contains('reservations'))
+            ListTile(
+              leading: const Icon(Icons.bookmark_outline, color: Colors.orange),
+              title: const Text('Réservations'),
+              subtitle: const Text('Gérer les réservations en cours'),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const PosReservationsSheet(),
+                );
+              },
             ),
           if (screens.contains('deliveries'))
             ListTile(

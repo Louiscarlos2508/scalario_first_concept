@@ -16,7 +16,7 @@ export class ClientOrdersController {
 
   // POST /client-orders
   @Post()
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async create(@Body() dto: CreateClientOrderDto, @Req() req: any) {
     const userId = req.user?.sub ?? dto.tenantId; // fallback for test contexts
     return this.service.createOrder(dto.tenantId, userId, dto);
@@ -24,20 +24,30 @@ export class ClientOrdersController {
 
   // GET /client-orders
   @Get()
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async list(
     @Query('tenantId') tenantId: string,
     @Query('status') status?: string,
     @Query('customerId') customerId?: string,
+    @Query('customerName') customerName?: string,
+    @Query('createdBy') createdBy?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '50',
+    @Req() req?: any,
   ) {
+    const userId = req?.user?.sub;
+    const role = req?.user?.role;
+    // Cashier and commercial can only see their own orders
+    const restrictedRoles = ['commercial', 'cashier'];
+    const effectiveCreatedBy = restrictedRoles.includes(role) ? userId : createdBy;
     return this.service.listOrders({
       tenantId,
       status,
       customerId,
+      customerName,
+      createdBy: effectiveCreatedBy,
       dateFrom,
       dateTo,
       page: parseInt(page),
@@ -47,7 +57,7 @@ export class ClientOrdersController {
 
   // GET /client-orders/:id
   @Get(':id')
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async getOne(@Param('id') id: string, @Query('tenantId') tenantId: string) {
     return this.service.getOrder(id, tenantId);
   }
@@ -83,7 +93,7 @@ export class ClientOrdersController {
   // POST /client-orders/:id/prepare
   @Post(':id/prepare')
   @HttpCode(200)
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async prepare(@Param('id') id: string, @Query('tenantId') tenantId: string) {
     return this.service.prepareOrder(id, tenantId);
   }
@@ -91,7 +101,7 @@ export class ClientOrdersController {
   // POST /client-orders/:id/mark-ready
   @Post(':id/mark-ready')
   @HttpCode(200)
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async markReady(@Param('id') id: string, @Query('tenantId') tenantId: string) {
     return this.service.markReady(id, tenantId);
   }
@@ -99,7 +109,7 @@ export class ClientOrdersController {
   // POST /client-orders/:id/deliver
   @Post(':id/deliver')
   @HttpCode(200)
-  @Roles('owner', 'manager', 'commercial')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async deliver(
     @Param('id') id: string,
     @Query('tenantId') tenantId: string,
@@ -122,7 +132,11 @@ export class ClientOrdersController {
   @Post(':id/pay')
   @HttpCode(200)
   @Roles('owner', 'manager')
-  async pay(@Param('id') id: string, @Query('tenantId') tenantId: string) {
-    return this.service.payOrder(id, tenantId);
+  async pay(
+    @Param('id') id: string,
+    @Query('tenantId') tenantId: string,
+    @Body() body: { paymentMethod?: string },
+  ) {
+    return this.service.payOrder(id, tenantId, body.paymentMethod);
   }
 }

@@ -21,13 +21,15 @@ class ClientOrderRepository {
   Future<List<ClientOrder>> getOrders({
     required String tenantId,
     String? status,
-    String? customerId,
+    String? customerName,
+    String? createdBy,
     DateTime? dateFrom,
     DateTime? dateTo,
   }) async {
     final params = <String, String>{'tenantId': tenantId};
     if (status != null) params['status'] = status;
-    if (customerId != null) params['customerId'] = customerId;
+    if (customerName != null) params['customerName'] = customerName;
+    if (createdBy != null) params['createdBy'] = createdBy;
     if (dateFrom != null) params['dateFrom'] = dateFrom.toIso8601String();
     if (dateTo != null) params['dateTo'] = dateTo.toIso8601String();
 
@@ -212,11 +214,18 @@ class ClientOrderRepository {
     }
   }
 
-  Future<void> payOrder(String id, {required String tenantId}) async {
+  Future<void> payOrder(
+    String id, {
+    required String tenantId,
+    String? paymentMethod,
+  }) async {
     final uri = Uri.parse('${ApiConstants.baseUrl}/client-orders/$id/pay')
         .replace(queryParameters: {'tenantId': tenantId});
-    final response =
-        await _httpClient.post(uri, headers: _headers(tenantId: tenantId));
+    final response = await _httpClient.post(
+      uri,
+      headers: _headers(tenantId: tenantId),
+      body: jsonEncode({'paymentMethod': paymentMethod ?? 'CASH'}),
+    );
     if (response.statusCode != 200 && response.statusCode != 201) {
       final err = jsonDecode(response.body);
       throw Exception(

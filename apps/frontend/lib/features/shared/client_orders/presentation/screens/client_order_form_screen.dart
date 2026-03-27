@@ -13,7 +13,9 @@ String _fcfa(double amount) =>
         .format(amount);
 
 class ClientOrderFormScreen extends ConsumerStatefulWidget {
-  const ClientOrderFormScreen({super.key});
+  final List<ClientOrderLineValue>? initialItems;
+
+  const ClientOrderFormScreen({super.key, this.initialItems});
 
   @override
   ConsumerState<ClientOrderFormScreen> createState() =>
@@ -34,6 +36,16 @@ class _ClientOrderFormScreenState
   // Each entry: nullable ClientOrderLineValue (null = incomplete line)
   final List<ClientOrderLineValue?> _lineValues = [];
   int _lineCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final items = widget.initialItems;
+    if (items != null && items.isNotEmpty) {
+      _lineValues.addAll(items);
+      _lineCount = items.length;
+    }
+  }
 
   @override
   void dispose() {
@@ -186,6 +198,7 @@ class _ClientOrderFormScreenState
                 onRemove: () => _removeLine(i),
                 onChange: (val) =>
                     setState(() => _lineValues[i] = val),
+                initialValue: i < _lineValues.length ? _lineValues[i] : null,
               );
             }),
             if (_lineCount == 0)
