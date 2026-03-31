@@ -1053,14 +1053,13 @@ En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, dép
 
 Modèle validé sur Blandine (premier client Pro, mars-avril 2026) :
 
-1. Présentation on-site (~30 min) — démonstration des 5 flows critiques
-2. Signature accord commercial sur place
-3. Paiement setup fee via Orange Money (manuel V1) — immédiat
-4. Configuration tenant on-site : catalogue produits, comptes utilisateurs, rôles
-5. Formation employés (~30 min par rôle)
-6. Go-live le jour même ou J+1
+1. Présentation à distance (~30 min) — appel vidéo, démonstration des 5 flows critiques depuis le dashboard propriétaire mobile
+2. Signature accord commercial à distance (WhatsApp ou email)
+3. Paiement setup fee via Orange Money — par le gestionnaire on-site ou par Blandine depuis l'étranger
+4. Go-live on-site : Carlos chez les employés — configuration tenant (catalogue, comptes, rôles), formation par rôle (~30 min chacun)
+5. Blandine suit le go-live à distance via l'app en temps réel
 
-> Ce modèle devient le template du Playbook Commercial intégrateur (Phase 2).
+> **Note :** Blandine gère sa boutique depuis l'étranger — c'est l'archétype exact du use case "contrôle à distance" que Scalario résout. La démo vidéo montre en live ce qu'elle peut faire depuis là où elle est. Ce modèle (propriétaire absent, go-live via gestionnaire on-site) devient le template du Playbook Commercial intégrateur (Phase 2).
 
 ---
 

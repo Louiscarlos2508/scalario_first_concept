@@ -1,6291 +1,2729 @@
 ---
-stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories']
 inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
-  - docs/architecture-scalario-2026-03-08.md
+  - _bmad-output/planning-artifacts/architecture.md
+  - docs/architecture-scalario-2026-03-31.md
 ---
 
 # Scalario - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for Scalario, decomposing the requirements from the PRD and Architecture into implementable stories for the incremental restructuring of the existing monolithic POS into a modular kernel/shared/vertical architecture.
+This document provides the complete epic and story breakdown for Scalario, decomposing the requirements from the PRD v8.3, Architecture v2.0, into implementable stories.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-FR1: System administrator can create and configure a new tenant with currency, timezone, and fiscal jurisdiction
-FR2: Tenant owner can create user accounts and assign roles (Owner, Manager, Commercial)
-FR3: System enforces role-based permissions — each role has predefined access boundaries per vertical
-FR4: Users can authenticate via credentials and receive a session scoped to their tenant
-FR5: System automatically enforces tenant isolation — no user can access data outside their tenant context
-FR6: System terminates idle sessions after a configurable timeout period
-FR7: System administrator can activate or deactivate shared modules and vertical modules per tenant
-FR8: Vertical modules declare dependencies on shared modules — activation validates all dependencies are met
+**Identity & Access (FR1–FR6)**
+FR1: Admin can create and configure a new tenant (currency, timezone, fiscal jurisdiction, business type, org_mode)
+FR2: Owner can create user accounts, assign roles, and assign departments (Enterprise mode)
+FR3: System enforces RBAC permissions at the intersection of (tenant, department, role). Retail: boundaries per active sector. Enterprise: boundaries per department.
+FR4: JWT authentication scoped to tenant
+FR5: Tenant isolation enforced automatically — no user can access another tenant's data
+FR6: Sessions expire after configurable timeout
+
+**Modules & Sectors (FR7–FR10)**
+FR7: Admin can activate or deactivate shared and sectoral modules per tenant
+FR8: Sectoral modules validate their dependencies at activation
 FR9: Deactivating a module for one tenant has zero impact on other tenants
-FR10: Each tenant can have exactly one active vertical module at a time (MVP)
-FR11: Owner can create, edit, and deactivate catalog items with name, price, category, and barcode
-FR12: Catalog items support a type discriminator (physical, bookable, service) at the shared level
-FR13: Vertical modules can extend base catalog items with vertical-specific fields (e.g., RetailProduct adds stockQuantity, weightUnit)
-FR14: Owner can create and manage product categories
-FR15: Catalog data is available offline on the local device for all assigned users
-FR16: Commercial can create a sales transaction by selecting catalog items and quantities
-FR17: Commercial can apply a payment method to a transaction (cash, mobile money)
-FR18: System calculates transaction totals with currency-specific rounding rules (FCFA: 5-franc rounding)
-FR19: System records change due for cash payments
-FR20: Transactions support lifecycle states at the shared level (instant, accumulating, scheduled)
-FR21: Vertical modules can extend base transactions with vertical-specific fields (e.g., RetailSale adds sessionId, receiptNumber)
-FR22: All transactions are written locally first and queued for synchronization
-FR23: Commercial can open a cash session by declaring the starting cash float
+FR10: Retail mode: one active sector per tenant. Enterprise mode: multiple business_type active simultaneously per configured departments.
+
+**Catalog (FR11–FR15)**
+FR11: Owner can create, edit, and deactivate items (name, price, category, barcode)
+FR12: Items support a type discriminator (physical, bookable, service)
+FR13: Sectoral modules can extend items with sector-specific fields via UI-Driven Engine
+FR14: Owner can manage product categories
+FR15: Catalog data is available offline on device
+
+**Transactions (FR16–FR22)**
+FR16: Commercial can create a sale transaction by selecting items and quantities
+FR17: Commercial can apply a payment method (cash, mobile money, customer credit)
+FR18: System calculates totals with currency-specific rounding (XOF: 5 FCFA)
+FR19: System records change given for cash payments
+FR20: Transactions support lifecycle states (instant, accumulating, scheduled)
+FR21: Sectoral modules can extend transactions (e.g. sessionId, receiptNumber for Retail)
+FR22: All transactions are written locally first and queued for sync
+
+**POS Session (FR23–FR28)**
+FR23: Commercial can open a session by declaring the initial cash float
 FR24: All sales during an active session are associated with that session
-FR25: Commercial can close a cash session by declaring the counted cash amount
-FR26: System calculates and displays the variance between theoretical and declared cash amounts
-FR27: Commercial must provide an explanation for any cash variance before session closure
-FR28: Manager can view session closure reports for all commercials in their location
-FR29: Manager can receive supplier deliveries and record received quantities against expected quantities
-FR30: System tracks reception variances (received vs expected) with observer notes
-FR31: Manager can create stock transfers from warehouse to shelf locations with declared quantities
-FR32: Commercial can confirm transfer reception and declare actually received quantity
-FR33: System automatically tracks and attributes transfer variances (sent vs received)
-FR34: Commercial can declare stock losses with a mandatory motif (spoilage, damage, etc.)
-FR35: Manager can perform partial inventory counts and the system signals variances against theoretical stock
-FR36: Inventory data is maintained locally for offline operation
+FR25: Commercial can close a session by declaring the counted amount
+FR26: System calculates and displays the theoretical/real discrepancy
+FR27: Commercial must provide an explanation for any discrepancy before closing
+FR28: Manager can consult closing reports of all commercials at their location
+
+**Inventory & Stock (FR29–FR36)**
+FR29: Manager can receive supplier deliveries and record received vs. expected quantities
+FR30: System traces receipt variances with observer notes
+FR31: Manager can create store → shelf transfers with declared quantities
+FR32: Commercial can confirm receipt of a transfer and declare the quantity actually received
+FR33: System traces and automatically assigns transfer variances
+FR34: Commercial can declare stock losses with mandatory reason
+FR35: Manager can perform partial inventories with variance signaling
+FR36: Inventory data is maintained locally for offline mode
+
+**Contacts (FR37–FR40)**
 FR37: Users can create and manage customer profiles (name, phone, type)
 FR38: Commercial can associate a transaction with a customer profile
-FR39: Commercial can record a credit sale against a customer profile, updating their outstanding balance
+FR39: Commercial can record a credit sale against a customer profile, updating balance
 FR40: Customer profiles and balances are available offline
-FR41: All create, read, update operations function identically whether online or offline
-FR42: System queues all local mutations in an outbox for automatic synchronization when connectivity returns
-FR43: Sync engine transmits only delta changes (incremental sync), never full dataset after initialization
-FR44: System resolves conflicts for concurrent offline edits (last-write-wins for non-critical data, manual resolution queue for financial data)
-FR45: System displays a subtle, non-blocking connectivity status indicator
-FR46: System recovers to a consistent state after unexpected termination (power failure, crash) with zero data loss
-FR47: Local database retains operational data for a configurable retention period (30-90 days)
-FR48: Manager can generate a daily consolidation report covering sales, losses, variances, and transfers across all sessions
-FR49: Owner can view dashboard reports on revenue, sale count, losses, cash variances, and critical stock levels
-FR50: System maintains an immutable audit trail of all mutations (actor, action, timestamp, before/after data)
-FR51: Audit trail is retained indefinitely server-side and for the configured retention period locally
-FR52: System supports migration of existing client data from monolithic schema to multi-schema architecture with zero data loss
-FR53: Prisma schema operates across kernel, shared, and retail schemas with referential integrity
-FR54: Sync engine operates module-agnostically with per-module sync adapters
-FR76: Owner configures a unitType per article (unit/weight/volume/length); tenant defines native unit label per type (e.g. kg, L, m). Default = unit. Configurable from product form without deployment.
-FR77: For articles with unitType ≠ unit, POS shows a floating-point quantity input with native unit label. Total = pricePerUnit × quantity, rounded per tenant currency rule (XOF: nearest 5 FCFA). Transaction records exact quantity and native unit.
-FR78: Owner can define per article: sale unit label (free text), price per unit, and optional conversionRate to stock unit (e.g. 1 sachet 500g = 0.5 stock unit). conversionRate is applied to stock decrement on each sale.
-FR79: Owner or authorized manager can create a purchase order: select supplier contact, add items with expected quantities, set expected delivery date and optional notes. Status lifecycle: draft → confirmed → partially_received → received → cancelled. POs are listable and filterable by status, supplier, and period.
-FR80: On delivery reception, manager links reception to existing PO (optional). System records received quantity per line, calculates variance (received − expected), and accepts free-text quality notes per line. Variances and notes are traced in audit trail and visible in reception reports. Reception without linked PO remains possible.
-FR83: Owner can define repackaging rules per (source article, target article) pair: source unit (e.g. 5 kg bag), target unit (e.g. 100 g sachet), conversion factor (e.g. 50 sachets per bag). At POS, selling a child article automatically decrements the parent article's stock by quantity × conversionRate. Partial operations are allowed. The operation generates a traceable REPACKAGING stock movement in the audit trail.
-FR84: Owner configures per article: (a) a freshness window in days (expiryDays) — expiry date calculated automatically as reception date + window; (b) a natural shrinkage tolerance % (shrinkageTolerance) representing acceptable weight loss from dehydration or evaporation. Weight losses within tolerance are classified as natural variance, not losses. Either field can be null (feature inactive for that article).
-FR85: Articles with a configured freshness window display a color indicator in POS grid and stock views: Green (> 50% of window remaining), Orange (20–50% remaining), Red (< 20% remaining or expired). Both color thresholds are configurable per tenant. Orange/Red articles are sorted first in the POS grid. A filter "Articles urgents" shows only Orange/Red articles.
-FR89: Catalog articles support tenant-configurable variant attributes (size, color, material — free labels). Each variant has its own SKU, optional barcode, independent price and stock. Parent article aggregates total variant stock for reporting. At POS, cashier selects article then variant before adding to cart. Articles without variants work exactly as today. (Phase 2b)
-FR90: Articles support multiple tenant-configurable price levels (e.g. retail, wholesale, loyalty, promotional — labels free). Applied price determined automatically by contactType of associated customer OR by ordered quantity threshold (both tenant-configurable). A cashier with price_override permission can force a level manually. Receipt shows applied price level. (Phase 2b)
-FR91: Owner creates promotion rules: (a) % discount on article or full category, (b) quantity offer (buy N get M — threshold + free article configurable), (c) temporary crossed-out price. Each promotion has start/end dates and active/inactive status. Active promotions apply automatically at POS when eligible article added to cart. Receipt shows original crossed-out price + discounted price. Multiple promotions: most-advantageous wins (configurable). (Phase 3)
-FR81: Owner or manager can configure a minimum stock level (minStockLevel) per article from the product form. The field is optional; if unset, no alert is generated for that article.
-FR82: After any stock movement that decrements stock (sale, loss, transfer_out, adjustment), the system evaluates whether stockQuantity ≤ minStockLevel for each affected article. If so, a low-stock alert is recorded and surfaced in the backoffice (badge on catalog, dedicated alerts screen, KPI on dashboard).
-FR86: Owner can enable a daily summary notification per tenant: configure channel (in-app push v1; WhatsApp Phase 2b), delivery time, and on/off switch. When enabled, the system sends a summary each day at the configured time covering: total sales, total revenue, new low-stock alerts count, and pending purchase orders count.
 
-### NonFunctional Requirements
+**Sync & Offline (FR41–FR47)**
+FR41: All CRUD operations work identically online or offline
+FR42: System queues (outbox) all local mutations for automatic sync on reconnection
+FR43: Sync engine transmits only deltas (incremental sync)
+FR44: System resolves conflicts (last-write-wins for non-critical data, manual resolution queue for financial data)
+FR45: Connectivity indicator visible only in status bar (< 5% screen area), never blocks operations
+FR46: System recovers consistent state after unexpected termination, zero data loss
+FR47: Local database retains operational data for a configurable period (30–90 days)
 
-NFR1: Product grid rendering < 500ms for up to 2,000 catalog items
+**Reporting & Accountability (FR48–FR51)**
+FR48: Manager can generate a daily consolidation report (sales, losses, variances, transfers)
+FR49: Owner can view dashboard (revenue, sale count, losses, cash discrepancies, critical stock)
+FR50: System maintains an immutable audit trail of all mutations
+FR51: Audit trail retained indefinitely server-side, configurable period locally
+
+**Scalario Connect — Anticipated DB Structure (FR52–FR55)**
+FR52: Tenants table includes `referred_by` (nullable UUID) and `network_visible` (bool)
+FR53: Contacts table includes `linked_tenant_id` (nullable UUID) to link a supplier to a Scalario tenant
+FR54: Catalog_items table includes `supplier_reference` (nullable UUID)
+FR55: Transaction types support `transfer_inter_tenant` for future inter-tenant operations
+
+**Migration & Architecture (FR56–FR58)**
+FR56: Migration of existing client data to multi-schema architecture without loss
+FR57: Prisma operates on kernel, shared, and retail schemas with referential integrity
+FR58: Sync engine operates module-agnostically with per-module adapters
+
+**Scalario Enterprise — Anticipated DB Structure (FR59–FR62)**
+FR59: Tenants table includes `org_mode` (enum: standalone | integrated | federated) and `parent_tenant_id` (nullable UUID)
+FR60: Users table includes `department_ids` (UUID array) for multi-department membership
+FR61: TenantModule table includes `department_id` (nullable UUID) for per-department activation
+FR62: System supports internal inter-department events via Kernel event bus
+
+**HR & Payroll Enterprise (FR63–FR68)**
+FR63: HR manager can create and manage employee records
+FR64: System automatically calculates net salary from gross applying active payroll plugin rules (pluggable: CNSS BF, IPRES SN, CNPS CI, etc.)
+FR65: HR manager can record absences; factored into monthly payroll
+FR66: System generates payslips for all active employees in one operation; validated payslip is immutable
+FR67: System generates social declaration file (employees + employer) in local format, exportable CSV/PDF
+FR68: Payslip validation emits inter-department event to Accounting for automatic salary expense entry
+
+**Accounting & Finance Enterprise (FR69–FR72)**
+FR69: System provides a pre-loaded chart of accounts per active accounting plugin (OHADA default for UEMOA, pluggable for others)
+FR70: Accountant can enter manual journal entries; auto-generated entries are pre-filled and editable before validation
+FR71: System supports bank reconciliation: statement import (CSV/PDF), automatic match suggestions, manual validation of discrepancies
+FR72: Accountant can close a month; entries freeze. System generates balance sheet and income statement per active accounting plugin, exportable PDF/Excel.
+
+**Enterprise Import & Error Management (FR73–FR74)**
+FR73: System accepts CSV imports for employees, chart of accounts, opening balances, equipment. Per-line error report. Partial import allowed.
+FR74: Retail tenant (standalone) can be migrated to Enterprise (integrated) without data loss and without maintenance window
+
+**Sync Failure Management (FR75)**
+FR75: System implements full lifecycle for failed mutations: outbox → 3 retries (exponential backoff) → FAILED marking → admin/user notification → manual resolution interface. Financial mutations never subject to last-write-wins — mandatory manual resolution queue.
+
+**Advanced Inventory & Configurable Sales (FR76–FR88)**
+FR76: Owner can configure unitType per item (unit, weight, volume, length) with native unit. Default: unit.
+FR77: For weight/volume/length items, POS shows floating-point quantity field; total auto-calculated; exact quantity and unit recorded.
+FR78: Owner can define per item: sale unit label, unit price, optional conversion factor to stock unit.
+FR79: Owner/authorized manager can create purchase orders (supplier, items, expected quantity, delivery date, status lifecycle: draft→confirmed→partially_received→received→cancelled)
+FR80: Manager can link a delivery reception to an existing purchase order, record received quantities, note quality observations. Variances traced in audit trail.
+FR81: Owner can define low stock threshold (lowStockThreshold) per item, in native stock unit.
+FR82: After each stock movement, system evaluates stock vs. threshold; triggers push notification and flags in daily summary if threshold breached.
+FR83: Owner can define repackaging rules (source article, target article, conversion factor). Repackaging decrements source, increments target, generates REPACKAGING stock movement. *(Phase 2b)*
+FR84: Owner can configure freshness window (days) and natural loss tolerance (%) per item. Expiry auto-calculated on reception. *(Phase 2b)*
+FR85: Items with freshness configured display color indicator in POS grid and stock views (Green/Orange/Red). Configurable thresholds. *(Phase 2b)*
+FR86: Each day at configurable time (default 20h00 local), system sends daily summary to owner via WhatsApp (opt-in) and/or push: revenue, losses, low-stock items, top 3 best sellers.
+FR87: During loss declaration (FR34), user must select loss location from tenant-configurable list. Loss reports filterable by location.
+FR88: Commercial can create internal replenishment request (item, quantity, urgency). Configurable circuit: Commercial → Manager (optional) → Owner approval. Approved request auto-generates store→shelf transfer.
+
+**Variants, Multi-pricing & Promotions (FR89–FR91)**
+FR89: Catalog item can have tenant-configured variants (attributes: free labels). Each variant has own SKU, optional barcode, price, independent stock. *(Phase 2b)*
+FR90: Item can have multiple price levels (retail, wholesale, loyalty, promotional). Auto-applied by customerType or quantity threshold. Manual override with price_override permission. *(Phase 2b)*
+FR91: Owner can create promotion rules: % discount, quantity offer (X+Y), temporary crossed-out price. Auto-applied at POS. *(Phase 3)*
+
+**Article Traceability & Business Configurations (FR92–FR97)**
+FR92: Item can have traceable serial number (IMEI, chassis) per unit sold. Link item–serial–customer–date recorded. *(Phase 2b)*
+FR93: Item can have configurable warranty duration. On sale, system generates warranty certificate (unique number, purchase date, expiry, customer). *(Phase 2b)*
+FR94: Item can be marked requiresPrescription. On sale, system requires prescription number and prescriber name. *(Phase 2b)*
+FR95: Product batch can have bestBeforeDate in addition to expiresAt. Freshness color code uses bestBeforeDate if set. *(Phase 2b)*
+FR96: Item can be marked dynamicPricing. Price updated daily by owner. Price history maintained. POS always uses latest active price. *(Phase 2b)*
+FR97: Item can be marked isUnique (consignment, antiques). Max stock = 1. Once sold, removed from active catalog. *(Phase 2b)*
+
+**Returns & Reservations (FR98–FR99)**
+FR98: Commercial can record a return at POS (linked to original transaction). Options: cash refund, customer credit, item exchange. Stock auto-reintegrated (RETURN). Tenant-configurable return policy. *(Phase 2a)*
+FR99: Commercial can create reservation with partial deposit (configurable minimum %). Reservation creates pending transaction. Balance visible on customer profile. Owner can cancel → deposit becomes credit or is refunded. *(Phase 2b)*
+
+**Pricing Plans & Billing (FR100–FR103)**
+FR100: Superadmin can assign pricing plan per tenant (free, standard, premium, enterprise) via PlanDefinition. Plan change auto-updates active modules and maxUsers. *(Phase 2a)*
+FR101: Superadmin can record installation and training fees per tenant. Billing status: trial/active/overdue/suspended. Auto-suspension configurable. *(Phase 2a)*
+FR102: Tenant owner can view current plan, included modules, billing status, payment history from backoffice Settings. Can request plan upgrade (manual validation by superadmin in Phase 2a). *(Phase 2a)*
+FR103: System supports online subscription payment (plan selection, Mobile Money/card, auto-provisioning on confirmation). *(Phase 3)*
+
+**Business Type Configuration (FR104–FR106)**
+FR104: Superadmin can assign business type per tenant. BusinessTypeDefinition configurable without deployment (code, name, product default flags, visible sections, suggested categories). 14 types seeded. *(Phase 2a)*
+FR105: Product creation/edit form adapts to tenant businessType. Relevant fields prioritized and pre-filled. Non-relevant fields hidden with "Show more options" toggle. Per-product override always possible. *(Phase 2a)*
+FR106: On tenant creation with businessType, system pre-creates suggested categories. Owner can rename, delete, or add freely. *(Phase 2a)*
+
+**Client Orders (FR107–FR111)**
+FR107: Commercial can create a client order (customer, products+quantities, delivery date, payment mode, notes). Lifecycle: draft→confirmed→preparing→ready→delivered→invoiced→paid. *(Phase 2a)*
+FR108: Manager/owner validates order (draft→confirmed). Stock availability checked (alerts but doesn't block). Manager prepares (confirmed→preparing→ready) by checking each line. Stock reserved (RESERVED). *(Phase 2a)*
+FR109: Commercial records delivery (ready→delivered). Actual delivered quantities entered. Delivery auto-generates linked sale transaction. Document type configurable by businessType (ticket/delivery note/invoice). *(Phase 2a)*
+FR110: Owner views open orders in backoffice (filterable). KPIs: open orders count, pending revenue. Partial payments recorded on order. Balance visible on customer profile. *(Phase 2a)*
+FR111: Each BusinessTypeDefinition includes roleLabels JSON mapping role codes to business-specific labels (e.g. "commercial" → "Delivery Driver"). Labels change display only; underlying permissions unchanged. *(Phase 2a)*
+
+**AI Assistant (FR-AI-01 to FR-AI-05)**
+FR-AI-01: Dedicated AI section — lateral panel on demand, global keyboard shortcut, optional full-screen. Never injected on module screens. *(Phase 1 architecture, Phase 2b activation)*
+FR-AI-02: AI-invocable actions per module — each module exposes a catalog of actions AI can invoke via function calling. AI can only invoke declared actions, never direct DB access. *(Phase 2b)*
+FR-AI-03: Excel/CSV AI-guided import — catalog items, customer lists, transaction histories. Column mapping driven by AI. *(Phase 2b)*
+FR-AI-04: Natural language configuration — user configures business parameters via AI chat. AI translates to validated JSON mutations applied server-side. *(Phase 2b)*
+FR-AI-05: Universal Config Wizard — guided onboarding for any new organization type. Conversational dialog to generate initial tenant configuration. Selects and adapts appropriate sectoral template. *(Phase 3)*
+
+**Template Builder (FR-TEMPLATE-01 to FR-TEMPLATE-02)**
+FR-TEMPLATE-01: AI-driven Template Builder — tool for integrators to create and publish sectoral templates via JSON/YAML configuration. AI suggests modules, workflows, and default parameters. No Flutter screen generation — pure configuration. *(Phase 3)*
+FR-TEMPLATE-02: Natural language module configuration — integrator describes a need in natural language, AI generates module configuration (fields, rules, workflows). Output: JSON/YAML validated against Scalario schema before publishing. *(Phase 3)*
+
+**Multi-POS Management (FR-MULTISTORE-01)**
+FR-MULTISTORE-01: Centralized owner dashboard to supervise N POS locations of same tenant. Three stock models: A (central shared), B (independent per POS), C (mix). Inter-site transfers with traceability, consolidated sales reports, stock-out alerts per site. *(Phase 2b)*
+
+**Multi-Client Professional Dashboard (FR-MULTISERVICE-01)**
+FR-MULTISERVICE-01: Interface for service professionals managing multiple clients (accounting firms, consultants, franchisors). Delegated access to N client tenants from single professional account. Aggregated KPI view cross-tenant. Cross-tenant notifications. Xero model: client invites accountant → accountant sees all clients in dedicated dashboard. *(Phase 3)*
+
+**User Session Management (FR-SESSION-01)**
+FR-SESSION-01: Active session dashboard per user (device, approximate location, connection time). Instant single-session revocation from admin backoffice (forced logout < 5s). Unusual login alerts (new unrecognized device, abnormal geolocation). Configurable session expiry per tenant (default: 8h). *(Phase 2b)*
+
+**Integrator Model (FR-INTEGRATOR-01 to FR-INTEGRATOR-04)**
+FR-INTEGRATOR-01: Floor price enforcement — system rejects integrator subscription if resale price is below Scalario-configured floor. *(Phase 2b)*
+FR-INTEGRATOR-02: Ceiling price enforcement — system rejects integrator subscription if resale price is above configured ceiling. *(Phase 2b)*
+FR-INTEGRATOR-03: Volume-degressive fee — wholesale fee auto-recalculated per billing cycle: standard (1–5 clients), -10% (6–20), -20% (21–50), contract (50+). *(Phase 2b)*
+FR-INTEGRATOR-04: Recurring integrator commission — integrator earns margin (resale – wholesale) monthly while client is active and attached. Commission suspended on cancellation, migration to direct, or integrator suspension. 30-day grace period. *(Phase 2b)*
+
+**Sectoral Core Modules — Phase 3+ (FR-DEVIS-01 to FR-APPOINTMENT-01)**
+FR-DEVIS-01: Quote/Manufacturing module — quote with materials, labor, margin. Lifecycle: draft→submitted→accepted/rejected→converted to work_order. *(Phase 3+)*
+FR-WORKORDER-01: Work Order module — manufacturing order with configurable kanban steps. Each step has status, assigned owner, estimated date. *(Phase 3+)*
+FR-BOM-01: Bill of Materials module — materials required per manufactured product (quantity, unit, catalog item). On work_order validation, stock auto-consumed via Inventory module. *(Phase 3+)*
+FR-ATELIERPLANNING-01: Workshop Planning module — calendar view of work orders by workshop/operator. Queue management, configurable daily capacity, promised vs. actual delivery dates. *(Phase 3+)*
+FR-TABLE-01: Table Management module — configurable floor plan (tables, zones, capacity). Table → active order assignment. Real-time status: free/occupied/reserved/cleaning. Table merge/split. *(Phase 3+)*
+FR-KDS-01: Kitchen Display System — real-time preparation tickets from POS to kitchen. Statuses: received/in-progress/ready. Floor notification on validation. View by station. *(Phase 3+)*
+FR-APPOINTMENT-01: Appointment module — slot booking by service and operator. Operator agenda view (day/week). Automatic customer reminders (push/SMS). Cancellation and rescheduling. Linked to catalog (service) and contacts (customer). *(Phase 3+)*
+
+**Dynamic RBAC (FR-RBAC-01)**
+FR-RBAC-01: Dynamic RBAC per tenant — roles are data stored in DB per tenant, not global enums. Each tenant defines role names (free text) and permission sets per module. Template sectoral roles are the starting point. Guards check permission codes (catalog.edit, session.open) not role names. Architecture H1 — API Phase 2b — AI RBAC Phase 2c.
+
+**Super Admin (FR-SUPERADMIN-01 to FR-SUPERADMIN-06)**
+FR-SUPERADMIN-01: Tenant creation via Super Admin form — plan selection, active modules, initial sectoral template, attached integrator (optional). Immediate provisioning. *(H1)*
+FR-SUPERADMIN-02: Tenant suspension/reactivation with traced reason. Suspension expires active client sessions in < 5s. *(H1)*
+FR-SUPERADMIN-03: Billing dashboard — active subscriptions, confirmed vs. pending payments, payment delay alerts. Auto-suspension after configurable days. *(Phase 2b)*
+FR-SUPERADMIN-04: Integrator onboarding — create integrator account, configure initial fee tier, activate wholesale rights. *(Phase 2b)*
+FR-SUPERADMIN-05: Feature flags per tenant — activate/deactivate a module or experimental feature on a specific tenant without deployment. Stored in tenant_features. *(Phase 2b)*
+FR-SUPERADMIN-06: Template marketplace review — submission queue from integrators, validation interface (approve/reject + comment), versioning of approved templates. *(Phase 3)*
+
+---
+
+### Non-Functional Requirements
+
+**Performance**
+NFR1: Product grid render < 500ms for 2,000 items
 NFR2: Transaction recording < 200ms local write
-NFR3: Full-day sync < 30 seconds for 150+ transactions
-NFR4: App cold start < 3 seconds to usable state
-NFR5: Session closure report < 2 seconds generation
-NFR6: Device memory footprint < 150MB RAM steady state
-NFR7: Local database size < 500MB for 90 days of operational data
-NFR8: Tenant data isolation — zero cross-tenant data leakage (tenant_id + RLS)
-NFR9: JWT-based authentication with configurable session timeout
-NFR10: Encrypted local database (AES-256)
-NFR11: TLS 1.2+ for all server communication
-NFR12: Price modification audit — every price change traced with actor, timestamp, before/after values
-NFR13: Financial data integrity — all financial mutations atomic and logged
-NFR14: Offline autonomy — 8+ hours continuous operation without connectivity
-NFR15: Crash recovery — zero data loss on unexpected termination (WAL)
-NFR16: Sync resilience — automatic retry with exponential backoff
-NFR17: Server uptime — 99%
+NFR3: Full-day sync < 30s for 150+ transactions
+NFR4: Cold start < 3s to usable state
+NFR5: Session closing report < 2s generation
+NFR6: RAM footprint < 150MB stable state
+NFR7: Local database size < 500MB for 90 days
+
+**Security**
+NFR8: Tenant isolation — zero inter-tenant data leak; applicative tenant_id + Supabase RLS defense-in-depth
+NFR9: Authentication — JWT with configurable session timeout
+NFR10: Local encryption — local database encrypted; device loss/theft protection
+NFR11: Transport encryption — TLS 1.2+ for all server communications
+NFR12: Price modification audit — every price change traced: actor, timestamp, before/after
+NFR13: Financial data integrity — all financial mutations are atomic and logged
+
+**Reliability & Availability**
+NFR14: Offline autonomy — 8h+ continuous operation without connectivity
+NFR15: Crash recovery — zero data loss on unexpected termination (validated by crash-recovery test)
+NFR16: Sync resilience — automatic retry on sync failure (5s, 30s, 2min). Zero manual intervention for recoverable cases.
+NFR17: Server uptime — 99% (self-hosted Supabase, solo admin — realistic target)
 NFR18: Data durability — zero transaction loss, ever
-NFR19: Tenant capacity — support 30+ concurrent tenants
-NFR20: Users per tenant — up to 10 concurrent users
-NFR21: Transaction volume — up to 500 transactions/day per tenant
-NFR22: Catalog size — up to 5,000 items per tenant
-NFR23: Horizontal growth — adding tenants requires zero code changes
-NFR24: Sync payload compression — compressed delta-only payloads
-NFR25: Minimum bandwidth — functional sync on 2G (50 kbps)
-NFR26: No heavy asset sync — images/files excluded, data only
-NFR27: Initial provisioning — full catalog + config download < 5MB
-NFR28: Cashier onboarding — autonomous after < 1 hour training
-NFR29: Error recovery — clear, actionable error messages in user's language
-NFR30: Offline transparency — user unaware of connectivity state during normal operations
+
+**Scalability**
+NFR19: Tenant capacity — 30+ concurrent tenants (12-month objective)
+NFR20: Users per tenant — Retail: 10 concurrent (Standard), 20 (Premium multi-site). Enterprise: 50 concurrent (Pro).
+NFR21: Transaction volume — Retail: 500 sales/day per tenant. Enterprise: 2,000 events/day per tenant.
+NFR22: Catalog size — Retail: 5,000 items per tenant. Enterprise: 10,000 records per tenant.
+NFR23: Horizontal growth — adding tenants or departments requires no code changes
+
+**Network & Bandwidth**
+NFR24: Sync compression — delta payloads compressed only
+NFR25: Minimum bandwidth — sync functional on 2G (50 kbps)
+NFR26: No heavy asset sync — images and files excluded from sync; data only
+NFR27: Initial provisioning — catalog + full config < 5MB
+
+**Usability**
+NFR28: Cashier onboarding — autonomous after < 1h training
+NFR29: Error handling — clear, actionable messages in user's language; zero technical jargon
+NFR30: Offline transparency — user does not perceive connectivity state during normal operations
+
+**Internationalization**
+NFR31: Full i18n — zero hardcoded French strings in Flutter or NestJS code. All UI strings via i18n system. Native multi-currency support (FCFA default, extensible).
+
+**Pluggable Compliance**
+NFR32: Pluggable compliance framework — OHADA, CNSS, CARFO, local fiscal regimes implemented as country plugins, not core logic. Each tenant activates plugin for their jurisdiction. Adding new jurisdiction requires no core modification.
+
+**Payment Adapters**
+NFR33: Payment adapter pattern — Wave, Orange Money, Moov Money, and future payment methods implemented as interchangeable adapters. Core contains no direct payment provider integration.
+
+**Universal Configuration**
+NFR34: Configurable units — measurement units, currencies, date/time formats configurable per tenant; no non-overridable defaults.
+
+**Versioned API**
+NFR35: Versioned REST API — all API routes under /api/v1/; semantic versioning; 12-month backward compatibility guarantee before deprecation.
+
+**Mobile Security**
+NFR36: Flutter certificate pinning — Flutter app implements certificate pinning for all communications to Scalario backend. Certificate validated client-side on every HTTPS request.
+
+**Rate Limiting**
+NFR37: Rate limiting — applied on all public and authenticated API routes. Limits per tenant, per IP, and per endpoint. HTTP 429 responses with Retry-After header.
+
+**Subscription Enforcement**
+NFR38: Server-side only subscription enforcement — subscription-level restrictions (features, user limits, active modules) enforced exclusively server-side via Kernel. Zero enforcement logic in Flutter client.
+
+**Anomaly Detection (H2)**
+NFR39: Financial anomaly detection — H2 — automatic monitoring of abnormal transaction patterns (unusual volumes, out-of-range price modifications, atypical discounts). Alerts < 60s after detection to tenant owner. Configurable thresholds per tenant.
+
+**Scalable Architecture**
+NFR40: Microservices trajectory — H1: modular NestJS monolith. H2: dedicated Python/FastAPI service for AI features. H3: extract to independent microservices on proven production bottlenecks only.
+
+**Infrastructure**
+NFR-INFRA-01: Backend deploy < 5 min end-to-end (git push → live). *(H1)*
+NFR-INFRA-02: Zero data loss on deploy (additive migrations only on prod without maintenance window). *(H1)*
+NFR-INFRA-03: Backend rollback < 2 min in case of post-deploy incident. *(H1)*
+NFR-INFRA-04: Automatic daily prod backup with minimum 7-day retention. Restore test performed before each new active client. *(H1)*
+NFR-INFRA-05: Isolated staging environment activated before opening integrator channel — no integrator tests on prod. *(H2)*
+
+---
 
 ### Additional Requirements
 
-From Architecture:
-- Brownfield restructuring — no starter template, incremental extraction from existing monolith
-- 9-step incremental migration sequence: Kernel → Catalog → Contacts → Transactions+Payments → Inventory → Retail Vertical → Reporting → Frontend Sync → Cleanup
-- Guard chain on every request: AuthGuard → TenantGuard → ModuleGuard → RolesGuard
-- Event Bus: NestJS EventEmitter2 for cross-module communication (TransactionCreated, StockAdjusted, SessionClosed)
-- Module registration pattern: NestJS DynamicModule per shared/vertical module
-- RLS defense-in-depth: Prisma middleware sets SET LOCAL app.current_tenant_id per request
-- Base + Extension Table pattern: CatalogItem → RetailProduct, Transaction → RetailSale (not STI)
-- Isar local models remain denormalized — API joins across schemas, returns flat objects
-- Sync protocol: UUID-based idempotent push, ?since= delta pull, Supabase Realtime push
-- Backward-compatible migration: old endpoints proxy to new services during transition
-- CI/CD: GitHub Actions (lint → test → migrate → build → deploy staging → manual prod promotion)
-- Testing priorities: tenant isolation, sync idempotency, FCFA rounding, session variance, offline→online transition
-- Target project structure: kernel/, shared/, retail/ directories in backend src/
-- Prisma multi-schema with previewFeatures: ["driverAdapters", "multiSchema"]
-- Entity mapping: Product→CatalogItem+RetailProduct, Order→Transaction+RetailSale, Customer→Contact, Category stays, PosSession→retail schema, StockMovement→shared schema
+**From Architecture v2.0:**
+- Guard chain order enforced on all Level 2 module endpoints: `AuthGuard → TenantGuard → BillingGuard → ModuleGuard → RolesGuard`
+- Outbox pattern mandatory for all Flutter mutations: widget → repository → Isar outbox → SyncEngine background isolate → API (never call API directly from widget or provider)
+- Every Level 2 shared module must declare an `AiActionsManifest` (H1 — connects to AI microservice H2)
+- PaymentAdapter interface H1: no code may call a payment provider directly; must go through `PaymentAdapter` interface
+- RBAC migration H1: add `tenant_id` to `kernel.roles`, change guard from role-name comparison to permission-code checking (`@Permissions('catalog.edit')`)
+- i18n discipline effective 2026-03-31: no new hardcoded user-facing strings in Flutter; NestJS error responses return `{ key: 'error.domain.code', params: {} }` never raw English strings
+- Python AI microservice: NestJS ↔ Python communication via HTTP REST localhost:8001; Flutter never calls AI service directly
+- Wave integration: webhook primary + polling fallback
+- Default AI model: Claude Sonnet 4.6 (speed/cost for real-time); Config Wizard: Claude Opus 4.6 (complex reasoning)
+- Money stored as DECIMAL(10,2) in Prisma, serialized as string in JSON responses (never float)
+- Delta sync param `?since=ISO8601` on every list endpoint supporting offline sync
+- Brownfield project — no starter template; existing codebase to be progressively restructured
+
+**From PRD v8.3 — Phase constraints:**
+- H1 (Phase 1–2a): Demo mid-April (Blandine), foundation architectural patterns (interfaces, adapters, registries), no H2 features
+- H2 (Phase 2b): AI Assistant activation, integrator channel, ambassador program, advanced inventory features
+- H3 (Phase 3+): Scalario Connect B2B, Enterprise full, self-service onboarding, sectoral core modules
+
+---
 
 ### FR Coverage Map
 
-| FR | Epic | Description |
-|:---|:---|:---|
-| FR1 | Epic 1 | Create/configure tenant |
-| FR2 | Epic 1 | Create users, assign roles |
-| FR3 | Epic 1 | Enforce role-based permissions |
-| FR4 | Epic 1 | Authenticate, scoped session |
-| FR5 | Epic 1 | Tenant isolation |
-| FR6 | Epic 1 | Session timeout |
-| FR7 | Epic 1 | Activate/deactivate modules |
-| FR8 | Epic 1 | Module dependency validation |
-| FR9 | Epic 1 | Module isolation per tenant |
-| FR10 | Epic 1 | One vertical per tenant — Retail (standalone). Multi-vertical allowed in Enterprise mode (FR10 v5) |
-| FR11 | Epic 2 | CRUD catalog items |
-| FR12 | Epic 2 | itemType discriminator |
-| FR13 | Epic 6 + Epic 10 | Vertical extension fields: RetailProduct (Epic 6 static) + UI-Driven Engine dynamic layer (Epic 10) |
-| FR14 | Epic 2 | Category management |
-| FR15 | Epic 2 | Offline catalog availability |
-| FR16 | Epic 4 | Create sales transactions |
-| FR17 | Epic 4 | Payment method selection |
-| FR18 | Epic 4 | FCFA 5-franc rounding |
-| FR19 | Epic 4 | Change due calculation |
-| FR20 | Epic 4 | Transaction lifecycle types |
-| FR21 | Epic 6 | Vertical transaction extension (RetailSale) |
-| FR22 | Epic 4 | Local-first write + sync queue |
-| FR23 | Epic 6 | Open cash session |
-| FR24 | Epic 6 | Session-scoped transactions |
-| FR25 | Epic 6 | Close session with balance |
-| FR26 | Epic 6 | Variance display |
-| FR27 | Epic 6 | Mandatory variance explanation |
-| FR28 | Epic 6 | Manager views session reports |
-| FR29 | Epic 5 | Receive supplier deliveries |
-| FR30 | Epic 5 | Reception variance tracking |
-| FR31 | Epic 5 | Stock transfers |
-| FR32 | Epic 5 | Confirm transfer reception |
-| FR33 | Epic 5 | Transfer variance auto-tracking |
-| FR34 | Epic 5 | Loss declaration with motif |
-| FR35 | Epic 5 | Partial inventory counts |
-| FR36 | Epic 5 | Offline inventory data |
-| FR37 | Epic 3 | Customer CRUD |
-| FR38 | Epic 3 | Associate transactions with customers |
-| FR39 | Epic 3 | Credit sales, balance tracking |
-| FR40 | Epic 3 | Offline customer profiles |
-| FR41 | Epic 8 | Identical online/offline operations |
-| FR42 | Epic 8 | Outbox queue, auto-sync |
-| FR43 | Epic 8 | Delta-only sync |
-| FR44 | Epic 8 | Conflict resolution |
-| FR45 | Epic 8 | Connectivity status indicator |
-| FR46 | Epic 8 | Crash recovery (WAL) |
-| FR47 | Epic 8 | Configurable data retention |
-| FR48 | Epic 7 | Daily consolidation report |
-| FR49 | Epic 7 | Owner dashboard |
-| FR50 | Epic 1 | Immutable audit trail |
-| FR51 | Epic 1 | Audit retention policy |
-| FR52 (DB) | Story 1.6 | tenants: referred_by + network_visible (Connect/Ambassadeurs — DB only) |
-| FR53 (DB) | Story 1.6 | contacts: linked_tenant_id (Connect — DB only) |
-| FR54 (DB) | Story 1.6 | catalog_items: supplier_reference (Connect — DB only) |
-| FR55 (DB) | Story 1.6 | transaction type: transfer_inter_tenant enum value (Connect — DB only) |
-| FR56 | Epic 9 | Zero-loss data migration (renumbered from FR52 v1) |
-| FR57 | Epic 9 | Multi-schema Prisma (renumbered from FR53 v1) |
-| FR58 | Epic 8 | Module-agnostic sync adapters (renumbered from FR54 v1) |
-| FR59 (DB) | Story 1.6 | tenants: org_mode + parent_tenant_id (Enterprise — DB only) |
-| FR60 (DB) | Story 1.6 | organization_members: department_ids (Enterprise — DB only) |
-| FR61 (DB) | Story 1.6 | tenant_modules: department_id (Enterprise — DB only) |
-| FR62 | Epic 13 | Inter-department events via event bus (Enterprise Phase 3) |
-| FR63–FR68 | Epic 13 | RH & Paie Enterprise: employés, salaires CNSS/CARFO, bulletins (Phase 3) |
-| FR69–FR72 | Epic 13 | Comptabilité OHADA: plan comptable, clôture, bilan, FEC (Phase 3) |
-| FR73–FR74 | Epic 13 | Import Enterprise CSV + migration Retail → Enterprise (Phase 3) |
-| FR75 | Epic 8 | Gestion des Échecs de Sync: cycle de vie outbox complet (Phase 1) |
-| FR76 | Epic 20 | unitType configurable par article (unit/weight/volume/length) |
-| FR77 | Epic 20 | POS vente au poids — saisie quantité flottante, calcul automatique FCFA |
-| FR78 | Epic 20 | Label unité libre + facteur de conversion stock par article |
-| FR79 | Epic 21 | Création et gestion des commandes fournisseurs (lifecycle statuts) |
-| FR80 | Epic 21 | Réception liée à une commande + variance + notes qualité par article |
-| FR81 | Epic 22 | Seuil stock bas configurable par article (minStockLevel) |
-| FR82 | Epic 22 | Alerte stock bas déclenchée après mouvement de stock si stock ≤ seuil |
-| FR83 | Epic 23 | Reconditionnement vrac → détail : parentItemId + conversionRate, décrémentation stock parent à la vente |
-| FR84 | Epic 24 | Fraîcheur configurable par article (expiryDays, shrinkageTolerance) ; date expiration calculée à la réception |
-| FR85 | Epic 24 | Indicateur couleur vert/orange/rouge dans grille POS et stock ; seuils tenant-configurables ; tri priorité |
-| FR89 | Epic 25 | Variantes configurables par article (attributs libres, SKU, prix et stock indépendants) ; sélection au POS |
-| FR90 | Epic 25 | Multi-niveaux de prix tenant-configurables ; résolution automatique par contactType ou quantité |
-| FR91 | Epic 25 | Promotions configurables (%, quantitatif, prix barré) ; application auto au POS ; reçu avec prix barré |
-| FR86 | Epic 22 | Résumé quotidien automatique — canal et heure configurables par tenant |
-| FR92 | Epic 26 | Numéros de série traçables par unité vendue (trackSerialNumbers) |
-| FR93 | Epic 26 | Certificat de garantie généré depuis SerialRecord + warrantyMonths |
-| FR94 | Epic 26 | Flag requiresPrescription sur article ; blocage vente sans ordonnance |
-| FR95 | Epic 26 | Date de garde optimale sur ProductBatch (bestBeforeDate) |
-| FR96 | Epic 26 | Prix dynamique avec historique complet (PriceHistory) |
-| FR97 | Epic 26 | Article unique non-réapprovisable (isUnique) — archivé automatiquement après vente |
-| FR98 | Epic 27 | Retour article au POS — remboursement / avoir / échange ; stock réintégré (RETURN) ; politique tenant configurable |
-| FR99 | Epic 27 | Réservation avec acompte partiel configurable ; suivi solde ; KPI dashboard |
-| FR100 | Epic 28 | Plan tarifaire par tenant (PlanDefinition) ; activation/désactivation modules auto ; maxUsers synchronisé |
-| FR101 | Epic 28 | Frais installation/formation ; cycle de vie facturation (trial → active → overdue → suspended) ; cron suspension auto |
-| FR102 | Epic 28 | Propriétaire consulte son plan, modules inclus, statut facturation et historique paiements ; demande upgrade |
-| FR103 | Epic 28 | Paiement en ligne (Mobile Money / carte) + auto-provisioning tenant (Phase 3) |
-| FR104 | Epic 29 | BusinessTypeDefinition configurable sans déploiement ; assignation par superadmin à la création du tenant |
-| FR105 | Epic 29 | ProductFormDialog adaptatif — visibleSections, defaultFlags, toggle "Afficher plus d'options", override libre |
-| FR106 | Epic 29 | Catégories suggérées pré-créées à la création du tenant ; propriétaire peut renommer/supprimer/ajouter |
-| FR107 | Epic 30 | Commandes clients — cycle de vie draft→confirmed→in-progress→delivered\|cancelled ; numérotation auto CO-XXXX ; validation stock à la confirmation |
-| FR108 | Epic 30 | Stock réservé à la confirmation (StockMovement RESERVATION) ; consommé ou libéré à la livraison ; livraison partielle supportée (deliveredQty par ligne) |
-| FR109 | Epic 30 | Document de livraison généré selon BusinessTypeDefinition.documentType (receipt/delivery_note/invoice) ; acompte suivi (depositAmount, depositPaidAt) |
-| FR110 | Epic 30 | KPI "Commandes en cours" et "CA en attente" dans le dashboard ; liste filtrable par statut et client |
-| FR111 | Epic 30 | Labels rôles adaptés au type de business via BusinessTypeDefinition.roleLabels ; permissions sous-jacentes inchangées ; fallback sur le code du rôle |
+FR1: Epic 1 — Tenant creation & configuration
+FR2: Epic 1 — User accounts & role assignment
+FR3: Epic 1 — RBAC permissions enforcement
+FR4: Epic 1 — JWT tenant-scoped authentication
+FR5: Epic 1 — Tenant isolation enforcement
+FR6: Epic 1 — Session timeout
+FR7: Epic 8 — Module activation/deactivation per tenant
+FR8: Epic 8 — Module dependency validation on activation
+FR9: Epic 8 — Module isolation between tenants
+FR10: Epic 8 — Retail single sector / Enterprise multi-department
+FR11: Epic 2 — Item creation, edit, deactivation
+FR12: Epic 2 — Item type discriminator (physical/bookable/service)
+FR13: Epic 2 — Sectoral item field extension via UI-Driven Engine
+FR14: Epic 2 — Category management
+FR15: Epic 2 — Offline catalog availability
+FR16: Epic 3 — Sale transaction creation
+FR17: Epic 3 — Payment method (cash/mobile money/credit)
+FR18: Epic 3 — Currency-specific total rounding
+FR19: Epic 3 — Cash change recording
+FR20: Epic 3 — Transaction lifecycle states
+FR21: Epic 3 — Sectoral transaction extension
+FR22: Epic 3 — Local-first write & sync queue
+FR23: Epic 3 — POS session open with float declaration
+FR24: Epic 3 — Session-scoped sales
+FR25: Epic 3 — Session close with counted amount
+FR26: Epic 3 — Theoretical/real discrepancy calculation
+FR27: Epic 3 — Mandatory discrepancy explanation
+FR28: Epic 3 — Manager session closing report access
+FR29: Epic 4 — Supplier delivery reception
+FR30: Epic 4 — Receipt variance tracing
+FR31: Epic 4 — Store→shelf transfer creation
+FR32: Epic 4 — Transfer receipt confirmation
+FR33: Epic 4 — Transfer variance auto-assignment
+FR34: Epic 4 — Loss declaration with reason
+FR35: Epic 4 — Partial inventory with variance signal
+FR36: Epic 4 — Offline inventory data maintenance
+FR37: Epic 5 — Customer profile creation & management
+FR38: Epic 5 — Transaction–customer association
+FR39: Epic 5 — Credit sale recording & balance update
+FR40: Epic 5 — Offline customer profiles & balances
+FR41: Epic 6 — Online/offline CRUD parity
+FR42: Epic 6 — Outbox mutation queuing
+FR43: Epic 6 — Delta-only incremental sync
+FR44: Epic 6 — Conflict resolution (LWW for data, manual for financial)
+FR45: Epic 6 — Non-blocking connectivity status indicator
+FR46: Epic 6 — Crash recovery with zero data loss
+FR47: Epic 6 — Configurable local data retention (30–90 days)
+FR48: Epic 7 — Daily consolidation report
+FR49: Epic 7 — Owner dashboard (revenue, sales, losses, discrepancies, stock)
+FR50: Epic 7 — Immutable audit trail
+FR51: Epic 7 — Audit trail retention policy
+FR52: Epic 8 — Tenants.referred_by & network_visible fields (Connect seed)
+FR53: Epic 8 — Contacts.linked_tenant_id field (Connect seed)
+FR54: Epic 8 — Catalog_items.supplier_reference field (Connect seed)
+FR55: Epic 8 — Transaction type transfer_inter_tenant (Connect seed)
+FR56: Epic 8 — Multi-schema data migration without loss
+FR57: Epic 8 — Prisma multi-schema integrity (kernel/shared/retail)
+FR58: Epic 8 — Module-agnostic sync engine with per-module adapters
+FR59: Epic 8 — Tenants.org_mode & parent_tenant_id fields (Enterprise seed)
+FR60: Epic 8 — Users.department_ids field (Enterprise seed)
+FR61: Epic 8 — TenantModule.department_id field (Enterprise seed)
+FR62: Epic 8 — Inter-department event bus (Enterprise seed)
+FR63: Epic 15 — Employee record management
+FR64: Epic 15 — Net salary calculation via payroll plugin
+FR65: Epic 15 — Absence recording & payroll impact
+FR66: Epic 15 — Bulk payslip generation (immutable on validation)
+FR67: Epic 15 — Social declaration file export (CNSS/IPRES/CNPS)
+FR68: Epic 15 — Payslip validation → accounting expense entry event
+FR69: Epic 15 — Pre-loaded chart of accounts (OHADA plugin)
+FR70: Epic 15 — Manual journal entries; auto-generated entries editable
+FR71: Epic 15 — Bank reconciliation (CSV/PDF import, auto-matching)
+FR72: Epic 15 — Month close; balance sheet & income statement export
+FR73: Epic 15 — CSV import for employees, accounts, balances, equipment
+FR74: Epic 15 — Retail→Enterprise migration without data loss
+FR75: Epic 6 — Sync failure lifecycle (outbox→retry→FAILED→manual resolution)
+FR76: Epic 2 — Per-item unitType configuration (unit/weight/volume/length)
+FR77: Epic 3 — Float-quantity POS input for weight/volume items
+FR78: Epic 2 — Sale unit label, unit price, conversion factor to stock unit
+FR79: Epic 4 — Purchase order creation & lifecycle management
+FR80: Epic 4 — Delivery reception linked to purchase order + variance tracing
+FR81: Epic 4 — Per-item low stock threshold definition
+FR82: Epic 4 — Automatic low-stock notification after stock movements
+FR83: Epic 11 — Repackaging rules (source→target, conversion factor) *(2b)*
+FR84: Epic 11 — Freshness window & natural loss tolerance per item *(2b)*
+FR85: Epic 11 — Freshness color indicator (Green/Orange/Red) in POS & stock *(2b)*
+FR86: Epic 7 — Automatic daily summary to owner (WhatsApp/push)
+FR87: Epic 4 — Loss location selection from configurable list
+FR88: Epic 4 — Internal replenishment request circuit
+FR89: Epic 11 — Item variants with tenant-configured attributes *(2b)*
+FR90: Epic 11 — Multi-level pricing (retail/wholesale/loyalty) *(2b)*
+FR91: Epic 14 — Promotion rules (% discount, quantity offer, crossed-out price) *(Phase 3)*
+FR92: Epic 11 — Serial number traceability per unit sold *(2b)*
+FR93: Epic 11 — Warranty certificate generation on sale *(2b)*
+FR94: Epic 11 — Prescription requirement enforcement per item *(2b)*
+FR95: Epic 11 — ProductBatch bestBeforeDate for freshness code *(2b)*
+FR96: Epic 11 — Dynamic pricing with price history *(2b)*
+FR97: Epic 11 — Unique item flag (consignment/antiques) *(2b)*
+FR98: Epic 9 — POS return with refund/credit/exchange options *(2a)*
+FR99: Epic 9 — Reservation with partial deposit *(2b)*
+FR100: Epic 10 — Pricing plan assignment per tenant (PlanDefinition) *(2a)*
+FR101: Epic 10 — Installation fees & billing status management *(2a)*
+FR102: Epic 10 — Tenant owner plan view & upgrade request *(2a)*
+FR103: Epic 10 — Online subscription payment & auto-provisioning *(Phase 3)*
+FR104: Epic 2 — BusinessTypeDefinition (flags, sections, categories) *(2a)*
+FR105: Epic 2 — Adaptive product form per businessType *(2a)*
+FR106: Epic 2 — Suggested category pre-creation on tenant creation *(2a)*
+FR107: Epic 9 — Client order creation (customer, products, delivery date) *(2a)*
+FR108: Epic 9 — Order validation & stock reservation *(2a)*
+FR109: Epic 9 — Delivery recording with actual quantities & linked transaction *(2a)*
+FR110: Epic 9 — Open orders dashboard + partial payments tracking *(2a)*
+FR111: Epic 9 — BusinessType role labels mapping *(2a)*
+FR-AI-01: Epic 12 — Dedicated AI panel (architecture H1, activation 2b)
+FR-AI-02: Epic 12 — AI-invocable module actions via function calling *(2b)*
+FR-AI-03: Epic 12 — AI-guided Excel/CSV import *(2b)*
+FR-AI-04: Epic 12 — Natural language business configuration *(2b)*
+FR-AI-05: Epic 17 — Universal Config Wizard *(Phase 3)*
+FR-TEMPLATE-01: Epic 17 — AI-driven Template Builder for integrators *(Phase 3)*
+FR-TEMPLATE-02: Epic 17 — Natural language module configuration *(Phase 3)*
+FR-MULTISTORE-01: Epic 11 — Multi-POS centralized dashboard & stock models *(2b)*
+FR-MULTISERVICE-01: Epic 17 — Multi-client professional dashboard *(Phase 3)*
+FR-SESSION-01: Epic 13 — Active session management & revocation *(2b)*
+FR-INTEGRATOR-01: Epic 13 — Floor price enforcement *(2b)*
+FR-INTEGRATOR-02: Epic 13 — Ceiling price enforcement *(2b)*
+FR-INTEGRATOR-03: Epic 13 — Volume-degressive wholesale fee *(2b)*
+FR-INTEGRATOR-04: Epic 13 — Recurring integrator commission *(2b)*
+FR-DEVIS-01: Epic 17 — Quote/Manufacturing module *(Phase 3+)*
+FR-WORKORDER-01: Epic 17 — Work Order module *(Phase 3+)*
+FR-BOM-01: Epic 17 — Bill of Materials module *(Phase 3+)*
+FR-ATELIERPLANNING-01: Epic 17 — Workshop Planning module *(Phase 3+)*
+FR-TABLE-01: Epic 17 — Table Management module *(Phase 3+)*
+FR-KDS-01: Epic 17 — Kitchen Display System *(Phase 3+)*
+FR-APPOINTMENT-01: Epic 17 — Appointment module *(Phase 3+)*
+FR-RBAC-01: Epic 1 — Dynamic RBAC (H1 schema + guard migration; API 2b; AI 2c)
+FR-SUPERADMIN-01: Epic 1 — Tenant creation via Super Admin *(H1)*
+FR-SUPERADMIN-02: Epic 1 — Tenant suspension/reactivation *(H1)*
+FR-SUPERADMIN-03: Epic 10 — Billing dashboard & auto-suspension *(2b)*
+FR-SUPERADMIN-04: Epic 13 — Integrator onboarding *(2b)*
+FR-SUPERADMIN-05: Epic 13 — Feature flags per tenant *(2b)*
+FR-SUPERADMIN-06: Epic 17 — Template marketplace review *(Phase 3)*
+
+---
 
 ## Epic List
 
-### Epic 1: Kernel — Identity, Tenancy & Access Control
-After this epic, users authenticate with tenant-scoped sessions, roles are enforced system-wide, modules can be activated per tenant, and every mutation is audit-logged. This is the foundation all other modules depend on.
-**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR7, FR8, FR9, FR10, FR50, FR51
+### Epic 1: Secure Multi-Tenant Access & RBAC Foundation
+Users can sign in securely, access only their tenant's data, and operate within properly scoped role-based permissions. Carlos can provision and suspend tenants instantly from Super Admin.
+**FRs covered:** FR1, FR2, FR3, FR4, FR5, FR6, FR-RBAC-01, FR-SUPERADMIN-01, FR-SUPERADMIN-02
+**Horizon:** H1
 
-### Epic 2: Shared Catalog Module
-Owners can manage products through the new polymorphic catalog (with itemType discriminator), organize by categories, and all catalog data is available offline. Old product endpoints remain backward-compatible.
-**FRs covered:** FR11, FR12, FR14, FR15
+### Epic 2: Product Catalog & Business Configuration
+Owner can build a complete product catalog with units of measure, categories, and business-type-appropriate defaults pre-configured — no irrelevant fields cluttering the interface.
+**FRs covered:** FR11, FR12, FR13, FR14, FR15, FR76, FR77 (POS part → Epic 3), FR78, FR104, FR105, FR106
+**Horizon:** H1 (FR104–FR106: Phase 2a)
 
-### Epic 3: Shared Contacts Module
-Users can manage customer profiles, track outstanding balances for credit sales, and access contact data offline. Customer → Contact entity migration with contactType support.
+### Epic 3: Point-of-Sale Operations
+Commercial can open a session, sell products with any payment method, and close the session with a complete Z-report — including weight/volume-based items.
+**FRs covered:** FR16, FR17, FR18, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR26, FR27, FR28, FR77 (POS float input)
+**Horizon:** H1
+
+### Epic 4: Stock & Inventory Management
+Manager can fully control stock operations: receive deliveries (with or without purchase orders), make transfers, declare losses with location, perform inventories, define stock alerts, and process replenishment requests.
+**FRs covered:** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36, FR79, FR80, FR81, FR82, FR87, FR88
+**Horizon:** H1 (FR79–FR80: Phase 2a)
+
+### Epic 5: Customer Management & Credit Sales
+Commercial can manage customer profiles, sell on credit, and track customer balances — fully available offline.
 **FRs covered:** FR37, FR38, FR39, FR40
+**Horizon:** H1
 
-### Epic 4: Shared Transactions & Payments Module
-Commercials can process sales with proper payment methods (cash, mobile money, credit, split), FCFA 5-franc rounding, change due calculation, and local-first transaction recording. Order → Transaction entity migration with lifecycle types.
-**FRs covered:** FR16, FR17, FR18, FR19, FR20, FR22
+### Epic 6: Offline-First Sync Engine & Data Reliability
+The entire business runs uninterrupted during network outages. All operations (sales, stock, reports) continue offline, sync automatically on reconnection, and no data is ever lost — even on power cut or crash.
+**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR75
+**NFRs addressed:** NFR14, NFR15, NFR16, NFR17, NFR18, NFR24, NFR25, NFR26, NFR27
+**Horizon:** H1
 
-### Epic 5: Shared Inventory Module
-Managers can receive deliveries, create stock transfers, and perform partial inventory counts. Commercials can confirm transfers and declare losses. The chain-of-custody pattern with double-validation and variance tracking is fully operational. All inventory data works offline.
-**FRs covered:** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36
+### Epic 7: Operations Reporting & Daily Intelligence
+Owner and manager have complete visibility: daily consolidated reports, live dashboard KPIs, immutable audit trail, and an automatic end-of-day summary pushed to the owner every evening.
+**FRs covered:** FR48, FR49, FR50, FR51, FR86
+**Horizon:** H1
 
-### Epic 6: Retail Vertical — POS Sessions & Extensions
-The retail POS is wrapped as a vertical module with cash sessions (open/close/variance), session-scoped transactions, RetailProduct extensions (stockQuantity, weightUnit), RetailSale extensions (sessionId, receiptNumber), and parked cart support. Cash accountability with mandatory variance explanation.
-**FRs covered:** FR13, FR21, FR23, FR24, FR25, FR26, FR27, FR28
+### Epic 8: Module Registry & Platform Architecture Foundations
+The platform's architectural contracts are established: modular per-tenant activation, payment adapter pattern, AiActionsManifest registry, guard chain, i18n discipline, versioned API, infrastructure CI/CD pipeline. Every future epic builds on this foundation.
+**FRs covered:** FR7, FR8, FR9, FR10, FR52, FR53, FR54, FR55, FR56, FR57, FR58, FR59, FR60, FR61, FR62
+**NFRs addressed:** NFR31, NFR32, NFR33, NFR34, NFR35, NFR36, NFR37, NFR38, NFR40, NFR-INFRA-01–05
+**Horizon:** H1
 
-### Epic 7: Reporting & Business Intelligence
-Managers can generate daily consolidation reports. Owners can view dashboards with revenue, sale count, losses, cash variances, and critical stock levels. Reports aggregate across sessions and modules.
-**FRs covered:** FR48, FR49
+### Epic 9: Client Orders & Delivery Workflow
+Commercial can manage the full client order lifecycle — create, validate stock, prepare, deliver, invoice, and collect partial payments — with returns and reservations fully handled.
+**FRs covered:** FR98, FR99, FR107, FR108, FR109, FR110, FR111
+**Horizon:** Phase 2a (FR99: Phase 2b)
 
-### Epic 8: Frontend Sync & Offline Resilience
-Frontend repositories updated to new API endpoints, Isar models aligned with new response shapes, full offline-first experience preserved: delta sync, crash recovery (WAL), conflict resolution, outbox queue, connectivity indicator, configurable data retention. Module-agnostic sync adapters. Full sync failure lifecycle: outbox → retry (3x exponential backoff) → FAILED state → admin notification → manual resolution interface.
-**FRs covered:** FR41, FR42, FR43, FR44, FR45, FR46, FR47, FR58, FR75
+### Epic 10: Billing Plans & Super Admin Backoffice
+Carlos can manage all tenant subscriptions, billing status, business type assignments, and feature flags from a Super Admin interface — no code deployments required.
+**FRs covered:** FR100, FR101, FR102, FR103, FR-SUPERADMIN-03, FR-SUPERADMIN-04 (partial), FR-SUPERADMIN-05
+**Horizon:** Phase 2a/2b (FR103: Phase 3)
 
-### Epic 9: Data Migration & Client Cutover
-All 3 existing clients migrated from monolithic public schema to kernel/shared/retail multi-schema architecture with zero data loss. Old endpoint proxies removed, cleanup completed, full regression validated.
-**FRs covered:** FR56, FR57
+### Epic 11: Advanced Product Features & Multi-Site Management
+Owner can unlock advanced product capabilities — variants, multi-pricing, freshness tracking, serial numbers, warranty certificates, dynamic pricing, unique items, and manage inventory across multiple POS locations.
+**FRs covered:** FR83, FR84, FR85, FR89, FR90, FR92, FR93, FR94, FR95, FR96, FR97, FR-MULTISTORE-01
+**Horizon:** Phase 2b
 
-### Epic 10: Server-Driven UI Infrastructure
-The Flutter app gains a JSON-driven layout engine. A single Flutter binary renders any vertical or department UI by reading layout definitions from the server DB. All Retail screens (Epics 2–6) are refactored to use the layout engine — adding a new business type requires only a new JSON layout config, zero Flutter code change. Infrastructure is in place for future verticals (Pharmacy, Restaurant) and Enterprise departments.
-**Phase:** 1 (after Epic 6, before Epic 7)
-**FRs covered:** FR13 (dynamic UI-Driven Engine layer)
-**Prerequisite:** Epics 1–6 complete (all shared modules + Retail vertical operational)
+### Epic 12: AI Assistant Layer
+Users can interact with their business data via a dedicated AI panel — ask questions, import Excel/CSV catalogs, configure business parameters in natural language, and trigger module actions via function calling.
+**FRs covered:** FR-AI-01, FR-AI-02, FR-AI-03, FR-AI-04
+**Horizon:** Phase 2b (architecture pattern: H1)
 
-### Epic 15: SDUI Dashboard & UI Polish
-The dashboard is wired to the SDUI engine (retail.dashboard.json), real KPI/chart/terminal widgets replace stubs, all POS and backoffice labels are translated to French with FCFA currency, hardcoded colors are replaced by AppTheme tokens, and navigation adapts to screen size (BottomNavigationBar on phone, NavigationRail on tablet) with SafeArea and Fitts-compliant touch targets throughout.
-**Phase:** 1b (after Epic 10 done)
-**FRs covered:** FR13 (SDUI dashboard), NFR28 (cashier onboarding ≤ 1h — French UI), NFR29 (French error messages)
-**Prerequisite:** Epic 10 complete (SduiRenderer + SduiWidgetRegistry operational)
+### Epic 13: Integrator Channel & Platform Governance
+Integrators can onboard, manage client portfolios, earn degressive commissions, and operate within Scalario's pricing guardrails. Tenant admins get full session visibility and security controls.
+**FRs covered:** FR-INTEGRATOR-01, FR-INTEGRATOR-02, FR-INTEGRATOR-03, FR-INTEGRATOR-04, FR-SUPERADMIN-04 (wholesale), FR-SUPERADMIN-05, FR-SESSION-01
+**Horizon:** Phase 2b
 
----
+### Epic 14: Promotions & Revenue Growth Tools
+Owner can create and run promotions that auto-apply at POS: percentage discounts on items or categories, quantity offers (buy X get Y), and temporary crossed-out prices with start/end dates.
+**FRs covered:** FR91
+**Horizon:** Phase 3
 
-### Epic 16: Retail Operations — Gestion Stock Terrain
-Les 4 opérations stock terrain de Moussa (gestionnaire) sont désormais accessibles depuis le frontend Flutter : réception livraison fournisseur, transfert magasin → rayon avec double validation chain-of-custody, déclaration de pertes avec motif obligatoire, et inventaire partiel avec signal des écarts. Les 4 écrans sont intégrés dans un hub Inventaire tabbed. Toutes les opérations fonctionnent offline (Isar + outbox).
-**Phase:** 1 (après Epic 15 — UI polish complète)
-**FRs covered:** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36
-**Prerequisite:** Epics 1–9 (backend inventory opérationnel — 288 tests NestJS verts), Epic 15 (DashboardShell + navigation tabbed)
+### Epic 15: Enterprise Operations (HR, Payroll & Accounting)
+A PME can manage its full back-office: employee records, payroll with local compliance plugins (CNSS, IPRES, CNPS), OHADA accounting, bank reconciliation, and regulatory declarations — all from one platform.
+**FRs covered:** FR63, FR64, FR65, FR66, FR67, FR68, FR69, FR70, FR71, FR72, FR73, FR74
+**Horizon:** Phase 3
 
-### Epic 11: Programme Ambassadeurs
-Existing tenants generate referral codes and refer new businesses to Scalario. The system tracks referrals via referred_by (seeded in Story 1.6), calculates monthly commissions (20% of referred tenant subscription), and triggers Mobile Money payouts automatically. Ambassadeur dashboard shows referred tenants, commission history, and next payout date.
-**Phase:** 2b
-**FRs covered:** FR52 business logic (DB fields already seeded in Story 1.6), PRD Section 8 — Programme Ambassadeurs
-**Prerequisite:** Epics 1–9 complete
+### Epic 16: Scalario Connect B2B Network
+Any tenant can transact directly with suppliers or partner businesses on the Scalario network — purchase orders, deliveries, and payments flow between tenants without leaving the platform.
+**FRs covered:** FR52–FR55 (DB seeds planted in Epic 8), full Connect feature layer
+**Horizon:** Phase 3
 
-### Epic 12: Scalario Connect
-Any Scalario tenant can act as Buyer, Seller, or both in a B2B graph. Tenants discover network-visible suppliers (network_visible flag), link supplier contacts (linked_tenant_id), reference supplier catalog items (supplier_reference), and execute inter-tenant transfers (transfer_inter_tenant type). B2B documents (orders, delivery notes, invoices) flow between tenants digitally — replacing WhatsApp/phone/paper coordination.
-**Phase:** 3
-**FRs covered:** FR52–FR55 Phase 3 business logic (DB structure already seeded in Story 1.6)
-**Prerequisite:** Epic 11 (Ambassadeurs network established)
-
-### Epic 21: Commandes fournisseurs + réception liée
-Le gestionnaire peut créer des commandes fournisseurs (sélection fournisseur, articles, quantités, date prévue), suivre leur statut (draft → confirmed → partially_received → received → cancelled), et enregistrer la réception liée avec variance automatique et notes qualité par article. Un KPI "Commandes en attente" apparaît sur le dashboard.
-**Phase:** 2a
-**FRs covered:** FR79, FR80
-**Prerequisite:** Epics 1–9, Epic 3 (contacts fournisseurs), Epic 16 (hub inventaire)
-
----
-
-### Epic 25: Variantes, multi-tarifs & promotions
-Les articles du catalogue supportent des variantes tenant-configurables (taille, couleur, matière) avec stock et prix indépendants. Les prix multi-niveaux (détail, gros, fidélité) s'appliquent automatiquement selon le type de client ou la quantité. Des promotions configurables (%, quantitatives, prix barré) s'appliquent automatiquement au POS dès qu'un article éligible est ajouté au panier.
-**Phase:** 2b (FR89, FR90) + Phase 3 (FR91)
-**FRs covered:** FR89, FR90, FR91
-**Prerequisite:** Epics 1–9, Epic 2 (catalog), Epic 4 (transactions + paiements), Epic 3 (contacts + contactType)
+### Epic 17: AI Config Wizard, Template Builder & Sectoral Core Modules
+Integrators can deploy any business sector without writing code. Any organization type — artisan workshop, restaurant, medical practice, salon, hotel — can be fully onboarded via AI-generated configuration and sectoral templates.
+**FRs covered:** FR-AI-05, FR-TEMPLATE-01, FR-TEMPLATE-02, FR-MULTISERVICE-01, FR-RBAC-01 (API 2b, AI 2c), FR-SUPERADMIN-06, FR-DEVIS-01, FR-WORKORDER-01, FR-BOM-01, FR-ATELIERPLANNING-01, FR-TABLE-01, FR-KDS-01, FR-APPOINTMENT-01
+**Horizon:** Phase 3+
 
 ---
 
-### Epic 26: Traçabilité Articles & Configurations Métier
+## Epic 1: Secure Multi-Tenant Access & RBAC Foundation
 
-Chaque article du catalogue peut être enrichi de configurations métier avancées selon le secteur du tenant : suivi de numéros de série par unité vendue (électronique, hi-fi), durée de garantie avec génération automatique de certificat, exigence d'ordonnance pour la vente (pharmacie), date de garde optimale sur lot (agroalimentaire, cave), prix dynamique avec historique complet (or, carburant), article unique non-réapprovisable avec archivage automatique après vente (dépôt-vente, antiquités). Toutes ces fonctionnalités sont optionnelles et désactivées par défaut.
-**Phase:** 2b
-**FRs covered:** FR92, FR93, FR94, FR95, FR96, FR97
-**Prerequisite:** Epic 2 (catalog), Epic 5 (inventory/stock movements), Epic 16 (réception fournisseur), Epic 24 (fraîcheur/batches), Epic 25 (variants/pricing)
+Users can sign in securely, access only their tenant's data, and operate within properly scoped role-based permissions. Carlos can provision and suspend tenants instantly from Super Admin.
 
----
+### Story 1.1: Super Admin Provisions a New Tenant
 
-### Epic 27: Retours Articles & Réservations
-
-Le POS supporte les retours d'articles avec trois modes de résolution configurables par tenant (remboursement cash, avoir client, échange article) et réintégration automatique du stock en mouvement RETURN. La politique de retour est tenant-configurable (délai en jours, exigence de raison, approbation manager). Les réservations permettent à un client de bloquer un article avec un acompte partiel configurable (10–50%) ; le cycle de vie pending → completed est suivi avec solde client et KPI dashboard.
-**Phase:** 2a (FR98) + 2b (FR99)
-**FRs covered:** FR98, FR99
-**Prerequisite:** Epics 1–9, Epic 4 (transactions + paiements), Epic 3 (contacts + solde client), Epic 5 (mouvements de stock)
-
----
-
-### Epic 28: Plans Tarifaires & Facturation
-
-Le superadmin gère les plans tarifaires (PlanDefinition), assigne un plan par tenant avec activation automatique des modules et synchronisation du maxUsers, enregistre les frais d'installation et de formation, et pilote le cycle de vie de facturation (trial → active → overdue → suspended) avec suspension automatique configurable. Le propriétaire consulte son plan et son historique de facturation depuis son backoffice et peut demander un upgrade.
-**Phase:** 2a (FR100–FR102) + Phase 3 (FR103)
-**FRs covered:** FR100, FR101, FR102, FR103
-**Prerequisite:** Epic 1 (Kernel + ModuleRegistry), Epic 19 (admin panel)
-
----
-
-### Epic 29: Types de Business Configurables
-
-Le superadmin assigne un type de business à chaque tenant via une table `BusinessTypeDefinition` configurable sans déploiement (13 types seedés : généraliste, épicerie, téléphonie, textile, pharmacie, quincaillerie, cosmétique, restaurant, boulangerie, services, informatique, véhicules, grossiste). Le formulaire produit du backoffice s'adapte automatiquement au type du tenant (sections visibles, flags pré-remplis, toggle "Afficher plus d'options"). À la création du tenant, les catégories suggérées du type sont pré-créées dans le catalogue.
-**Phase:** 2a
-**FRs covered:** FR104, FR105, FR106
-**Prerequisite:** Epic 1 (Kernel + Tenant), Epic 2 (catalog + CatalogCategory), Epic 19 (admin panel), Epic 28 (NewTenantForm — ajouter le champ après plan)
-
----
-
-### Epic 30: Commandes Clients & Labels Rôle
-
-Les tenants de type grossiste/distribution peuvent créer et piloter des commandes clients avec cycle de vie complet (draft → confirmed → in-progress → delivered), numérotation automatique (CO-XXXX), validation de stock à la confirmation (StockMovement RESERVATION), et génération du document de livraison selon le type de business (ticket, bon de livraison, facture). Un KPI "Commandes en cours / CA en attente" s'affiche sur le dashboard. Les labels de rôles s'affichent dans toute l'UI selon `BusinessTypeDefinition.roleLabels` du tenant sans impact sur les permissions.
-**Phase:** 2a
-**FRs covered:** FR107, FR108, FR109, FR110, FR111
-**Prerequisite:** Epic 1 (Kernel + RBAC), Epic 2 (catalog), Epic 3 (contacts), Epic 4 (transactions), Epic 5 (inventory/StockMovement), Epic 29 (BusinessTypeDefinition + roleLabels/documentType)
-
----
-
-### Epic 24: Fraîcheur + code couleur priorité vente
-Chaque article peut avoir une fenêtre de fraîcheur en jours et un coefficient de tolérance au rétrécissement. À la réception, une date d'expiration est calculée automatiquement par lot (`ProductBatch`). La grille POS et les vues stock affichent un indicateur couleur vert/orange/rouge selon le pourcentage de fenêtre restant. Les articles orange/rouge sont triés en priorité. Un onglet "Fraîcheur" dans l'`InventoryScreen` permet de déclasser les lots.
-**Phase:** 2b
-**FRs covered:** FR84, FR85
-**Prerequisite:** Epic 21 (réception fournisseur), Epic 5 (mouvements de stock), Epic 22 (alertes stock)
-
----
-
-### Epic 23: Conversion unités vrac → détail
-Un article enfant (ex: sachet 100 g) peut être lié à un article parent vrac (ex: sac 5 kg) via `parentItemId` et un `conversionRate`. À la vente de l'article enfant au POS, le stock du parent est décrémenté automatiquement selon le facteur. L'opération est tracée comme mouvement `REPACKAGING` dans l'audit trail.
-**Phase:** 2a
-**FRs covered:** FR83
-**Prerequisite:** Epic 20 (unitType + conversionRate sur CatalogItem), Epic 5 (mouvements de stock)
-
----
-
-### Epic 22: Alertes stock bas + notifications
-Chaque article peut avoir un seuil de stock bas configurable. Après tout mouvement décrémentant le stock, le système évalue automatiquement les articles sous seuil et publie les alertes. Le backoffice affiche un badge catalogue, un écran alertes dédié, et un KPI dashboard "Stock critique". Un service de notification envoie un résumé quotidien configurable par tenant (canal, heure, on/off).
-**Phase:** 2a
-**FRs covered:** FR81, FR82, FR86
-**Prerequisite:** Epics 1–9, Epic 2 (catalog + minStockLevel field), Epic 5 (mouvements de stock)
-
----
-
-### Epic 20: Vente au poids + unités configurables
-Les articles peuvent être configurés avec un `unitType` (pièce, poids, volume, longueur) et un label d'unité libre. Au POS, les articles au poids affichent un champ de saisie de quantité en virgule flottante ; le total est calculé automatiquement avec arrondi FCFA. Le reçu affiche la quantité et l'unité native. La décrémentation stock applique le facteur de conversion configuré.
-**Phase:** 2a
-**FRs covered:** FR76, FR77, FR78
-**Prerequisite:** Epics 1–9 (backend catalog opérationnel)
-
----
-
-### Epic 13: Scalario Enterprise
-A Retail tenant (org_mode: standalone) upgrades to Enterprise (org_mode: integrated or federated) with zero downtime. Enterprise adds: multi-department org structure (FR59–FR61, DB seeded in Story 1.6), HR & Payroll with CNSS/CARFO/SMIG compliance (FR63–FR68), OHADA accounting with month-end close and FEC export (FR69–FR72), CSV import for employees and chart of accounts (FR73–FR74), and inter-department event flows connecting payroll validation to automatic accounting entries (FR62). User journeys: Awa (DRH), Ibrahim (Comptable), Serge (DG).
-**Phase:** 3
-**FRs covered:** FR59–FR74 Phase 3 business logic (DB structure for FR59–FR61 already seeded in Story 1.6)
-**Prerequisite:** Epic 1 (Kernel + Story 1.6 DB fields in place)
-
----
-
-## Epic 1: Kernel — Identity, Tenancy & Access Control
-
-After this epic, users authenticate with tenant-scoped sessions, roles are enforced system-wide, modules can be activated per tenant, and every mutation is audit-logged. This is the foundation all other modules depend on.
-
-### Story 1.1: Kernel Schema, Tenant Management & Authentication
-
-As a system administrator,
-I want to create and configure tenants, and have users authenticate with tenant-scoped sessions,
-So that each business operates in complete isolation with proper authentication.
+As a Super Admin (Carlos),
+I want to create and configure a new tenant from the admin backoffice,
+So that a new client is immediately live on the platform without any manual database operations.
 
 **Acceptance Criteria:**
 
-**Given** the database has no kernel schema
-**When** the Prisma migration runs
-**Then** the `kernel` schema is created with `tenants` and `organization_members` tables, and `Tenant` includes fields: `id`, `name`, `currency` (default XOF), `timezone` (default Africa/Abidjan), `fiscal_jurisdiction`, `status` (active/suspended/archived), `created_at`
+**Given** I am authenticated as Super Admin
+**When** I submit the tenant creation form with: name, currency (XOF default), timezone, fiscal jurisdiction, business type, org_mode (standalone default), pricing plan, initial modules, sector template, and optional integrator
+**Then** the tenant is provisioned immediately with status `active`
+**And** the tenant's suggested product categories are pre-created based on the selected business type
+**And** the assigned plan's module list is activated for the tenant
+**And** an audit log entry records: creator, timestamp, all configuration values
 
-**Given** an existing Tenant in the old public schema
-**When** the migration completes
-**Then** tenant data is preserved in the new kernel schema with new fields populated with defaults
+**Given** a tenant is created with plan "free"
+**When** an API request is made by that tenant exceeding the free plan's maxUsers limit
+**Then** the server returns HTTP 402 with key `error.billing.limit_exceeded`
 
-**Given** a valid JWT token from Supabase Auth
-**When** a request hits any protected endpoint
-**Then** `AuthGuard` validates the token and attaches user context to the request via `@CurrentUser()` decorator
+### Story 1.2: Tenant-Scoped User Authentication
 
-**Given** a request with `x-tenant-id` header
-**When** the request passes AuthGuard
-**Then** `TenantGuard` validates the user is a member of that tenant, attaches tenant context via `@CurrentTenant()` decorator, and Prisma middleware executes `SET LOCAL app.current_tenant_id` for RLS enforcement
+As a user,
+I want to authenticate and receive a JWT token scoped to my tenant,
+So that all my operations are automatically isolated to my organization's data without me having to specify it.
 
-**Given** a request without a valid JWT or with an invalid `x-tenant-id`
-**When** the request hits a protected endpoint
-**Then** the system returns 401 (no JWT) or 403 (wrong tenant) with clear error messages
+**Acceptance Criteria:**
 
-**Given** a user session that has been idle longer than the configured timeout
-**When** the next request is made
-**Then** the session is rejected and the user must re-authenticate
+**Given** a user has valid credentials for tenant T
+**When** they authenticate via `POST /api/v1/auth/login`
+**Then** they receive a JWT containing `tenantId`, `userId`, `roles`, and expiry
+**And** every subsequent API call with that JWT only accesses tenant T's data
 
-**Given** a route decorated with `@Public()`
-**When** an unauthenticated request hits that route
-**Then** the request is allowed through without JWT validation
+**Given** a valid JWT for tenant A
+**When** a request attempts to access any resource belonging to tenant B
+**Then** the server returns HTTP 403
+**And** no tenant B data is exposed in the response body or error message
 
-### Story 1.2: Role-Based Access Control (RBAC)
+**Given** a JWT whose tenant has been suspended
+**When** any API call is made with that token
+**Then** the server returns HTTP 401 with key `error.auth.tenant_inactive`
+
+### Story 1.3: Owner Manages User Accounts & Role Assignment
 
 As a tenant owner,
-I want to create user accounts with assigned roles and have the system enforce role-based permissions,
-So that each team member can only access features appropriate to their role (Owner, Manager, Commercial).
+I want to create user accounts and assign them roles with business-appropriate labels for my trade,
+So that my team members can access the system with the right permissions from day one.
 
 **Acceptance Criteria:**
 
-**Given** the kernel schema exists
-**When** the RBAC migration runs
-**Then** `roles`, `permissions`, and `role_permissions` tables are created in the kernel schema, and `organization_members.role` is converted from String to FK referencing `roles`
+**Given** I am authenticated as owner of tenant T
+**When** I create a new user with email, name, and a role from the available roles for my tenant
+**Then** the user receives an invitation with setup credentials
+**And** the user's role label in the UI matches the BusinessTypeDefinition roleLabels for my business type (e.g. "Livreur" instead of "commercial" for a distribution business)
 
-**Given** the system initializes
-**When** the seed script runs
-**Then** MVP Retail roles are seeded: Owner (full access), Manager (stock/reports), Commercial (POS/sales), each with predefined permissions matching the PRD v5 RBAC Retail matrix
-**And** two Phase-3-reserved roles are seeded with zero active permissions:
-  - DepartmentAdmin (Enterprise: department-level management)
-  - Employee (Enterprise: basic access within department)
-  Each marked with a `phase` metadata field ('phase3') — non-activatable in Phase 1 but require no schema migration to enable in Phase 3
+**Given** I attempt to create a user that would exceed the plan's `maxUsers` limit
+**When** I submit the form
+**Then** the system rejects the creation with key `error.billing.max_users_reached`
 
-**Given** an Owner user is authenticated
-**When** they call `POST /api/v1/organizations/:id/members` with a role assignment
-**Then** a new OrganizationMember is created with the specified role FK
+**Given** I am in Enterprise mode (org_mode: integrated)
+**When** I create a user
+**Then** I can assign them to one or more departments
+**And** their access is scoped to those departments' activated modules
 
-**Given** a Commercial user is authenticated
-**When** they attempt to access an Owner-only endpoint (e.g., price modification)
-**Then** `RolesGuard` returns 403 Forbidden
+### Story 1.4: RBAC Permission Enforcement at API & UI Level
 
-**Given** an endpoint decorated with `@Roles('owner', 'manager')`
-**When** a Commercial user calls it
-**Then** the request is rejected; when an Owner or Manager calls it, the request proceeds
-
-**Given** the RBAC system is deployed
-**When** existing OrganizationMember records are migrated
-**Then** each member's string role is mapped to the corresponding Role FK with zero data loss
-
-### Story 1.3: Module Registry & Activation
-
-As a system administrator,
-I want to register available modules and activate/deactivate them per tenant,
-So that each tenant only pays for and accesses the modules they need, with dependency validation.
+As a tenant user,
+I want the system to consistently enforce my role's permissions across every screen and API endpoint,
+So that I can only perform actions my role is authorized for — no more, no less.
 
 **Acceptance Criteria:**
 
-**Given** the kernel schema exists
-**When** the module registry migration runs
-**Then** `modules` and `tenant_modules` tables are created with fields matching the Architecture spec (code, name, type, dependencies, status)
+**Given** a user with role `commercial` (has `session.open`, `catalog.read`; does NOT have `catalog.edit`)
+**When** they call `POST /api/v1/catalog/items` (requires `catalog.edit`)
+**Then** the server returns HTTP 403 with key `error.rbac.permission_denied`
+**And** the Flutter UI does not render the "Add Product" button for this user
 
-**Given** the system initializes
-**When** the seed script runs
-**Then** shared modules (catalog, transactions, inventory, payments, contacts, reporting) and the retail vertical are registered with correct dependency declarations
-**And** two Phase-3 modules are pre-registered with status='available_phase3' and activatable=false:
-  - connect: type='vertical', depends_on=[]
-  - enterprise: type='vertical', depends_on=[catalog, contacts, transactions, reporting]
-So that Phase 3 launch requires only a status flag update, never a new seed migration on a live multi-tenant system
+**Given** the guard chain: `AuthGuard → TenantGuard → BillingGuard → ModuleGuard → RolesGuard`
+**When** a request reaches a protected endpoint
+**Then** each guard executes in order; the first failing guard blocks the request and returns its specific error key
+**And** no guard after the failing one executes
 
-**Given** an admin activates a vertical module for a tenant
-**When** the vertical declares dependencies on shared modules
-**Then** the system validates all dependencies are active before allowing activation; if a dependency is missing, activation fails with a clear error
+**Given** a user's role permissions are updated by the owner
+**When** the user makes their next API request (after JWT refresh)
+**Then** the updated permissions are enforced immediately with zero regression on previously allowed actions
 
-**Given** a tenant has the catalog module active
-**When** a request hits a Catalog endpoint with `@RequiresModule('catalog')`
-**Then** `ModuleGuard` allows the request through
+### Story 1.5: RBAC Foundation Migration — Tenant-Scoped Roles & Permission Codes
 
-**Given** a tenant does NOT have the catalog module active
-**When** a request hits a Catalog endpoint
-**Then** `ModuleGuard` returns 403 with message "Module not activated for this tenant"
+As a platform developer,
+I want roles stored per-tenant in the database with permission-code-based guards,
+So that sector templates can define distinct role structures per business type without code deployments.
 
-**Given** a tenant with active modules
-**When** admin deactivates a module for that tenant
-**Then** the deactivation has zero impact on other tenants' module activations
+**Acceptance Criteria:**
 
-**Given** a tenant with org_mode='standalone' already has one active vertical
-**When** admin attempts to activate a second vertical
-**Then** the system rejects the activation (Retail mode: one vertical per tenant)
+**Given** the current `kernel.roles` table has no `tenant_id`
+**When** the H1 migration runs
+**Then** `kernel.roles` gains `tenant_id UUID FK nullable` and the unique constraint becomes `@@unique([name, tenantId])`
+**And** existing global template roles retain `tenantId = null`
+**And** no existing role data or user access is disrupted (zero regression)
 
-**Given** a tenant with org_mode='integrated' (Enterprise Phase 3)
-**When** admin activates a vertical scoped to a specific department
-**Then** the system allows it — multi-vertical is valid in Enterprise mode
-**Note:** ModuleGuard must check org_mode before enforcing the constraint — write the guard to be mode-aware from day one
+**Given** the guard currently checks `@Roles('owner')` via string name comparison
+**When** the guard is migrated to `@Permissions('catalog.edit')` using the existing `hasPermission()` in PermissionService
+**Then** all existing permission sets continue to resolve correctly
+**And** no new hardcoded role name strings are introduced anywhere in the backend
 
-### Story 1.4: Event Bus & Audit Trail
+**Given** a sector template is applied to a tenant (e.g. restaurant template with roles "Gérant" / "Serveur")
+**When** a different template is applied to another tenant (e.g. pharmacy with "Pharmacien" / "Préparateur")
+**Then** each tenant has isolated role records with its own `tenantId`
+**And** no cross-tenant role pollution occurs in any query
+
+### Story 1.6: Session Timeout Configuration
+
+As a tenant owner,
+I want to configure how long user sessions stay active,
+So that unattended devices automatically lock out after inactivity without disrupting active work.
+
+**Acceptance Criteria:**
+
+**Given** a tenant has configured session timeout of N hours (default: 8h)
+**When** a user's JWT age exceeds N hours without activity
+**Then** the next API call returns HTTP 401 with key `error.auth.session_expired`
+**And** the Flutter app redirects to the login screen without data loss
+
+**Given** a user is actively making API calls
+**When** each call occurs within the timeout window
+**Then** the session sliding window resets
+**And** no interruption occurs during normal operation
+
+### Story 1.7: Super Admin Suspends and Reactivates a Tenant
+
+As a Super Admin (Carlos),
+I want to suspend a non-paying or misbehaving tenant with a traced reason,
+So that their team is immediately locked out while their data is fully preserved for reactivation.
+
+**Acceptance Criteria:**
+
+**Given** a tenant is `active` with users currently connected
+**When** I suspend it from Super Admin with a mandatory reason
+**Then** the tenant status becomes `suspended` within < 1s
+**And** all active sessions for that tenant are invalidated within < 5s (Supabase Realtime forced logout)
+**And** suspension reason, actor, and timestamp are written to the audit log
+
+**Given** a tenant is `suspended`
+**When** any user from that tenant attempts to authenticate or make an API call
+**Then** the server returns HTTP 403 with key `error.tenant.suspended`
+**And** the Flutter app displays the message resolved from that i18n key
+
+**Given** a suspended tenant
+**When** I reactivate it from Super Admin with a reason
+**Then** the tenant status returns to `active` immediately
+**And** users can log in again without any additional steps
+**And** reactivation actor, reason, and timestamp are recorded in the audit log
+
+---
+
+## Epic 2: Product Catalog & Business Configuration
+
+Owner can build a complete product catalog with units of measure, categories, and business-type-appropriate defaults. No irrelevant fields cluttering the interface.
+
+### Story 2.1: Create, Edit and Deactivate Catalog Items
+
+As an owner,
+I want to create, edit, and deactivate catalog items with all essential attributes,
+So that my product list accurately reflects what my business sells.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as owner
+**When** I create an item with: name, price (DECIMAL, never float), category, barcode (optional), and type discriminator (physical | bookable | service)
+**Then** the item is saved with `tenantId` automatically set from my JWT
+**And** the price is stored as `DECIMAL(10,2)` and serialized as string in all API responses
+
+**Given** an item with `status: active`
+**When** I deactivate it
+**Then** it no longer appears in POS search results or catalog grids
+**And** the item record is retained (soft delete) with its full history intact
+
+**Given** I edit an existing item's price
+**When** the change is saved
+**Then** an audit entry is created with: actor, timestamp, old price, new price (NFR12)
+**And** the POS reflects the new price on the next catalog sync
+
+### Story 2.2: Product Category Management
+
+As an owner,
+I want to create and manage product categories,
+So that my catalog is organized and easy to browse at the POS.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as owner
+**When** I create a category with a name
+**Then** the category is available for item assignment and scoped to my tenant only
+
+**Given** a category has items assigned to it
+**When** I attempt to delete the category
+**Then** the system prevents deletion and returns key `error.catalog.category_has_items`
+**And** I am prompted to reassign items first
+
+**Given** categories exist
+**When** they are fetched via `GET /api/v1/catalog/categories`
+**Then** the response supports `?since=ISO8601` delta sync for offline-first devices
+
+### Story 2.3: Configure Item Unit Types for Weight & Volume Sales
+
+As an owner,
+I want to configure each item with its unit type, sale unit label, and optional stock conversion factor,
+So that the POS correctly handles items sold by weight, volume, or length — not just by piece.
+
+**Acceptance Criteria:**
+
+**Given** I open an item's edit form
+**When** I set `unitType` to `weight` and `nativeUnit` to `kg`
+**Then** the POS displays a float-precision quantity input labeled "kg" for this item
+**And** `unitType: unit` remains the default for unconfigured items
+
+**Given** I define sale unit "sachet 500g" with price 500 FCFA and conversion factor 0.5 (= 0.5 kg per sachet)
+**When** a commercial sells 3 sachets
+**Then** the transaction records: quantity = 3, unit = "sachet 500g", total = 1500 FCFA
+**And** stock is decremented by 1.5 kg (3 × 0.5)
+
+**Given** an item with `unitType: weight` is sold
+**When** the total is calculated
+**Then** it is rounded according to the tenant's currency rule (XOF: nearest 5 FCFA)
+
+### Story 2.4: Sectoral Catalog Extension via UI-Driven Engine
+
+As a sectoral module,
+I want to extend base catalog items with sector-specific fields,
+So that each business type sees only the fields relevant to their operations without modifying the shared catalog schema.
+
+**Acceptance Criteria:**
+
+**Given** the retail sector module is active for a tenant
+**When** an item is created
+**Then** the item can include retail-specific fields (stockQuantity, reorderPoint, expiresAt) without altering the base CatalogItem schema
+
+**Given** a non-retail sector template is active
+**When** catalog items are fetched
+**Then** only fields declared by the active sector module's extension are included
+**And** no retail-specific fields appear for non-retail tenants
+
+**Given** a tenant has no sector module active
+**When** catalog items are accessed
+**Then** items function correctly with base fields only (name, price, category, type, barcode)
+
+### Story 2.5: Offline Catalog Availability
+
+As a commercial,
+I want the full product catalog available on my device without an internet connection,
+So that I can search, browse, and sell even when the network is down.
+
+**Acceptance Criteria:**
+
+**Given** the device has completed at least one full catalog sync
+**When** the device goes offline
+**Then** all catalog items, categories, prices, and unit configurations remain fully accessible in Isar
+**And** no "loading" or "unavailable" state appears in the POS grid
+
+**Given** catalog items were updated server-side while the device was offline
+**When** the device reconnects and sync runs
+**Then** only changed items are transmitted via `?since=ISO8601` delta sync
+**And** the local Isar catalog reflects all updates within the sync cycle
+
+**Given** an item is deactivated server-side
+**When** the delta sync runs on the device
+**Then** the item is removed from the local Isar collection and disappears from POS immediately
+
+### Story 2.6: Business Type Definition Configuration *(Phase 2a)*
+
+As a Super Admin,
+I want to configure BusinessTypeDefinitions without code deployment,
+So that new business types can be added and existing ones updated as Scalario expands to new sectors.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as Super Admin
+**When** I create a BusinessTypeDefinition with: code (unique), name, default product flags (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), visible form sections, suggested categories, roleLabels JSON, and documentType
+**Then** the definition is immediately available for tenant assignment
+**And** all 14 seeded business types (generaliste, epicerie, telephonie, textile, pharmacie, etc.) are present with correct defaults on first migration
+
+**Given** a BusinessTypeDefinition default flag is updated
+**When** the change is saved
+**Then** the change applies to new tenants of that type only
+**And** existing tenants' per-item overrides are not retroactively altered
+
+### Story 2.7: Adaptive Product Form by Business Type *(Phase 2a)*
+
+As a tenant owner,
+I want the product creation form to show only the fields relevant to my business type by default,
+So that I'm not overwhelmed by irrelevant options when adding items.
+
+**Acceptance Criteria:**
+
+**Given** a tenant with businessType "telephonie"
+**When** I open the product creation form
+**Then** `trackSerialNumbers` and `warrantyMonths` are visible and pre-filled with the type's defaults
+**And** `expiryDays` and `requiresPrescription` are hidden behind a "Show more options" toggle
+
+**Given** I toggle "Show more options" and enable `expiryDays` on a specific product
+**When** the product is saved
+**Then** that product uses `expiryDays` regardless of business type defaults
+**And** the per-product override is retained independently of any future BusinessTypeDefinition changes
+
+**Given** a product is created without any flag override
+**When** the business type defaults are read
+**Then** the product inherits those defaults at read time (not stored redundantly on the product record)
+
+### Story 2.8: Suggested Category Auto-Creation on Tenant Setup *(Phase 2a)*
+
+As an owner of a newly provisioned tenant,
+I want my starting category list to match my business type out of the box,
+So that I can begin adding products immediately without manually building my category structure.
+
+**Acceptance Criteria:**
+
+**Given** a tenant is created with businessType "telephonie"
+**When** provisioning completes
+**Then** the categories ["Smartphones", "Accessoires", "Cartes SIM", "Tablettes"] are created in the tenant's catalog
+**And** these categories are fully owned by the tenant (rename, delete, or add freely)
+
+**Given** a tenant is created with businessType "generaliste"
+**When** provisioning completes
+**Then** no suggested categories are pre-created (blank slate)
+
+**Given** a tenant's suggested categories exist
+**When** the owner deletes one
+**Then** the deletion succeeds without restriction and no system behavior depends on its existence
+
+---
+
+## Epic 3: Point-of-Sale Operations
+
+Commercial can open a session, sell products with any payment method, and close the session with a complete Z-report — including weight/volume-based items.
+
+### Story 3.1: Open a POS Session with Cash Float Declaration
+
+As a commercial,
+I want to open a POS session by declaring my starting cash float,
+So that all my sales during the shift are tracked within a single accountable session.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as commercial and no session is currently open on my device
+**When** I open a new session and declare the starting float amount (e.g. 10,000 FCFA)
+**Then** a session is created with status `open`, `openedAt` timestamp, my `userId`, and the declared `openingFloat`
+**And** all subsequent sales I create are automatically associated with this session via `sessionId`
+
+**Given** a session is already open on my device
+**When** I attempt to open a second session
+**Then** the system prevents it with key `error.session.already_open`
+**And** I must close the existing session before opening a new one
+
+**Given** I open a session with float 0 FCFA
+**When** the session is created
+**Then** it is accepted (zero float is valid)
+
+### Story 3.2: Create a Sale Transaction with Payment
+
+As a commercial,
+I want to select items, quantities, and a payment method to complete a sale,
+So that the customer's purchase is recorded instantly and the correct change is calculated.
+
+**Acceptance Criteria:**
+
+**Given** I have an active open session
+**When** I add items to the cart and select payment method "cash" with amount tendered 10,000 FCFA for a 9,750 FCFA total
+**Then** the transaction is created with: `tenantId`, `sessionId`, line items (itemId, qty, unitPrice, subtotal), total = 9,750 FCFA, paymentMethod = cash, changeDue = 250 FCFA
+**And** the transaction is written to Isar immediately (local-first) and queued in the outbox for server sync
+**And** total is stored as `DECIMAL(10,2)` and rounded to nearest 5 FCFA (XOF rule)
+
+**Given** a sale with payment method "mobile money"
+**When** the transaction is created
+**Then** `changeDue` is 0 and the payment method is recorded via the `PaymentAdapter` interface (never a direct provider call)
+
+**Given** a sale with payment method "credit" linked to a customer contact
+**When** the transaction is created
+**Then** the customer's outstanding balance is incremented by the transaction total
+**And** the transaction `lifecycle` is set to `accumulating`
+
+**Given** a transaction is synced to the server
+**When** the server processes it
+**Then** `tenantId` is validated from JWT (never from request body)
+**And** the response includes the server-assigned `receiptNumber` (sequential, tenant-scoped)
+
+### Story 3.3: Float-Quantity Sales for Weight & Volume Items
+
+As a commercial,
+I want to enter a decimal quantity for items sold by weight or volume,
+So that items like loose produce, liquids, or fabric are priced accurately at the POS.
+
+**Acceptance Criteria:**
+
+**Given** an item configured with `unitType: weight` and `nativeUnit: kg`
+**When** I add it to the cart
+**Then** the POS displays a numeric input accepting decimal values (e.g. 1.35) labeled "kg"
+**And** the line total is auto-calculated as `unitPrice × quantity`, rounded per currency rule
+
+**Given** an item with sale unit "sachet 500g" and conversion factor 0.5
+**When** I enter quantity 4
+**Then** the cart shows 4 × sachet 500g and the stock decrement queued in the outbox is 2 kg (4 × 0.5)
+
+**Given** an item with `unitType: unit` (default)
+**When** I add it to the cart
+**Then** the quantity input accepts only whole numbers
+
+### Story 3.4: Close POS Session with Z-Report
+
+As a commercial,
+I want to close my session by counting my cash and submitting a Z-report,
+So that my shift is formally closed with a full reconciliation record.
+
+**Acceptance Criteria:**
+
+**Given** I have an active session with completed sales
+**When** I initiate session close and enter my counted cash amount
+**Then** the system calculates `discrepancy = countedAmount - (openingFloat + cashSalesTotal - changeGiven)`
+**And** the Z-report is generated in < 2s showing: opening float, sales by payment method, expected cash, counted amount, discrepancy
+
+**Given** the discrepancy is non-zero
+**When** I attempt to submit the close
+**Then** the system requires a mandatory text explanation before allowing submission
+
+**Given** the discrepancy is 0 FCFA
+**When** I submit the close
+**Then** the session closes without requiring an explanation and status changes to `closed` with `closedAt` timestamp
+
+**Given** a session is closed
+**When** the closure syncs to the server
+**Then** the Z-report and all sale lines are immutably recorded in the audit trail and the session cannot be reopened or modified
+
+### Story 3.5: Manager Reviews Session Closing Reports
+
+As a manager,
+I want to consult the closing reports of all commercials at my location,
+So that I can verify daily reconciliation and identify discrepancies across the team.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as manager
+**When** I access the session reports section
+**Then** I see all closed sessions for my location, filterable by date range, commercial, and status
+**And** each report shows: commercial name, opening float, total sales, discrepancy, explanation (if any)
+
+**Given** a session with a non-zero discrepancy
+**When** I view it
+**Then** the discrepancy is highlighted and the commercial's explanation is clearly displayed
+
+**Given** I am authenticated as commercial (not manager)
+**When** I access session reports
+**Then** I can only see my own sessions (RBAC: `session.read.own` vs `session.read.all`)
+
+---
+
+## Epic 4: Stock & Inventory Management
+
+Manager can fully control stock operations — receive deliveries, make transfers, declare losses, perform inventories, set alerts, and process replenishment requests.
+
+### Story 4.1: Receive Supplier Delivery
+
+As a manager,
+I want to record a supplier delivery by entering quantities received versus expected,
+So that my stock is immediately updated and any reception variance is traced.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as manager
+**When** I create a delivery reception with supplier contact, items, expected vs. received quantities, and optional observation notes per item
+**Then** a `InventoryMovement` of type `RECEIPT` is created per item with the actual received quantity
+**And** stock levels are incremented by received quantities
+**And** variances (received − expected) are stored on the reception record
+**And** all data is written locally first and queued in the outbox
+
+**Given** I add observation notes (e.g. "produits trop mûrs")
+**When** the reception is saved
+**Then** notes are attached to the inventory movement and visible in reception reports
+
+**Given** the reception syncs to the server
+**When** processed
+**Then** `tenantId` is validated from JWT and the reception is added to the immutable audit trail
+
+### Story 4.2: Create and Process Store→Shelf Transfers
+
+As a manager,
+I want to create stock transfers from the store to a shelf or section,
+So that sales staff always have sufficient stock on the selling floor.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as manager
+**When** I create a transfer with: source (store), destination (shelf/section), items and declared quantities
+**Then** a `StockTransfer` is created with status `pending` and stock reserved from the source location
+
+**Given** a transfer is pending
+**When** the receiving commercial confirms it and enters the actually received quantity
+**Then** the transfer status changes to `completed`
+**And** a variance record is created if actual ≠ declared (FR33), attributed to the transfer and visible in reports
+**And** source stock is decremented by the actual received quantity only
+
+### Story 4.3: Declare Stock Losses with Location Attribution
+
+As a commercial,
+I want to declare stock losses with a mandatory reason and location,
+So that losses are traceable and attributable to the right area of the business.
+
+**Acceptance Criteria:**
+
+**Given** my tenant has configured loss locations (e.g. "Magasin", "Rayon")
+**When** I declare a loss for an item
+**Then** the location selector is mandatory and the form cannot be submitted without it
+**And** a `InventoryMovement` of type `LOSS` is created with: item, quantity, reason, location, actor, timestamp
+
+**Given** my tenant has no loss locations configured
+**When** I declare a loss
+**Then** the location field is optional
+
+**Given** losses are recorded
+**When** the manager views the loss report
+**Then** losses are filterable and aggregatable by location and date range for responsibility attribution
+
+### Story 4.4: Partial Inventory with Variance Signaling
+
+As a manager,
+I want to perform a partial inventory count for selected items or categories,
+So that I can detect and correct stock discrepancies without a full store closure.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as manager
+**When** I enter counted quantities for each item in the partial inventory
+**Then** the system calculates `variance = counted - systemStock` per item
+**And** items with non-zero variance are flagged in the inventory report
+
+**Given** I validate the counts
+**When** the inventory is completed
+**Then** stock is adjusted to match counted quantities
+**And** each adjustment generates a `InventoryMovement` of type `ADJUSTMENT` with actor and timestamp
+
+**Given** the device is offline during an inventory count (FR36)
+**When** the count is completed offline
+**Then** adjustments are queued in the outbox and synced on reconnection without data loss
+
+### Story 4.5: Create and Manage Purchase Orders *(Phase 2a)*
+
+As an owner or authorized manager,
+I want to create purchase orders for suppliers with full lifecycle tracking,
+So that expected deliveries are documented and receivable against a reference.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as owner or manager with PO permissions
+**When** I create a PO with: supplier contact, item lines (item, expected qty, unit), expected delivery date, optional notes
+**Then** the PO is created with a unique identifier and status `draft`
+
+**Given** a PO in `draft`
+**When** I confirm it
+**Then** status becomes `confirmed` and the PO is available to link to future receptions
+
+**Given** POs exist
+**When** I view the list
+**Then** I can filter by status (draft / confirmed / partially_received / received / cancelled), supplier, and date range
+
+**Given** I cancel a PO
+**When** cancellation is submitted
+**Then** status becomes `cancelled`, no stock adjustments are made, and the cancellation is recorded in the audit trail
+
+### Story 4.6: Receive Delivery Linked to a Purchase Order *(Phase 2a)*
+
+As a manager,
+I want to link a supplier delivery to an existing purchase order,
+So that received quantities are automatically compared to what was ordered.
+
+**Acceptance Criteria:**
+
+**Given** a confirmed PO exists
+**When** I create a delivery reception and link it to the PO
+**Then** the PO's expected quantities are pre-filled in the reception form
+
+**Given** I enter actually received quantities
+**When** I save the reception
+**Then** variance per line (received − ordered) is calculated and stored
+**And** PO status updates to `partially_received` if some lines are incomplete or `received` if all fulfilled
+
+**Given** a reception without a linked PO
+**When** I record it
+**Then** the reception is valid and processed normally (PO linkage is optional)
+
+### Story 4.7: Configure Low Stock Thresholds and Automatic Alerts
+
+As an owner,
+I want to set a low stock threshold per item and receive automatic alerts when stock drops below it,
+So that I can reorder before running out without manually monitoring every item.
+
+**Acceptance Criteria:**
+
+**Given** I set `lowStockThreshold: 5` (kg) on item "Riz"
+**When** a sale reduces stock from 6 kg to 4.5 kg
+**Then** a push notification is sent to owner and manager: "Stock bas: Riz (4.5 kg restants)"
+**And** "Riz" is flagged in the next daily summary
+**And** the alert does not re-trigger until stock rises above 5 kg again and drops back below
+
+**Given** an item with `lowStockThreshold: null`
+**When** any stock movement occurs
+**Then** no alert is triggered
+
+### Story 4.8: Internal Replenishment Request Circuit
+
+As a commercial,
+I want to submit an internal replenishment request for a low-stock item,
+So that the manager and owner can review and fulfill it without me leaving the floor.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as commercial
+**When** I create a replenishment request with: item, quantity, unit, urgency (Normal | Urgent)
+**Then** the request is created and a push notification is sent to the next actor in the configured circuit
+**And** status is `pending_manager` (or `pending_owner` if the intermediate step is disabled for this tenant)
+
+**Given** the manager approves and optionally adjusts the quantity
+**When** approval is submitted
+**Then** the request advances to `pending_owner` and the owner is notified
+
+**Given** the owner approves
+**When** approval is confirmed
+**Then** a `StockTransfer` store→shelf is automatically created for the approved quantity and follows the standard transfer confirmation flow
+
+**Given** the owner rejects with a mandatory reason
+**When** rejection is submitted
+**Then** request status becomes `rejected` and the commercial is notified with the reason
+
+---
+
+## Epic 5: Customer Management & Credit Sales
+
+Commercial can manage customer profiles, sell on credit, and track customer balances — fully available offline.
+
+### Story 5.1: Create and Manage Customer Profiles
+
+As a commercial,
+I want to create and manage customer profiles with name, phone, and type,
+So that I can identify customers at the POS and build a client relationship history.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as commercial
+**When** I create a customer with: name (required), phone (optional), type (individual | business | vip)
+**Then** the profile is saved with `tenantId` from JWT and immediately available for transaction association
+
+**Given** a customer profile exists
+**When** I search by name or phone at the POS
+**Then** results appear within 500ms even with 1,000+ contacts in the local Isar collection
+
+**Given** I update a customer's phone number
+**When** saved
+**Then** the change is queued in the outbox and reflected on all devices after their next sync
+
+### Story 5.2: Associate a Transaction with a Customer
+
+As a commercial,
+I want to link a sale to a customer profile,
+So that the customer's purchase history is built and I can apply credit or customer-specific pricing.
+
+**Acceptance Criteria:**
+
+**Given** I have items in the cart
+**When** I search for and select a customer before finalizing the sale
+**Then** the transaction is saved with `contactId` referencing the customer
+
+**Given** I complete a sale without selecting a customer
+**When** the transaction is saved
+**Then** `contactId` is null and the sale is valid (customer association is optional)
+
+**Given** a customer is linked to transactions
+**When** the manager views the customer's profile
+**Then** all linked transactions are visible in chronological order
+
+### Story 5.3: Record Credit Sales and Track Customer Balance
+
+As a commercial,
+I want to record a sale on credit against a customer's account,
+So that outstanding balances are tracked and the owner always knows what is owed.
+
+**Acceptance Criteria:**
+
+**Given** I select payment method "credit" and associate a customer
+**When** the transaction is finalized
+**Then** `lifecycle` is set to `accumulating` and the customer's `outstandingBalance` is incremented by the total
+**And** the balance update is written locally first and queued in the outbox
+
+**Given** a customer has an existing balance of 15,000 FCFA
+**When** a new credit sale of 5,000 FCFA is recorded
+**Then** the customer's balance becomes 20,000 FCFA
+
+**Given** a customer makes a full or partial repayment
+**When** the payment is recorded
+**Then** `outstandingBalance` is decremented accordingly and a payment record (actor, timestamp, amount) is appended to their history
+
+**Given** the owner views the customer list
+**When** sorted by outstanding balance
+**Then** customers with the highest balances appear first
+**And** total outstanding credit across all customers is shown as a dashboard KPI
+
+### Story 5.4: Offline Customer Profiles and Balance Access
+
+As a commercial,
+I want full access to customer profiles and balances without connectivity,
+So that I can identify customers and apply credit correctly during a network outage.
+
+**Acceptance Criteria:**
+
+**Given** customer data has been synced to the device
+**When** the device goes offline
+**Then** all customer records remain searchable and their balances are accurate as of the last sync
+
+**Given** a credit sale is made offline
+**When** written to Isar
+**Then** the customer's local balance is updated immediately
+**And** the outbox mutation syncs the balance update to the server on reconnection
+
+**Given** a balance conflict arises (e.g. same customer updated on two offline devices)
+**When** sync runs
+**Then** financial balance conflicts are NOT auto-resolved via last-write-wins
+**And** they enter the manual resolution queue (FR75) and the owner is notified
+
+---
+
+## Epic 6: Offline-First Sync Engine & Data Reliability
+
+The entire business runs uninterrupted during network outages. All operations continue offline, sync automatically on reconnection, and no data is ever lost — even on power cut.
+
+### Story 6.1: Local-First Writes via Outbox Mutation Queue
+
+As a user performing any operation,
+I want every mutation written locally to Isar first and queued for server sync,
+So that the app is always responsive and no operation is lost waiting for network confirmation.
+
+**Acceptance Criteria:**
+
+**Given** I perform any create/update/delete operation (sale, transfer, loss, customer update)
+**When** the operation executes
+**Then** it is written to Isar immediately (< 200ms, NFR2)
+**And** an `OutboxItem` is created with: `entityType`, `entityId`, `operation`, `payload`, `status: pending`, `createdAt`
+**And** the UI reflects the result immediately without waiting for server confirmation
+
+**Given** the device is online and the SyncEngine background isolate picks up an outbox item
+**When** it POSTs to `/api/v1/{resource}`
+**Then** on HTTP 200: the item is marked `synced` and local record updated with server response (e.g. server-assigned `receiptNumber`)
+**And** on HTTP 4xx (permanent error): the item is marked `FAILED` and enters the failure management flow (FR75)
+
+**Given** the SyncEngine runs as a background isolate
+**When** the main Flutter thread is active
+**Then** the sync runs without blocking or interrupting the UI thread
+
+### Story 6.2: Incremental Delta Sync on Reconnection
+
+As a user,
+I want the app to sync only what changed since the last sync,
+So that reconnection is fast even after hours of offline operation, even on 2G.
+
+**Acceptance Criteria:**
+
+**Given** the device reconnects after being offline
+**When** the SyncEngine initiates a pull sync
+**Then** it requests `GET /api/v1/{resource}?since={lastSyncTimestamp}` for each module
+**And** a full day of transactions (150+) syncs in < 30s (NFR3)
+
+**Given** a sync payload is transmitted
+**When** sent over the network
+**Then** it contains only data deltas (no images or binary assets, NFR26), is compressed (NFR24), and functions on 2G at 50 kbps (NFR25)
+
+**Given** a successful sync cycle completes
+**When** all modules are reconciled
+**Then** `lastSyncTimestamp` is updated per module in Isar metadata and the next sync starts from the new timestamp
+
+### Story 6.3: Conflict Resolution — LWW for Data, Manual Queue for Financial
+
+As a platform,
+I want non-financial conflicts resolved automatically and financial conflicts flagged for manual review,
+So that data integrity is maintained without overwhelming operators with false alerts.
+
+**Acceptance Criteria:**
+
+**Given** the same non-financial record (e.g. item name) is updated on two offline devices
+**When** both updates sync
+**Then** the record with the later `updatedAt` wins (last-write-wins) without notification
+
+**Given** a financial mutation (sale, customer balance, stock movement) conflicts with a server-side record
+**When** the sync detects the conflict
+**Then** it is NOT auto-resolved via LWW
+**And** it is placed in the manual resolution queue with: local value, server value, timestamps, actor
+**And** the owner receives a notification
+
+**Given** a conflict is in the queue
+**When** the owner opens the resolution interface
+**Then** they see both versions side by side and can select which to keep or enter a corrected value
+**And** the resolution is recorded in the audit trail
+
+### Story 6.4: Non-Blocking Connectivity Status Indicator
+
+As a user,
+I want to see my connectivity status without it interrupting what I'm doing,
+So that network state is informational only and never blocks operations.
+
+**Acceptance Criteria:**
+
+**Given** the device loses connectivity during an active POS session
+**When** the state changes to offline
+**Then** a small indicator appears in the status bar only (< 5% screen area, NFR30)
+**And** no modal, toast, or blocking alert is shown
+**And** all POS actions remain fully functional without delay
+
+**Given** the device is offline and I create a sale or perform any operation
+**When** the operation executes
+**Then** it succeeds immediately (written to Isar) with no connectivity-related confirmation prompt
+
+**Given** the device reconnects
+**When** the SyncEngine begins syncing
+**Then** the indicator transitions to "syncing" then "synced" silently without interrupting the user
+
+### Story 6.5: Crash Recovery with Zero Data Loss
+
+As a commercial,
+I want the app to recover to a consistent state after an unexpected termination,
+So that no sales or operations are ever lost even if the device shuts down mid-operation.
+
+**Acceptance Criteria:**
+
+**Given** a submitted operation was in the outbox when the device lost power
+**When** the app restarts
+**Then** the outbox item is still present and retried by the SyncEngine
+**And** no operation not yet submitted by the user is partially written
+
+**Given** an outbox item was mid-sync when the device crashed
+**When** the SyncEngine resumes after restart
+**Then** the item is retried from the beginning (idempotent sync)
+**And** no duplicates are created server-side (server deduplicates by `clientId`)
+
+**Given** a simulated crash-recovery test (power cut simulation, NFR15)
+**When** the app restarts
+**Then** zero transactions are lost and the app reaches a usable state in < 3s (NFR4)
+
+### Story 6.6: Configurable Local Data Retention
+
+As a tenant owner,
+I want to configure how many days of data the app keeps locally,
+So that device storage stays within limits while preserving enough history for daily operations.
+
+**Acceptance Criteria:**
+
+**Given** local retention is set to 30 days (range: 30–90, default: 30)
+**When** the nightly maintenance task runs
+**Then** records older than 30 days are purged from Isar
+**And** the local database stays under 500MB (NFR7)
+**And** records with un-synced outbox items are never purged
+
+**Given** a user queries data beyond the local retention window
+**When** the query runs
+**Then** the app fetches it from the server (not shown as "unavailable")
+
+### Story 6.7: Sync Failure Lifecycle and Manual Resolution
+
+As an owner,
+I want failed sync mutations tracked, retried automatically, and surfaced for manual resolution,
+So that no operation is silently lost and I have full control over irrecoverable failures.
+
+**Acceptance Criteria:**
+
+**Given** an outbox item fails (server 5xx or network timeout)
+**When** the failure occurs
+**Then** the SyncEngine retries with exponential backoff: 5s, 30s, 2min (NFR16)
+**And** after 3 failed attempts the item is marked `FAILED`
+**And** a push notification is sent to the owner and on-device user
+
+**Given** a mutation is `FAILED`
+**When** the owner opens the manual resolution interface
+**Then** they see: entity type, operation, payload, error message, failure timestamp, retry count
+
+**Given** the owner acts on a failed mutation
+**When** they choose Retry
+**Then** the mutation is re-queued in the outbox with `attempts` reset to 0
+**And** financial mutations (sales, balance updates, stock movements) can never be silently discarded — explicit owner action is always required
+
+---
+
+## Epic 7: Operations Reporting & Daily Intelligence
+
+Owner and manager get complete visibility on daily operations — consolidated reports, live dashboard KPIs, immutable audit trail, and an automatic nightly summary pushed to the owner.
+
+### Story 7.1: Manager Generates Daily Consolidation Report
+
+As a manager,
+I want to generate a daily consolidation report covering sales, losses, variances, and transfers,
+So that I have a complete picture of the day's operations in one view.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as manager
+**When** I request the daily report for a specific date
+**Then** it includes: total sales by payment method, total losses by location, transfer variances, session discrepancies, and top items by quantity sold
+**And** the report generates in < 2s (NFR5)
+
+**Given** the device is offline
+**When** I request today's report
+**Then** it is generated from local Isar data without a server call
+
+**Given** I request a past date beyond local retention
+**When** the query executes
+**Then** the report fetches from the server with the same structure
+
+### Story 7.2: Owner Views Live Operations Dashboard
+
+As an owner,
+I want a real-time dashboard showing key performance indicators of my business,
+So that I can monitor operations at a glance — even remotely from abroad.
+
+**Acceptance Criteria:**
+
+**Given** I am authenticated as owner
+**When** I open the dashboard
+**Then** I see: today's revenue (CA), number of sales, total declared losses, session discrepancy total, and count of stock-critical items (below `lowStockThreshold`)
+**And** the data refreshes automatically when a new sync cycle completes via Supabase Realtime
+
+**Given** no sales have been recorded today
+**When** the dashboard loads
+**Then** all KPIs show 0 with an i18n-resolved "no activity" label (not null, not blank)
+
+### Story 7.3: Immutable Audit Trail for All Mutations
+
+As an owner,
+I want every mutation permanently recorded with actor, timestamp, and before/after values,
+So that I can always trace what happened, who did it, and when — with no possibility of tampering.
+
+**Acceptance Criteria:**
+
+**Given** any mutation occurs (sale, price change, stock adjustment, role modification)
+**When** committed server-side
+**Then** an audit entry is written with: `tenantId`, `actorId`, `entityType`, `entityId`, `operation`, `before` (nullable), `after`, `timestamp`
+**And** the audit record is immutable — no UPDATE or DELETE is permitted on audit entries
+
+**Given** I query the audit trail for a specific item, user, or date range
+**When** the query runs
+**Then** the full history is returned chronologically
+**And** every price change shows exact before/after values and actor (NFR12)
+
+**Given** local data is purged beyond the retention window
+**When** the server audit trail is queried
+**Then** it remains intact and queryable indefinitely (FR51)
+
+### Story 7.4: Automatic Daily Summary to Owner
+
+As an owner,
+I want an automatic summary of my business delivered every evening,
+So that I stay informed about the day's performance without opening the app — especially when not on-site.
+
+**Acceptance Criteria:**
+
+**Given** the tenant's summary time is configured (default: 20h00 local) and owner has opted in to push notifications
+**When** the scheduled time arrives
+**Then** a push notification is sent with: (1) total revenue, (2) total declared losses, (3) items below `lowStockThreshold`, (4) top 3 best-selling items by quantity
+
+**Given** the owner has opted in to WhatsApp summaries
+**When** the message is generated
+**Then** all strings use i18n-resolved templates with zero hardcoded French strings (NFR31)
+**And** currency and date formats match the tenant's configured locale
+
+**Given** there was no activity during the day
+**When** the summary is generated
+**Then** it sends with an i18n-resolved "no activity" message — not skipped silently
+
+**Given** the owner changes the summary time to 22h00
+**When** the next nightly cycle runs
+**Then** the summary fires at 22h00 local time
+
+---
+
+## Epic 8: Platform Foundations — Module System, Payments, i18n & Compliance Infrastructure
+
+**Goal:** Deliver the cross-cutting technical foundations that all functional epics depend on: dynamic module registry, pluggable payment adapters, AiActionsManifest registry, zero-hardcoded-string i18n, versioned API with rate limiting, pluggable compliance framework, anticipated DB schema seeds for H2/H3, and CI/CD infrastructure.
+
+**FR Coverage:** FR-TEMPLATE-01, FR-TEMPLATE-02, FR33 (payment), NFR31, NFR32, NFR33, NFR35, NFR36, NFR37, NFR38, NFR-INFRA-01–05, FR-MULTISTORE-01 (schema seed), FR51 (audit arch)
+
+---
+
+### Story 8.1: Module Registry — Per-Tenant Activation & Dependency Validation
+
+As a Super Admin,
+I want to activate or deactivate modules per tenant from the backoffice,
+So that each tenant only pays for and sees what their subscription entitles them to.
+
+**Acceptance Criteria:**
+
+**Given** a new tenant is provisioned
+**When** the platform creates their record
+**Then** a module activation record is created for each default module (Sales, Inventory, CRM) with `isActive: true`
+**And** optional modules (Appointments, Reservations, HR, etc.) are created with `isActive: false`
+
+**Given** Super Admin activates the Appointments module for a tenant
+**When** the activation request is processed
+**Then** `ModuleGuard` allows `/appointments/**` routes for that tenant's users
+**And** the UI shows the Appointments nav item on next app launch (FR-TEMPLATE-01)
+
+**Given** a module has declared dependencies (e.g., Reservations requires CRM)
+**When** an attempt is made to deactivate a dependency module while a dependent module is active
+**Then** the operation is rejected with a clear error listing the blocking dependent modules (FR-TEMPLATE-02)
+
+**Given** a user on the Flutter client attempts to access a deactivated module route
+**When** the `ModuleGuard` evaluates the request
+**Then** it returns HTTP 403 with code `MODULE_NOT_ACTIVE`
+**And** the Flutter client shows a paywall/upgrade screen
+
+### Story 8.2: Payment Adapter Interface — Cash & Wave Adapters
+
+As a developer,
+I want all payment processing to go through a `PaymentAdapter` interface,
+So that adding new payment providers (Orange Money, Stripe) requires no changes to business logic.
+
+**Acceptance Criteria:**
+
+**Given** the `PaymentAdapter` interface defines `initiate(amount, currency, metadata)`, `verify(ref)`, `refund(ref, amount)`
+**When** the Cash adapter is invoked
+**Then** it immediately returns a confirmed payment result with no external API call (NFR33)
+
+**Given** the Wave adapter is configured with valid API credentials
+**When** `initiate()` is called with a valid amount and recipient
+**Then** the adapter calls the Wave API, stores the reference, and returns `{ status: 'pending', ref }`
+**And** no Wave-specific logic leaks into the service layer
+
+**Given** a payment provider is temporarily unavailable
+**When** `initiate()` throws an error
+**Then** the error is caught by the adapter and rethrown as a standardized `PaymentError` with provider-agnostic fields
+**And** the business-layer service never receives a provider-specific error object
+
+**Given** a new `OrangeMoneyAdapter` is implemented by implementing the interface
+**When** it is registered in the `PaymentAdapterRegistry`
+**Then** it is available for selection without any modification to existing service code (NFR33)
+
+### Story 8.3: AiActionsManifest Registry on All Level 2 Modules
+
+As a platform architect,
+I want every functional module to register its actions in the `AiActionsManifest`,
+So that the H2 AI layer can discover and invoke any operation without hardcoded routing logic.
+
+**Acceptance Criteria:**
+
+**Given** the Sales module is loaded
+**When** the platform initializes
+**Then** the Sales module registers at minimum: `createSale`, `voidSale`, `applyCoupon` in the manifest with their input schemas
+
+**Given** the Inventory module is loaded
+**When** the platform initializes
+**Then** it registers: `addStock`, `deductStock`, `setThreshold`, `declareWaste` in the manifest
+
+**Given** the AI assistant (H2) calls `manifest.resolve('createSale')`
+**When** the resolution completes
+**Then** it receives the handler reference, input schema, and required permissions — and can invoke it directly (FR-AI-01)
+
+**Given** a module is deactivated for a tenant
+**When** the manifest is queried for that tenant
+**Then** the deactivated module's actions are excluded from the resolution results
+
+### Story 8.4: i18n Infrastructure — Zero Hardcoded Strings
+
+As a developer,
+I want all user-facing strings on both backend and frontend to be resolved through the i18n system,
+So that Scalario can serve users in any language with no code changes (NFR31).
+
+**Acceptance Criteria:**
+
+**Given** a new backend error or notification string is needed
+**When** a developer adds it
+**Then** it MUST be added to the i18n key registry — PRs with hardcoded French or English strings in user-facing contexts are rejected by CI lint rule
+
+**Given** the tenant locale is set to `fr-SN`
+**When** any API response includes a user-facing message
+**Then** the message is resolved in French (Senegal) with correct currency symbol and date format
+
+**Given** the Flutter client renders any label, button, error, or notification
+**When** the widget builds
+**Then** it uses `AppLocalizations.of(context).key` — direct string literals in user-facing widgets fail the CI lint check
+
+**Given** a new locale (`en-GH`) is added to the i18n registry
+**When** a tenant switches to that locale
+**Then** all strings resolve in that locale with zero code changes — only translation file additions are needed
+
+### Story 8.5: Versioned API, Rate Limiting & Server-Side Subscription Enforcement
 
 As a platform operator,
-I want every data mutation to be logged in an immutable audit trail and cross-module events to be published,
-So that we have complete accountability and modules can react to events from other modules.
+I want all API routes versioned, rate-limited, and protected by subscription tier,
+So that the platform scales safely and tenants cannot exceed their plan limits.
 
 **Acceptance Criteria:**
 
-**Given** the kernel schema exists
-**When** the audit trail migration runs
-**Then** the `audit_log` table is created with fields: `id`, `tenant_id`, `user_id`, `action` (CREATE/UPDATE/DELETE), `entity`, `entity_id`, `before` (JSON), `after` (JSON), `created_at`, with indexes on `(tenant_id, created_at)` and `(entity_id)`
+**Given** all routes are prefixed with `/v1/`
+**When** a future breaking change requires a new API version
+**Then** `/v2/` routes are added without removing `/v1/` — existing clients are not broken (NFR35)
 
-**Given** the NestJS application starts
-**When** the EventBus module initializes
-**Then** `EventEmitter2` is configured and available for injection, with typed domain event definitions (TransactionCreated, StockAdjusted, SessionClosed, BalanceUpdated, etc.)
+**Given** a tenant sends more than the configured rate limit (e.g., 100 req/min)
+**When** the limit is exceeded
+**Then** HTTP 429 is returned with `Retry-After` header
+**And** legitimate traffic is not throttled
 
-**Given** any service creates, updates, or deletes an entity
-**When** the mutation is committed
-**Then** an AuditLog entry is created capturing: the authenticated user, the tenant context, the action type, the entity type and ID, the before state (null for CREATE), and the after state (null for DELETE)
+**Given** a tenant's subscription tier allows max 500 products
+**When** a request to create product #501 is received
+**Then** `BillingGuard` intercepts it and returns HTTP 402 with code `PLAN_LIMIT_EXCEEDED` before any DB write occurs (NFR36)
 
-**Given** the audit_log table contains entries
-**When** any attempt is made to UPDATE or DELETE audit records
-**Then** the operation is rejected — audit log is append-only and immutable
+**Given** a tenant's subscription expires
+**When** any protected route is accessed
+**Then** `BillingGuard` returns HTTP 402 with code `SUBSCRIPTION_EXPIRED`
+**And** the tenant is redirected to the upgrade/renewal screen
 
-**Given** the audit log contains data older than the client-side retention period
-**When** the local retention policy runs
-**Then** old audit entries are purged locally but remain indefinitely on the server
+### Story 8.6: Pluggable Compliance Framework Interface
 
-**Given** a domain event (e.g., TransactionCreated) is published
-**When** a handler in another module is registered with `@OnEvent('transaction.created')`
-**Then** the handler executes with the event payload
-
-### Story 1.5: Guard Chain Integration & Backward Compatibility
-
-As a developer deploying the kernel extraction,
-I want the complete guard chain wired and all existing endpoints still functional,
-So that the 3 existing clients experience zero disruption during the kernel deployment.
+As a platform architect,
+I want accounting and compliance rules to be injected via a `CompliancePlugin` interface,
+So that Scalario can operate correctly under OHADA, CNSS, or any other regulatory framework without core code changes (NFR32).
 
 **Acceptance Criteria:**
 
-**Given** all kernel guards are implemented (Auth, Tenant, Module, Roles)
-**When** a request hits any protected endpoint
-**Then** guards execute in order: AuthGuard → TenantGuard → ModuleGuard → RolesGuard, and failure at any stage returns the appropriate error code
+**Given** the `CompliancePlugin` interface defines `validateTransaction(tx)`, `generateReport(period)`, `getChartOfAccounts()`
+**When** the OHADA plugin is loaded for a tenant in a OHADA-zone country
+**Then** `validateTransaction` applies OHADA-specific posting rules
+**And** `generateReport` returns an OHADA-compliant balance sheet structure
 
-**Given** the existing POS endpoints (`/pos/*`)
-**When** the kernel is deployed
-**Then** all existing endpoints continue to function identically for the 3 current clients — same request/response shapes, same behavior
+**Given** a tenant is in a country without a registered compliance plugin
+**When** compliance functions are called
+**Then** a `NullCompliancePlugin` is used that passes all validations and returns empty report structures — no crash
 
-**Given** two tenants (A and B) exist in the system
-**When** tenant A's user attempts to query data
-**Then** RLS policies ensure zero cross-tenant data leakage, validated by integration tests that create data in tenant A and verify it's invisible to tenant B
+**Given** a `CNSSPlugin` is implemented and registered
+**When** payroll is processed for a Senegalese tenant
+**Then** CNSS contribution calculations are handled by the plugin with no core payroll logic changes (NFR32)
 
-**Given** the kernel module is registered as a NestJS module
-**When** `AppModule` imports `KernelModule`
-**Then** it exports: AuthGuard, TenantGuard, RolesGuard, ModuleGuard, EventBus, and all decorators (@CurrentUser, @CurrentTenant, @Roles, @RequiresModule, @Public)
+### Story 8.7: Connect & Enterprise Anticipated DB Schema Seeds
 
-**Given** a new tenant needs to be created
-**When** admin calls the tenant creation endpoint
-**Then** the tenant is created with default configuration (XOF currency, Africa/Abidjan timezone), MVP roles are seeded, and shared + retail modules are activated — requiring zero code changes
-
-### Story 1.6: Phase 3 DB Anticipation Fields
-
-As a system architect,
-I want to add all Phase 2b/3 anticipation fields in a single dedicated Prisma migration,
-So that Scalario Connect, Enterprise, and Programme Ambassadeurs can be activated in future phases without a breaking migration on a live multi-tenant system.
-
-**Note:** This story contains zero business logic. It is a schema-only migration. All new fields are nullable or have safe defaults. No endpoint, service, or guard is modified.
+As a platform architect,
+I want the H2/H3 feature DB schemas (B2B Connect network tables, multi-store aggregation tables) seeded in the initial migration,
+So that enabling these features later requires only data population, not schema migrations on live tenants.
 
 **Acceptance Criteria:**
 
-**Given** all Epic 1 stories (1.1–1.5) are complete
-**When** the Phase 3 anticipation migration runs
-**Then** the following fields are added with zero data loss and zero downtime for existing tenants:
+**Given** the initial database migration runs
+**When** it completes
+**Then** the `b2b_connections`, `b2b_offers`, `b2b_orders` tables exist with all planned columns but are empty (FR-MULTISTORE-01 seed)
 
-kernel.tenants:
-- referred_by UUID nullable FK → tenants.id (FR52 — Programme Ambassadeurs Phase 2b)
-- network_visible Boolean default false (FR52 — Scalario Connect Phase 3)
-- org_mode Enum(standalone|integrated|federated) default standalone (FR59 — Enterprise Phase 3)
-- parent_tenant_id UUID nullable FK → tenants.id (FR59 — Enterprise Fédéré Phase 3)
+**Given** a developer inspects the schema after H1 deploy
+**When** they query these tables
+**Then** they are present and correctly indexed — no migration error occurs
+**And** no H1 application code writes to these tables
 
-kernel.organization_members:
-- department_ids UUID[] default [] (FR60 — Enterprise Phase 3)
+**Given** H3 B2B Connect is activated in a future release
+**When** the feature flag is enabled
+**Then** no schema migration is needed — only service layer code is added
 
-kernel.tenant_modules:
-- department_id UUID nullable (FR61 — Enterprise Phase 3)
+### Story 8.8: Multi-Schema Data Migration Without Loss
 
-shared.contacts:
-- linked_tenant_id UUID nullable (FR53 — Scalario Connect Phase 3)
+As a platform operator,
+I want all schema migrations to be reversible and zero-data-loss,
+So that deployments can be rolled back without destroying tenant data (NFR37).
 
-shared.catalog_items:
-- supplier_reference UUID nullable (FR54 — Scalario Connect Phase 3)
+**Acceptance Criteria:**
 
-shared.transactions (transaction_type enum):
-- Add 'transfer_inter_tenant' to transaction_type enum (FR55 — Scalario Connect Phase 3)
+**Given** a Prisma migration adds a new non-nullable column
+**When** the migration runs on a database with existing rows
+**Then** a default value is provided so existing rows remain valid — no migration fails on non-empty tables
 
-**Given** each new column is created
-**When** existing rows are read
-**Then** all nullable fields return null, boolean fields return false, enum fields return 'standalone' — zero breaking change for the 3 existing clients
+**Given** a migration is deployed and a critical bug is discovered
+**When** a rollback migration is run
+**Then** the schema returns to the previous state and all pre-migration data is intact
 
-**Given** RLS is active on kernel.tenants
-**When** the new fields are queried
-**Then** existing RLS policies cover them automatically — same tenant_id filter applies, no new policy needed
+**Given** migrations are run in a CI pipeline against a seeded test database
+**When** the pipeline runs
+**Then** all up and down migrations pass without errors before the build is considered green (NFR-INFRA-01)
 
-**Given** the migration completes
-**Then** each field has a Prisma schema comment explaining its phase and purpose, e.g.:
-  /// Phase 2b — Programme Ambassadeurs. Populated when tenant is created via referral. FK to tenants.id.
-  referred_by String? @db.Uuid
+### Story 8.9: Infrastructure CI/CD, Deploy Pipeline & Security Baseline
+
+As a platform operator,
+I want a complete CI/CD pipeline with security scanning, test gates, and automated deployment,
+So that every merge to main is deployable with high confidence and no manual steps (NFR-INFRA-01–05).
+
+**Acceptance Criteria:**
+
+**Given** a PR is opened against `main`
+**When** CI runs
+**Then** it executes: lint → unit tests → integration tests (real DB) → migration dry-run → SAST scan
+**And** the PR cannot be merged if any step fails (NFR-INFRA-01)
+
+**Given** all CI checks pass on `main`
+**When** the deploy pipeline triggers
+**Then** the NestJS API is containerized, pushed to the registry, and deployed to the staging environment automatically (NFR-INFRA-02)
+
+**Given** a SAST scan detects a high-severity vulnerability in a dependency
+**When** the scan reports it
+**Then** the build fails and the vulnerability is surfaced in the PR review interface (NFR-INFRA-03)
+
+**Given** the production environment handles secrets (DB credentials, payment API keys)
+**When** the application reads them
+**Then** they are injected via environment variables from a secrets manager — no secrets exist in the codebase or Docker images (NFR-INFRA-04)
 
 ---
 
-## Epic 2: Shared Catalog Module
+## Epic 9: Client Orders & Delivery Workflow
 
-Owners can manage products through the new polymorphic catalog (with itemType discriminator), organize by categories, and all catalog data is available offline. Old product endpoints remain backward-compatible.
+**Goal:** Enable clients to place orders via WhatsApp/phone, track delivery status, and receive digital confirmations — creating a complete order-to-delivery loop for B2C commerce.
 
-### Story 2.1: Shared Schema & CatalogItem Entity
+**FR Coverage:** FR98, FR99, FR107, FR108, FR109, FR110, FR111
 
-As a system architect,
-I want the Product entity decomposed into a shared CatalogItem with a polymorphic type discriminator,
-So that any vertical can extend the base catalog without touching shared code.
+---
 
-**Acceptance Criteria:**
-
-**Given** the kernel schema exists from Epic 1
-**When** the shared catalog migration runs
-**Then** the `shared` schema is created with `catalog_items` table containing: `id`, `name`, `price` (Decimal 10,2), `barcode`, `item_type` (default 'physical', enum: physical/bookable/service), `category_id`, `tenant_id`, `is_deleted` (default false), `created_at`, `updated_at`
-
-**Given** existing Product records in the public schema
-**When** the data migration runs
-**Then** all products are migrated to `shared.catalog_items` with `item_type` set to 'physical', and zero data loss is verified by row count comparison
-
-**Given** the `catalog_items` table exists
-**When** indexes are created
-**Then** indexes exist on `(tenant_id, updated_at)` for delta sync, `(tenant_id, category_id)` for grid filtering, and `(barcode)` for scan lookup
-
-**Given** RLS is enabled on `shared.catalog_items`
-**When** a query executes
-**Then** the tenant_isolation policy enforces `tenant_id = current_setting('app.current_tenant_id')::uuid`
-
-### Story 2.2: Category Management & Catalog API
+### Story 9.1: Client Order Intake via WhatsApp & Phone
 
 As a shop owner,
-I want to create and manage product categories and catalog items through the new shared API,
-So that my products are organized and manageable from any vertical.
+I want to log client orders received via WhatsApp or phone call directly in Scalario,
+So that verbal and message orders are tracked in the same system as walk-in sales.
 
 **Acceptance Criteria:**
 
-**Given** the shared schema with catalog_items exists
-**When** the categories migration runs
-**Then** the `shared.categories` table is created with `id`, `name`, `tenant_id`, `created_at`, with index on `(tenant_id)` and FK from `catalog_items.category_id`
-
-**Given** existing Category records in the public schema
-**When** the data migration runs
-**Then** all categories are migrated to `shared.categories` with zero data loss
-
-**Given** an authenticated Owner user
-**When** they call `POST /api/v1/catalog/items` with item data (name, price, category, barcode)
-**Then** a CatalogItem is created in the shared schema with `item_type` defaulting to 'physical'
-**And** an AuditLog entry is recorded
-
-**Given** an authenticated Owner user
-**When** they call `DELETE /api/v1/catalog/items/:id`
-**Then** the item is soft-deleted (`is_deleted = true`), not physically removed, and delta sync clients will receive the deletion flag
-
-**Given** an authenticated Owner user
-**When** they call `GET /api/v1/catalog/categories`
-**Then** all categories for the tenant are returned
-
-**Given** an authenticated Owner user
-**When** they call `POST /api/v1/catalog/categories` with a category name
-**Then** a new Category is created for the tenant
-
-**Given** a Commercial user is authenticated
-**When** they attempt to create or edit a catalog item
-**Then** RolesGuard returns 403 (only Owner can modify catalog)
-
-**Given** the old `/pos/products` endpoints still exist
-**When** a client calls the old endpoints
-**Then** they are proxied to the new CatalogService and return identical response shapes
-
-### Story 2.3: Catalog Sync Adapter & Delta Pull
-
-As a cashier using the POS offline,
-I want catalog data to sync to my device automatically using delta pulls,
-So that I always have the latest products and prices without downloading the entire catalog.
-
-**Acceptance Criteria:**
-
-**Given** a client device with a last sync timestamp
-**When** the client calls `GET /api/v1/catalog/items?since=<ISO8601>`
-**Then** only items with `updated_at > since` are returned, including soft-deleted items (so the client can remove them locally)
-
-**Given** a client calls the catalog sync endpoint
-**When** the response is returned
-**Then** it includes `meta.serverTime` so the client can store it as the next `since` value
-**And** pagination is supported with `?page=1&limit=100` and `meta.hasMore`
-
-**Given** the CatalogModule is implemented
-**When** it is registered in AppModule
-**Then** it is registered as a `DynamicModule` via `CatalogModule.register()`, imports KernelModule and PrismaModule, and exports CatalogService for use by other modules
-
-**Given** a bulk sync request from the frontend
-**When** the client calls `POST /api/v1/catalog/items/sync` with an array of items
-**Then** each item is upserted by UUID (idempotent) — existing items are updated, new items are created
-
-**Given** 2,000 catalog items for a tenant
-**When** the client queries the catalog
-**Then** the response is returned within acceptable performance bounds for the delta sync protocol
-
----
-
-## Epic 3: Shared Contacts Module
-
-Users can manage customer profiles, track outstanding balances for credit sales, and access contact data offline. Customer → Contact entity migration with contactType support.
-
-### Story 3.1: Contact Entity & Migration
-
-As a system architect,
-I want the Customer entity migrated to a shared Contact with contactType support,
-So that the contact system supports customers, suppliers, and future contact types across verticals.
-
-**Acceptance Criteria:**
-
-**Given** the shared schema exists from Epic 2
-**When** the contacts migration runs
-**Then** the `shared.contacts` table is created with: `id`, `name`, `phone`, `email`, `address`, `contact_type` (default 'customer', future: 'supplier'), `balance` (Decimal 10,2, default 0), `tenant_id`, `created_at`, `updated_at`, with indexes on `(tenant_id)` and `(tenant_id, phone)`
-
-**Given** existing Customer records in the public schema
-**When** the data migration runs
-**Then** all customers are migrated to `shared.contacts` with `contact_type = 'customer'`, balances preserved, and zero data loss verified
-
-**Given** RLS is enabled on `shared.contacts`
-**When** a query executes for a tenant
-**Then** only contacts belonging to that tenant are returned
-
-### Story 3.2: Contacts API & Credit Management
-
-As a commercial,
-I want to manage customer profiles and record credit sales that update their outstanding balance,
-So that I can track which customers owe money and settle debts.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated user
-**When** they call `POST /api/v1/contacts` with name and phone
-**Then** a Contact is created for the tenant with `contact_type = 'customer'` and `balance = 0`
-**And** an AuditLog entry is recorded
-
-**Given** an authenticated user
-**When** they call `GET /api/v1/contacts?since=<ISO8601>`
-**Then** only contacts with `updated_at > since` are returned (delta sync support)
-
-**Given** an authenticated user
-**When** they call `GET /api/v1/contacts/search?q=<name_or_phone>`
-**Then** contacts matching the search query for the tenant are returned
-
-**Given** a credit sale is recorded against a customer
-**When** `ContactsService.updateBalance(customerId, amount)` is called
-**Then** the customer's balance is incremented by the sale amount
-**And** a `BalanceUpdated` event is emitted
-
-**Given** a customer has an outstanding balance of 5000 FCFA
-**When** a user calls `POST /api/v1/contacts/:id/settle` with amount 3000
-**Then** the balance is reduced to 2000 FCFA
-**And** an AuditLog entry records the settlement
-
-**Given** the ContactsModule is implemented
-**When** it is registered in AppModule
-**Then** it is registered as a DynamicModule, imports KernelModule, and exports ContactsService for use by Transactions/Payments
-
-**Given** the old `/pos/customers` endpoints exist
-**When** a client calls the old endpoints
-**Then** they are proxied to the new ContactsService with identical response shapes
-
----
-
-## Epic 4: Shared Transactions & Payments Module
-
-Commercials can process sales with proper payment methods (cash, mobile money, credit, split), FCFA 5-franc rounding, change due calculation, and local-first transaction recording. Order → Transaction entity migration with lifecycle types.
-
-### Story 4.1: Transaction Entity & Payments Service
-
-As a system architect,
-I want the Order entity decomposed into a shared Transaction with lifecycle types and a dedicated Payments service with FCFA rounding,
-So that transaction processing is shared infrastructure usable by any vertical.
-
-**Acceptance Criteria:**
-
-**Given** the shared schema exists
-**When** the transactions migration runs
-**Then** the `shared.transactions` table is created with: `id`, `total_amount` (Decimal 10,2), `items_json` (JSON), `payment_method`, `payment_splits` (JSON), `lifecycle_type` (default 'instant', enum: instant/accumulating/scheduled), `customer_id` (FK → contacts), `tenant_id`, `created_at`, with indexes on `(tenant_id, created_at)` and `(customer_id)`
-
-**Given** existing Order records in the public schema
-**When** the data migration runs
-**Then** all orders are migrated to `shared.transactions` with `lifecycle_type = 'instant'`, and zero data loss verified
-
-**Given** the PaymentsService receives a list of items and currency XOF
-**When** it calculates the total
-**Then** the total is rounded to the nearest 5 FCFA (e.g., 1247 → 1245, 1248 → 1250)
-
-**Given** a cash payment of 1000 FCFA for a 600 FCFA transaction
-**When** the change is calculated
-**Then** the system returns 400 FCFA as change due
-
-**Given** a split payment (e.g., 500 cash + 100 mobile money)
-**When** the payment is processed
-**Then** `payment_splits` JSON records each split with method and amount, and the total matches the transaction amount
-
-### Story 4.2: Transaction API & Local-First Recording
-
-As a commercial,
-I want to create sales transactions that are written locally first and synced when connectivity returns,
-So that I can process sales without interruption regardless of network status.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated Commercial user
-**When** they call `POST /api/v1/transactions` with a client-generated UUID and transaction data
-**Then** the transaction is created with the provided UUID (idempotent — if UUID exists, return existing record without error)
-**And** stock is automatically decremented via `StockAdjusted` event (when Inventory module is active)
-**And** an AuditLog entry is recorded
-
-**Given** a transaction with `payment_method = 'credit'` and a `customer_id`
-**When** the transaction is recorded
-**Then** `ContactsService.updateBalance()` is called to increment the customer's outstanding balance
-
-**Given** the client pushes multiple pending transactions in a batch
-**When** they call `POST /api/v1/transactions` for each
-**Then** each is processed idempotently — duplicates are ignored, new ones are created
-
-**Given** the TransactionsModule is implemented
-**When** it is registered in AppModule
-**Then** it is registered as a DynamicModule, imports KernelModule, CatalogModule, ContactsModule, and PaymentsModule
-**And** emits `TransactionCreated` event on every new transaction
-
-**Given** the old `/pos/orders` endpoints exist
-**When** a client calls the old endpoints
-**Then** they are proxied to the new TransactionsService with identical response shapes
-
-**Given** RLS is enabled on `shared.transactions`
-**When** a query executes
-**Then** only transactions belonging to the authenticated tenant are returned
-
----
-
-## Epic 5: Shared Inventory Module
-
-Managers can receive deliveries, create stock transfers, and perform partial inventory counts. Commercials can confirm transfers and declare losses. The chain-of-custody pattern with double-validation and variance tracking is fully operational.
-
-### Story 5.1: Inventory Schema & Stock Movement Types
-
-As a system architect,
-I want stock movements extracted to a shared module with typed movement categories,
-So that inventory tracking is shared infrastructure with clear movement semantics.
-
-**Acceptance Criteria:**
-
-**Given** the shared schema exists
-**When** the inventory migration runs
-**Then** the `shared.stock_movements` table is created with: `id`, `catalog_item_id` (FK → catalog_items), `quantity` (Decimal 10,2), `type` (enum: SALE/DELIVERY/TRANSFER_OUT/TRANSFER_IN/LOSS/ADJUSTMENT), `reason`, `tenant_id`, `user_id`, `created_at`, with indexes on `(tenant_id, created_at)` and `(catalog_item_id)`
-
-**Given** existing StockMovement records in the public schema
-**When** the data migration runs
-**Then** all movements are migrated to `shared.stock_movements` with `productId` renamed to `catalog_item_id` and zero data loss verified
-
-**Given** a `TransactionCreated` event is published
-**When** the Inventory event handler receives it
-**Then** a SALE-type stock movement is automatically created for each item in the transaction, decrementing stock
-
-**Given** the InventoryModule is implemented
-**When** it is registered in AppModule
-**Then** it is registered as a DynamicModule, imports KernelModule and CatalogModule, exports InventoryService, and listens to TransactionCreated events
-
-### Story 5.2: Supplier Delivery Reception
-
-As a store manager,
-I want to receive supplier deliveries and record received quantities against expected quantities,
-So that delivery variances are tracked and attributed automatically.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated Manager user
-**When** they call `POST /api/v1/inventory/movements` with type DELIVERY, catalogItemId, and received quantity
-**Then** a DELIVERY stock movement is created, increasing the stock level for that item
-**And** an AuditLog entry is recorded
-
-**Given** a delivery with expected quantity 20 and received quantity 18
-**When** the manager records the reception with an observer note "2 cartons not delivered"
-**Then** the movement records quantity 18 with the reason field containing the variance note
-**And** a `StockAdjusted` event is emitted
-
-**Given** the old `/pos/stock-movements` endpoints exist
-**When** a client calls the old endpoints
-**Then** they are proxied to the new InventoryService with identical response shapes
-
-### Story 5.3: Stock Transfers & Chain-of-Custody
-
-As a store manager and commercial,
-I want to create stock transfers with double-validation (sender declares, receiver confirms),
-So that transfer variances are automatically tracked and attributed to the correct link in the chain.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated Manager user
-**When** they call `POST /api/v1/inventory/movements` with type TRANSFER_OUT, catalogItemId, quantity, and destination info
-**Then** a TRANSFER_OUT movement is created, reducing stock at the sender's location
-**And** a `TransferCreated` event is emitted with status "pending confirmation"
-
-**Given** a pending transfer exists
-**When** an authenticated Commercial calls the confirmation endpoint with type TRANSFER_IN, the transfer reference, and their actually received quantity
-**Then** a TRANSFER_IN movement is created with the declared received quantity
-**And** if sent quantity (8 kg) != received quantity (7 kg), the variance (1 kg) is automatically calculated and attributed
-**And** a `TransferConfirmed` event is emitted with the variance data
-
-**Given** transfer variance data exists
-**When** the owner or manager views the transfer history
-**Then** each transfer shows: who sent, quantity sent, who received, quantity received, variance, and timestamp
-
-### Story 5.4: Loss Declaration & Partial Inventory
-
-As a commercial or manager,
-I want to declare stock losses with a mandatory reason and perform partial inventory counts,
-So that all stock discrepancies are documented and shrinkage is traceable.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated Commercial or Manager user
-**When** they call `POST /api/v1/inventory/movements` with type LOSS, catalogItemId, quantity, and reason
-**Then** a LOSS movement is created, reducing stock
-**And** the `reason` field is mandatory and must be non-empty (e.g., "produit trop mur", "sac perce")
-**And** an AuditLog entry is recorded
-
-**Given** an authenticated Manager user
-**When** they perform a partial inventory count via `POST /api/v1/inventory/adjust` with catalogItemId and counted quantity
-**Then** the system compares counted vs theoretical stock and creates an ADJUSTMENT movement for the variance
-**And** if variance exists, the reason is required
-
-**Given** the inventory module processes movements
-**When** `GET /api/v1/inventory/stock?catalogItemId=<id>` is called
-**Then** the current stock level is calculated by summing all movements for that item (deliveries + transfers_in - sales - transfers_out - losses +/- adjustments)
-
-**Given** the `GET /api/v1/inventory/movements?since=<ISO8601>` endpoint is called
-**When** the response is returned
-**Then** delta sync is supported, returning only movements after the given timestamp
-
----
-
-## Epic 6: Retail Vertical — POS Sessions & Extensions
-
-The retail POS is wrapped as a vertical module with cash sessions, session-scoped transactions, RetailProduct and RetailSale extensions, and parked cart support.
-
-### Story 6.1: Retail Schema & Product Extensions
-
-As a system architect,
-I want the retail-specific product fields extracted into a RetailProduct extension table,
-So that the shared CatalogItem stays clean and other verticals can add their own extensions.
-
-**Acceptance Criteria:**
-
-**Given** the shared catalog_items table exists
-**When** the retail schema migration runs
-**Then** the `retail` schema is created with `retail_products` table containing: `id`, `catalog_item_id` (unique FK → catalog_items), `stock_quantity` (Decimal 10,2, default 0), `weight_unit` (nullable, for future weight-based sales), `min_stock_level` (nullable, Decimal 10,2)
-
-**Given** existing Product records that had stock-related fields
-**When** the data migration runs
-**Then** RetailProduct records are created for each CatalogItem with `stock_quantity` and `min_stock_level` values migrated from the old Product model
-
-**Given** a `GET /api/v1/catalog/items` request from a retail tenant
-**When** the API response is built
-**Then** the response joins CatalogItem + RetailProduct and returns a flat object (name, price, barcode, stockQuantity, weightUnit, minStockLevel) — the client stores this denormalized shape directly in Isar
-
-### Story 6.2: RetailSale Extensions & Session Scoping
-
-As a system architect,
-I want retail-specific transaction fields (sessionId, receiptNumber, cashierId) in an extension table,
-So that the shared Transaction stays clean and retail-specific POS logic is isolated.
-
-**Acceptance Criteria:**
-
-**Given** the retail schema exists
-**When** the retail sales migration runs
-**Then** the `retail.retail_sales` table is created with: `id`, `transaction_id` (unique FK → transactions), `session_id` (FK → pos_sessions, nullable), `receipt_number`, `cashier_id`
-
-**Given** existing Order records with sessionId and receiptNumber
-**When** the data migration runs
-**Then** RetailSale records are created for each Transaction with session and receipt data migrated, zero data loss verified
-
-**Given** a retail transaction is created
-**When** the RetailModule processes the sale
-**Then** both a shared Transaction AND a RetailSale extension record are created in a single database transaction (atomicity guaranteed)
-**And** the RetailSale is linked to the active POS session via `session_id`
-
-### Story 6.3: Cash Session Management
-
-As a commercial,
-I want to open and close cash sessions with balance tracking and mandatory variance explanation,
-So that cash accountability is enforced and the owner can track cash handling accuracy.
-
-**Acceptance Criteria:**
-
-**Given** the retail schema exists
-**When** the sessions migration runs
-**Then** the `retail.pos_sessions` table is created (or migrated from public) with: `id`, `opening_balance` (Decimal 10,2), `closing_balance` (nullable), `theoretical_balance` (nullable), `variance` (nullable), `variance_explanation` (nullable), `status` (OPEN/CLOSED), `user_id`, `tenant_id`, `opened_at`, `closed_at`, with index on `(tenant_id, user_id, status)`
-
-**Given** an authenticated Commercial user with no open session
-**When** they call `POST /api/v1/retail/sessions/open` with an opening balance (e.g., 15000 FCFA)
-**Then** a new PosSession is created with status OPEN and the declared opening balance
-
-**Given** a Commercial has an open session
-**When** they attempt to open another session
-**Then** the system rejects the request — only one open session per user
-
-**Given** a Commercial has an open session with sales totaling 128000 FCFA in cash
-**When** they call `POST /api/v1/retail/sessions/close/:id` with closing_balance = 127500
-**Then** the system calculates theoretical_balance = opening_balance + cash_sales = 143000, variance = 127500 - 143000 = -15500
-**And** if variance != 0 and no variance_explanation is provided, the closure is rejected with an error
-
-**Given** a Commercial provides a variance explanation
-**When** the session is closed
-**Then** the session status changes to CLOSED, closed_at is set, and a `SessionClosed` event is emitted
-
-**Given** an authenticated Manager user
-**When** they call `GET /api/v1/retail/sessions/summary/:id`
-**Then** the session summary is returned with: total sales, breakdown by payment method, opening balance, closing balance, theoretical balance, variance, and explanation
-
-**Given** an authenticated Manager user
-**When** they call `GET /api/v1/reports/sessions`
-**Then** they can view session closure reports for all commercials in their location
-
-### Story 6.4: Retail Module Registration & POS Orchestration
-
-As a developer,
-I want the RetailModule to wrap shared modules into a cohesive POS vertical,
-So that activating the retail vertical for a tenant gives them the complete POS experience.
-
-**Acceptance Criteria:**
-
-**Given** the RetailModule is implemented
-**When** it is registered in AppModule via `RetailModule.register()`
-**Then** it imports CatalogModule, TransactionsModule, InventoryModule, PaymentsModule, ContactsModule, and declares dependency on all of them in the Module registry
-
-**Given** a retail tenant's Commercial creates a sale
-**When** the POS orchestration service processes it
-**Then** it coordinates: Transaction creation (shared) → RetailSale extension (retail) → Stock decrement (shared, via event) → Customer balance update if credit (shared) — all in a single atomic operation
-
-**Given** the retail vertical endpoints (`/api/v1/retail/*`)
-**When** decorated with `@RequiresModule('retail')`
-**Then** only tenants with the retail module activated can access them
-
-**Given** all old POS endpoints
-**When** the retail module is deployed
-**Then** old endpoints proxy to the new retail services with identical behavior for backward compatibility
-
----
-
-## Epic 7: Reporting & Business Intelligence
-
-Managers can generate daily consolidation reports. Owners can view dashboards with revenue, sale count, losses, cash variances, and critical stock levels.
-
-### Story 7.1: Daily Consolidation Reports
-
-As a store manager,
-I want to generate a daily consolidation report covering sales, losses, variances, and transfers,
-So that I can review the day's operations and send a summary to the owner.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated Manager user
-**When** they call `GET /api/v1/reports/sales?from=<date>&to=<date>&groupBy=day`
-**Then** the report returns: total revenue, sale count, breakdown by payment method, total losses declared, total transfer variances, for the requested date range
-
-**Given** an authenticated Manager user
-**When** they call `GET /api/v1/reports/sessions?from=<date>&to=<date>`
-**Then** the report returns: all sessions with their closure summaries, cash variances per commercial, and variance explanations
-
-**Given** an authenticated Manager user
-**When** they call `GET /api/v1/reports/inventory?from=<date>&to=<date>`
-**Then** the report returns: deliveries received, transfers completed with variances, losses declared with motifs, adjustments from partial counts
-
-**Given** the ReportingModule is implemented
-**When** it is registered in AppModule
-**Then** it is a read-only module that queries across shared and retail schemas, imports KernelModule, CatalogModule, TransactionsModule, and InventoryModule
-
-### Story 7.2: Owner Dashboard & Analytics
+**Given** I receive a WhatsApp order message from a client
+**When** I open the "New Client Order" screen
+**Then** I can search for the client by name/phone, select items with quantities, set a delivery address and scheduled delivery time, and add order notes (FR98)
+
+**Given** I submit the order
+**When** it is saved
+**Then** it appears in the "Pending Orders" queue with status `PENDING`
+**And** stock availability is checked — unavailable items are flagged with a warning (not blocked)
+
+**Given** the client does not exist in CRM yet
+**When** I enter their phone number
+**Then** a new contact is created automatically with the order linked (FR99)
+
+### Story 9.2: Order-to-Delivery Status Tracking
 
 As a shop owner,
-I want to view a dashboard with revenue, sale count, losses, cash variances, and critical stock levels,
-So that I can monitor my business remotely without being physically present.
+I want to move orders through a `PENDING → CONFIRMED → OUT_FOR_DELIVERY → DELIVERED` pipeline,
+So that I always know what's been promised, what's in transit, and what's been completed.
 
 **Acceptance Criteria:**
 
-**Given** an authenticated Owner user
-**When** they call `GET /api/v1/reports/sales/stats?from=<date>&to=<date>`
-**Then** the response includes: total revenue, total sale count, average transaction value, top 3 products by sales volume, total losses, and total cash variances
+**Given** an order is in `PENDING` status
+**When** I confirm it
+**Then** its status changes to `CONFIRMED`
+**And** the reserved stock is locked against other sales (FR107)
 
-**Given** an authenticated Owner user
-**When** they call `GET /api/v1/reports/inventory` with no date filter
-**Then** the response includes current stock levels for all products with items below `min_stock_level` flagged as critical
+**Given** an order is `CONFIRMED`
+**When** I assign it to a delivery person and tap "Dispatch"
+**Then** status changes to `OUT_FOR_DELIVERY`
+**And** the delivery person's name is recorded on the order (FR108)
 
-**Given** a Commercial user attempts to access reporting endpoints
-**When** the RolesGuard evaluates the request
-**Then** access is denied — reporting is limited to Manager and Owner roles
+**Given** the delivery person confirms delivery
+**When** I tap "Mark Delivered"
+**Then** status changes to `DELIVERED`, the delivery timestamp is recorded, and the stock deduction is finalized (FR109)
 
-**Given** the old stats/reports methods in PosService
-**When** the reporting module is deployed
-**Then** old report endpoints proxy to the new ReportingService with identical response shapes
+**Given** a delivered order
+**When** the client later reports non-delivery
+**Then** an owner/manager can open a dispute that changes status to `DISPUTED` and triggers a review notification (FR110)
+
+### Story 9.3: Digital Delivery Receipt & Client Notification
+
+As a client,
+I want to receive a digital receipt when my order is delivered,
+So that I have proof of delivery and the order details without needing a paper receipt.
+
+**Acceptance Criteria:**
+
+**Given** an order is marked `DELIVERED`
+**When** the delivery confirmation is submitted
+**Then** a digital receipt is generated with: order items, quantities, total, delivery address, and delivery timestamp (FR111)
+
+**Given** the receipt is generated
+**When** the client has a WhatsApp number on record
+**Then** the receipt is sent via WhatsApp automatically
+**And** it uses an i18n-resolved template — no hardcoded strings (NFR31)
+
+**Given** the owner reviews the order history
+**When** they open any past delivered order
+**Then** the digital receipt is accessible and can be resent on demand
+
+### Story 9.4: Client Order Analytics
+
+As an owner,
+I want to see a breakdown of client orders by status, delivery time, and client,
+So that I can identify delivery bottlenecks and high-value delivery clients.
+
+**Acceptance Criteria:**
+
+**Given** I open the Orders Analytics view
+**When** I filter by date range
+**Then** I see: total orders by status, average fulfillment time (CONFIRMED → DELIVERED), top 5 clients by order volume (FR99)
+
+**Given** orders have been in `PENDING` status for more than a configurable threshold (default: 2 hours)
+**When** I view the pending orders list
+**Then** overdue orders are highlighted with a visual indicator
 
 ---
 
-## Epic 8: Frontend Sync & Offline Resilience
+## Epic 10: Billing Plans, Tenant Provisioning & Super Admin Backoffice
 
-Frontend repositories updated to new API endpoints, Isar models aligned with new response shapes, full offline-first experience preserved with delta sync, crash recovery, conflict resolution, and connectivity indicator.
+**Goal:** Give Scalario operators a complete backoffice to manage tenant lifecycle — provisioning, billing plan assignment, module activation, and platform-wide monitoring — without touching the database directly.
 
-### Story 8.1: Repository & API URL Migration
-
-As a developer,
-I want all frontend repositories updated to call the new modular API endpoints,
-So that the frontend communicates with the restructured backend correctly.
-
-**Acceptance Criteria:**
-
-**Given** the existing ProductRepository calls `/pos/products`
-**When** the migration is applied
-**Then** it calls `/api/v1/catalog/items` with the same request/response handling
-**And** delta sync uses `?since=<lastSync>` parameter
-
-**Given** the existing CustomerRepository calls `/pos/customers`
-**When** the migration is applied
-**Then** it calls `/api/v1/contacts` with updated field mappings (Customer → Contact)
-
-**Given** the existing OrderRepository calls `/pos/orders`
-**When** the migration is applied
-**Then** it calls `/api/v1/transactions` with updated field mappings (Order → Transaction)
-
-**Given** the existing SessionRepository calls `/pos/sessions`
-**When** the migration is applied
-**Then** it calls `/api/v1/retail/sessions/*` with updated endpoints (open, close, active, summary)
-
-**Given** all repositories are updated
-**When** the frontend makes API calls
-**Then** all requests include `x-tenant-id` header and Bearer JWT token as required by the new guard chain
-
-### Story 8.2: Isar Model Alignment & Sync Adapters
-
-As a developer,
-I want Isar collections aligned with the new API response shapes and module-agnostic sync adapters,
-So that local data matches the restructured backend models.
-
-**Acceptance Criteria:**
-
-**Given** the existing Isar Product collection
-**When** the model is updated
-**Then** it stores the denormalized CatalogItem + RetailProduct shape (name, price, barcode, itemType, stockQuantity, weightUnit, minStockLevel) as returned by the API
-
-**Given** the existing Isar Customer collection
-**When** the model is updated
-**Then** it stores the Contact shape (name, phone, email, address, contactType, balance) with the new field names
-
-**Given** the existing Isar Order collection
-**When** the model is updated
-**Then** it stores the Transaction + RetailSale joined shape (totalAmount, itemsJson, paymentMethod, lifecycleType, sessionId, receiptNumber)
-
-**Given** the SyncService needs module-agnostic adapters
-**When** sync adapters are implemented
-**Then** each entity type (catalog, contacts, transactions, sessions, movements) has its own sync adapter that handles push/pull independently
-**And** the sync engine orchestrates adapters without knowing entity-specific logic
-
-### Story 8.3: Delta Sync, Outbox & Conflict Resolution
-
-As a cashier working offline,
-I want all my local mutations queued and synced automatically when connectivity returns,
-So that I never lose a transaction and the system handles conflicts gracefully.
-
-**Acceptance Criteria:**
-
-**Given** a mutation (sale, session, customer edit) is performed offline
-**When** it is written to Isar
-**Then** it is also added to the outbox queue with `syncStatus = pending`
-
-**Given** connectivity returns after an offline period
-**When** the sync engine detects the connection
-**Then** all pending outbox items are pushed to the server in order: sessions → transactions → customers → stock movements
-**And** each push uses UUID-based idempotent upsert (duplicate pushes are safe)
-
-**Given** a delta pull is triggered
-**When** the sync engine calls `GET /api/v1/<resource>?since=<lastSync>`
-**Then** only records with `updated_at > lastSync` are returned
-**And** the client stores `meta.serverTime` as the next `since` value
-
-**Given** two devices edit the same non-critical record offline (e.g., customer address)
-**When** both sync
-**Then** last-write-wins (LWW) conflict resolution is applied based on `updated_at`
-
-**Given** two devices create conflicting financial records (e.g., overlapping stock adjustments)
-**When** both sync
-**Then** server-wins resolution is applied and the conflict is logged for review
-
-**Given** a full day of 150+ transactions is pending
-**When** sync executes on a 3G connection
-**Then** all transactions sync in under 30 seconds with compressed delta payloads
-
-### Story 8.4: Crash Recovery, Retention & Connectivity Indicator
-
-As a cashier on a device that may lose power unexpectedly,
-I want the system to recover to a consistent state after a crash with zero data loss,
-So that I can resume work immediately without worrying about lost transactions.
-
-**Acceptance Criteria:**
-
-**Given** Isar is configured with WAL (Write-Ahead Log) enabled
-**When** the device loses power mid-transaction
-**Then** on next app start, Isar replays the WAL and recovers all committed writes — zero data loss
-
-**Given** the app starts after an unexpected termination
-**When** the recovery process completes
-**Then** in-progress transactions that were fully written are preserved; partially written transactions are rolled back to a consistent state
-**And** app cold start remains under 3 seconds
-
-**Given** the sync status UI component
-**When** the device is online
-**Then** a subtle, non-blocking indicator shows connected status (e.g., small green dot)
-
-**Given** the device goes offline
-**When** the connectivity changes
-**Then** the indicator updates to show offline status (e.g., small grey dot) without any popup or blocking modal — the user may not even notice
-
-**Given** local data retention is configured (e.g., 60 days)
-**When** the retention policy runs
-**Then** synced records older than the retention period are purged from Isar
-**And** unsynced records are NEVER purged regardless of age
-**And** the local database remains under 500MB
-
-**Given** the device has limited memory (1-2 GB RAM)
-**When** the app is running with sync in background
-**Then** total memory footprint stays under 150MB (Isar mmap, ListView.builder, sync in isolate)
+**FR Coverage:** FR100, FR101, FR102, FR103, FR-SUPERADMIN-01–06
 
 ---
 
-## Epic 9: Data Migration & Client Cutover
+### Story 10.1: Tenant Provisioning from Super Admin Backoffice
 
-All 3 existing clients migrated from monolithic public schema to kernel/shared/retail multi-schema architecture with zero data loss. Old endpoint proxies removed, cleanup completed.
+As a Super Admin,
+I want to create a new tenant from the backoffice with a single form,
+So that onboarding a new business requires no manual DB intervention.
 
-### Story 9.1: Migration Scripts & Dry Run Validation
+**Acceptance Criteria:**
+
+**Given** I fill in: business name, owner email, country, currency, sector template, and billing plan
+**When** I submit the provisioning form
+**Then** the system creates: tenant record, owner user account, default roles (Owner, Manager, Cashier), default module activations, and initial DB schema (FR-SUPERADMIN-01)
+**And** the owner receives a welcome email with their login credentials
+
+**Given** the provisioning completes
+**When** I view the tenant in the backoffice
+**Then** I see their full profile: created date, sector, plan, active modules, owner contact
+
+**Given** I try to provision a tenant with an email already in use
+**When** I submit the form
+**Then** a validation error is shown — no duplicate tenant is created
+
+### Story 10.2: Billing Plan Management
+
+As a Super Admin,
+I want to create and manage billing plans with tier limits and module inclusions,
+So that I can adjust pricing without deploying new code (FR100).
+
+**Acceptance Criteria:**
+
+**Given** I create a new billing plan "Pro" with: max 1000 products, max 5 users, modules [Sales, Inventory, CRM, Appointments]
+**When** the plan is saved
+**Then** it is immediately available for assignment to new or existing tenants
+
+**Given** I update the "Starter" plan to increase the product limit from 200 to 300
+**When** the update is saved
+**Then** all tenants on the Starter plan have their effective limit updated immediately
+**And** tenants who were previously over the new limit are flagged for review (FR101)
+
+**Given** I assign a tenant to a new billing plan
+**When** the assignment is confirmed
+**Then** `BillingGuard` enforces the new limits on the next API call — no restart required (FR102)
+
+### Story 10.3: Module Activation per Tenant
+
+As a Super Admin,
+I want to activate or deactivate individual modules per tenant from the backoffice,
+So that I can grant trial access or respond to plan downgrades without code changes (FR103).
+
+**Acceptance Criteria:**
+
+**Given** a tenant wants to trial the Reservations module
+**When** I activate it from the backoffice
+**Then** their `ModuleGuard` allows access within 60 seconds (next auth token refresh cycle)
+
+**Given** a tenant downgrades and the HR module is no longer included
+**When** I deactivate it
+**Then** HR routes return 403 for that tenant's users on the next request
+**And** existing HR data is preserved — not deleted
+
+### Story 10.4: Platform Health Monitoring & Alerting
+
+As a Super Admin,
+I want a real-time platform health dashboard,
+So that I can detect degraded tenants, failed sync jobs, and infrastructure issues before clients report them (FR-SUPERADMIN-02).
+
+**Acceptance Criteria:**
+
+**Given** I open the platform health dashboard
+**When** it loads
+**Then** I see: active tenants count, API error rate (last 1h), pending sync queue depth, and infrastructure health indicators
+
+**Given** a tenant's outbox sync queue has been stalled for more than 10 minutes
+**When** the monitoring job detects it
+**Then** an alert is raised in the Super Admin dashboard with the tenant ID and stall duration (NFR-INFRA-05)
+
+**Given** I click on a specific tenant in the health view
+**When** the detail panel opens
+**Then** I see their last activity timestamp, sync queue status, and recent error log entries (FR-SUPERADMIN-06)
+
+### Story 10.5: Super Admin Impersonation for Support
+
+As a Super Admin,
+I want to impersonate any tenant's account for support purposes,
+So that I can diagnose issues from the tenant's perspective without sharing credentials (FR-SUPERADMIN-03).
+
+**Acceptance Criteria:**
+
+**Given** a tenant reports a bug
+**When** I initiate impersonation from the backoffice
+**Then** I receive a short-lived token (30-min TTL) that grants me the impersonated tenant's permissions
+
+**Given** I am impersonating a tenant
+**When** I perform any action
+**Then** the audit trail records: `actorId: superadmin_id`, `impersonating: tenant_id` — my actions are permanently distinguished from the tenant's own actions (FR-SUPERADMIN-04)
+
+**Given** the impersonation token expires
+**When** I make an API call
+**Then** the session ends and I am returned to the Super Admin context — no silent extension
+
+---
+
+## Epic 11: Advanced Product & Inventory Features
+
+**Goal:** Cover the full product management surface: variants, compound products (recipes), batch/lot tracking, inter-location transfers, and multi-store aggregation visibility — enabling complex inventory operations beyond basic stock-in/stock-out.
+
+**FR Coverage:** FR83–97, FR-MULTISTORE-01
+
+---
+
+### Story 11.1: Product Variants (Size, Color, Unit)
+
+As a shop owner,
+I want to define product variants (e.g., Small/Medium/Large T-shirts, 1L/5L oil),
+So that I track each variant's stock separately without creating duplicate products.
+
+**Acceptance Criteria:**
+
+**Given** I create a product "T-Shirt"
+**When** I add variant attributes (Size: S, M, L) and (Color: Red, Blue)
+**Then** variant SKUs are auto-generated for each combination (S-Red, S-Blue, M-Red, etc.)
+**And** each variant has its own stock level (FR83)
+
+**Given** a sale is made for "T-Shirt M-Red"
+**When** it is committed
+**Then** only the M-Red variant stock is decremented — other variants are unaffected (FR84)
+
+**Given** I view the product detail for "T-Shirt"
+**When** the variants panel renders
+**Then** I see all variants with their individual stock levels, prices, and low-stock indicators (FR85)
+
+### Story 11.2: Compound Products & Recipe Management
+
+As a restaurateur or food producer,
+I want to define compound products (recipes) that automatically deduct ingredient stock when sold,
+So that I never manually track ingredient consumption for produced items.
+
+**Acceptance Criteria:**
+
+**Given** I define "Smoothie Bowl" with recipe: 200g Mango + 100g Banana + 50g Oats
+**When** a Smoothie Bowl is sold
+**Then** 200g is deducted from Mango stock, 100g from Banana, 50g from Oats — atomically (FR86)
+
+**Given** Mango stock is insufficient for the recipe quantity
+**When** a sale of Smoothie Bowl is attempted
+**Then** the system warns: "Insufficient ingredient: Mango (need 200g, have 150g)" before confirming the sale (FR87)
+
+**Given** I update the recipe (change Oats from 50g to 75g)
+**When** the next Smoothie Bowl is sold
+**Then** the updated recipe quantities are used for stock deduction
+
+### Story 11.3: Batch & Lot Tracking with Expiry
+
+As a shop owner selling perishables,
+I want to track product batches with expiry dates and apply FEFO (First-Expired-First-Out) selection,
+So that I always sell the oldest stock first and receive alerts before items expire.
+
+**Acceptance Criteria:**
+
+**Given** I receive a new batch of "Yogurt" with expiry 2026-04-15
+**When** I record the stock entry with the batch's expiry date
+**Then** a `BatchRecord` is created with `lotNumber`, `quantity`, `expiryDate`, `receivedAt` (FR88)
+
+**Given** I sell 5 units of Yogurt
+**When** the sale is committed
+**Then** the system deducts from the batch with the earliest expiry date first (FEFO)
+**And** if multiple batches are needed to fulfill the quantity, they are deducted in expiry order (FR89)
+
+**Given** a batch has an expiry date within the next 3 days
+**When** the nightly check runs
+**Then** the owner receives a push notification: "Yogurt batch (Lot #X) expires in 3 days — 12 units remaining" (FR90)
+
+### Story 11.4: Inter-Location Stock Transfer
+
+As a multi-location business owner,
+I want to transfer stock between my locations (warehouse → store),
+So that I can balance inventory without recording fake sales or purchases.
+
+**Acceptance Criteria:**
+
+**Given** I initiate a transfer of 50kg "Rice" from Warehouse A to Store B
+**When** the transfer is submitted
+**Then** Warehouse A stock decreases by 50kg and Store B stock increases by 50kg — atomically (FR92)
+
+**Given** the transfer is initiated offline on a field device
+**When** the device syncs
+**Then** the transfer is replayed on the server via the outbox pattern with conflict detection (FR92 + outbox arch)
+
+**Given** I view the transfer history for Store B
+**When** the history loads
+**Then** all incoming and outgoing transfers are listed with: source/destination, quantity, actor, and timestamp
+
+### Story 11.5: Multi-Store Aggregated Inventory View
+
+As a business owner with multiple locations,
+I want to see a consolidated inventory view across all my stores,
+So that I can identify where stock is concentrated and make redistribution decisions.
+
+**Acceptance Criteria:**
+
+**Given** I have 3 stores with different stock levels of "Cooking Oil 5L"
+**When** I open the Multi-Store Inventory view
+**Then** I see a table: Store | Stock Level | Below Threshold? — for every location (FR-MULTISTORE-01)
+
+**Given** the aggregated view loads
+**When** it renders
+**Then** total aggregated stock across all stores is shown at the top
+**And** locations below threshold are highlighted
+
+**Given** I tap a specific store row
+**When** the detail view opens
+**Then** I navigate to that store's full product list with their individual levels
+
+### Story 11.6: Supplier Management & Purchase Orders
+
+As an inventory manager,
+I want to manage supplier profiles and create purchase orders directly in Scalario,
+So that my restocking workflow is tracked end-to-end within the system.
+
+**Acceptance Criteria:**
+
+**Given** I create a supplier profile: name, contact, lead time, preferred currency
+**When** saved
+**Then** the supplier is available when creating purchase orders (FR93)
+
+**Given** I create a PO for 100kg Rice from Supplier X at 500 XOF/kg
+**When** the PO is submitted
+**Then** a `PurchaseOrder` record is created with status `PENDING` and line items stored (FR94)
+
+**Given** the goods arrive and I confirm receipt
+**When** I mark the PO as received and enter actual quantities
+**Then** stock is increased by the received quantities
+**And** if actual ≠ ordered, a discrepancy is flagged for review (FR95)
+
+### Story 11.7: Waste & Loss Declaration with Category Tracking
+
+As an inventory manager,
+I want to declare waste or losses with a reason category,
+So that I can analyze where inventory shrinkage is coming from and optimize accordingly.
+
+**Acceptance Criteria:**
+
+**Given** 5 units of Yogurt have expired
+**When** I declare the waste with category `EXPIRED`
+**Then** stock is reduced by 5, a `WasteRecord` is created, and the loss value is added to the day's declared losses (FR96)
+
+**Given** I declare a theft loss with category `THEFT`
+**When** committed
+**Then** a security alert notification is sent to the owner if a `THEFT` threshold is configured (FR97)
+
+**Given** I view the Waste Report for the month
+**When** it loads
+**Then** waste is grouped by category (EXPIRED, DAMAGED, THEFT, OTHER) with total units and value per category
+
+---
+
+## Epic 12: AI Assistant Layer (H2)
+
+**Goal:** Deliver the AI assistant that understands natural language queries about the business, executes actions via the AiActionsManifest, proactively surfaces insights, and maintains data sovereignty — all within the guard chain so AI never bypasses RBAC.
+
+**FR Coverage:** FR-AI-01–04 (+ NFR39, NFR40 for safety constraints)
+
+---
+
+### Story 12.1: Natural Language Business Query
+
+As an owner,
+I want to ask questions about my business in plain language (French or English),
+So that I get instant answers without knowing which report screen to navigate to.
+
+**Acceptance Criteria:**
+
+**Given** I type "Quels sont mes 5 produits les plus vendus ce mois?"
+**When** the AI processes the query
+**Then** it resolves the intent to `getSalesReport(period: current_month, groupBy: product, limit: 5)` via AiActionsManifest
+**And** returns a ranked list with product names, units sold, and revenue — using my tenant data only (FR-AI-01)
+
+**Given** I ask "Do I have enough stock to last the week?"
+**When** the AI analyzes current stock vs. average daily sales velocity
+**Then** it returns a per-product estimate: "Product X: ~3 days remaining. Product Y: sufficient for 14+ days." (FR-AI-02)
+
+**Given** I ask a question that cannot be answered with available data
+**When** the AI processes it
+**Then** it responds with an honest "I don't have enough data to answer that" — not a hallucinated answer (NFR39)
+
+### Story 12.2: AI-Driven Action Execution
+
+As an owner,
+I want to execute business operations via voice/text commands,
+So that I can restock, adjust prices, or generate reports hands-free.
+
+**Acceptance Criteria:**
+
+**Given** I say "Add 50kg of Rice to inventory"
+**When** the AI processes the command
+**Then** it resolves to `addStock({ productId: rice_id, quantity: 50, unit: 'kg' })` via AiActionsManifest
+**And** presents a confirmation: "Add 50kg Rice — confirm?" before executing (FR-AI-03)
+
+**Given** I confirm the action
+**When** it executes
+**Then** the stock is increased, an audit trail entry is written with `actorId: ai_assistant`, and I receive a success confirmation
+
+**Given** the action requires a permission I don't have (e.g., price change requires Manager role)
+**When** the AI attempts to execute it
+**Then** it is blocked by `RolesGuard` within the guard chain — the AI NEVER bypasses RBAC (NFR40)
+
+### Story 12.3: Proactive Business Insights
+
+As an owner,
+I want the AI to proactively surface insights I didn't think to ask for,
+So that I discover opportunities and risks I might have missed.
+
+**Acceptance Criteria:**
+
+**Given** the AI detects that Product X's sales velocity increased 40% this week
+**When** the daily insight run executes
+**Then** I receive a proactive notification: "Rice sales up 40% this week — current stock may last only 4 days. Consider restocking." (FR-AI-04)
+
+**Given** the AI detects an unusual spike in waste declarations (3x the 30-day average)
+**When** the anomaly detection runs
+**Then** I receive an alert: "Unusual waste spike detected — 15 units declared in the last 24h. Review?" (FR-AI-04)
+
+**Given** I have disabled proactive notifications in my AI preferences
+**When** the insight engine runs
+**Then** no proactive push notifications are sent — insights are available on demand only
+
+### Story 12.4: Data Sovereignty & AI Safety Constraints
+
+As a tenant,
+I want to know that the AI assistant cannot access data from other tenants and cannot perform destructive actions autonomously,
+So that I trust the AI layer with sensitive business data.
+
+**Acceptance Criteria:**
+
+**Given** the AI processes any query
+**When** it constructs database queries via AiActionsManifest handlers
+**Then** every query includes `tenantId` scoping — tenant isolation is enforced at the data layer, not by the AI (NFR40)
+
+**Given** the AI is asked to "delete all sales from last month"
+**When** it processes the command
+**Then** it refuses: destructive bulk operations (DELETE, bulk UPDATE without specific criteria) are blocked at the manifest layer regardless of user instruction (NFR40)
+
+**Given** the AI calls an external LLM API for natural language processing
+**When** the request is constructed
+**Then** only aggregated metrics and anonymized patterns are sent — no raw PII (customer names, phone numbers) leaves the tenant's data boundary (NFR39)
+
+---
+
+## Epic 13: Integrator Channel & Platform Governance
+
+**Goal:** Enable third-party integrators to embed Scalario modules into their own platforms via a white-label API, managing their reseller tenants under their own branding and access controls — unlocking a B2B2B distribution channel.
+
+**FR Coverage:** FR-INTEGRATOR-01–04, FR-SESSION-01
+
+---
+
+### Story 13.1: Integrator Account Registration & API Credential Management
+
+As an integrator (ISV or reseller),
+I want to register as an integrator on the Scalario platform and receive API credentials,
+So that I can embed Scalario modules in my own product under my branding.
+
+**Acceptance Criteria:**
+
+**Given** I submit an integrator registration request with: company name, contact, intended use case, and agreement to ToS
+**When** a Super Admin approves the application
+**Then** an integrator account is created with: `integrator_id`, `api_key`, `api_secret`, and a default rate limit tier (FR-INTEGRATOR-01)
+
+**Given** I have an integrator account
+**When** I access my developer dashboard
+**Then** I can: view my API credentials, rotate the secret, configure webhook endpoints, and see my API usage metrics (FR-INTEGRATOR-02)
+
+**Given** I rotate my API secret
+**When** the rotation completes
+**Then** the old secret is invalidated immediately
+**And** my existing active sessions using the old secret receive a 401 on the next request
+
+### Story 13.2: Integrator-Managed Tenant Provisioning
+
+As an integrator,
+I want to provision tenants under my integrator account via API,
+So that my clients onboard into Scalario without ever seeing the Scalario brand.
+
+**Acceptance Criteria:**
+
+**Given** I call `POST /v1/integrator/tenants` with tenant details and my API credentials
+**When** the request is processed
+**Then** a new tenant is created with: my `integrator_id` as parent, white-label branding config, and modules I am licensed to distribute (FR-INTEGRATOR-03)
+
+**Given** the tenant is provisioned under my account
+**When** they log in via my platform
+**Then** they see my branding — no Scalario logos or references unless I configure it (FR-INTEGRATOR-03)
+
+**Given** I try to provision a tenant with a module I am not licensed for
+**When** the request is received
+**Then** it is rejected with HTTP 403: `INTEGRATOR_MODULE_NOT_LICENSED`
+
+### Story 13.3: Integrator Revenue Share & Usage Reporting
+
+As an integrator,
+I want to see usage metrics for all tenants under my account,
+So that I can calculate my revenue share and identify high-value clients to upsell.
+
+**Acceptance Criteria:**
+
+**Given** I access the integrator analytics endpoint
+**When** I query for a date range
+**Then** I receive: active tenant count, API call volume per tenant, module activation breakdown, and MRR contribution per tenant (FR-INTEGRATOR-04)
+
+**Given** a tenant under my account churns (subscription cancelled)
+**When** the cancellation is processed
+**Then** I receive a webhook event: `tenant.churned` with the tenant ID and final billing period
+
+### Story 13.4: Session Management & Concurrent Login Control
 
 As a platform administrator,
-I want migration scripts that move all data from public schema to kernel/shared/retail with rollback capability,
-So that we can validate the migration on a cloned database before touching production.
+I want to control concurrent session limits per user and provide session revocation,
+So that shared devices and security incidents can be managed without resetting passwords (FR-SESSION-01).
 
 **Acceptance Criteria:**
 
-**Given** the complete multi-schema architecture is deployed (Epics 1-8)
-**When** the migration script runs on a cloned production database
-**Then** all data is moved: tenants → kernel.tenants, org_members → kernel.organization_members, products → shared.catalog_items + retail.retail_products, orders → shared.transactions + retail.retail_sales, customers → shared.contacts, stock_movements → shared.stock_movements, pos_sessions → retail.pos_sessions
+**Given** a user logs in from a third device when the plan allows max 2 concurrent sessions
+**When** the third login is attempted
+**Then** the oldest session is automatically invalidated and the user is notified of the session displacement
 
-**Given** the migration script completes
-**When** row counts are compared (source vs destination)
-**Then** every table has identical row counts with zero data loss
-**And** referential integrity is verified across all FK relationships
+**Given** an owner suspects their account was compromised
+**When** they trigger "Revoke all sessions"
+**Then** all active tokens for that user are invalidated immediately
+**And** all devices are logged out on the next API call
 
-**Given** a migration step fails
-**When** the rollback is triggered
-**Then** the database returns to its pre-migration state — old tables are intact, new tables are dropped
+**Given** a Super Admin reviews a suspicious tenant
+**When** they access the tenant's session list
+**Then** they can revoke any individual session with reason logging (FR-SESSION-01)
 
-**Given** the dry run passes on the cloned database
-**When** the migration report is generated
-**Then** it shows: tables migrated, row counts, FK integrity status, estimated production migration time, and any warnings
-
-### Story 9.2: Production Cutover & Cleanup
-
-As a platform administrator,
-I want to execute the production migration for all 3 clients with minimal downtime and then clean up the old schema,
-So that the platform is fully on the new architecture with no legacy code remaining.
-
-**Acceptance Criteria:**
-
-**Given** the dry run has been validated and the 1-2 day maintenance window is scheduled
-**When** the production migration is executed for all 3 tenants
-**Then** all data is migrated to the new schema with zero data loss
-**And** the migration completes within the maintenance window
-
-**Given** the production migration is complete
-**When** the backend is restarted with the new configuration
-**Then** all new endpoints (`/api/v1/*`) are active and functional
-**And** old proxy endpoints are still active as a safety net
-
-**Given** all 3 clients are verified working on the new architecture
-**When** the cleanup phase executes
-**Then** the old PosModule, PosService, and proxy endpoints are removed
-**And** the old `public` schema tables that were migrated are dropped
-**And** the codebase contains only kernel/, shared/, retail/ module structure
-
-**Given** the cleanup is complete
-**When** a full regression test runs
-**Then** all existing functionality works identically: POS sales, sessions, stock movements, customers, sync, reports
-**And** the Prisma schema only references kernel, shared, and retail schemas
-
-**Given** the new APK is distributed to all 3 clients
-**When** the clients update their devices
-**Then** the frontend communicates exclusively with new endpoints
-**And** sync resumes seamlessly with zero data loss from the transition period
-
----
-
-## Epic 14: UI Polish — Design System & Conformité UX
-
-Mise en conformité complète de l'interface Flutter avec le design system Scalario : palette 60-30-10, typographie, espacement, boutons tactiles (Fitts), responsive (breakpoints compact/medium/expanded), labels en français, et accessibilité WCAG AA. Epic bloquant pour tout démo client ou lancement commercial.
-
-### Story 14.1: Fix Compile Errors — POS Providers
-
-As a developer,
-I want the 3 pre-existing compile errors in pos_providers.dart and related files fixed,
-So that the app builds cleanly before any UI work begins.
-
-**Acceptance Criteria:**
-
-**Given** the current state of `pos_providers.dart` and dependent files
-**When** `flutter build` or `flutter analyze` is run
-**Then** zero compile errors are reported for the POS provider files
-
-**Given** the `RealtimeService`, `RetentionService`, and related imports
-**When** the provider wiring is resolved
-**Then** all providers instantiate without type mismatches or missing constructors
-
-**Given** the fix is applied
-**When** the POS screen and dashboard screens are navigated
-**Then** all screens load without runtime provider exceptions
-
-**Notes:**
-- Check `RealtimeService(supabase, syncService, ref)` constructor signature
-- Check `RetentionService(isarService)` constructor signature
-- Run `flutter analyze` to surface all errors before fixing
-
----
-
-### Story 14.2: ThemeData Centralisé — Design System Setup
-
-As a developer,
-I want a centralized `AppTheme` with `ThemeData`, `ColorScheme`, and `TextTheme` matching the Scalario design system,
-So that all screens use a single source of truth for colors, typography, and component defaults.
-
-**Acceptance Criteria:**
-
-**Given** the design system palette (60-30-10 rule)
-**When** `AppTheme.light()` is applied at the `MaterialApp` level
-**Then** all screens inherit:
-- Primary: `#1565C0`
-- Background: `#F5F5F5`
-- Surface: `#FFFFFF`
-- Error: `#C62828`
-- OnPrimary: `#FFFFFF`
-- Text primary: `#212121`
-- Text secondary: `#757575`
-
-**Given** the typography scale from the design system
-**When** `AppTheme.textTheme` is defined
-**Then** it provides:
-- `displayMedium`: 22sp / Bold (titre principal)
-- `titleLarge`: 18sp / SemiBold (titre section)
-- `titleMedium`: 16sp / SemiBold (titre carte)
-- `bodyMedium`: 14sp / Regular
-- `bodySmall`: 12sp / Regular / `#757575`
-- `labelSmall`: 11sp / Medium / `#757575` (uppercase)
-- `headlineLarge`: 20sp / Bold / Monospace (prix)
-
-**Given** the component defaults
-**When** `ElevatedButton` is used anywhere in the app
-**Then** it uses primary blue background, white text, minimum height 48px
-
-**Given** the `FilledButton` (primary CTA — Encaisser)
-**When** defined in `AppTheme`
-**Then** it uses `#1565C0` background, minimum height 56px
-
-**Given** the app starts
-**When** `MaterialApp(theme: AppTheme.light())` is set
-**Then** no screen uses hardcoded `Colors.teal`, `Colors.blue`, `Colors.green`, `Colors.purple`, `Colors.grey` — all resolved via `Theme.of(context).colorScheme`
-
-**Files to create/modify:**
-- Create: `lib/core/theme/app_theme.dart`
-- Modify: `lib/main.dart` — apply `AppTheme.light()`
-
----
-
-### Story 14.3: Refactor Écran POS
-
-As a cashier (Fatou),
-I want the POS screen and its widgets to look professional and feel easy to use on a tablet,
-So that I can serve customers quickly without confusion.
-
-**Acceptance Criteria:**
-
-**Given** the POS screen (`pos_screen.dart`)
-**When** it renders
-**Then** the AppBar title shows the active shop name (from `userProfile`) instead of "Scalario POS"
-**And** all action icons have French tooltips ("Scanner code-barres", "Fermer la session")
-**And** the layout uses `LayoutBuilder` with breakpoints:
-  - `< 600px` → stacked (product grid full width, cart = FAB badge + separate screen)
-  - `≥ 600px` → Row split (product grid 60% | cart panel 40%)
-
-**Given** the cart panel (`cart_panel.dart`)
-**When** it renders on tablet (≥ 600px)
-**Then** the panel width is `max(320px, 35% of screen width)` — not hardcoded 350px
-**And** the header title reads "Vente en cours" (French)
-**And** cart items show: product name (bodyMedium), quantity × price in monospace, total in monospace bold
-**And** the discount text is at least 13sp (not 12sp)
-**And** the "remove" icon is wrapped in a 48×48 touch target (Fitts)
-**And** the currency symbol uses FCFA notation (or configured currency — `CurrencyFormatter`)
-**And** all hardcoded colors replaced with `Theme.of(context).colorScheme.*`
-
-**Given** the "PAY & PRINT" button (primary CTA)
-**When** it renders
-**Then** it is labeled "ENCAISSER" (French)
-**And** its height is ≥ 56px (Fitts — largest element in the panel)
-**And** it uses `colorScheme.primary` background
-
-**Given** the "HOLD" button
-**When** it renders
-**Then** it is labeled "METTRE EN ATTENTE" or "RETENIR" (French)
-
-**Given** the payment method dropdown
-**When** rendered
-**Then** method names are translated: CASH→"Espèces", MOBILE_MONEY→"Mobile Money", CARD→"Carte", CREDIT→"Crédit", SPLIT→"Paiement mixte"
-
-**Given** the product grid (`product_grid.dart`)
-**When** it renders
-**Then** `crossAxisCount` adapts: 2 cols `< 600px`, 3 cols `600–1024px`, 5 cols `> 1024px`
-**And** loading state shows a shimmer skeleton (not `CircularProgressIndicator`)
-**And** empty state shows: icon + "Aucun produit trouvé" + button "Ajouter un produit"
-**And** product card icon uses `colorScheme.primary` (not teal)
-**And** category chips use `colorScheme.primaryContainer` when selected
-
-**Given** the close session dialog (`pos_screen.dart` `_showCloseSessionDialog`)
-**When** triggered
-**Then** all text is in French: "Fermer la session", "Comptez l'argent en caisse", "Montant physique", "Annuler", "Suivant"
-
-**Given** the session report dialog (`session_report_dialog.dart`)
-**When** rendered
-**Then** all labels are in French: "Résumé de session (Rapport Z)", "Ventes par mode", "Réconciliation caisse", "Solde d'ouverture", "Caisse théorique", "Compte physique", "Écart", "Retour", "Imprimer rapport Z", "Confirmer la fermeture"
-
-**Given** the receipt dialog (`receipt_dialog.dart`)
-**When** rendered
-**Then** labels are French: "Reçu", "Numéro:", "Date:", "TOTAL:", "Paiement:", "Merci pour votre achat !", "OK", "Imprimer"
-**And** date format is `dd/MM/yyyy HH:mm`
-
-**Given** the sync status indicator
-**When** rendered
-**Then** tooltips are French: "En ligne & synchronisé", "Synchronisation...", "Erreur de synchronisation", "Hors ligne"
-
-**Given** the customer selection dialog
-**When** rendered
-**Then** labels are French: "Sélectionner un client", "Rechercher par nom ou téléphone", "Aucun client trouvé", "NOUVEAU CLIENT"
-
-**Given** the discount dialog
-**When** rendered
-**Then** labels are French: "Remise :", "Montant", "Type :", "Annuler", "Appliquer"
-
 ---
 
-### Story 14.4: Refactor Dashboard & Écrans Back-Office
+## Epic 14: Promotions, Coupons & Revenue Optimization Tools
 
-As a manager (Moussa) or owner (Blandine),
-I want the dashboard and back-office screens to match the design system and be usable on tablet and desktop,
-So that I can manage the business without visual clutter or confusion.
+**Goal:** Give merchants a flexible promotions engine — fixed-amount and percentage coupons, flash sales, loyalty point programs, and automatic discount application at POS — to drive repeat purchases and increase basket size.
 
-**Acceptance Criteria:**
-
-**Given** the dashboard shell (`dashboard_shell.dart`)
-**When** it renders on a phone (width < 600px)
-**Then** a `BottomNavigationBar` (max 5 items) replaces the `NavigationRail`
-**And** the rail is only shown for width ≥ 600px
-
-**Given** the NavigationRail is shown (width ≥ 600px)
-**When** it renders
-**Then** it is `extended: true` when width ≥ 1024px (not 1200px — matches design system breakpoint)
-**And** destination labels are French: "Aperçu", "Inventaire", "Catégories", "Clients", "Historique stock", "Rapports", "Paramètres"
-**And** the whole shell is wrapped in `SafeArea`
-**And** branch name label is at least 12sp
-
-**Given** the "Open POS" and "Logout" icon buttons in the rail trailing
-**When** rendered
-**Then** tooltips are French: "Ouvrir la caisse", "Se déconnecter"
-
-**Given** the Overview screen (`dashboard_screen.dart`)
-**When** it renders
-**Then** the greeting is French: "Bon retour !" or "Bonjour, {prénom} !"
-**And** the date picker button label is French: "7 derniers jours" / "dd/MM – dd/MM"
-**And** KPI card titles are French: "Chiffre d'affaires", "Nb commandes", "Ticket moyen"
-**And** the chart title is French: "Évolution des ventes (7 derniers jours)"
-**And** the "Active Terminals" section is French: "Terminaux actifs"
-**And** on phone (< 600px), KPI cards stack vertically (not Row)
-**And** loading state uses skeleton shimmer (not CircularProgressIndicator)
-**And** hardcoded `Colors.green`, `Colors.blue`, `Colors.purple`, `Colors.teal` replaced with `colorScheme` tokens
-
-**Given** the Inventory screen (`inventory_screen.dart`)
-**When** it renders
-**Then** the AppBar title is "Gestion des stocks"
-**And** the search hint is "Rechercher par nom ou code-barres…"
-**And** the "Add Product" button is "Ajouter un produit"
-**And** DataTable columns are French: "Nom", "Code-barres", "Prix", "Stock", "Actions"
-**And** on width < 900px, the DataTable is replaced by a card list (responsive)
-**And** action IconButtons in table rows are wrapped in 48×48 touch targets (Fitts)
-**And** delete confirmation dialog text is French: "Supprimer ce produit ?", "Êtes-vous sûr…", "Annuler", "Supprimer"
-
-**Given** the Customers screen (`customers_screen.dart`)
-**When** it renders
-**Then** AppBar title is "Gestion des clients"
-**And** search hint is "Rechercher un client…"
-**And** "SETTLE DEBT" button is "RÉGLER LA DETTE" and uses `colorScheme.primary` (not teal)
-**And** "Balance:" label is "Solde :"
-**And** empty state shows icon + "Aucun client trouvé" + "Ajouter un client" button
-
-**Given** the Reports screen (`reports_screen.dart`)
-**When** it renders
-**Then** AppBar title is "Rapports détaillés"
-**And** section titles are French: "Ventes par produit", "Ventes par mode de paiement"
-**And** date picker shows "Toute la période"
-**And** date format is `dd/MM`
-**And** pie chart colors use design system palette (not `Colors.primaries`)
-**And** DataTable columns are French: "Produit", "Qté", "Chiffre d'affaires"
-
-**Given** the Categories screen (`categories_screen.dart`)
-**When** it renders
-**Then** AppBar title is "Gestion des catégories"
-**And** empty state shows icon + "Aucune catégorie" + "Créer une catégorie" button
-**And** add dialog title is "Ajouter une catégorie", field label "Nom de la catégorie", buttons "Annuler" / "Ajouter"
-**And** delete dialog text is "Supprimer cette catégorie ?" with "Annuler" / "Supprimer"
-
-**Given** the Stock History screen (`stock_history_screen.dart`)
-**When** it renders
-**Then** AppBar title is "Historique des stocks"
-**And** date format uses French month names (`dd MMM` with locale `fr`)
-**And** empty state shows icon + "Aucun mouvement de stock"
-**And** date label text is at least 12sp (not 10sp)
-
-**Given** the Product Form dialog (`product_form_dialog.dart`)
-**When** it renders
-**Then** title is "Modifier le produit" / "Nouveau produit"
-**And** field labels are French: "Nom du produit *", "Prix *", "Stock initial", "Catégorie", "Code-barres"
-**And** validation messages are French: "Requis", "Nombre invalide"
-**And** buttons are "Annuler" / "Mettre à jour" / "Créer"
-
-**Given** the Settle Debt dialog (`settle_debt_dialog.dart`)
-**When** it renders
-**Then** title is "Régler la dette — {nom}"
-**And** labels are French: "Solde actuel :", "Montant du règlement"
-**And** buttons are "ANNULER" / "RÉGLER"
-**And** button color uses `colorScheme.primary` (not teal)
-
----
-
-### Story 14.5: Refactor Écran de Connexion
-
-As a new user opening the app for the first time,
-I want a clean, professional login screen with French labels and proper branding,
-So that I immediately trust the product.
-
-**Acceptance Criteria:**
-
-**Given** the login screen (`login_screen.dart`)
-**When** it renders
-**Then** the "Scalario" text is replaced (or complemented) with a proper logo widget (`ScalarioLogo`) using the design system primary color
-**And** below the logo, a subtitle reads "Gérez votre boutique, partout." in `bodyMedium` / `#757575`
-**And** the email field label is "Adresse email"
-**And** the password field label is "Mot de passe"
-**And** the password field has a visibility toggle icon (show/hide)
-**And** a "Mot de passe oublié ?" `TextButton` appears below the password field (leads to placeholder for now)
-**And** the "Sign In" button is labeled "Se connecter" with height ≥ 56px (Fitts)
-**And** the background uses `colorScheme.background` (`#F5F5F5`) — not plain white
-**And** error snackbars display French messages (pass through Supabase `e.message` — already shows in French if locale is set)
-**And** the form container max-width stays at 400px (desktop centering preserved)
-
----
-
-### Story 14.6: Responsive Breakpoints — Layouts Adaptatifs
-
-As any user (cashier on tablet, owner on phone, manager on desktop),
-I want the app to adapt its layout based on screen size,
-So that every platform (tablet, phone, desktop) has an optimal experience.
-
-**Acceptance Criteria:**
-
-**Given** the app runs on a phone (width < 600px)
-**When** any list screen (Inventory, Customers, Stock History) is displayed
-**Then** DataTables are replaced by scrollable card lists (each row = 1 card)
-**And** form dialogs use full-screen modals (not AlertDialog)
-**And** the bottom navigation bar is visible (not the NavigationRail)
-
-**Given** the POS screen on phone (< 600px)
-**When** displayed
-**Then** the product grid occupies full width (2 columns)
-**And** a floating cart badge button ("🛒 Panier (3)") appears bottom-right showing item count
-**And** tapping the cart badge navigates to the full-screen cart view
-**And** back from cart returns to the product grid
-
-**Given** the POS screen on tablet (600–1024px)
-**When** displayed
-**Then** the split layout (product grid | cart panel) is shown as described in the design system
-**And** the cart panel is always visible (no FAB needed)
-
-**Given** the POS screen on desktop (> 1024px)
-**When** displayed
-**Then** the NavigationRail is expanded with labels
-**And** the product grid shows 5 columns
-**And** the cart panel shows customer history section as per design system
-
-**Given** a `LayoutBuilder` is used in each adaptive screen
-**When** the breakpoints are defined
-**Then** they follow the design system constants:
-- `kCompactBreakpoint = 600.0`
-- `kMediumBreakpoint = 1024.0`
-**And** a shared `AppBreakpoints` class in `lib/core/theme/` exports these constants
-
-**Given** the dashboard KPI cards on phone
-**When** width < 600px
-**Then** the 3 stat cards stack vertically (Column) instead of Row
-
-**Given** the Inventory DataTable on medium screens (600–900px)
-**When** rendered
-**Then** it switches to a card list to avoid horizontal overflow
-
-**Notes:**
-- Create `lib/core/theme/app_breakpoints.dart` with `kCompactBreakpoint`, `kMediumBreakpoint`
-- Use `LayoutBuilder` in `PosScreen`, `DashboardShell`, `OverviewScreen`, `InventoryScreen`
-- Phone cart = separate route, tablet/desktop = side panel
+**FR Coverage:** FR91 (coupons/promotions), FR-DEVIS-01 (quote-to-sale), FR105 (flash sales), FR106 (loyalty)
 
-
----
-
-## Epic 10: SDUI Foundation & Engine
-
-A Server-Driven UI (SDUI) engine that allows layout definitions to be served from the backend as JSON, enabling dynamic rendering of screens per `business_type` without Flutter code changes. The first SDUI layout converts the existing Retail POS screen to JSON-driven rendering. Story 10.0 is a prerequisite: compile errors must be fixed before any new development.
-
-**Phase:** 1 (after Epics 1–6 done)
-**FRs covered:** FR13 (UI-Driven Engine dynamic layer)
-**Prerequisite:** Epics 1–6 complete + Epic 14 Story 14.2 (AppTheme tokens in place)
-
-### Story 10.0: Fix Compile Errors — SyncService, categoriesProvider, ReceiptDialog
-
-As a developer,
-I want the existing compile errors in `pos_providers.dart`, `product_grid.dart`, and `cart_panel.dart` fixed,
-So that the app builds cleanly and all subsequent SDUI work can proceed on a stable base.
-
-**Acceptance Criteria:**
-
-**Given** the `SyncService` constructor call in `pos_providers.dart` (`syncServiceProvider` block)
-**When** `flutter analyze` is run
-**Then** the 5-argument call `SyncService(orderRepo, productRepo, sessionRepo, customerRepo, categoryRepo)` matches the actual constructor signature in `lib/core/services/sync_service.dart`
-**And** if the constructor signature has changed (e.g. parameter added/removed after schema migration), the call is updated accordingly
-
-**Given** `categoriesProvider` referenced in `product_grid.dart` (line 13) via `ref.watch(categoriesProvider)`
-**When** the file is analyzed
-**Then** the provider is correctly exported and importable from `category_repository.dart`
-**And** the import line in `product_grid.dart` resolves without "undefined identifier" error
-
-**Given** `cart_panel.dart` calls `ReceiptDialog(order: order)` and also calls `_showPostCheckoutDialog`
-**When** the file is analyzed
-**Then** `ReceiptDialog` is imported from `package:frontend/features/pos/presentation/widgets/receipt_dialog.dart`
-**And** there is no duplicate receipt dialog trigger (both `showDialog(ReceiptDialog)` and `_showPostCheckoutDialog` firing for the same checkout)
-
-**Given** all errors are resolved
-**When** `flutter build windows` or `flutter build apk` is run
-**Then** exit code 0, zero compile errors across all three files
-
-**Notes:**
-- Run `flutter analyze` first to capture the exact error list — may surface additional issues
-- Do NOT refactor beyond fixing errors: no translation, no style changes, no logic changes
-
 ---
 
-### Story 10.1: Design System Theme Tokens
+### Story 14.1: Coupon & Promotion Code Engine
 
-As a developer,
-I want a centralized `AppTheme` file encoding every design system token from `docs/design-system.md`,
-So that all screens adopt correct colors, typography, and component defaults automatically.
+As a shop owner,
+I want to create discount codes (percentage or fixed amount) with usage limits and validity windows,
+So that I can run targeted promotions without manually adjusting prices at checkout.
 
 **Acceptance Criteria:**
-
-**Given** the 60-30-10 color palette in `docs/design-system.md`
-**When** `lib/core/theme/app_theme.dart` is created
-**Then** it exports an `AppColors` class with static `const Color` values:
-- `primary = Color(0xFF1565C0)` — Bleu confiance (10% accent)
-- `success = Color(0xFF2E7D32)` — Vert
-- `error = Color(0xFFC62828)` — Rouge
-- `warning = Color(0xFFF9A825)` — Jaune
-- `surface = Color(0xFFFFFFFF)` — Surfaces
-- `background = Color(0xFFF5F5F5)` — Fond app (60%)
-- `textPrimary = Color(0xFF212121)` — Texte principal
-- `textSecondary = Color(0xFF757575)` — Texte léger
-- `border = Color(0xFFE0E0E0)` — Bordures
-
-**Given** the typography hierarchy in `docs/design-system.md`
-**When** `AppTheme.textTheme` is built
-**Then** it defines 8 text styles mapped to Flutter's `TextTheme` slots:
-- `displayMedium` → 22sp Bold `#212121` (titre principal)
-- `titleLarge` → 18sp SemiBold `#212121` (titre section)
-- `titleMedium` → 16sp SemiBold `#212121` (titre carte)
-- `bodyMedium` → 14sp Regular `#212121` (corps)
-- `bodySmall` → 12sp Regular `#757575` (corps petit)
-- `labelSmall` → 11sp Medium `#757575` (étiquette)
-- `headlineLarge` → 20sp Bold monospace `#212121` (prix)
-- `headlineMedium` → 18sp Bold monospace `#212121` (quantité)
-
-**Given** component defaults required by the design system (Fitts — min 48dp)
-**When** `AppTheme.light()` is constructed
-**Then** `ElevatedButtonThemeData` has `minimumSize: Size(64, 48)`
-**And** `FilledButtonThemeData` has `minimumSize: Size(88, 56)` (primary CTA)
-**And** `InputDecorationTheme` uses `OutlineInputBorder` with `AppColors.border`
-**And** `CardTheme` sets `elevation: 0`, `borderRadius: 12`, side `AppColors.border`
-
-**Given** the theme is registered
-**When** `lib/main.dart` is modified
-**Then** `MaterialApp(theme: AppTheme.light())` is set — single line change
-
-**Files to create:**
-- `lib/core/theme/app_theme.dart`
-- `lib/core/theme/app_breakpoints.dart` — exports `kCompact = 600.0`, `kMedium = 1024.0`
-
-**Files to modify:**
-- `lib/main.dart` — `theme: AppTheme.light()`
-
-**Scope constraint:** Zero screen/widget files are modified. Theme tokens only.
 
----
-
-### Story 10.2: SDUI JSON Schema Definition
+**Given** I create a coupon "RAMADAN10" with: 10% discount, max 50 uses, valid 2026-03-01 to 2026-03-31
+**When** saved
+**Then** the coupon is active and usable at POS (FR91)
 
-As a developer,
-I want a documented JSON schema for describing screen layouts per `business_type`,
-So that backend and frontend have a shared contract before building either side.
-
-**Acceptance Criteria:**
+**Given** a cashier applies coupon code "RAMADAN10" at checkout
+**When** the code is validated
+**Then** the discount is applied to the subtotal, the use count is incremented, and the coupon ID is recorded on the sale
 
-**Given** the need to describe adaptive screen layouts
-**When** `docs/sdui-schema.md` is committed
-**Then** it documents the following top-level schema:
-```json
-{
-  "version": "1",
-  "business_type": "retail",
-  "screen": "pos",
-  "layout": {
-    "type": "split_view",
-    "breakpoints": {
-      "compact":  { "type": "stacked_with_fab_cart" },
-      "medium":   { "type": "horizontal_split", "left_flex": 2, "right_flex": 1 },
-      "expanded": { "type": "horizontal_split", "left_flex": 3, "right_flex": 1 }
-    },
-    "panels": {
-      "product_grid": {
-        "type": "product_grid",
-        "columns": { "compact": 2, "medium": 3, "expanded": 5 },
-        "show_categories": true,
-        "show_search": true
-      },
-      "cart": {
-        "type": "cart_panel",
-        "primary_action": {
-          "type": "filled_button",
-          "label": "ENCAISSER",
-          "action": "checkout",
-          "min_height": 56
-        },
-        "payment_methods": ["CASH", "MOBILE_MONEY", "CARD", "CREDIT", "SPLIT"]
-      }
-    }
-  }
-}
-```
-
-**Given** the schema must support the dashboard screen
-**When** the schema docs describe `retail.dashboard`
-**Then** it covers: `kpi_cards` (array with icon, label, value_provider), `line_chart` (data_provider, title), `terminal_status_list`
-
-**Given** parsing unknown widget types
-**When** a JSON layout has `"type": "unknown_widget_xyz"`
-**Then** the schema documents that this renders a `SduiPlaceholder` — never crashes
-
-**Deliverable:**
-- `docs/sdui-schema.md` with field documentation
-- `apps/backend/src/sdui/layouts/retail.pos.json` (first real layout)
-- `apps/backend/src/sdui/layouts/retail.dashboard.json`
+**Given** the coupon has reached its 50-use limit
+**When** a cashier attempts to apply it
+**Then** it is rejected with message: "Coupon limit reached" — no discount is applied
 
----
+**Given** the coupon's validity window has expired
+**When** it is applied
+**Then** it is rejected with an i18n-resolved "coupon expired" error (NFR31)
 
-### Story 10.3: SDUI Backend Layout Service
+### Story 14.2: Flash Sales & Time-Limited Price Overrides
 
-As a backend developer,
-I want a NestJS `SduiModule` that serves layout JSON based on the tenant's `business_type`,
-So that the Flutter app can fetch its screen configuration dynamically at startup.
+As a shop owner,
+I want to set temporary price reductions on specific products for a defined window,
+So that I can run flash sales without manually changing and reverting prices.
 
 **Acceptance Criteria:**
-
-**Given** an authenticated tenant with `business_type = 'retail'` calls `GET /api/v1/sdui/layout?screen=pos`
-**When** the request hits `SduiController`
-**Then** the response is HTTP 200 with `retail.pos.json` content
-**And** the response header includes `ETag` (MD5 of layout content) for client-side cache validation
-
-**Given** tenant context is available via the guard chain
-**When** `SduiController` processes the request
-**Then** it reads `tenant.business_type` from `KernelTenantService` (already available from Epic 1)
-**And** delegates to `SduiService.getLayout(businessType, screen)`
-
-**Given** `SduiService` starts up
-**When** NestJS bootstraps
-**Then** all `.json` files in `apps/backend/src/sdui/layouts/` are loaded into an in-memory `Map<string, object>`
-**And** the map key is `{business_type}.{screen}` (e.g., `retail.pos`)
-
-**Given** an unknown combination is requested
-**When** `SduiService.getLayout` is called
-**Then** it throws `NotFoundException` with message `"Layout introuvable pour ce type de commerce"`
-
-**Files to create:**
-- `apps/backend/src/sdui/sdui.module.ts`
-- `apps/backend/src/sdui/sdui.controller.ts`
-- `apps/backend/src/sdui/sdui.service.ts`
-- `apps/backend/src/sdui/layouts/retail.pos.json`
-- `apps/backend/src/sdui/layouts/retail.dashboard.json`
-- Register `SduiModule` in `apps/backend/src/app.module.ts`
-
----
 
-### Story 10.4: SDUI Flutter Renderer Engine
+**Given** I set a flash sale on "Mango Juice 1L": 25% off from 2026-03-15 12:00 to 2026-03-15 18:00
+**When** a sale occurs within that window
+**Then** the POS automatically applies the reduced price — no manual coupon entry needed (FR105)
 
-As a Flutter developer,
-I want a generic widget renderer that converts a parsed `SduiLayout` into a Flutter widget tree,
-So that any screen can be driven by server-provided JSON without hardcoded widget hierarchies.
+**Given** the flash sale window has passed
+**When** a sale occurs
+**Then** the original price is charged — no manual revert required
 
-**Acceptance Criteria:**
-
-**Given** a `SduiLayout` object is parsed from JSON
-**When** `SduiRenderer(layout: layout).build(context)` is called
-**Then** it produces the correct `Widget` hierarchy for the top-level layout type
-
-**Given** the `SduiWidgetRegistry` is initialized at app startup
-**When** the renderer encounters `"type": "product_grid"`
-**Then** it renders the registered `ProductGrid` widget with props from JSON
-**And** for `"type": "cart_panel"` → `CartPanel` widget
-**And** for `"type": "split_view"` → `LayoutBuilder` with `kCompact`/`kMedium` breakpoints
-**And** for `"type": "stacked_with_fab_cart"` → full-width product grid + floating cart badge
-
-**Given** `sduiLayoutProvider(screen: 'pos')` is defined
-**When** a screen watches this provider
-**Then** it first returns a cached layout from `SharedPreferences` (key: `sdui_layout_pos`, TTL: 1 hour)
-**And** refetches in background after TTL expires (stale-while-revalidate)
-**And** if fetch fails (offline), cached layout is used without throwing
-
-**Given** an unknown widget type is encountered
-**When** the renderer processes it
-**Then** it renders `SizedBox.shrink()` — fails silently, logs in debug mode
-
-**Files to create:**
-- `lib/core/sdui/sdui_layout.dart` — models: `SduiLayout`, `SduiPanel`, `SduiAction`
-- `lib/core/sdui/sdui_renderer.dart` — `SduiRenderer` StatelessWidget
-- `lib/core/sdui/sdui_widget_registry.dart` — type-string to factory function map
-- `lib/core/sdui/sdui_providers.dart` — `sduiLayoutProvider(screen)` FutureProvider
-- `lib/core/services/sdui_service.dart` — HTTP GET + SharedPreferences cache
-
----
+**Given** I view the product at POS during an active flash sale
+**When** it is displayed
+**Then** the original price is shown with a strikethrough and the flash price is highlighted
 
-### Story 10.5: Retail POS Layout — Premier Layout SDUI
+### Story 14.3: Loyalty Points Program
 
-As a developer,
-I want the Retail POS screen to use the SDUI renderer for its top-level layout,
-So that the POS is the first validated proof-of-concept for the full SDUI stack (10.0 → 10.4).
+As a shop owner,
+I want clients to earn points on purchases and redeem them for discounts,
+So that I reward repeat customers and increase retention.
 
 **Acceptance Criteria:**
-
-**Given** the SDUI engine from Story 10.4 is in place
-**When** `PosScreen` is updated
-**Then** it watches `sduiLayoutProvider(screen: 'pos')`
-**And** delegates layout assembly to `SduiRenderer(layout: layout)`
-**And** `ProductGrid` and `CartPanel` are rendered by the SDUI engine via the widget registry
-
-**Given** the `retail.pos.json` layout specifies `horizontal_split` for medium/expanded
-**When** the POS renders on a tablet (width ≥ 600px)
-**Then** it shows product grid (left, flex 2) and cart panel (right, flex 1) — matching current behavior
-
-**Given** the layout specifies `stacked_with_fab_cart` for compact
-**When** the POS renders on a phone (width < 600px)
-**Then** product grid occupies full width (2 columns)
-**And** a floating cart badge button (bottom-right, 56dp) shows item count
-**And** tapping navigates to the full-screen cart view
-
-**Given** the device is offline at POS startup
-**When** the SDUI layout cannot be fetched
-**Then** the POS falls back to the hardcoded default layout (current `Row` split)
-**And** the fallback is defined as a constant `SduiLayout.retailPosDefault()` in `sdui_layout.dart`
-
-**Given** the layout JSON changes on the backend (e.g., `left_flex: 3`)
-**When** the Flutter app restarts (or cache TTL expires)
-**Then** the new layout is applied without a new APK release
-
-**Notes:**
-- `ProductGrid` and `CartPanel` widget internals are NOT changed in this story
-- Only `PosScreen`'s layout-assembly code is replaced with SDUI rendering
-- Validate on tablet emulator AND phone emulator before marking done
-
----
-
-## Epic 16: Retail Operations — Gestion Stock Terrain
 
-**Objectif :** Câbler les 4 opérations stock terrain de Moussa (gestionnaire) côté frontend Flutter. Le backend (Epic 5) expose déjà tous les endpoints nécessaires (288 tests NestJS verts). Il manque les écrans Flutter, l'intégration dans la navigation, et le support offline.
+**Given** the loyalty program is configured: 1 point per 100 XOF spent, 100 points = 500 XOF discount
+**When** a sale of 1500 XOF is completed for a loyalty member
+**Then** 15 points are credited to the client's account (FR106)
 
-**Phase :** 1 (après Epic 15)
-**FRs couverts :** FR29, FR30, FR31, FR32, FR33, FR34, FR35, FR36
-**Prérequis :** Epics 1–9 (backend inventory opérationnel), Epic 15 (DashboardShell + navigation stable)
+**Given** a loyalty member has 200 points and wants to redeem
+**When** they request redemption at checkout
+**Then** 100 points are deducted, a 500 XOF discount is applied, and 100 points remain
 
-### Endpoints backend existants (à consommer)
+**Given** I view a client's loyalty profile
+**When** the profile loads
+**Then** I see: total points, points history (earn/redeem), current tier (if tiered program), and estimated next reward threshold
 
-| Endpoint | Méthode | RBAC | Usage |
-|----------|---------|------|-------|
-| `/inventory/movements` | POST | owner, manager | DELIVERY / LOSS / TRANSFER_OUT |
-| `/inventory/movements/confirm` | POST | owner, manager, commercial | Confirmation TRANSFER_IN |
-| `/inventory/adjust` | POST | owner, manager | Inventaire partiel (ADJUSTMENT signé) |
-| `/inventory/stock` | GET | tous | Stock actuel par catalogItemId |
-| `/inventory/movements` | GET | tous | Historique mouvements (filtres: tenantId, since, referenceId) |
+### Story 14.4: Quote-to-Sale Conversion
 
-### Types de mouvements (backend)
+As a sales representative,
+I want to generate a formal quote for a client and convert it to a confirmed sale upon acceptance,
+So that I handle high-value or custom orders with a professional proposal step.
 
-`DELIVERY` · `TRANSFER_OUT` · `TRANSFER_IN` · `LOSS` · `ADJUSTMENT` · `SALE` (auto)
-
-### Story 16.1: Réception livraison fournisseur
-
-As a manager (Moussa),
-I want to record a supplier delivery with received quantities,
-So that stock is credited and variances are traced (FR29, FR30).
-
-**Acceptance Criteria:**
-
-**AC1 — Formulaire réception :**
-- Sélection du produit (recherche dans le catalogue)
-- Champ quantité reçue (obligatoire, entier > 0)
-- Champ notes/variance (optionnel)
-- Bouton "Valider la réception"
-
-**AC2 — Appel API :**
-- Submit → `POST /inventory/movements` body `{type: "DELIVERY", catalogItemId, quantity, reason?, tenantId}`
-- En cas de succès → snackbar "Réception enregistrée" + retour à l'écran précédent
-- En cas d'erreur → snackbar rouge avec message d'erreur
-
-**AC3 — Feedback visuel :**
-- Loading indicator pendant l'appel
-- Formulaire désactivé pendant l'envoi (évite double-soumission)
-
-**AC4 — Test :**
-- Soumettre une réception → `InventoryMovement.type == 'DELIVERY'` créé avec la bonne quantité
-- Widget test vérifie que le formulaire est présent et soumissible
-
-**Notes dev :**
-- Rôle requis : owner ou manager (backend enforced — pas de vérification frontend nécessaire sauf cacher le bouton)
-- `catalogItemId` = `product.remoteId` (champ existant sur le modèle Product Flutter)
-- Réutiliser le pattern ProductFormDialog pour la sélection produit
-
----
-
-### Story 16.2: Transfert stock magasin → rayon
-
-As a manager (Moussa) and a commercial (Fatou),
-I want to declare a stock transfer out and confirm reception,
-So that the chain of custody is maintained with automatic variance tracking (FR31, FR32, FR33).
-
 **Acceptance Criteria:**
-
-**AC1 — Formulaire déclaration sortie (gestionnaire) :**
-- Sélection produit + quantité déclarée
-- Submit → `POST /inventory/movements` body `{type: "TRANSFER_OUT", catalogItemId, quantity, reason?, tenantId}`
-- Retourne un `referenceId` (UUID) à conserver pour la confirmation
-
-**AC2 — Affichage en attente de confirmation :**
-- Après TRANSFER_OUT créé → écran ou card "Transfert en attente de confirmation"
-- Affiche : produit, quantité déclarée, referenceId, date
 
-**AC3 — Formulaire confirmation (récepteur) :**
-- Champ quantité effectivement reçue (pré-remplie avec quantité déclarée)
-- Submit → `POST /inventory/movements/confirm` body `{referenceId, catalogItemId, quantity, tenantId}`
+**Given** I create a quote for Client X with 3 line items, a validity date, and a 5% custom discount
+**When** saved
+**Then** a PDF quote is generated with my business branding, quote number, and line items (FR-DEVIS-01)
 
-**AC4 — Variance automatique :**
-- Si quantité reçue ≠ quantité déclarée → backend crée `TRANSFER_IN` avec `reason: "Variance: X"`
-- Frontend affiche la variance calculée après confirmation
+**Given** the client accepts the quote
+**When** I convert it to a sale
+**Then** a sale record is created with the same line items and discount — no re-entry required
+**And** the quote status changes to `CONVERTED`
 
-**AC5 — Test :**
-- Flux complet (TRANSFER_OUT + confirm) → 2 InventoryMovements créés
-- Test variance : déclaré 10, reçu 8 → variance = 2 dans le reason
+**Given** the quote validity date passes without conversion
+**When** the client later tries to accept it
+**Then** the system warns: "Quote expired — prices may have changed" before allowing conversion
 
-**Notes dev :**
-- RBAC : TRANSFER_OUT = owner/manager ; confirmation = owner/manager/commercial
-- `referenceId` transmis via state local (StateProvider) entre les deux écrans
-
 ---
-
-### Story 16.3: Déclaration de pertes
 
-As a manager or commercial,
-I want to declare a stock loss with a mandatory reason,
-So that shrinkage is traced and attributed (FR34).
+## Epic 15: Enterprise Operations — HR, Payroll, Accounting & Reporting
 
-**Acceptance Criteria:**
+**Goal:** Serve growing businesses with multi-location operations: staff scheduling, leave management, payroll calculation with CNSS/IPRES compliance, OHADA-aligned chart of accounts, and comprehensive financial reporting for business owners and accountants.
 
-**AC1 — Formulaire déclaration :**
-- Sélection produit + quantité perdue (entier > 0)
-- Motif obligatoire — dropdown : Casse · Péremption · Vol · Frotte · Autre
-- Si "Autre" → champ texte libre obligatoire
-- Bouton "Déclarer la perte"
-
-**AC2 — Validation frontend :**
-- Motif non sélectionné → erreur inline "Motif obligatoire"
-- Quantité ≤ 0 → erreur inline "Quantité invalide"
-
-**AC3 — Appel API :**
-- Submit → `POST /inventory/movements` body `{type: "LOSS", catalogItemId, quantity, reason, tenantId}`
-- Backend valide : `reason` obligatoire pour LOSS (BadRequestException si absent)
-- En cas de succès → snackbar "Perte déclarée"
-
-**AC4 — Test :**
-- Soumettre sans motif → snackbar erreur (validation frontend) + pas d'appel API
-- Soumettre avec motif → `InventoryMovement.type == 'LOSS'` créé
-- Widget test vérifie les 4 options du dropdown
-
-**Notes dev :**
-- RBAC backend : owner/manager uniquement pour `POST /inventory/movements`
-- Discordance PRD vs backend : FR34 dit "commercial peut déclarer", mais le backend n'autorise que owner/manager. À aligner en Epic 17 (ou via endpoint dédié). Pour cette story, implémenter avec les contraintes backend actuelles.
-- Motifs labels FR : "Casse", "Péremption", "Vol", "Frotte", "Autre"
+**FR Coverage:** FR63–74
 
 ---
 
-### Story 16.4: Inventaire partiel
+### Story 15.1: Staff Scheduling & Shift Management
 
-As a manager (Moussa),
-I want to perform a partial inventory count with variance signal,
-So that discrepancies between physical and system stock are identified and corrected (FR35).
+As an HR manager,
+I want to create weekly shift schedules for staff across locations,
+So that coverage is planned, visible to all staff, and conflicts are flagged before the week starts.
 
 **Acceptance Criteria:**
-
-**AC1 — Sélection produits à compter :**
-- Multi-sélection depuis le catalogue (checkbox ou tap)
-- Minimum 1 produit requis pour démarrer l'inventaire
 
-**AC2 — Feuille de comptage :**
-- Pour chaque produit sélectionné : nom, stock système (issu de `GET /inventory/stock`), champ quantité physique comptée
-- Signal visuel : vert si physique == système, rouge si écart
+**Given** I open the schedule builder for Week 2026-03-16
+**When** I assign shifts to staff members
+**Then** I can set: employee, location, start time, end time — and the schedule is saved per employee per day (FR63)
 
-**AC3 — Motif :**
-- Si au moins un produit a un écart → champ motif global obligatoire (ex. "Inventaire mensuel janvier")
+**Given** I assign the same employee to two overlapping shifts
+**When** I attempt to save
+**Then** a conflict warning is shown: "Employee X is already scheduled for [time range] — confirm override?" (FR63)
 
-**AC4 — Soumission :**
-- Pour chaque produit avec écart → `POST /inventory/adjust` body `{catalogItemId, countedQuantity, reason, tenantId}`
-- Produits sans écart ignorés (backend retourne `{adjusted: false}` — éviter appel inutile)
-- Résumé en fin : "X produits ajustés, Y sans écart"
+**Given** an employee views their schedule on the mobile app
+**When** the week loads
+**Then** they see only their own shifts with location, start/end times
 
-**AC5 — Test :**
-- Compter 1 produit avec écart → `InventoryMovement.type == 'ADJUSTMENT'` créé avec quantité signée
-- Compter 1 produit sans écart → pas d'appel API (ou appel retourne `adjusted: false`)
-- Widget test vérifie le signal couleur (vert/rouge)
+### Story 15.2: Leave & Absence Management
 
-**Notes dev :**
-- `POST /inventory/adjust` calcule la variance côté backend : `variance = countedQuantity - currentStock`
-- La quantité du mouvement ADJUSTMENT est signée (positive = surplus, négative = déficit)
-- `GET /inventory/stock?catalogItemId=X&tenantId=Y` pour afficher le stock système en temps réel
+As an HR manager,
+I want to manage leave requests, approvals, and balances,
+So that absences are tracked and their impact on scheduling is visible.
 
----
-
-### Story 16.5: Hub Inventaire — Navigation intégrée
-
-As a manager using the backoffice,
-I want a unified inventory hub with tabs for all stock operations,
-So that all 4 terrain operations are one tap away from the Inventaire nav item (AC intégration navigation).
-
 **Acceptance Criteria:**
-
-**AC1 — Structure tabbed :**
-- L'écran Inventaire (nav item existant) devient un hub avec `TabBar` ou `NavigationBar` :
-  - **Produits** — écran existant `InventoryScreen` (catalogue + pagination)
-  - **Réceptions** — formulaire 16-1 + liste des réceptions récentes
-  - **Transferts** — formulaire 16-2 + liste des transferts en attente
-  - **Pertes** — formulaire 16-3 + liste des pertes récentes
-  - **Inventaire** — écran 16-4
-
-**AC2 — Labels français, AppTheme :**
-- Tous les labels en français, couleurs AppTheme, FCFA où applicable
-
-**AC3 — Liste récente par onglet :**
-- Chaque onglet affiche une liste des 20 derniers mouvements du type concerné
-- Source : `GET /inventory/movements?tenantId=&limit=20` filtré par type
-
-**AC4 — Raccourci dashboard :**
-- La card "Stock faible" du dashboard (KpiCardGrid) navigue vers l'onglet Réceptions
 
-**AC5 — Test :**
-- Widget test : TabBar présent avec 5 onglets
-- Navigation entre onglets ne déclenche pas d'erreur
+**Given** an employee submits a leave request for 2026-03-20 to 2026-03-22
+**When** submitted
+**Then** it appears in the manager's approval queue with status `PENDING` (FR64)
 
-**Notes dev :**
-- Réutiliser `DefaultTabController` + `TabBar` + `TabBarView`
-- Les 4 nouveaux écrans (16-1 à 16-4) sont des widgets intégrés dans les `TabBarView` — pas de screens séparés dans la navigation principale
+**Given** the manager approves the leave
+**When** approved
+**Then** the employee's leave balance is decremented by 3 days
+**And** any shifts scheduled during the leave period are flagged for reassignment
 
----
+**Given** the manager rejects the leave with a reason
+**When** the employee next logs in
+**Then** they see the rejection reason and can submit a revised request
 
-### Story 16.6: Sync offline pour les opérations stock
+### Story 15.3: Payroll Calculation with CNSS/IPRES Compliance
 
-As a manager or commercial working offline,
-I want stock operations to be saved locally and synced when connectivity returns,
-So that terrain work is never lost (FR36, NFR30).
+As an HR manager,
+I want to calculate payroll for the month, including CNSS and IPRES deductions, via the compliance plugin,
+So that I produce accurate pay slips without manual calculation.
 
 **Acceptance Criteria:**
-
-**AC1 — Modèle Isar `InventoryMovementLocal` :**
-- Champs : `id` (Isar auto), `remoteId` (String?), `catalogItemId`, `quantity`, `type`, `reason`, `tenantId`, `referenceId` (pour transferts), `status` (pending/synced/failed), `createdAt`
-- Fichier : `apps/frontend/lib/features/pos/data/models/inventory_movement.dart` + `.g.dart`
-
-**AC2 — Repository `InventoryRepository` :**
-- `saveLocal(movement)` — écriture Isar
-- `getPending()` — mouvements avec status == pending
-- `markSynced(id)` / `markFailed(id)`
-- `getMovements({type?, limit?})` — lecture locale pour les listes onglets
-
-**AC3 — Opérations offline :**
-- Les 4 formulaires (16-1 à 16-4) sauvegardent d'abord en local (status: pending)
-- Si online → appel API immédiat → markSynced
-- Si offline → stocké en pending → sync automatique à la reconnexion via `SyncService`
-
-**AC4 — Indicateur outbox :**
-- Badge sur l'icône Inventaire dans la navigation si des mouvements pending existent
-
-**AC5 — Test :**
-- Créer un mouvement offline (mock SyncService offline) → status == pending dans Isar
-- Réactiver la connexion → mouvement synced, status == synced
-- Test Isar en mémoire (pas de DB fichier)
-
-**Notes dev :**
-- Suivre le pattern existant : `OrderRepository` (Isar + outbox), `SyncService.startSync()`
-- Générer `.g.dart` avec `flutter pub run build_runner build`
-- Ne pas modifier `SyncService` — ajouter un `InventorySyncAdapter` si l'architecture le prévoit, sinon étendre `SyncService` avec un batch inventory
-
 
----
-
-### Epic 18: Lien Session Caisse ↔ Terminal Physique
+**Given** attendance records and salary configs are in place for the month
+**When** I trigger payroll calculation for March 2026
+**Then** the system calculates: gross salary, CNSS employee deduction, CNSS employer contribution, IPRES deduction, net salary — per employee (FR65, NFR32)
 
-Le backoffice "État des caisses" affiche désormais **quel terminal physique** porte quelle session ouverte. Chaque appareil (Android, Windows, Linux) génère et persiste une identité stable (`deviceId`). À l'ouverture d'une session caisse, le `deviceId` est transmis au backend et stocké sur `PosSession`. L'écran "État des caisses" résout et affiche le nom du terminal pour chaque session active.
+**Given** the CNSS plugin is active for a Senegalese tenant
+**When** payroll runs
+**Then** CNSS rates are sourced from the plugin — not hardcoded in payroll logic
 
-**Phase:** 1 (correctif backoffice pré-Epic 17)
-**FRs covered:** FR23, FR24, FR28 (enrichissement — identification terminal physique)
-**Prerequisite:** Epics 1–16 (PosSession opérationnel, TerminalStatusList affiche sessions OPEN)
+**Given** payroll is calculated
+**When** I approve it
+**Then** a pay slip is generated per employee in PDF format with all line items
 
-#### Story 18.1: Backend — `deviceId` sur `PosSession`
+### Story 15.4: OHADA Chart of Accounts & Accounting Entries
 
-**As a** platform developer,
-**I want** `PosSession` to store the `deviceId` of the physical terminal that opened it,
-**So that** backoffice reports can show which device is running which session.
+As an accountant,
+I want all transactions automatically posted to the correct OHADA account codes,
+So that I can generate compliant financial statements without manual journal entries.
 
 **Acceptance Criteria:**
 
-**Given** the current `PosSession` schema has no `deviceId`
-**When** the Prisma migration runs
-**Then** `pos_sessions` gains a nullable column `device_id VARCHAR` (not UUID — device IDs are human-readable strings like `"caisse-android-1"`)
+**Given** a sale of 10,000 XOF is made
+**When** committed
+**Then** an accounting entry is posted: DR 411 (Clients) 10,000 / CR 701 (Sales) 10,000 — per OHADA plan (FR66, NFR32)
 
-**Given** `POST /retail/sessions/open` receives `{ deviceId?: string, ... }`
-**When** a session is opened with a `deviceId`
-**Then** the session is saved with that `deviceId`; if omitted, `deviceId` is null
+**Given** a stock purchase of 5,000 XOF is recorded
+**When** committed
+**Then** DR 601 (Purchases) 5,000 / CR 401 (Suppliers) 5,000 is posted
 
-**Given** `POST /pos/sessions` (sync endpoint) receives `{ deviceId?: string, ... }`
-**When** the sync adapter pushes a session from the device
-**Then** `syncSession()` preserves `deviceId` on upsert
+**Given** a non-OHADA country tenant
+**When** transactions are recorded
+**Then** the `NullCompliancePlugin` posts to a generic chart of accounts — no OHADA codes, no crash
 
-**Given** `GET /retail/sessions/active?tenantId=`
-**When** sessions are returned
-**Then** each session includes `deviceId` in the response payload
+### Story 15.5: Financial Reporting — P&L, Balance Sheet, Cash Flow
 
-#### Story 18.2: Frontend — Service d'identité device + envoi `deviceId`
+As an owner or accountant,
+I want to generate P&L, balance sheet, and cash flow statements for any period,
+So that I have the financial visibility required for investors, banks, and tax authorities.
 
-**As a** cashier working on a physical POS terminal,
-**I want** my device to have a stable, readable identity,
-**So that** the backoffice always knows which physical terminal I'm working on.
-
 **Acceptance Criteria:**
-
-**Given** the app launches on a device for the first time
-**When** `DeviceIdentityService.getDeviceId()` is called
-**Then** a `deviceId` is generated in the format `caisse-{platform}-{6-char-hex}` (ex: `caisse-android-a3f9c2`) and persisted in `SharedPreferences` under key `scalario_device_id`
 
-**Given** the app launches on a device that already has a `deviceId` persisted
-**When** `DeviceIdentityService.getDeviceId()` is called
-**Then** the existing `deviceId` is returned — never regenerated
+**Given** I request a P&L for Q1 2026
+**When** the report generates
+**Then** it shows: revenue by category, COGS, gross profit, operating expenses, and net profit — with prior period comparison (FR67)
 
-**Given** a cashier taps "Ouvrir session" on the POS
-**When** the session open request is built
-**Then** the `deviceId` from `DeviceIdentityService` is included in the body sent to `POST /retail/sessions/open`
+**Given** I request a balance sheet as of 2026-03-31
+**When** it generates
+**Then** it shows: assets (current + fixed), liabilities (current + long-term), and equity — per OHADA structure for OHADA tenants (FR68)
 
-**Given** the sync adapter pushes a pending session
-**When** `SessionSyncAdapter.pushPending()` executes
-**Then** the `deviceId` stored on the local `PosSession` is included in the sync payload
+**Given** I export the report
+**When** export is triggered
+**Then** a PDF and an XLSX are available for download
 
-**Given** the heartbeat fires every 30 seconds
-**When** `_sendHeartbeat()` is called
-**Then** the same `deviceId` from `DeviceIdentityService` is used (not the hardcoded `"terminal_linux_1"`)
+### Story 15.6: Multi-Location Consolidated Reporting
 
-#### Story 18.3: Frontend — "État des caisses" affiche le nom du terminal
+As an owner with multiple locations,
+I want consolidated reports across all my stores as well as per-location breakdowns,
+So that I see both the group picture and individual store performance.
 
-**As a** store owner viewing the backoffice dashboard,
-**I want** "État des caisses" to show the name of each active terminal,
-**So that** I can instantly identify which physical device is working.
-
 **Acceptance Criteria:**
-
-**Given** one or more sessions are OPEN
-**When** `TerminalStatusList` renders
-**Then** each session card shows `deviceId` (ex: `caisse-android-a3f9c2`) if available, or `"Terminal inconnu"` if `deviceId` is null
-
-**Given** a session has `deviceId: "caisse-android-a3f9c2"`
-**When** the card renders
-**Then** the title is `caisse-android-a3f9c2`, the subtitle shows `Depuis HH:mm • Fond: XX FCFA`
-
-**Given** `activeSessionsProvider` auto-refresh fires (30 secondes)
-**When** a new session is opened on another terminal
-**Then** the new card appears within the next refresh cycle — no manual reload required
-
-**Test `test/dashboard_sdui_integration_test.dart` :**
-- Mock `activeSessionsProvider` avec une session ayant `deviceId: "caisse-test-001"` → vérifie que le texte `"caisse-test-001"` est rendu
-- Mock avec `deviceId: null` → vérifie que `"Terminal inconnu"` est rendu
-
----
-
-## Epic 17: Dépenses & Bénéfice
-
-**Objectif :** Permettre au gérant de saisir les dépenses du magasin (loyer, électricité, charges diverses) et d'afficher le bénéfice net réel (ventes − dépenses) dans le tableau de bord backoffice.
-
-**Phase :** 1 (après Epic 16)
-**Module :** `retail`
-**FRs couverts :** FR48, FR49 (extension — bénéfice net)
-**Prérequis :** Epics 1–9 (backend retail opérationnel), Epic 10 (SDUI), Epic 16 (navigation stable)
-
-### Contexte métier
-
-Un commerçant a besoin de connaître son **bénéfice net**, pas seulement ses ventes brutes. Les dépenses (loyer, salaires, approvisionnements hors stock) ne transitent pas par le POS — elles sont saisies manuellement par le manager/owner depuis le backoffice.
 
-### Modèle de données cible
+**Given** I have 3 active locations
+**When** I open the consolidated P&L
+**Then** it shows aggregated figures with a per-location column breakdown (FR69)
 
-```
-Expense (retail schema)
-  id            UUID PK
-  tenantId      UUID FK → tenants.id
-  userId        UUID (qui a saisi)
-  label         String (ex: "Loyer mars")
-  amount        Decimal(10,2)
-  category      String (LOYER | SALAIRE | ELECTRICITE | AUTRE)
-  date          Date
-  notes         String?
-  createdAt     Timestamptz
-  updatedAt     Timestamptz
-```
+**Given** I drill into Store B's P&L
+**When** the view loads
+**Then** it shows only Store B's data — correctly isolated from the other stores
 
-### KPIs dashboard impactés
+**Given** I compare Q1 vs Q4 2025 for the group
+**When** the comparison loads
+**Then** growth rates are shown per line item as percentage deltas
 
-| KPI | Calcul |
-|-----|--------|
-| Dépenses (période) | `SUM(expense.amount)` sur la période |
-| Bénéfice net | `totalVentes − totalDépenses` sur la période |
+### Story 15.7: Tax Declaration Preparation & Export
 
----
-
-### Story 17.1: Backend — Modèle Expense + endpoints CRUD
-
-**ID:** `17-1-expenses-backend`
-**Dépend de :** Epics 1–9
-
-**As a** manager/owner,
-**I want** to record and retrieve expense entries via the API,
-**So that** the frontend can display them and compute net profit.
+As an accountant,
+I want to generate tax declaration summaries (VAT, CNSS employer contributions) ready for filing,
+So that tax preparation time is reduced to review and submission — not data compilation.
 
 **Acceptance Criteria:**
-
-**Given** `prisma/schema.prisma`
-**When** the story is implemented
-**Then** un modèle `Expense` est ajouté dans le schéma `retail` avec les champs : `id`, `tenantId`, `userId`, `label`, `amount`, `category`, `date`, `notes?`, `createdAt`, `updatedAt`
-
-**Given** `POST /retail/expenses` avec body `{ label, amount, category, date, notes?, tenantId }`
-**When** le body est valide
-**Then** une dépense est créée et retournée (201) ; `tenantId` est isolé par `TenantGuard`
-
-**Given** `GET /retail/expenses?tenantId=&from=&to=`
-**When** la requête est valide
-**Then** les dépenses du tenant sont retournées filtrées par période (from/to inclusifs)
-
-**Given** `DELETE /retail/expenses/:id`
-**When** l'expense appartient au tenant
-**Then** la dépense est supprimée (soft delete `isDeleted`) ; sinon 404
 
-**Given** `GET /retail/reporting/summary?tenantId=&from=&to=`
-**When** la requête est valide
-**Then** la réponse inclut `totalExpenses` et `netProfit` (= `totalSales − totalExpenses`) en plus des champs existants
+**Given** I request the monthly VAT report for March 2026
+**When** it generates
+**Then** it shows: output VAT (collected on sales), input VAT (paid on purchases), net VAT due — grouped by tax code (FR70)
 
-**RBAC :** `POST` / `DELETE` → `owner`, `manager` ; `GET` → `owner`, `manager`
-
-**Tests :**
-- POST valide → expense créé, status 201
-- GET avec filtre de date → seules les dépenses dans la période retournées
-- DELETE → soft-delete (isDeleted = true)
-- Summary endpoint → `netProfit` = `totalSales - totalExpenses`
-- POST sans `label` ou `amount` → 400
-
----
-
-### Story 17.2: Frontend — Écran Dépenses + formulaire de saisie
-
-**ID:** `17-2-expenses-frontend`
-**Dépend de :** 17-1
-
-**As a** manager/owner,
-**I want** a dedicated "Dépenses" screen in the backoffice with an add form,
-**So that** I can log expenses without leaving the app.
-
-**Acceptance Criteria:**
+**Given** I request the CNSS employer contributions summary for Q1 2026
+**When** it generates
+**Then** it shows total contributions per employee and the aggregate due — formatted per CNSS declaration requirements (FR71, NFR32)
 
-**Given** l'utilisateur navigue vers l'écran Dépenses
-**When** l'écran se charge
-**Then** la liste des dépenses de la période active est affichée (label, montant, catégorie, date) ou le message "Aucune dépense enregistrée" si vide
-
-**Given** l'utilisateur appuie sur le FAB "+"
-**When** le formulaire apparaît
-**Then** les champs suivants sont présents : Label (texte, obligatoire), Montant (numérique, obligatoire), Catégorie (dropdown : Loyer / Salaire / Électricité / Autre), Date (date picker, défaut = aujourd'hui), Notes (texte, optionnel)
-
-**Given** l'utilisateur soumet le formulaire avec des données valides
-**When** `POST /retail/expenses` répond 201
-**Then** la liste se rafraîchit, le formulaire se ferme, snackbar "Dépense enregistrée"
-
-**Given** l'utilisateur appuie sur "Supprimer" sur une dépense
-**When** `DELETE /retail/expenses/:id` répond 200
-**Then** la dépense disparaît de la liste, snackbar "Dépense supprimée"
-
-**Structure fichiers :**
-```
-lib/features/retail/expenses/
-  data/
-    models/expense.dart
-    repositories/expense_repository.dart
-  presentation/
-    providers/expense_providers.dart
-    screens/expenses_screen.dart
-    widgets/expense_form.dart
-    widgets/expense_list_tile.dart
-```
-
-**Tests :**
-- Widget test : formulaire présent, champs validés
-- Provider test : submit → repository.create() appelé avec les bons params
-- Cas erreur réseau → snackbar rouge affiché
+**Given** I export the tax summary
+**When** the export runs
+**Then** a formatted XLSX is generated that maps to the official declaration form fields
 
 ---
 
-### Story 17.3: Frontend — Navigation + KPIs Bénéfice dans le dashboard
+## Epic 16: Scalario Connect — B2B Supplier Network
 
-**ID:** `17-3-expenses-navigation`
-**Dépend de :** 17-2
+**Goal:** Launch the B2B marketplace layer where tenants can discover suppliers, place bulk orders, and receive connected-supply confirmations — transforming Scalario from a single-business tool into a connected commerce network.
 
-**As a** store owner viewing the backoffice dashboard,
-**I want** to see "Dépenses" and "Bénéfice net" KPI cards alongside sales,
-**So that** I have a real-time view of my shop's financial health.
+**FR Coverage:** FR-MULTISERVICE-01, FR-MULTISTORE-01 (B2B), FR-AI-05 (supplier matching)
 
-**Acceptance Criteria:**
-
-**Given** le `DashboardShell` (ou l'écran principal backoffice)
-**When** le menu latéral / bottom bar est visible
-**Then** un onglet ou entrée "Dépenses" est présent et navigue vers `ExpensesScreen`
-
-**Given** le `KpiCardGrid` du dashboard
-**When** les données sont chargées
-**Then** deux nouvelles cartes apparaissent : "Dépenses (période)" (montant total en FCFA) et "Bénéfice net" (ventes − dépenses, en vert si positif, rouge si négatif)
-
-**Given** le filtre de période change (ex: 7 jours → 30 jours)
-**When** `salesStatsProvider` et `expensesProvider` se rechargent
-**Then** les KPIs "Dépenses" et "Bénéfice net" se mettent à jour en cohérence avec la même période
-
-**Given** le bénéfice net est négatif
-**When** la carte KPI s'affiche
-**Then** la valeur est affichée en rouge avec un icône d'alerte `⚠`
-
-**Tests (`test/dashboard_sdui_integration_test.dart`) :**
-- Mock `expensesProvider` → vérifie que "Dépenses (période)" apparaît dans le KpiCardGrid
-- Mock avec bénéfice net négatif → vérifie la couleur rouge ou le texte d'alerte
-- Navigation : tap sur "Dépenses" dans le menu → `ExpensesScreen` chargé
-
 ---
-
-### Story 17.4: Frontend — Ajout produit depuis le backoffice catalogue
 
-**ID:** `17-4-add-product-backoffice`
-**Dépend de :** Epic 10 (SDUI), Epic 14 (design system)
+### Story 16.1: Supplier & Buyer Profile on the Connect Network
 
-**As a** store owner in the backoffice,
-**I want** to add a new product to the catalog directly from the backoffice,
-**So that** I don't need to use a separate admin interface.
+As a business owner,
+I want to create a Connect profile listing my products, minimum order quantities, and pricing tiers,
+So that other Scalario tenants can discover and order from me.
 
 **Acceptance Criteria:**
-
-**Given** l'utilisateur est sur l'écran Catalogue du backoffice
-**When** il appuie sur le FAB "+"
-**Then** un formulaire d'ajout de produit apparaît avec : Nom (texte, obligatoire), Prix (numérique, obligatoire), Catégorie (dropdown, liste des catégories du tenant), Barcode (optionnel), Quantité initiale en stock (numérique, défaut 0)
-
-**Given** le formulaire est soumis avec des données valides
-**When** `POST /catalog/items` répond 201
-**Then** le produit est créé, la liste catalogue se rafraîchit, snackbar "Produit ajouté"
-
-**Given** le formulaire est soumis sans Nom ou sans Prix
-**When** la validation s'exécute localement
-**Then** les champs invalides sont soulignés en rouge, le submit est bloqué
-
-**Given** `POST /retail/products` (création RetailProduct avec stockQuantity initiale)
-**When** la quantité initiale > 0
-**Then** un `InventoryMovement` de type `DELIVERY` est automatiquement créé côté backend pour tracer l'entrée initiale
-
-**Structure fichiers :**
-```
-lib/features/retail/catalog/
-  presentation/
-    screens/catalog_screen.dart     ← déjà existant ou à créer
-    widgets/product_form_dialog.dart
-```
-
-**Tests :**
-- Widget test : formulaire présent, validation Nom + Prix obligatoires
-- Submit valide → `CatalogRepository.createItem()` appelé
-- Cas erreur réseau → snackbar rouge affiché
-
----
-
-## Epic 19: Admin Backoffice — Gestion Plateforme
-
-**Objectif :** Permettre à Carlos d'onboarder de nouveaux clients directement depuis l'application Flutter sans toucher à Supabase ou la base SQL manuellement. Le panel admin est intégré dans l'app existante, accessible uniquement au rôle `superadmin`, et couvre la création de tenants, la gestion des modules, des utilisateurs, et un dashboard de monitoring.
-
-**Phase :** 1 (après Epic 18)
-**FRs couverts :** FR1, FR2, FR7, FR8, FR9, FR10
-**Prérequis :** Epics 1–9 (kernel, tenancy, module registry opérationnels), Epic 15 (DashboardShell + navigation stable)
-
-### Contexte métier
-
-Aujourd'hui, pour onboarder un client, Carlos effectue des `INSERT` SQL manuels dans Supabase :
-- Créer le tenant dans `kernel.tenants`
-- Créer l'owner dans Supabase Auth
-- Créer le membre dans `kernel.organization_members`
-- Activer les modules dans `kernel.tenant_modules`
-- Insérer les seed data (rôles, permissions)
 
-Ce processus est manuel, error-prone et ne scale pas. Epic 19 remplace tout ça par un panel admin intégré dans l'app Flutter, accessible uniquement si `userProfile.role == 'superadmin'`.
+**Given** I enable the Connect module for my tenant
+**When** I complete my seller profile: business name, location, product catalog excerpt, MOQ, and delivery zones
+**Then** my profile is visible to other verified Scalario tenants in my region (FR-MULTISERVICE-01)
 
-### Architecture admin
+**Given** another tenant searches for "Rice 50kg Dakar"
+**When** the search executes
+**Then** my profile appears if I list that product and serve the Dakar delivery zone
 
-- **PAS** une app séparée — c'est un écran dans l'app Flutter existante
-- Si `userProfile.role == 'superadmin'` → affiche `AdminDashboard` au lieu du POS/backoffice retail
-- Les endpoints admin sont sous `/admin/*` avec un `SuperAdminGuard` (vérifie rôle superadmin dans `OrganizationMember`)
-- Le panel admin n'a **pas besoin** de fonctionner offline (toujours connecté)
+**Given** I set my catalog item as private (not listed)
+**When** another tenant searches
+**Then** that item does not appear in their search results — only approved connections can see it
 
----
-
-### Story 19.1: Backend — CRUD Tenants sous /admin/tenants
-
-**As a** superadmin,
-**I want** REST endpoints to create, list, and update tenants,
-**So that** I can onboard new clients without manual SQL.
-
-**Acceptance Criteria:**
-
-**Given** a `SuperAdminGuard` is in place
-**When** any `/admin/*` endpoint is called
-**Then** only users with `role = 'superadmin'` in `organization_members` can access it; others get 403
-
-**Given** `POST /admin/tenants` with `{ name, ownerEmail, ownerPassword, currency?, timezone?, businessType? }`
-**When** the body is valid
-**Then** the following is executed in a single Prisma transaction:
-- Supabase Auth user created for the owner (email + password)
-- `kernel.tenants` record created with provided name, currency (default XOF), timezone, status = active
-- `kernel.organization_members` record created linking the new userId to the tenant with `role = 'owner'`
-- Default retail modules activated via `ModuleRegistryService.activateDefaultModulesForTenant()` (catalog, inventory, transactions, retail)
-- Response: `{ tenantId, userId, name, currency, timezone, status, modulesActivated }`
-
-**Given** `GET /admin/tenants`
-**When** called by a superadmin
-**Then** returns an array of tenants with: `id`, `name`, `status`, `currency`, `timezone`, `createdAt`, `membersCount` (count of active org members), `activeModules` (array of module codes with status = active)
-
-**Given** `PATCH /admin/tenants/:id` with `{ name?, currency?, timezone?, status? }`
-**When** the tenant exists
-**Then** the specified fields are updated; `status` accepts only `active | suspended | archived`
-**And** if status changes to `suspended`, the change is reflected immediately (tenant guard blocks access)
-
-**Given** a step in the POST transaction fails (e.g., Supabase Auth returns an error)
-**When** the error is caught
-**Then** the entire transaction is rolled back — no orphaned tenant or org_member records exist
-
----
+### Story 16.2: B2B Order Placement & Confirmation
 
-### Story 19.2: Backend — Activation/Désactivation Modules par Tenant
+As a buyer tenant,
+I want to place bulk orders from supplier tenants in the Connect network,
+So that my restocking workflow is automated and tracked end-to-end within Scalario.
 
-**As a** superadmin,
-**I want** endpoints to manage which modules are active per tenant,
-**So that** I can enable or disable features for a client without touching the database.
-
 **Acceptance Criteria:**
-
-**Given** `GET /admin/modules`
-**When** called by a superadmin
-**Then** returns the full module catalog from `kernel.modules`: `{ id, code, name, type, dependencies }`
-
-**Given** `GET /admin/tenants/:tenantId/modules`
-**When** called by a superadmin
-**Then** returns all modules with their activation status for that tenant: `{ moduleCode, name, type, status: 'active'|'inactive', activatedAt? }`
-
-**Given** `POST /admin/tenants/:tenantId/modules/:moduleCode/activate`
-**When** the module has dependencies (e.g., `retail` depends on `catalog`, `inventory`, `transactions`)
-**Then** all dependency modules are validated as active before activating the requested module
-**And** if a dependency is inactive, return 422 with `{ error: 'MISSING_DEPENDENCY', missing: ['catalog'] }`
-**And** if all dependencies are met, the module status is set to `active` with `activatedAt = now()`
-
-**Given** `POST /admin/tenants/:tenantId/modules/:moduleCode/deactivate`
-**When** another active module depends on the module being deactivated
-**Then** return 422 with `{ error: 'HAS_DEPENDENTS', dependents: ['retail'] }`
-**And** if no other active module depends on it, set status to `inactive`
-
-**Given** `POST /admin/tenants` creates a retail tenant (Story 19.1)
-**When** the seed step runs
-**Then** modules `catalog`, `inventory`, `transactions`, `retail` are all activated automatically
-
----
 
-### Story 19.3: Backend — Gestion Users par Tenant
+**Given** I find Supplier X's Rice listing on Connect
+**When** I place an order for 500kg at the listed bulk price
+**Then** a `B2BOrder` is created with status `PENDING_CONFIRMATION` linked to both tenants (FR-MULTISTORE-01)
 
-**As a** superadmin,
-**I want** endpoints to create, list, update, and deactivate users within a tenant,
-**So that** I can manage client team members without Supabase dashboard access.
+**Given** Supplier X receives the order
+**When** they confirm and set an estimated delivery date
+**Then** the order status changes to `CONFIRMED`
+**And** I receive a push notification with the confirmation details
 
-**Acceptance Criteria:**
-
-**Given** `POST /admin/tenants/:tenantId/users` with `{ email, password, role }`
-**When** the body is valid and `role` is one of `owner | manager | cashier`
-**Then** a Supabase Auth user is created with the given email/password
-**And** an `organization_members` record is created linking the userId to the tenant with the given role
-**And** response: `{ userId, email, role, createdAt }`
-
-**Given** `GET /admin/tenants/:tenantId/users`
-**When** called by a superadmin
-**Then** returns all `organization_members` for that tenant with: `userId`, `email` (from Supabase Auth), `role`, `createdAt`, `lastSignInAt` (from Supabase Auth metadata)
-
-**Given** `PATCH /admin/tenants/:tenantId/users/:userId` with `{ role }`
-**When** the user is a member of that tenant
-**Then** the `role_id` in `organization_members` is updated to the new role
-**And** return the updated member record
-
-**Given** `DELETE /admin/tenants/:tenantId/users/:userId`
-**When** the user is a member of that tenant
-**Then** the `organization_members` record is deleted (hard delete — user removed from org)
-**And** the Supabase Auth user is disabled (`banned_until = far future`) — not deleted (preserves audit trail)
-**And** return 204 No Content
-
-**Given** the target userId is the only owner of the tenant
-**When** DELETE is attempted
-**Then** return 422 with `{ error: 'CANNOT_REMOVE_LAST_OWNER' }`
-
----
+**Given** the delivery is completed
+**When** the supplier marks it `DELIVERED`
+**Then** my inventory is automatically increased by the received quantity
+**And** an incoming PO record is created on my side
 
-### Story 19.4: Frontend — Admin Shell avec Navigation
+### Story 16.3: AI-Assisted Supplier Matching
 
-**As a** superadmin,
-**I want** a dedicated admin dashboard to appear when I log in,
-**So that** I can manage the platform without seeing the retail POS interface.
+As a buyer tenant,
+I want the AI to proactively suggest suppliers when my stock of an item is critically low,
+So that I can reorder with minimal effort.
 
 **Acceptance Criteria:**
-
-**Given** `main.dart` evaluates `userProfile.role`
-**When** `profile.role == 'superadmin'`
-**Then** `AdminDashboard` is shown instead of `PosScreen` or `DashboardScreen`
-**And** the existing cashier/manager routing is unchanged
-
-**Given** `AdminDashboard` is rendered
-**When** on a tablet (width ≥ 1024px)
-**Then** a `NavigationRail` is shown on the left with 3 destinations: Tenants / Modules / Monitoring
-**When** on a phone or medium (width < 1024px)
-**Then** a `NavigationBar` (BottomNav) is shown with the same 3 destinations
-**And** the same `LayoutBuilder` + `kMedium = 1024.0` breakpoint from `app_breakpoints.dart` is used
-
-**Given** the Tenants tab is selected
-**When** `AdminTenantsScreen` renders
-**Then** it shows a scrollable list of tenants with: name, status badge (active=green / suspended=orange / archived=grey), member count, active module chips
-**And** a FAB "Nouveau client" (bottom-right) navigates to the tenant creation form
-
-**Given** the admin panel has no offline requirement
-**When** the device goes offline
-**Then** a non-blocking banner "Connexion requise pour l'admin" is shown — no crash, no data corruption
-
-**Files to create:**
-- `lib/features/admin/presentation/screens/admin_dashboard.dart`
-- `lib/features/admin/presentation/screens/admin_tenants_screen.dart`
-- `lib/features/admin/presentation/providers/admin_providers.dart`
-- Modify: `lib/main.dart` — add `superadmin` branch in `userProfileAsync.when(data: ...)`
-
----
-
-### Story 19.5: Frontend — Formulaire Création Tenant + Gestion Modules & Users
 
-**As a** superadmin,
-**I want** forms to create a new client and manage their modules and users,
-**So that** onboarding is a guided flow with no SQL required.
+**Given** my Rice stock drops below the low-stock threshold
+**When** the AI insight engine runs
+**Then** it suggests the top 3 Connect suppliers for Rice ranked by: price, proximity, and past order reliability (FR-AI-05)
 
-**Acceptance Criteria:**
-
-**Given** the FAB "Nouveau client" is tapped
-**When** `NewTenantForm` renders
-**Then** it presents: Nom boutique (required), Email owner (required, validated), Mot de passe owner (required, min 8 chars), Devise (dropdown: XOF default, EUR, USD, MAD), Timezone (dropdown: Africa/Abidjan default), Type métier (radio: Retail — seul choix MVP)
-
-**Given** the form is submitted with valid data
-**When** `POST /admin/tenants` returns 201
-**Then** success snackbar "Client [nom] créé avec succès", form closes, tenants list refreshes
-
-**Given** the form is submitted with invalid data (missing name, bad email)
-**When** local validation runs before submit
-**Then** invalid fields are underlined in red; submit is blocked
-
-**Given** a tenant card is tapped in the list
-**When** `TenantDetailScreen` renders
-**Then** it shows 3 tabs: Infos, Modules, Users
-
-**Given** the Modules tab is selected
-**When** `TenantModulesTab` renders
-**Then** each module in the catalog is shown as a row with: module name, type badge, a toggle switch
-**And** toggling ON calls `POST /admin/tenants/:tenantId/modules/:code/activate`
-**And** toggling OFF calls `POST /admin/tenants/:tenantId/modules/:code/deactivate`
-**And** if the API returns 422 (dependency error), the toggle reverts and a snackbar shows the error message
-
-**Given** the Users tab is selected
-**When** `TenantUsersTab` renders
-**Then** it lists users with: email, role chip, last sign-in date
-**And** a "+" button opens `AddUserDialog` (email, password, role dropdown)
-**And** a long-press on a user row offers "Changer rôle" and "Désactiver"
-
-**Files to create:**
-- `lib/features/admin/presentation/screens/new_tenant_form.dart`
-- `lib/features/admin/presentation/screens/tenant_detail_screen.dart`
-- `lib/features/admin/presentation/widgets/tenant_modules_tab.dart`
-- `lib/features/admin/presentation/widgets/tenant_users_tab.dart`
+**Given** I accept a supplier suggestion
+**When** I confirm
+**Then** a draft B2B order is pre-filled with the suggested supplier, quantity (based on reorder formula), and price — ready for review
 
----
+**Given** no Connect suppliers are available for that product in my region
+**When** the AI checks
+**Then** it acknowledges: "No Connect suppliers found for this product in your region" — not a blank response
 
-### Story 19.6: Frontend — Dashboard Monitoring
+### Story 16.4: Connect Network Analytics for Suppliers
 
-**As a** superadmin,
-**I want** a monitoring dashboard showing platform health,
-**So that** I can proactively identify tenants with sync issues or high error rates.
+As a supplier tenant,
+I want to see analytics on my Connect profile performance and order history,
+So that I can optimize my pricing and product listing for the B2B market.
 
 **Acceptance Criteria:**
-
-**Given** the Monitoring tab is selected
-**When** `AdminMonitoringScreen` renders
-**Then** it calls `GET /admin/monitoring/health` and displays:
-- Total tenants actifs (count where status = 'active')
-- Total utilisateurs sur la plateforme
-- Liste des tenants avec: nom, statut, dernière activité (dernière mutation créée), nombre de mutations FAILED en attente
-
-**Given** a tenant has > 10 mutations FAILED en attente
-**When** its row renders in the monitoring list
-**Then** a warning icon (⚠️) and red badge showing the count are displayed
-**And** tapping the row shows a detail card with the failed mutation IDs
-
-**Given** `GET /admin/monitoring/health` is called (backend endpoint — à créer dans Story 19.6)
-**When** the backend responds
-**Then** the response shape is:
-```json
-{
-  "activeTenants": 5,
-  "totalUsers": 23,
-  "tenants": [
-    {
-      "id": "uuid",
-      "name": "Boutique Koné",
-      "status": "active",
-      "lastActivityAt": "ISO8601",
-      "failedMutationsCount": 0
-    }
-  ]
-}
-```
-
-**Given** the monitoring screen is open
-**When** the user pulls to refresh
-**Then** `GET /admin/monitoring/health` is re-fetched and the data updates
-
-**Backend endpoint à créer :**
-- `GET /admin/monitoring/health` — agrège `Tenant`, `OrganizationMember`, et une future table `sync_mutations` (ou `audit_log` comme proxy pour lastActivity)
-- Pour MVP : `lastActivityAt` = MAX(`audit_log.created_at`) par tenant, `failedMutationsCount` = 0 (placeholder — réel quand outbox server-side existe)
-
-**Files to create:**
-- `lib/features/admin/presentation/screens/admin_monitoring_screen.dart`
-- Backend: `apps/backend/src/admin/monitoring/admin-monitoring.controller.ts`
-
----
-
-## Epic 20: Vente au poids + unités configurables
-
-Les articles peuvent être configurés avec un `unitType` (pièce, poids, volume, longueur) et un label d'unité libre. Au POS, les articles au poids affichent un champ de saisie de quantité en virgule flottante ; le total est calculé automatiquement avec arrondi FCFA. Le reçu affiche la quantité et l'unité native. La décrémentation stock applique le facteur de conversion configuré.
 
-**FRs covered:** FR76, FR77, FR78
-**Phase:** 2a
-**Prerequisite:** Epics 1–9 (backend catalog opérationnel)
+**Given** I open my Connect analytics dashboard
+**When** it loads
+**Then** I see: profile views (last 30 days), orders received (count and value), average fulfillment time, and top 3 products by B2B order volume
 
----
-
-### Story 20-1: Backend — Migration Prisma unitType + pricePerUnit + conversionRate
-
-**As an** owner,
-**I want** each catalog item to have a configurable unit type, unit price, and stock conversion factor,
-**So that** the system can price and track weight/volume/length articles correctly (FR76, FR78).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma :**
-
-**Given** the current `CatalogItem` table has no `unit_type`, `price_per_unit`, or `conversion_rate` columns
-**When** the Prisma migration runs
-**Then** the following columns are added to `shared.catalog_items`:
-- `unit_type VARCHAR NOT NULL DEFAULT 'piece'` — valeurs acceptées : `piece | weight | volume | length`
-- `price_per_unit NUMERIC(10,2) NULL` — prix par unité native (optionnel, null = même valeur que `price`)
-- `conversion_rate NUMERIC(10,4) NULL` — facteur de conversion unité de vente → unité de stock
-**And** toutes les lignes existantes ont `unit_type = 'piece'`, `price_per_unit = NULL`, `conversion_rate = NULL`
-**And** aucune donnée existante n'est perdue
-
-**AC2 — DTO & validation :**
-
-**Given** `POST /api/v1/catalog/items` ou `PATCH /api/v1/catalog/items/:id`
-**When** le body inclut `unitType`, `pricePerUnit`, `conversionRate`
-**Then** les champs sont validés :
-- `unitType` : enum strict `['piece', 'weight', 'volume', 'length']`, défaut `'piece'`
-- `pricePerUnit` : Decimal ≥ 0, optionnel
-- `conversionRate` : Decimal > 0, optionnel
-**And** une valeur `unitType` invalide retourne HTTP 400 avec message d'erreur lisible
-
-**AC3 — Réponse GET catalog :**
-
-**Given** `GET /api/v1/catalog/items`
-**When** la réponse est sérialisée
-**Then** chaque item inclut `unitType`, `pricePerUnit`, `conversionRate` (null si non définis)
-**And** la sync delta (`?since=`) inclut aussi ces champs
-
-**AC4 — Décrémentation stock avec conversionRate :**
-
-**Given** un article avec `conversionRate = 0.5` (ex: 1 sachet 500g = 0.5 unité stock)
-**When** une vente de quantité `2.0` est enregistrée
-**Then** le `InventoryMovement.quantity` créé est `2.0 × 0.5 = 1.0` (dans l'unité de stock)
-**And** si `conversionRate` est null, la décrémentation est `quantity` sans transformation
-
-**AC5 — Tests backend :**
-
-**Given** `catalog.service.spec.ts`
-**When** les tests unitaires sont exécutés
-**Then** :
-- Créer un item avec `unitType: 'weight'` → champ persisté correctement
-- Créer avec `unitType: 'invalid'` → erreur de validation
-- Décrémentation avec `conversionRate: 0.5`, quantité `3` → stock réduit de `1.5`
-- Décrémentation sans `conversionRate` → stock réduit de `3` (comportement inchangé)
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter les 3 champs sur `CatalogItem`
-- `apps/backend/prisma/migrations/` — nouvelle migration auto-générée
-- `apps/backend/src/shared/catalog/catalog.service.ts` — logique conversionRate
-- `apps/backend/src/shared/catalog/catalog.controller.ts` — accepter nouveaux champs
-- `apps/backend/src/shared/catalog/dto/` — `CreateCatalogItemDto`, `UpdateCatalogItemDto`
-- `apps/backend/src/shared/catalog/catalog.service.spec.ts`
+**Given** a buyer leaves a rating after a delivered order
+**When** the rating is submitted
+**Then** my supplier profile shows the updated average rating visible to future buyers
 
 ---
-
-### Story 20-2: Frontend — ProductFormDialog supporte unitType
-
-**As an** owner,
-**I want** the product form to let me configure unit type, unit label, and unit price,
-**So that** I can set up weight/volume articles for accurate POS pricing (FR76, FR78).
-
-**Acceptance Criteria:**
-
-**AC1 — Dropdown unitType :**
-
-**Given** `ProductFormDialog` est ouvert (création ou édition)
-**When** l'utilisateur voit le formulaire
-**Then** un dropdown "Type d'unité" est présent avec 4 options :
-- Pièce (`piece`) — sélectionné par défaut
-- Poids (`weight`)
-- Volume (`volume`)
-- Longueur (`length`)
-
-**AC2 — Champ label unité (conditionnel) :**
-
-**Given** `unitType != 'piece'` est sélectionné
-**When** le formulaire se met à jour
-**Then** un champ texte "Label unité" apparaît (ex: "kg", "g", "L", "m")
-**And** ce champ est obligatoire si `unitType != 'piece'`
-**And** si `unitType == 'piece'`, le champ est masqué et sa valeur est ignorée
-
-**AC3 — Affichage prix adapté :**
-
-**Given** `unitType != 'piece'`
-**When** le champ prix est affiché
-**Then** son label affiche "Prix par [label unité]" (ex: "Prix par kg")
-**And** si `unitType == 'piece'`, le label reste "Prix" (comportement actuel)
 
-**AC4 — Champ facteur de conversion (optionnel) :**
+## Epic 17: AI Configuration Wizard, Sector Templates & Tenant Onboarding
 
-**Given** `unitType != 'piece'`
-**When** l'utilisateur développe la section "Paramètres avancés"
-**Then** un champ "Facteur de conversion (optionnel)" est disponible
-**And** son helper text indique "Ex: 0.5 si 1 sachet 500g = 0.5 kg stock"
-**And** le champ accepte uniquement des valeurs numériques décimales > 0
+**Goal:** Eliminate the cold-start problem: the AI Config Wizard guides new tenants from zero to a fully configured Scalario in under 10 minutes, using sector templates, intelligent defaults, and guided data import — so the first session ends with a working system, not a blank screen.
 
-**AC5 — Sauvegarde et pré-remplissage :**
+**FR Coverage:** FR-TEMPLATE-01, FR-TEMPLATE-02, FR-MULTISERVICE-01 (sector), FR-AI-01 (onboarding AI), NFR-ONBOARDING-01
 
-**Given** un article avec `unitType = 'weight'` et `pricePerUnit = 1500` est édité
-**When** `ProductFormDialog` s'ouvre en mode édition
-**Then** le dropdown affiche "Poids", le label unité affiche la valeur persistée, le prix affiche `1500`
-
-**AC6 — Appel API :**
-
-**Given** le formulaire est soumis avec `unitType = 'weight'`, `pricePerUnit = 1500`, `conversionRate = null`
-**When** `POST /api/v1/catalog/items` ou `PATCH` est appelé
-**Then** le body inclut `{"unitType": "weight", "pricePerUnit": 1500, "conversionRate": null}`
-
-**AC7 — Test widget :**
-
-**Given** le widget test de `ProductFormDialog`
-**When** `unitType` est changé à `'weight'`
-**Then** le champ "Label unité" devient visible et obligatoire
-**And** le label du champ prix change en "Prix par [label]"
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart`
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `unitType`, `pricePerUnit`, `conversionRate`
-- `apps/frontend/lib/features/retail/pos/data/models/product.g.dart` — regénérer
-- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — sérialisation nouveaux champs
-
 ---
 
-### Story 20-3: Frontend — POS vente au poids
+### Story 17.1: Sector Template Selection & Auto-Configuration
 
-**As a** commercial (Fatou),
-**I want** the POS to show a quantity input when I add a weight/volume article,
-**So that** I can sell 1.5 kg of tomatoes and get the correct total automatically (FR77).
+As a new tenant,
+I want to select my business sector during onboarding and have Scalario auto-configure the right modules, categories, and workflows,
+So that I start with a system that already understands my business type.
 
 **Acceptance Criteria:**
-
-**AC1 — Déclenchement saisie quantité :**
-
-**Given** la grille POS affiche un article avec `unitType = 'weight'` (ou `volume`, `length`)
-**When** l'utilisateur tape sur la carte produit
-**Then** un dialog "Saisir la quantité" apparaît immédiatement (avant ajout au panier)
-**And** le dialog affiche : nom du produit, champ numérique en virgule flottante, label unité (ex: "kg"), prix unitaire (ex: "1 500 F/kg")
-**And** la validation est immédiate : toute valeur > 0 est acceptée
-
-**AC2 — Calcul total automatique :**
-
-**Given** l'utilisateur saisit `1.5` dans le dialog quantité d'un article à `1 500 F/kg`
-**When** il confirme
-**Then** l'article est ajouté au panier avec quantité `1.5`, total ligne = `2 250 F` (arrondi 5 FCFA)
-**And** le total panier est mis à jour immédiatement
-
-**AC3 — Affichage panier :**
-
-**Given** un article au poids est dans le panier
-**When** le panneau panier (`CartPanel`) affiche la ligne
-**Then** la quantité s'affiche avec l'unité native : "1.5 kg" (pas "1.5 pièce(s)")
-**And** le prix ligne affiche "2 250 F"
-
-**AC4 — Article pièce inchangé :**
-
-**Given** un article avec `unitType = 'piece'`
-**When** l'utilisateur tape sur la carte produit
-**Then** le comportement existant est préservé (ajout direct, quantité entière, pas de dialog)
-
-**AC5 — Reçu adapté :**
-
-**Given** une vente contenant un article au poids est finalisée
-**When** `ReceiptDialog` s'affiche
-**Then** chaque ligne article au poids affiche : `[nom] — [quantité] [unité] × [prix/unité] = [total ligne]`
-**And** les articles pièce affichent le format actuel inchangé
 
-**AC6 — Transaction enregistrée :**
+**Given** I am a new tenant completing onboarding
+**When** I select sector "Fresh Produce Market"
+**Then** the platform activates: Sales, Inventory, CRM, Client Orders modules
+**And** pre-creates product categories: Fruits, Vegetables, Dairy, Beverages
+**And** configures default units: kg, g, piece, litre (FR-TEMPLATE-01)
 
-**Given** la vente est soumise au backend
-**When** `itemsJson` est sérialisé dans la `Transaction`
-**Then** chaque item au poids contient : `{"catalogItemId", "quantity": 1.5, "unitType": "weight", "unitLabel": "kg", "pricePerUnit": 1500, "lineTotal": 2250}`
+**Given** I select "Restaurant"
+**When** onboarding completes
+**Then** the platform activates: Sales, Inventory, CRM, Reservations, Recipes modules
+**And** pre-creates menu categories and a default recipe template
 
-**AC7 — Test widget :**
+**Given** I want to customize the template after selection
+**When** I reach the review step
+**Then** I can add/remove modules and categories before finalizing — the template is a starting point, not a lock-in (FR-TEMPLATE-02)
 
-**Given** le widget test du `QuantityInputDialog`
-**When** l'utilisateur entre `2.3` et confirme
-**Then** le `CartNotifier` reçoit l'article avec `quantity = 2.3`
-**And** le total calculé = `pricePerUnit × 2.3` arrondi au plus proche multiple de 5
+### Story 17.2: AI-Guided Product Import from Photo
 
-**Files to create/modify:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/quantity_input_dialog.dart` — nouveau widget
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/product_grid.dart` — détecter unitType et ouvrir dialog
-- `apps/frontend/lib/features/retail/pos/presentation/state/cart_notifier.dart` — gérer quantité flottante
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — affichage unité
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — format ligne poids
-- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — sérialisation itemsJson
+As a new tenant,
+I want to photograph my existing product labels or price lists and have the AI extract product data,
+So that I don't spend hours manually entering my catalog before I can start selling.
 
----
-
-### Story 20-4: Tests de bout en bout + sync produits au poids
-
-**As a** developer,
-**I want** weight products to sync correctly and receipts to display correct units end-to-end,
-**So that** the feature is validated from backend to frontend (FR76, FR77, FR78).
-
 **Acceptance Criteria:**
-
-**AC1 — Sync delta produits au poids :**
-
-**Given** un article avec `unitType = 'weight'` et `pricePerUnit = 1500` existe sur le backend
-**When** `CatalogRepository.syncProducts()` exécute un pull delta
-**Then** le `Product` local reçu a `unitType = 'weight'`, `pricePerUnit = 1500.0`
-**And** l'article est stocké dans Isar avec ces valeurs sans troncation ni perte de précision
-
-**AC2 — Robustesse sync — champs absents :**
-
-**Given** le backend retourne un article sans `unitType` (ancienne donnée avant migration)
-**When** `Product.fromJson()` parse la réponse
-**Then** `unitType` prend la valeur par défaut `'piece'`
-**And** aucune exception n'est levée
-
-**AC3 — Reçu affiché correctement :**
-
-**Given** un reçu contenant une ligne "Tomates — 1.5 kg × 1 500 F/kg = 2 250 F"
-**When** `ReceiptDialog` est rendu en test widget
-**Then** le texte "1.5 kg" apparaît dans le widget
-**And** le texte "2 250" apparaît dans le widget
-**And** aucun texte "pièce(s)" ou "1 pcs" n'apparaît pour cette ligne
-
-**AC4 — Calcul arrondi FCFA :**
-
-**Given** un article à `1 333 F/kg`
-**When** la quantité `0.75 kg` est saisie → total brut = `999.75 F`
-**Then** le total affiché et enregistré = `1 000 F` (arrondi au plus proche multiple de 5)
-
-**AC5 — conversionRate appliqué correctement :**
-
-**Given** un article "Sachet farine" avec `conversionRate = 0.5` (1 sachet = 0.5 kg de stock)
-**When** une vente de `3 sachets` est synchronisée avec le backend
-**Then** le `InventoryMovement.quantity` créé par le backend est `1.5` (3 × 0.5)
-**And** le stock de l'article diminue de `1.5`
-
-**AC6 — Test d'intégration backend (NestJS) :**
-
-**Given** `catalog.service.spec.ts`
-**When** les tests d'intégration sont exécutés contre une DB de test
-**Then** :
-- Migration appliquée → colonnes présentes avec bonnes valeurs par défaut
-- Create item `unitType: 'volume'` → GET retourne `unitType: 'volume'`
-- Sync delta `?since=T` → articles modifiés incluent `unitType` et `pricePerUnit`
 
-**Notes dev :**
-- `Product.fromJson()` doit utiliser `json['unitType'] ?? json['unit_type'] ?? 'piece'` pour la compatibilité snake_case/camelCase
-- Isar schema version bump nécessaire si `unitType` est ajouté comme champ indexé
+**Given** I photograph a handwritten price list or product label
+**When** I submit it during onboarding
+**Then** the AI extracts: product name, unit price, unit of measure — and pre-fills the import form (FR-AI-01 onboarding variant)
 
-**Files to create/modify:**
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — fromJson robuste
-- `apps/backend/src/shared/catalog/catalog.service.spec.ts` — tests migration + sync
-- `apps/frontend/test/features/pos/quantity_input_dialog_test.dart` — nouveau test widget
-- `apps/frontend/test/features/pos/receipt_dialog_weight_test.dart` — nouveau test reçu poids
+**Given** the AI extracts 20 products from a photo
+**When** the extraction is shown
+**Then** I can review, correct, and confirm each item before importing — no silent auto-import
 
----
-
-## Epic 21: Commandes fournisseurs + réception liée
-
-Le gestionnaire peut créer des commandes fournisseurs (sélection fournisseur, articles, quantités, date prévue), suivre leur statut, et enregistrer la réception liée avec variance automatique et notes qualité par article. La réception sans commande associée reste possible. Un KPI "Commandes en attente" apparaît sur le dashboard.
-
-**FRs covered:** FR79, FR80
-**Phase:** 2a
-**Prerequisite:** Epics 1–9, Epic 3 (contacts fournisseurs), Epic 16 (hub inventaire)
+**Given** the AI cannot confidently extract a field
+**When** showing the result
+**Then** that field is left blank with a highlight — never filled with a low-confidence guess
 
----
-
-### Story 21-1: Backend — Modèles PurchaseOrder + endpoints CRUD
+### Story 17.3: Guided Initial Configuration Wizard
 
-**As a** manager (Moussa),
-**I want** a purchase order API to create, update, and track supplier orders,
-**So that** expected deliveries are documented and reception variances are traceable (FR79, FR80).
+As a new tenant,
+I want a step-by-step wizard that walks me through: business profile, team setup, first products, and first sale,
+So that I understand how to use Scalario and have real data before closing the onboarding flow.
 
 **Acceptance Criteria:**
-
-**AC1 — Migration Prisma :**
-
-**Given** les tables `purchase_orders` et `purchase_order_lines` sont absentes du schéma `shared`
-**When** la migration Prisma s'exécute
-**Then** les tables sont créées avec :
-- `purchase_orders` : `id, supplier_id (UUID → contacts.id), status, expected_date, notes, tenant_id, created_by, created_at, updated_at`
-- `purchase_order_lines` : `id, purchase_order_id, catalog_item_id, expected_quantity, received_quantity (null), quality_notes (null), created_at`
-**And** aucune donnée existante n'est affectée
-
-**AC2 — CRUD commandes :**
-
-**Given** un manager authentifié avec rôle owner ou manager
-**When** `POST /api/v1/purchase-orders` est appelé avec `{supplierId, lines: [{catalogItemId, expectedQuantity}], expectedDate?, notes?}`
-**Then** une `PurchaseOrder` est créée avec `status = 'draft'` et ses lignes associées
-**And** la réponse inclut l'objet complet avec lignes
-
-**Given** `GET /api/v1/purchase-orders` est appelé
-**When** des filtres sont passés (`?status=confirmed&supplierId=uuid&from=date&to=date`)
-**Then** seules les commandes correspondant aux filtres sont retournées, triées par `created_at` DESC
-**And** chaque commande inclut : `id, status, expectedDate, supplierName, lineCount, tenantId`
-
-**Given** `GET /api/v1/purchase-orders/:id` est appelé
-**When** la commande existe pour le tenant courant
-**Then** la réponse inclut l'objet complet avec `lines[]` (chaque ligne : catalogItemId, itemName, expectedQuantity, receivedQuantity, qualityNotes)
-
-**Given** `PATCH /api/v1/purchase-orders/:id` est appelé avec `{status: 'confirmed'}`
-**When** la transition de statut est valide (ex: draft → confirmed)
-**Then** le statut est mis à jour et la réponse inclut l'objet mis à jour
-**And** une transition invalide (ex: received → draft) retourne HTTP 422 avec message d'erreur
-
-**AC3 — Endpoint réception :**
-
-**Given** `POST /api/v1/purchase-orders/:id/receive` est appelé avec `{lines: [{purchaseOrderLineId, receivedQuantity, qualityNotes?}]}`
-**When** la commande est en statut `confirmed` ou `partially_received`
-**Then** pour chaque ligne : `receivedQuantity` est enregistrée, `qualityNotes` sauvegardée
-**And** le système calcule la variance = `receivedQuantity - expectedQuantity` pour chaque ligne
-**And** si toutes les lignes sont reçues → statut passe à `received`
-**And** si certaines lignes sont partiellement reçues → statut passe à `partially_received`
-**And** pour chaque ligne reçue : un `InventoryMovement` de type `DELIVERY` est créé avec `quantity = receivedQuantity`, `referenceId = purchaseOrderId`
-**And** l'événement `DeliveryReceived` est émis (payload : lignes reçues, tenantId)
-
-**AC4 — Réception sans commande associée :**
-
-**Given** `POST /api/v1/inventory/movements` est appelé avec `{type: 'DELIVERY', catalogItemId, quantity}`
-**When** aucun `purchaseOrderId` n'est fourni
-**Then** le mouvement est créé normalement (comportement inchangé — Epic 16 Story 16.1)
-
-**AC5 — Tests backend :**
-
-**Given** `purchase-orders.service.spec.ts`
-**When** les tests sont exécutés
-**Then** :
-- Créer une PO avec 2 lignes → 2 `PurchaseOrderLine` créées avec `receivedQuantity = null`
-- Transition valide `draft → confirmed` → OK ; transition invalide `received → draft` → erreur 422
-- Réception complète (toutes lignes reçues) → statut = `received`, `InventoryMovement` créés
-- Réception partielle → statut = `partially_received`
-- Variance = reçu − commandé, calculée correctement pour chaque ligne
-
-**Files to create:**
-- `apps/backend/src/shared/purchase-orders/purchase-orders.module.ts`
-- `apps/backend/src/shared/purchase-orders/purchase-orders.controller.ts`
-- `apps/backend/src/shared/purchase-orders/purchase-orders.service.ts`
-- `apps/backend/src/shared/purchase-orders/dto/create-purchase-order.dto.ts`
-- `apps/backend/src/shared/purchase-orders/dto/receive-purchase-order.dto.ts`
-- `apps/backend/src/shared/purchase-orders/purchase-orders.service.spec.ts`
-- `apps/backend/prisma/migrations/` — nouvelle migration auto-générée
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter `PurchaseOrder`, `PurchaseOrderLine`
-- `apps/backend/src/app.module.ts` — importer `PurchaseOrdersModule`
-
----
-
-### Story 21-2: Frontend — Écran liste commandes + formulaire création
 
-**As a** manager (Moussa),
-**I want** a screen to list purchase orders and create new ones,
-**So that** I can document expected supplier deliveries (FR79).
-
-**Acceptance Criteria:**
+**Given** I complete tenant registration
+**When** I first open the app
+**Then** the onboarding wizard launches automatically with steps: (1) Business profile, (2) Add your team, (3) Import your products, (4) Make your first sale
 
-**AC1 — Écran liste commandes :**
-
-**Given** l'utilisateur navigue vers l'onglet "Commandes" (hub inventaire)
-**When** `PurchaseOrdersScreen` se charge
-**Then** il appelle `GET /api/v1/purchase-orders` et affiche une liste de cards
-**And** chaque card affiche : nom fournisseur, date prévue, statut (chip coloré), nombre d'articles
-**And** un filtre par statut (chips en haut : Tous · Brouillon · Confirmé · Partiel · Reçu · Annulé) est présent
-**And** si la liste est vide → message "Aucune commande" + bouton "Créer la première commande"
-
-**AC2 — Chips statut colorés :**
-
-| Statut | Couleur chip |
-|:---|:---|
-| draft | gris |
-| confirmed | bleu |
-| partially_received | orange |
-| received | vert |
-| cancelled | rouge |
-
-**AC3 — Formulaire création commande :**
-
-**Given** le FAB "+" est tapé
-**When** `CreatePurchaseOrderSheet` s'ouvre (bottom sheet plein écran)
-**Then** le formulaire contient :
-- Sélection fournisseur : `ProductAutocomplete` filtré sur `contactType = 'supplier'` (contacts existants)
-- Champ date de livraison prévue (optionnel) — `DatePicker`
-- Champ notes (optionnel, multiline)
-- Section "Articles commandés" : liste de lignes, chaque ligne = produit (autocomplete) + quantité (numérique)
-- Bouton "Ajouter un article" pour ajouter une ligne
-- Bouton "Supprimer" (icône poubelle) sur chaque ligne
-- Bouton "Créer la commande" (disabled si aucun article ou pas de fournisseur)
-
-**AC4 — Soumission création :**
-
-**Given** le formulaire est valide et soumis
-**When** `POST /api/v1/purchase-orders` est appelé
-**Then** en cas de succès : sheet se ferme, liste se rafraîchit, snackbar "Commande créée"
-**And** en cas d'erreur : snackbar rouge avec message d'erreur de l'API
-
-**AC5 — Transition statut depuis la liste :**
-
-**Given** une card de commande en statut `draft` est affichée
-**When** l'utilisateur la presse longuement (ou via menu contextuel)
-**Then** un menu propose "Confirmer la commande" → appelle `PATCH /api/v1/purchase-orders/:id {status: 'confirmed'}`
-**And** la card se met à jour avec le nouveau statut sans rechargement complet
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/purchase_orders/data/models/purchase_order_local.dart`
-- `apps/frontend/lib/features/shared/purchase_orders/data/repositories/purchase_orders_repository.dart`
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart`
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/widgets/create_purchase_order_sheet.dart`
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart`
+**Given** I complete step 3 (import products)
+**When** I reach step 4
+**Then** a practice POS screen opens with my real product catalog — I make a "test sale" that I can void after
 
----
+**Given** I close the wizard mid-way
+**When** I reopen the app
+**Then** the wizard resumes at the step I left — progress is persisted (FR-TEMPLATE-02)
 
-### Story 21-3: Frontend — Réception liée à une commande
+### Story 17.4: Tenant Self-Service Configuration After Onboarding
 
-**As a** manager (Moussa),
-**I want** to record a delivery against a purchase order with pre-filled quantities,
-**So that** variances are calculated automatically and quality issues are documented (FR80).
+As a tenant owner,
+I want to modify my configuration (activate new modules, change currency, update business profile) from the settings screen at any time,
+So that my Scalario setup evolves with my business without needing to contact support.
 
 **Acceptance Criteria:**
-
-**AC1 — Accès depuis liste :**
-
-**Given** une commande en statut `confirmed` ou `partially_received` est affichée
-**When** l'utilisateur tape dessus
-**Then** `PurchaseOrderDetailScreen` s'ouvre avec : fournisseur, date prévue, notes, liste des lignes (article, qté commandée)
-**And** un bouton "Réceptionner" est visible si statut ≠ `received` et ≠ `cancelled`
-
-**AC2 — Formulaire réception pré-rempli :**
-
-**Given** le bouton "Réceptionner" est tapé
-**When** `ReceivePurchaseOrderSheet` s'ouvre
-**Then** chaque ligne de la commande est affichée avec :
-- Nom article
-- Quantité commandée (affichée en lecture seule)
-- Champ "Quantité reçue" (pré-rempli avec quantité commandée, modifiable)
-- Champ "Notes qualité" (optionnel, ex: "produits trop mûrs")
-
-**AC3 — Affichage variance en temps réel :**
-
-**Given** l'utilisateur modifie la quantité reçue d'une ligne
-**When** la valeur change
-**Then** la variance s'affiche sous le champ : "+2.5" (vert si positif) ou "-1.0" (orange si négatif)
-**And** une variance de 0 n'est pas affichée
-
-**AC4 — Soumission réception :**
-
-**Given** le formulaire de réception est soumis
-**When** `POST /api/v1/purchase-orders/:id/receive` est appelé
-**Then** en cas de succès : sheet se ferme, détail commande se rafraîchit avec nouveau statut
-**And** snackbar "Réception enregistrée — [n] mouvements de stock créés"
-**And** en cas d'erreur : snackbar rouge avec message d'erreur
-
-**AC5 — Réception sans commande (flux hérité préservé) :**
-
-**Given** l'utilisateur est dans le hub inventaire, onglet "Réceptions"
-**When** il crée une réception sans sélectionner de commande fournisseur
-**Then** le flux `delivery_form.dart` existant (Epic 16 Story 16.1) fonctionne sans changement
-**And** aucune régression sur le flux actuel
-
-**AC6 — Test widget :**
-
-**Given** `ReceivePurchaseOrderSheet` est rendu avec une commande de 2 lignes
-**When** la quantité reçue de la ligne 1 est modifiée à une valeur différente de la quantité commandée
-**Then** la variance s'affiche correctement sur cette ligne
-**And** les autres lignes restent inchangées
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/screens/purchase_order_detail_screen.dart`
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/widgets/receive_purchase_order_sheet.dart`
-- `apps/frontend/test/features/purchase_orders/receive_sheet_test.dart`
-
----
-
-### Story 21-4: Navigation hub inventaire + KPI "Commandes en attente"
-
-**As a** manager or owner,
-**I want** purchase orders accessible from the inventory hub and visible as a dashboard KPI,
-**So that** pending deliveries are never missed (FR79).
-
-**Acceptance Criteria:**
-
-**AC1 — Onglet "Commandes" dans le hub inventaire :**
-
-**Given** l'utilisateur ouvre le hub inventaire (`InventoryScreen`)
-**When** les onglets s'affichent
-**Then** un onglet "Commandes" est ajouté aux onglets existants (Réceptions · Transferts · Pertes · Inventaire)
-**And** l'onglet "Commandes" charge `PurchaseOrdersScreen`
-**And** si des commandes sont en statut `confirmed` ou `partially_received`, un badge numérique rouge apparaît sur l'onglet
-
-**AC2 — KPI dashboard "Commandes en attente" :**
-
-**Given** le dashboard backoffice (`DashboardScreen`) est chargé
-**When** la section KPI s'affiche
-**Then** une card "Commandes en attente" affiche le nombre de POs avec `status IN ('confirmed', 'partially_received')`
-**And** tapper la card navigue vers `InventoryScreen` avec l'onglet "Commandes" sélectionné et filtre "Confirmé" actif
-**And** si le count = 0, la card affiche "0" sans masquer la card (visibilité permanente)
-
-**AC3 — Endpoint KPI backend :**
-
-**Given** `GET /api/v1/purchase-orders/stats` est appelé
-**When** le backend répond
-**Then** la réponse inclut `{ pendingCount: number }` — count des POs `confirmed` + `partially_received` pour le tenant
-**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
-
-**AC4 — Refresh automatique :**
-
-**Given** le dashboard est visible
-**When** une réception est enregistrée (Story 21-3 AC4)
-**Then** le provider du KPI est invalidé et le count se met à jour automatiquement
-
-**Notes dev :**
-- Le badge sur l'onglet utilise le même provider que le KPI dashboard (source unique de vérité)
-- Rôle requis pour accès commandes : owner ou manager — le commercial ne voit pas l'onglet "Commandes"
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — ajouter onglet Commandes
-- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — ajouter KPI card
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/purchase_orders/presentation/providers/purchase_orders_stats_provider.dart`
-
----
-
-## Epic 22: Alertes stock bas + notifications
-
-### Story 22-1: Backend — minStockLevel sur CatalogItem + endpoint alertes
-
-**As a** backend developer,
-**I want** a low-stock alert evaluation triggered after every stock-decrementing movement, surfaced via a dedicated endpoint,
-**So that** the backoffice can display real-time low-stock signals (FR81, FR82).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ minStockLevel déjà en schema :**
-
-**Given** la migration Prisma pour `minStockLevel` sur `CatalogItem` est déjà définie dans l'architecture v1.1
-**When** le développeur vérifie `schema.prisma`
-**Then** si le champ n'est pas encore appliqué, une migration `add_min_stock_level_to_catalog_items` est générée et appliquée
-**And** le champ est `Decimal?` nullable — absence = pas d'alerte pour cet article
-
-**AC2 — Endpoint PATCH minStockLevel :**
-
-**Given** `PATCH /api/v1/catalog/:id` est appelé avec `{ "minStockLevel": 5 }`
-**When** la requête est validée
-**Then** le champ `minStockLevel` est mis à jour pour l'article du tenant
-**And** la réponse renvoie l'article mis à jour avec `minStockLevel`
-**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
-
-**AC3 — Évaluation post-mouvement de stock :**
-
-**Given** un `InventoryMovement` de type `SALE`, `LOSS`, `TRANSFER_OUT`, ou `ADJUSTMENT` (quantité négative) est créé
-**When** l'`InventoryService` traite le mouvement
-**Then** pour chaque `catalogItemId` concerné, si `stockQuantity ≤ minStockLevel` et `minStockLevel IS NOT NULL`
-**And** une entrée `StockAlert` est upserted (ou un événement `LowStockDetected` est émis sur l'Event Bus)
-**And** si `stockQuantity > minStockLevel`, aucune alerte n'est créée / l'alerte existante est résolue automatiquement
-
-**AC4 — Endpoint GET alertes actives :**
-
-**Given** `GET /api/v1/stock-alerts` est appelé
-**When** le backend répond
-**Then** la réponse renvoie la liste des articles dont `stockQuantity ≤ minStockLevel` pour le tenant courant
-**And** chaque entrée inclut : `catalogItemId`, `itemName`, `stockQuantity`, `minStockLevel`, `deficit` (minStockLevel − stockQuantity)
-**And** les résultats sont triés par `deficit` décroissant (articles les plus critiques en premier)
-**And** l'endpoint supporte `?limit=` et `?offset=` pour la pagination
-
-**AC5 — Endpoint GET count alertes actives :**
-
-**Given** `GET /api/v1/stock-alerts/count` est appelé
-**When** le backend répond
-**Then** la réponse renvoie `{ criticalCount: number }` — nombre d'articles sous seuil pour le tenant
-**And** l'endpoint est protégé par `TenantGuard` et `RolesGuard(['owner', 'manager'])`
-
-**Notes dev :**
-- Créer `StockAlertsModule` dans `apps/backend/src/shared/stock-alerts/`
-- L'évaluation post-mouvement peut être synchrone (dans la transaction) ou via Event Bus (`LowStockDetected`) — privilégier Event Bus pour découplage
-- Pas de table `StockAlert` dédiée si on préfère une vue calculée — acceptable en MVP (query `WHERE stockQuantity <= minStockLevel`)
-
-**Files to create:**
-- `apps/backend/src/shared/stock-alerts/stock-alerts.module.ts`
-- `apps/backend/src/shared/stock-alerts/stock-alerts.service.ts`
-- `apps/backend/src/shared/stock-alerts/stock-alerts.controller.ts`
-- `apps/backend/src/shared/stock-alerts/dto/stock-alert.dto.ts`
-
-**Files to modify:**
-- `apps/backend/src/shared/inventory/inventory.service.ts` — émettre `LowStockDetected` après mouvement décrémentant
-- `apps/backend/prisma/schema.prisma` — vérifier/appliquer `minStockLevel` sur `CatalogItem`
-
----
-
-### Story 22-2: Frontend — Configuration seuil dans ProductFormDialog + badge catalogue
-
-**As a** owner or manager,
-**I want** to set a minimum stock threshold on each product and see a visual badge when that threshold is breached,
-**So that** I can identify at-risk articles at a glance in the catalog (FR81, FR82).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ minStockLevel dans ProductFormDialog :**
-
-**Given** l'utilisateur ouvre `ProductFormDialog` pour créer ou éditer un article
-**When** le formulaire s'affiche
-**Then** un champ optionnel "Seuil stock bas" (type: nombre décimal, label: "Alerte si stock ≤") est visible
-**And** si le champ est vide, aucune alerte ne sera générée pour cet article (placeholder : "Désactivé")
-**And** le champ accepte des valeurs décimales (ex. 2.5 pour articles au poids)
-
-**AC2 — Sauvegarde du seuil :**
-
-**Given** l'utilisateur saisit `5` dans le champ "Seuil stock bas" et soumet le formulaire
-**When** l'appel `PATCH /api/v1/catalog/:id` est exécuté
-**Then** `minStockLevel: 5` est inclus dans le payload
-**And** la réponse est reflétée dans le modèle `Product` local (Isar mis à jour)
-**And** un message de confirmation "Seuil enregistré" apparaît en snackbar
-
-**AC3 — Badge rouge sur article sous seuil dans la grille catalogue :**
-
-**Given** un article a `stockQuantity ≤ minStockLevel` (et `minStockLevel != null`)
-**When** la grille catalogue s'affiche
-**Then** une icône d'alerte (triangle orange ou badge rouge) apparaît sur la card de l'article
-**And** le tooltip ou sous-label indique "Stock critique : X restants" (X = stockQuantity)
-**And** les articles sans seuil configuré n'affichent aucun badge
-
-**AC4 — Offline :**
-
-**Given** l'appareil est hors ligne
-**When** l'utilisateur ouvre le catalogue
-**Then** les badges de stock bas sont calculés localement depuis le modèle Isar (stockQuantity vs minStockLevel)
-**And** aucun appel réseau n'est requis pour afficher les badges
-
-**Notes dev :**
-- Ajouter `minStockLevel` au modèle `Product` Dart et au `fromJson`
-- La logique de badge est pure (pas de provider supplémentaire) : `product.minStockLevel != null && product.stockQuantity <= product.minStockLevel`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `minStockLevel`
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — ajouter champ seuil
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — badge alerte
-- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — passer `minStockLevel` au PATCH
-
----
-
-### Story 22-3: Frontend — Écran alertes + KPI dashboard "Stock critique"
-
-**As a** manager or owner,
-**I want** a dedicated low-stock alerts screen and a persistent dashboard KPI,
-**So that** I can act quickly on replenishment decisions without scanning the full catalog (FR82).
-
-**Acceptance Criteria:**
-
-**AC1 — KPI "Stock critique" sur le dashboard :**
-
-**Given** le dashboard backoffice (`DashboardScreen`) est chargé
-**When** la section KPI s'affiche
-**Then** une card "Stock critique" affiche le nombre d'articles sous seuil (`criticalCount` de `GET /api/v1/stock-alerts/count`)
-**And** si criticalCount > 0, la card est colorée en orange/rouge (couleur d'alerte)
-**And** si criticalCount = 0, la card affiche "0 — Tout va bien" en vert
-**And** tapper la card navigue vers `StockAlertsScreen`
-
-**AC2 — Écran StockAlertsScreen :**
-
-**Given** l'utilisateur navigue vers `StockAlertsScreen`
-**When** l'écran se charge
-**Then** une liste d'articles sous seuil est affichée, triée par déficit décroissant
-**And** chaque item affiche : nom de l'article, stock actuel, seuil configuré, et déficit en rouge
-**And** un bouton "Réapprovisionner" sur chaque item navigue vers `CreatePurchaseOrderSheet` pré-rempli avec l'article
-**And** si aucune alerte, l'écran affiche un état vide "Aucun stock critique"
-
-**AC3 — Refresh automatique :**
-
-**Given** l'écran alertes est visible
-**When** un mouvement de stock est synchronisé (post-vente, post-perte)
-**Then** le provider est invalidé et la liste se rafraîchit automatiquement
-**And** si un article repasse au-dessus de son seuil, il disparaît de la liste
-
-**AC4 — Accès rôle :**
-
-**Given** un utilisateur avec le rôle `commercial` accède au dashboard
-**When** le dashboard s'affiche
-**Then** la card KPI "Stock critique" est masquée (visible uniquement pour `owner` et `manager`)
-
-**Notes dev :**
-- `StockAlertsScreen` dans `apps/frontend/lib/features/shared/stock_alerts/presentation/screens/`
-- Provider : `stockAlertsProvider` (Riverpod AutoDisposeFutureProvider)
-- Le bouton "Réapprovisionner" nécessite Epic 21 complété (navigation vers CreatePurchaseOrderSheet)
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart`
-- `apps/frontend/lib/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart`
-- `apps/frontend/lib/features/shared/stock_alerts/data/repositories/stock_alerts_repository.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — ajouter KPI "Stock critique"
-
----
-
-### Story 22-4: Backend — Service notification (cron/event, push in-app v1)
-
-**As a** backend developer,
-**I want** a notification service that listens for low-stock events and sends in-app push notifications to authorized users,
-**So that** managers and owners are alerted in real-time when stock drops below threshold (FR82).
-
-**Acceptance Criteria:**
-
-**AC1 — Listener LowStockDetected :**
-
-**Given** l'Event Bus reçoit un événement `LowStockDetected { tenantId, catalogItemId, itemName, stockQuantity, minStockLevel }`
-**When** le `NotificationService` traite l'événement
-**Then** une notification in-app est persistée pour tous les utilisateurs du tenant ayant le rôle `owner` ou `manager`
-**And** la notification contient : titre "Stock critique", corps "X — il reste Y unité(s) (seuil : Z)", et `catalogItemId` comme deep-link cible
-**And** la notification est marquée `unread` à la création
-
-**AC2 — Endpoint GET notifications non lues :**
-
-**Given** `GET /api/v1/notifications?unread=true` est appelé
-**When** le backend répond
-**Then** la réponse renvoie la liste des notifications non lues de l'utilisateur courant
-**And** chaque notification inclut : `id`, `title`, `body`, `type`, `targetId`, `createdAt`, `isRead`
-**And** l'endpoint est paginé (`?limit=`, `?offset=`)
-
-**AC3 — Endpoint POST marquer comme lue :**
-
-**Given** `POST /api/v1/notifications/:id/read` est appelé
-**When** le backend répond
-**Then** la notification est marquée `isRead: true`
-**And** la réponse renvoie `{ success: true }`
-
-**AC4 — Endpoint GET count non lues :**
-
-**Given** `GET /api/v1/notifications/unread-count` est appelé
-**When** le backend répond
-**Then** la réponse renvoie `{ unreadCount: number }`
-**And** ce count est utilisé par le frontend pour afficher le badge de notification dans l'AppBar
-
-**AC5 — Isolation tenant :**
-
-**Given** deux tenants ont des alertes stock bas
-**When** l'endpoint notifications est appelé pour un utilisateur du tenant A
-**Then** seules les notifications du tenant A sont retournées — aucune fuite cross-tenant
-
-**Notes dev :**
-- Créer `NotificationsModule` dans `apps/backend/src/shared/notifications/`
-- Table `notifications` dans le schema `shared` : `id`, `tenantId`, `userId`, `type`, `title`, `body`, `targetId`, `isRead`, `createdAt`
-- Phase 2b : intégration WhatsApp Business API (hors scope de cette story)
-- Phase 2b : FCM/APNs push mobile (hors scope — in-app only pour v1)
-
-**Files to create:**
-- `apps/backend/src/shared/notifications/notifications.module.ts`
-- `apps/backend/src/shared/notifications/notifications.service.ts`
-- `apps/backend/src/shared/notifications/notifications.controller.ts`
-- `apps/backend/src/shared/notifications/dto/notification.dto.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_notifications_table/migration.sql`
-
-**Files to modify:**
-- `apps/backend/src/shared/stock-alerts/stock-alerts.service.ts` — émettre `LowStockDetected`
-- `apps/backend/src/app.module.ts` — enregistrer `NotificationsModule`
-
----
-
-### Story 22-5: Backend — Résumé quotidien (FR86) + config canal par tenant dans panel admin
-
-**As a** owner,
-**I want** to receive a daily summary notification at a configured time, and to control this setting from the admin panel,
-**So that** I stay informed of daily performance without opening the app every day (FR86).
-
-**Acceptance Criteria:**
-
-**AC1 — Config tenant pour résumé quotidien :**
-
-**Given** `PATCH /api/v1/tenants/notification-settings` est appelé avec `{ dailySummaryEnabled: true, dailySummaryTime: "18:00", notificationChannel: "in_app" }`
-**When** la requête est validée
-**Then** les champs `dailySummaryEnabled`, `dailySummaryTime`, `notificationChannel` sont mis à jour sur le `Tenant`
-**And** seul un utilisateur avec le rôle `owner` peut appeler cet endpoint
-**And** la réponse renvoie les settings mis à jour
-
-**AC2 — Cron job résumé quotidien :**
-
-**Given** le cron job `DailySummaryJob` est planifié et `dailySummaryEnabled = true` pour un tenant
-**When** l'heure locale du tenant (timezone) atteint `dailySummaryTime`
-**Then** le système calcule pour la journée : total ventes (`transactionCount`), chiffre d'affaires (`totalRevenue`), nouvelles alertes stock bas (`newAlerts`), commandes en attente (`pendingPOs`)
-**And** une notification in-app est persistée pour tous les `owner` du tenant
-**And** le corps de la notification inclut ces 4 métriques formatées
-
-**AC3 — Canal WhatsApp (stub Phase 2b) :**
-
-**Given** `notificationChannel = "whatsapp"` est configuré
-**When** le résumé quotidien est envoyé
-**Then** le système log "WhatsApp channel not yet implemented — fallback to in_app" et envoie la notification in-app
-**And** aucune erreur n'est levée (graceful degradation)
-
-**AC4 — Frontend — Section "Notifications" dans le panel admin tenant :**
-
-**Given** l'administrateur ouvre le panel de configuration tenant (`TenantSettingsScreen`)
-**When** la section "Notifications" s'affiche
-**Then** un toggle "Résumé quotidien activé" est visible
-**And** si le toggle est ON, un champ "Heure d'envoi" (time picker, format HH:mm) est visible
-**And** un sélecteur "Canal" propose "Application (in-app)" et "WhatsApp (bientôt disponible)" (WhatsApp grisé)
-**And** les modifications sont sauvegardées via `PATCH /api/v1/tenants/notification-settings`
-
-**AC5 — Timezone awareness :**
-
-**Given** le cron job évalue quels tenants envoyer
-**When** le job s'exécute toutes les minutes
-**Then** seuls les tenants dont `dailySummaryTime` correspond à l'heure courante dans leur `timezone` sont traités
-**And** chaque tenant n'est traité qu'une fois par jour (idempotence via un flag `lastSummarySentDate`)
-
-**Notes dev :**
-- Utiliser `@nestjs/schedule` (`@Cron('* * * * *')`) pour le job minute-by-minute
-- `lastSummarySentDate` peut être un champ `DateTime?` sur `Tenant` ou une entrée dans un cache Redis (MVP : champ Tenant)
-- Le calcul des métriques réutilise les services existants : `TransactionsService`, `StockAlertsService`, `PurchaseOrdersService`
-
-**Files to create:**
-- `apps/backend/src/shared/notifications/jobs/daily-summary.job.ts`
-
-**Files to modify:**
-- `apps/backend/src/kernel/tenants/tenants.controller.ts` — ajouter `PATCH notification-settings`
-- `apps/backend/src/kernel/tenants/tenants.service.ts` — méthode `updateNotificationSettings`
-- `apps/backend/prisma/schema.prisma` — vérifier/appliquer champs notification sur `Tenant`
-- `apps/frontend/lib/features/admin/presentation/screens/tenant_settings_screen.dart` — section Notifications
-- Backend: `GET /api/v1/purchase-orders/stats` dans `purchase-orders.controller.ts`
-
----
-
-## Epic 23: Conversion unités vrac → détail
-
-### Story 23-1: Backend — parentItemId + conversionRate sur CatalogItem + logique REPACKAGING
-
-**As a** backend developer,
-**I want** parent-child article relationships persisted and the POS sale endpoint to automatically decrement parent stock when a child article is sold,
-**So that** bulk → retail unit stock tracking is automated and fully traced (FR83).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration parentItemId + conversionRate :**
-
-**Given** les champs `parentItemId` et `conversionRate` sont définis dans l'architecture v1.1 pour `CatalogItem`
-**When** le développeur applique la migration Prisma
-**Then** `parentItemId String? @map("parent_item_id") @db.Uuid` est présent sur `catalog_items`
-**And** `conversionRate Decimal? @map("conversion_rate") @db.Decimal(10, 4)` est présent
-**And** les deux champs sont nullable — absence = article autonome sans relation parent
-
-**AC2 — Validation relation parent-enfant :**
-
-**Given** `PATCH /api/v1/catalog/:id` est appelé avec `{ "parentItemId": "uuid", "conversionRate": 0.02 }`
-**When** le service valide la relation
-**Then** le parent référencé doit appartenir au même tenant (`tenantId` identique) — sinon erreur 400
-**And** pas de référence circulaire tolérée (A → B → A) — le service vérifie 1 niveau
-**And** profondeur max = 1 : un article enfant ne peut pas lui-même avoir des enfants
-**And** `conversionRate` doit être > 0 et ≤ 1 pour les sous-unités (ex: sachet = 0.02 sac)
-
-**AC3 — Décrémentation stock parent à la vente :**
-
-**Given** un article enfant avec `parentItemId` et `conversionRate` est vendu au POS
-**When** `POST /api/v1/transactions` traite la vente
-**Then** le stock de l'article enfant n'est PAS décrémenté (l'enfant n'a pas de stock propre)
-**And** le stock du parent est décrémenté de `quantity × conversionRate` (ex: 3 sachets × 0.02 = 0.06 sac)
-**And** un `InventoryMovement` de type `REPACKAGING` est créé avec `catalogItemId` = parent, `quantity` = -(quantity × conversionRate), `referenceId` = transactionId
-
-**AC4 — Endpoint GET articles enfants d'un parent :**
-
-**Given** `GET /api/v1/catalog/:id/children` est appelé
-**When** le backend répond
-**Then** la réponse liste tous les articles dont `parentItemId` = `:id` pour le tenant courant
-**And** chaque entrée inclut `id`, `name`, `unitType`, `pricePerUnit`, `conversionRate`
-
-**AC5 — Vérification stock parent insuffisant :**
-
-**Given** la vente d'un article enfant décrémenterait le stock parent en dessous de 0
-**When** la transaction est traitée
-**Then** le backend renvoie un avertissement `{ warning: "PARENT_STOCK_LOW", parentItemName: string, parentStockAfter: number }` dans la réponse (non bloquant — la vente passe quand même)
-**And** le stock parent peut devenir négatif (comportement identique aux articles ordinaires)
-
-**Notes dev :**
-- Si l'article enfant a aussi son propre `conversionRate` (FR78 sans `parentItemId`), les deux logiques coexistent : `parentItemId` déclenche la décrémentation parent, le `conversionRate` autonome décrémente self
-- Le type `REPACKAGING` est ajouté à l'enum commentaire de `InventoryMovement`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter `parentItemId`, `conversionRate` à `CatalogItem`
-- `apps/backend/src/shared/catalog/catalog.service.ts` — validation parent-enfant + endpoint children
-- `apps/backend/src/shared/catalog/catalog.controller.ts` — `GET /:id/children`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — décrémentation parent lors d'une vente
-
----
-
-### Story 23-2: Frontend — Formulaire conversion dans ProductFormDialog
-
-**As a** owner or manager,
-**I want** to link a child article to a parent bulk article and configure the conversion factor from the product form,
-**So that** I can set up bulk → retail splits without leaving the admin UI (FR83).
-
-**Acceptance Criteria:**
-
-**AC1 — Section "Lié à un article parent" dans ProductFormDialog :**
-
-**Given** l'utilisateur ouvre `ProductFormDialog` pour créer ou éditer un article
-**When** le formulaire s'affiche
-**Then** une section optionnelle "Reconditionnement" est visible, avec un toggle "Cet article est un détail d'un article vrac"
-**And** si le toggle est OFF, les champs de relation sont masqués
-**And** si le toggle est ON, deux champs apparaissent : "Article parent" (autocomplete) et "Facteur de conversion" (nombre décimal > 0)
-
-**AC2 — Autocomplete article parent :**
-
-**Given** l'utilisateur saisit du texte dans le champ "Article parent"
-**When** l'autocomplete se déclenche (≥ 2 caractères)
-**Then** la liste propose les articles du tenant qui ne sont pas eux-mêmes des articles enfants (pas de `parentItemId` défini)
-**And** l'article en cours d'édition est exclu de la liste (pas d'auto-référence)
-**And** chaque résultat affiche : nom, unitType, stock actuel
-
-**AC3 — Affichage du facteur de conversion :**
-
-**Given** l'utilisateur a sélectionné un article parent et saisi un facteur de conversion (ex: 0.02)
-**When** le facteur est confirmé
-**Then** un texte d'aide s'affiche sous le champ : "Vendre 1 [label enfant] décrémente [1/facteur] → [facteur] [unitLabel parent]" (ex: "Vendre 1 sachet décrémente 0.02 sac")
-**And** si le facteur est invalide (≤ 0 ou > 1), une erreur de validation s'affiche
-
-**AC4 — Sauvegarde :**
-
-**Given** l'utilisateur soumet le formulaire avec parentItemId + conversionRate
-**When** `PATCH /api/v1/catalog/:id` est appelé
-**Then** `parentItemId` et `conversionRate` sont inclus dans le payload
-**And** le modèle `Product` Dart est mis à jour avec ces champs
-
-**AC5 — Fiche parent — liste des articles enfants :**
-
-**Given** l'utilisateur ouvre la fiche d'un article parent (via le catalogue)
-**When** la fiche s'affiche
-**Then** une section "Articles détail liés" liste les articles enfants avec leur facteur de conversion
-**And** chaque enfant est cliquable pour ouvrir son `ProductFormDialog`
-
-**Notes dev :**
-- Ajouter `parentItemId` et `conversionRate` au modèle `Product` Dart et `fromJson`
-- L'autocomplete peut réutiliser le `catalogSearchProvider` existant avec un filtre `hasNoParent=true`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `parentItemId`, `conversionRate`
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section Reconditionnement
-- `apps/frontend/lib/features/shared/catalog/data/repositories/catalog_repository.dart` — PATCH avec nouveaux champs
-
----
-
-### Story 23-3: Frontend — POS vente du produit enfant (décrémente stock parent)
-
-**As a** cashier,
-**I want** to sell child articles (sachets, portions) at the POS with automatic parent stock tracking and a clear warning when parent stock is low,
-**So that** bulk consumption is tracked without manual intervention (FR83).
-
-**Acceptance Criteria:**
-
-**AC1 — Vente article enfant au POS — flux normal :**
-
-**Given** un article enfant (avec `parentItemId`) est ajouté au panier
-**When** la transaction est validée
-**Then** la vente se complète normalement — aucune différence visible pour le caissier
-**And** le backend décrémente le stock du parent (Story 23-1 AC3)
-**And** le reçu affiche l'article enfant vendu (nom, quantité, prix) sans mention du parent
-
-**AC2 — Alerte stock parent faible :**
-
-**Given** la transaction renvoie `warning: "PARENT_STOCK_LOW"` dans la réponse
-**When** la transaction est confirmée
-**Then** une snackbar orange apparaît après validation : "Stock faible : [nomParent] — [stockAfter] [unitLabel] restant(s)"
-**And** la snackbar est non bloquante (ne nécessite pas d'action) et disparaît après 4 secondes
-**And** la vente n'est PAS annulée — la snackbar est informationnelle uniquement
-
-**AC3 — Grille POS — badge "vrac" sur article parent :**
-
-**Given** un article a des enfants liés (`hasChildren = true`)
-**When** la grille POS s'affiche
-**Then** un badge discret "VRAC" apparaît sur la card de l'article parent pour signaler qu'il ne se vend pas à l'unité directement
-**And** les articles enfants n'ont pas ce badge
-
-**AC4 — Stock parent local mis à jour après vente :**
-
-**Given** une vente d'article enfant est synchronisée
-**When** la sync retour met à jour les stocks locaux
-**Then** le stock local du parent (dans Isar) est décrémenté de `quantity × conversionRate`
-**And** si le stock parent passe sous `minStockLevel`, l'alerte stock bas (Epic 22) se déclenche
-
-**Notes dev :**
-- Le `cartNotifier` doit lire `parentItemId` pour informer l'UI post-validation
-- La logique de décrémentation parent est entièrement backend — le frontend ne calcule pas, il affiche le warning du backend
-- Le badge "VRAC" sur la card parent est optionnel MVP — peut être un simple chip texte
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — lire `warning` de la réponse transaction
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher snackbar alerte parent
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — badge VRAC sur article parent
-
----
-
-## Epic 24: Fraîcheur + code couleur priorité vente
-
-### Story 24-1: Backend — ProductBatch + expiryDays + endpoints expiring
-
-**As a** backend developer,
-**I want** a `ProductBatch` model tracking freshness per reception lot, and endpoints to query expiring articles,
-**So that** the system can drive color-coded freshness indicators and the "Fraîcheur" tab (FR84, FR85).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration expiryDays + shrinkageTolerance sur CatalogItem :**
-
-**Given** les champs sont définis dans l'architecture v1.1
-**When** la migration est appliquée
-**Then** `expiryDays Int? @map("expiry_days")` est présent sur `catalog_items`
-**And** `shrinkageTolerance Decimal? @map("shrinkage_tolerance") @db.Decimal(5, 2)` est présent
-**And** les deux sont nullable — absence = fraîcheur non trackée pour cet article
-
-**AC2 — Migration ProductBatch :**
-
-**Given** le modèle `ProductBatch` est défini dans l'architecture v1.1 (§4.2.12)
-**When** la migration est appliquée
-**Then** la table `prod_batches` existe dans le schema `shared` avec les colonnes : `id`, `catalog_item_id`, `tenant_id`, `received_at`, `expires_at`, `initial_qty`, `remaining_qty`, `batch_ref`, `is_depleted`, `created_at`
-**And** un index existe sur `(tenant_id, expires_at)` pour les requêtes de tri par expiration
-
-**AC3 — Création automatique ProductBatch à la réception :**
-
-**Given** une réception fournisseur est enregistrée (`POST /api/v1/inventory/receive` ou via Epic 21 `POST /api/v1/purchase-orders/:id/receive`)
-**When** l'article reçu a `expiryDays != null`
-**Then** un `ProductBatch` est créé avec : `receivedAt = now()`, `expiresAt = now() + expiryDays days`, `initialQty = receivedQuantity`, `remainingQty = receivedQuantity`
-**And** si `expiryDays = null`, aucun batch n'est créé (article non tracé)
-
-**AC4 — Dépletion FIFO des batches à la vente :**
-
-**Given** un article avec des batches actifs est vendu au POS
-**When** la transaction est traitée
-**Then** le batch avec la date `expiresAt` la plus ancienne est consommé en premier (FIFO)
-**And** `remainingQty` est décrémenté de la quantité vendue
-**And** si `remainingQty ≤ 0`, le batch est marqué `isDepleted = true`
-**And** si la vente dépasse le `remainingQty` d'un batch, le surplus est prélevé sur le batch suivant (cascade)
-
-**AC5 — Endpoint GET articles expirant :**
-
-**Given** `GET /api/v1/batches/expiring?days=7` est appelé
-**When** le backend répond
-**Then** la réponse liste les batches dont `expiresAt ≤ now() + 7 days` et `isDepleted = false` pour le tenant
-**And** chaque entrée inclut : `batchId`, `catalogItemId`, `itemName`, `expiresAt`, `remainingQty`, `freshnessPercent` (% de fenêtre restante = (expiresAt − now) / expiryDays × 100)
-**And** les résultats sont triés par `expiresAt` croissant (plus urgents en premier)
-**And** `GET /api/v1/batches/expiring/count` renvoie `{ urgentCount: number }` (batches avec `freshnessPercent < 50%`)
-
-**AC6 — Tolérance rétrécissement sur mouvements LOSS :**
-
-**Given** un mouvement de stock de type `LOSS` est enregistré pour un article avec `shrinkageTolerance`
-**When** la quantité perdue est ≤ `shrinkageTolerance %` du stock total
-**Then** le mouvement est enregistré avec `reason: "NATURAL_VARIANCE"` (pas une perte signalée)
-**And** ce mouvement n'apparaît pas dans les KPIs de pertes du dashboard
-
-**Notes dev :**
-- La dépletion FIFO est optionnelle en MVP — acceptable de décrémenter le stock global sans tracker le batch précis ; tracker le batch est la v2
-- `ProductBatch` est dans `@@schema("shared")`
-
-**Files to create:**
-- `apps/backend/src/shared/batches/batches.module.ts`
-- `apps/backend/src/shared/batches/batches.service.ts`
-- `apps/backend/src/shared/batches/batches.controller.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_product_batches/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter `expiryDays`, `shrinkageTolerance` à `CatalogItem` + modèle `ProductBatch`
-- `apps/backend/src/shared/inventory/inventory.service.ts` — créer batch à la réception + dépletion FIFO
-
----
-
-### Story 24-2: Frontend — Code couleur dans catalogue et POS (vert/orange/rouge)
-
-**As a** cashier or manager,
-**I want** a color freshness indicator on product cards in the POS grid and catalog,
-**So that** I can prioritize selling perishable articles before they expire (FR85).
-
-**Acceptance Criteria:**
-
-**AC1 — Widget indicateur fraîcheur :**
-
-**Given** un article a `expiryDays != null` et un batch actif
-**When** la card de l'article s'affiche (POS grid ou catalogue)
-**Then** une bande de couleur ou un chip apparaît sur la card : **Vert** si `freshnessPercent > seuil_vert` (défaut 50%), **Orange** si entre `seuil_orange` et `seuil_vert` (défaut 20–50%), **Rouge** si `freshnessPercent < seuil_orange` ou date dépassée
-**And** le chip affiche le nombre de jours restants (ex: "3j" en rouge, "12j" en vert)
-**And** les articles sans `expiryDays` ou sans batch actif n'affichent aucun indicateur
-
-**AC2 — Seuils configurables par tenant :**
-
-**Given** l'owner modifie les seuils dans les paramètres tenant (`PATCH /api/v1/tenants/freshness-thresholds`)
-**When** les seuils sont mis à jour (`greenThreshold: 50, orangeThreshold: 20`)
-**Then** tous les indicateurs couleur recalculent selon les nouveaux seuils
-**And** les seuils sont persistés et chargés au démarrage de l'app (Isar local)
-
-**AC3 — Tri priorité orange/rouge dans la grille POS :**
-
-**Given** la grille POS s'affiche
-**When** des articles avec indicateurs orange ou rouge sont présents
-**Then** ces articles apparaissent en premier dans la grille (avant les verts et les sans-indicateur)
-**And** à l'intérieur du groupe rouge, tri par `expiresAt` croissant (plus urgent en premier)
-**And** le tri fraîcheur est appliqué après le tri par catégorie (catégorie est prioritaire)
-
-**AC4 — Filtre "Articles urgents" dans la grille POS :**
-
-**Given** l'utilisateur est dans la grille POS
-**When** il active le filtre "Articles urgents" (toggle ou chip dans la barre de filtres)
-**Then** seuls les articles avec indicateur orange ou rouge sont affichés
-**And** le filtre est persisté pour la session POS courante (disparaît à la fermeture du panier)
-
-**AC5 — Offline :**
-
-**Given** l'appareil est hors ligne
-**When** la grille POS ou le catalogue s'affiche
-**Then** la couleur est calculée localement depuis le batch Isar le plus récent de l'article (`expiresAt` vs date locale)
-**And** aucun appel réseau n'est requis pour afficher les indicateurs
-
-**Notes dev :**
-- Créer un widget `FreshnessChip` réutilisable (couleur + texte jours)
-- `freshnessPercent` peut être calculé localement : `(expiresAt.difference(now).inDays / expiryDays) × 100`
-- Le modèle `Product` Dart doit exposer le batch courant (`nearestExpiryDate`, `freshnessPercent`)
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/freshness_chip.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `nearestExpiryDate`, `expiryDays`
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — tri priorité + filtre urgent + chip fraîcheur
-- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — toggle filtre urgent
-
----
-
-### Story 24-3: Frontend — Onglet Fraîcheur dans InventoryScreen + action déclasser
-
-**As a** manager,
-**I want** a dedicated "Fraîcheur" tab in the inventory hub showing all expiring batches, with a declassify action,
-**So that** I can proactively manage perishable stock and record natural shrinkage (FR84, FR85).
-
-**Acceptance Criteria:**
-
-**AC1 — Onglet "Fraîcheur" dans InventoryScreen :**
-
-**Given** l'utilisateur ouvre le hub inventaire (`InventoryScreen`)
-**When** les onglets s'affichent
-**Then** un onglet "Fraîcheur" est ajouté aux onglets existants (Réceptions · Transferts · Pertes · Inventaire · Commandes)
-**And** un badge numérique orange/rouge apparaît sur l'onglet si `urgentCount > 0`
-**And** l'onglet charge `FreshnessScreen`
-
-**AC2 — FreshnessScreen — liste des lots :**
-
-**Given** `FreshnessScreen` se charge
-**When** les données sont disponibles
-**Then** la liste affiche tous les batches actifs avec fraîcheur trackée, triés par `expiresAt` croissant
-**And** chaque item affiche : nom de l'article, date d'expiration, jours restants, quantité restante, indicateur couleur
-**And** des sections séparent : "Expirés" (rouges dépassés), "Urgents" (rouges non dépassés), "À surveiller" (orange), "OK" (verts)
-**And** si aucun batch urgent, l'écran affiche un état vide "Tous vos lots sont frais"
-
-**AC3 — Action "Déclasser" un lot :**
-
-**Given** l'utilisateur appuie longuement sur un item ou ouvre son menu contextuel
-**When** il sélectionne "Déclasser"
-**Then** une bottom sheet s'ouvre avec : quantité à déclasser (pré-remplie avec `remainingQty`), motif ("Péremption", "Détérioration qualité", "Variance naturelle")
-**And** si le motif = "Variance naturelle" et la quantité ≤ `shrinkageTolerance %`, le formulaire indique "Sera enregistré comme variance naturelle (non comptabilisé en perte)"
-**And** à la validation, un mouvement `LOSS` est créé avec le motif sélectionné et le batch est marqué `isDepleted = true`
-
-**AC4 — KPI dashboard "Lots urgents" :**
-
-**Given** le dashboard backoffice est chargé
-**When** la section KPI s'affiche
-**Then** une card "Lots urgents" affiche `urgentCount` (batches avec `freshnessPercent < orangeThreshold`)
-**And** si urgentCount > 0, la card est colorée en orange
-**And** tapper la card navigue vers `InventoryScreen` avec l'onglet "Fraîcheur" sélectionné
-
-**Notes dev :**
-- `FreshnessScreen` dans `apps/frontend/lib/features/shared/freshness/presentation/screens/`
-- Le provider recharge depuis `GET /api/v1/batches/expiring?days=90` (large fenêtre pour tout afficher)
-- L'action "Déclasser" réutilise l'endpoint de déclaration de perte existant (`POST /api/v1/inventory/loss`)
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/freshness/presentation/screens/freshness_screen.dart`
-- `apps/frontend/lib/features/shared/freshness/presentation/widgets/declassify_sheet.dart`
-- `apps/frontend/lib/features/shared/freshness/presentation/providers/freshness_provider.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — ajouter onglet Fraîcheur
-- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — KPI "Lots urgents"
-
----
-
-## Epic 25: Variantes, multi-tarifs & promotions
-
-### Story 25-1: Backend — ProductVariant + endpoints CRUD
-
-**As a** backend developer,
-**I want** a `ProductVariant` model with its own price, stock and attributes, linked to a parent `CatalogItem`,
-**So that** articles can have multiple sellable variants (size S/M/L, color blue/red) with independent inventory (FR89).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration ProductVariant :**
-
-**Given** le modèle `ProductVariant` est défini dans l'architecture v1.1 (§4.2.7)
-**When** la migration est appliquée
-**Then** la table `prod_variants` existe dans le schema `shared` avec : `id`, `catalog_item_id`, `tenant_id`, `sku`, `barcode`, `price`, `stock_quantity`, `attributes` (Json), `is_active`, `created_at`, `updated_at`
-**And** `catalog_items.has_variants` est un booléen permettant de savoir si l'article parent a des variantes actives
-**And** un index existe sur `(tenant_id, catalog_item_id)`
-
-**AC2 — CRUD variantes :**
-
-**Given** `POST /api/v1/catalog/:id/variants` est appelé avec `{ sku, price, stockQuantity, attributes: { taille: "M", couleur: "Bleu" } }`
-**When** la requête est validée
-**Then** une variante est créée liée à l'article parent du tenant
-**And** `CatalogItem.hasVariants` est mis à `true` automatiquement si c'est la première variante active
-**And** `GET /api/v1/catalog/:id/variants` retourne toutes les variantes actives de l'article
-**And** `PATCH /api/v1/catalog/:id/variants/:variantId` permet de modifier prix, stock, attributs
-**And** `DELETE /api/v1/catalog/:id/variants/:variantId` désactive la variante (`isActive = false`)
-
-**AC3 — Stock agrégé sur l'article parent :**
-
-**Given** un article parent a 3 variantes avec des stocks respectifs de 10, 5, 8
-**When** `GET /api/v1/catalog/:id` est appelé
-**Then** la réponse inclut `totalStockQuantity: 23` (somme des `stockQuantity` des variantes actives)
-**And** le stock de l'article parent lui-même (`RetailProduct.stockQuantity`) n'est pas utilisé quand `hasVariants = true`
-
-**AC4 — Lookup par barcode de variante :**
-
-**Given** le caissier scanne un barcode de variante
-**When** `GET /api/v1/catalog/barcode/:barcode` est appelé
-**Then** si le barcode correspond à une variante, la réponse inclut l'article parent ET la variante correspondante (`matchedVariant: { id, attributes, price, stockQuantity }`)
-**And** le flux POS sélectionne automatiquement la variante sans étape manuelle
-
-**AC5 — Décrémentation stock variante à la vente :**
-
-**Given** une variante est vendue au POS
-**When** la transaction est traitée
-**Then** `stockQuantity` de la variante spécifique est décrémenté (pas celui du parent)
-**And** un `InventoryMovement` de type `SALE` est créé avec `catalogItemId` = parent et `variantId` = variante
-
-**Notes dev :**
-- Ajouter `variantId String? @map("variant_id") @db.Uuid` à `InventoryMovement` pour tracer les mouvements par variante
-- Les attributs `{ taille, couleur }` sont libres (Json) — pas d'enum fixe côté backend
-
-**Files to create:**
-- `apps/backend/src/shared/catalog/variants/variants.service.ts`
-- `apps/backend/src/shared/catalog/variants/variants.controller.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_product_variants/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter modèle `ProductVariant`, `hasVariants` sur `CatalogItem`
-- `apps/backend/src/shared/catalog/catalog.service.ts` — `totalStockQuantity` agrégé + barcode lookup
-- `apps/backend/src/shared/transactions/transactions.service.ts` — décrémenter stock variante
-
----
-
-### Story 25-2: Frontend — Gestion variantes dans le catalogue (attributs configurables)
-
-**As a** owner or manager,
-**I want** to define variants for an article with tenant-configurable attribute labels, directly from the product sheet,
-**So that** I can manage different sizes, colors, or grades without creating separate catalog entries (FR89).
-
-**Acceptance Criteria:**
-
-**AC1 — Toggle "Cet article a des variantes" dans ProductFormDialog :**
-
-**Given** l'utilisateur édite un article dans `ProductFormDialog`
-**When** il active le toggle "Cet article a des variantes"
-**Then** une section "Variantes" apparaît avec un bouton "Ajouter une variante"
-**And** un avertissement s'affiche : "Le prix et le stock de l'article seront gérés par variante"
-**And** si des variantes existent déjà, elles sont listées sous forme de chips éditables
-
-**AC2 — Formulaire de création de variante :**
-
-**Given** l'utilisateur clique "Ajouter une variante"
-**When** la bottom sheet s'ouvre
-**Then** il peut saisir : SKU (optionnel), barcode (optionnel), prix (requis), stock initial (requis), et 1 à N attributs libres (ex: `Taille = XL`)
-**And** les labels d'attributs proposés en autocomplete sont ceux définis dans les paramètres tenant (ex: "Taille", "Couleur", "Grade")
-**And** le tenant peut créer de nouveaux labels d'attributs à la volée depuis ce formulaire
-
-**AC3 — Vue liste variantes dans la fiche article :**
-
-**Given** un article a des variantes
-**When** sa fiche s'affiche dans le catalogue
-**Then** un tableau récapitulatif liste les variantes avec : attributs, SKU, prix, stock
-**And** chaque ligne est cliquable pour éditer la variante
-**And** un agrégat "Stock total : X" est affiché en en-tête
-
-**AC4 — Gestion attributs tenant depuis les paramètres :**
-
-**Given** l'owner ouvre les paramètres catalogue
-**When** la section "Attributs variantes" s'affiche
-**Then** il peut créer/renommer/supprimer les labels d'attributs disponibles (ex: "Pointure", "Parfum")
-**And** ces labels sont synchronisés sur tous les appareils
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section variantes
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `hasVariants`, `variants`
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/variant_form_sheet.dart`
-- `apps/frontend/lib/features/shared/catalog/data/models/product_variant.dart`
-
----
-
-### Story 25-3: Frontend — POS sélection variante à la vente
-
-**As a** cashier,
-**I want** a variant selector to appear automatically when I tap an article with variants,
-**So that** I can sell the exact variant the customer wants without leaving the POS screen (FR89).
-
-**Acceptance Criteria:**
-
-**AC1 — Sélecteur de variante au tap :**
-
-**Given** un article avec `hasVariants = true` est tappé dans la grille POS
-**When** la grille détecte le tap
-**Then** une bottom sheet `VariantSelectorSheet` s'ouvre avec la liste des variantes actives
-**And** chaque variante affiche ses attributs (ex: "Taille M — Bleu"), son prix et son stock
-**And** les variantes en rupture de stock (`stockQuantity = 0`) sont grisées mais visibles
-
-**AC2 — Ajout au panier avec variante :**
-
-**Given** le caissier sélectionne une variante
-**When** il confirme
-**Then** la variante est ajoutée au panier avec son prix propre (pas le prix parent)
-**And** la ligne panier affiche : nom article + attributs variante (ex: "T-Shirt — Taille M, Bleu")
-**And** le reçu affiche également les attributs de la variante
-
-**AC3 — Scan barcode variante :**
-
-**Given** le caissier scanne un barcode de variante
-**When** la grille POS reçoit le barcode
-**Then** la variante est directement ajoutée au panier sans passer par le sélecteur
-**And** si le barcode correspond à l'article parent (pas une variante), le sélecteur s'ouvre normalement
-
-**AC4 — Offline :**
-
-**Given** l'appareil est hors ligne
-**When** le sélecteur de variantes s'ouvre
-**Then** les variantes sont chargées depuis Isar (synchronisées lors de la dernière connexion)
-**And** le stock affiché est le stock local (peut être décalé — acceptable offline)
-
-**Files to create:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/variant_selector_sheet.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_grid.dart` — détecter `hasVariants` et ouvrir sélecteur
-- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — addToCart avec variantId
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher attributs variante
-
----
-
-### Story 25-4: Backend — PriceLevel + endpoints multi-tarifs
-
-**As a** backend developer,
-**I want** a `PriceLevel` model and price resolution logic that automatically selects the correct price per transaction context,
-**So that** wholesale, loyalty, and promotional prices apply without manual cashier intervention (FR90).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration PriceLevel :**
-
-**Given** le modèle `PriceLevel` est défini dans l'architecture v1.1 (§4.2.8)
-**When** la migration est appliquée
-**Then** la table `price_levels` existe dans le schema `shared` avec : `id`, `catalog_item_id`, `tenant_id`, `level_code` (ex: "GROS", "FIDELITE"), `label` (libre), `price`, `min_qty` (nullable), `customer_types` (String[] nullable), `is_active`, `created_at`
-**And** un index existe sur `(tenant_id, catalog_item_id)`
-
-**AC2 — CRUD price levels :**
-
-**Given** `POST /api/v1/catalog/:id/price-levels` est appelé avec `{ levelCode: "GROS", label: "Prix gros", price: 4500, minQty: 10 }`
-**When** la requête est validée
-**Then** un niveau de prix est créé pour l'article du tenant
-**And** `GET /api/v1/catalog/:id/price-levels` retourne tous les niveaux actifs
-**And** `PATCH` et `DELETE` (soft) sont disponibles
-
-**AC3 — Résolution automatique du prix à la vente :**
-
-**Given** une transaction inclut un article avec des niveaux de prix configurés
-**When** la transaction est traitée
-**Then** le service évalue dans l'ordre : (1) `minQty` — si `quantity >= minQty`, le niveau s'applique ; (2) `customerTypes` — si le contact a un `contactType` dans `customerTypes`, le niveau s'applique
-**And** si plusieurs niveaux sont éligibles, le plus avantageux (prix le plus bas) est sélectionné
-**And** si aucun niveau n'est éligible, le prix par défaut de l'article est utilisé
-**And** la réponse transaction inclut `appliedPriceLevel: { levelCode, label }` par ligne de vente
-
-**AC4 — Permission price_override :**
-
-**Given** un cashier avec la permission `price_override` sélectionne manuellement un niveau de prix
-**When** `POST /api/v1/transactions` est appelé avec `{ items: [{ ..., forcedPriceLevelCode: "GROS" }] }`
-**Then** le niveau forcé est appliqué sans vérification des conditions `minQty`/`customerTypes`
-**And** si l'utilisateur n'a pas `price_override`, une erreur 403 est renvoyée si `forcedPriceLevelCode` est présent
-
-**Notes dev :**
-- `contactType` sur le modèle `Contact` est déjà en place (Epic 3)
-- Le niveau "RETAIL" (défaut) n'a pas besoin d'être stocké en `PriceLevel` — c'est le prix `CatalogItem.price`
-
-**Files to create:**
-- `apps/backend/src/shared/catalog/price-levels/price-levels.service.ts`
-- `apps/backend/src/shared/catalog/price-levels/price-levels.controller.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_price_levels/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter modèle `PriceLevel`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — résolution prix + `forcedPriceLevelCode`
-
----
-
-### Story 25-5: Frontend — Configuration prix par niveau dans ProductFormDialog + POS override
-
-**As a** owner,
-**I want** to configure price levels per article from the product form, and cashiers with permission to manually select a price level at the POS,
-**So that** wholesale and loyalty pricing is managed centrally and applied consistently (FR90).
-
-**Acceptance Criteria:**
-
-**AC1 — Section "Prix par niveau" dans ProductFormDialog :**
-
-**Given** l'utilisateur édite un article
-**When** le formulaire s'affiche
-**Then** une section "Tarification" liste les niveaux de prix actifs du tenant (ex: "Gros", "Fidélité")
-**And** chaque niveau affiche un champ prix + champ "Quantité min" (optionnel) + champ "Types client" (multiselect optionnel)
-**And** les niveaux du tenant sont configurables depuis les paramètres tenant ("Gérer les niveaux de prix")
-
-**AC2 — Configuration des niveaux disponibles par tenant :**
-
-**Given** l'owner ouvre `TenantSettingsScreen` section "Tarification"
-**When** il crée un niveau "Grossiste" avec le code "GROS"
-**Then** ce niveau apparaît dans tous les `ProductFormDialog` du tenant
-**And** le tenant peut avoir entre 1 et N niveaux (pas de limite fixe)
-
-**AC3 — Affichage du niveau appliqué dans le panier POS :**
-
-**Given** un article est ajouté au panier et un niveau de prix est appliqué automatiquement
-**When** la ligne panier s'affiche
-**Then** un chip discret indique le niveau appliqué (ex: chip "GROS" en bleu sous le prix)
-**And** si le prix par défaut (RETAIL) est appliqué, aucun chip n'est affiché
-
-**AC4 — Override manuel par le caissier autorisé :**
-
-**Given** un caissier avec la permission `price_override` appuie longuement sur une ligne du panier
-**When** le menu contextuel s'ouvre
-**Then** une option "Changer le niveau de prix" est visible
-**And** une bottom sheet liste les niveaux disponibles pour cet article
-**And** la sélection met à jour le prix de la ligne et affiche le chip du niveau sélectionné
-**And** pour un caissier sans `price_override`, l'option "Changer le niveau de prix" est masquée
-
-**Files to modify:**
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — section Tarification
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — chip niveau + menu override
-- `apps/frontend/lib/features/retail/pos/data/models/product.dart` — ajouter `priceLevels`
-
----
-
-### Story 25-6: Backend — Promotion + endpoints CRUD + moteur d'éligibilité
-
-**As a** backend developer,
-**I want** a `Promotion` model with a promotion engine that evaluates eligibility at POS cart time,
-**So that** discounts apply automatically and the best promotion wins per article (FR91).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Promotion :**
-
-**Given** le modèle `Promotion` est défini dans l'architecture v1.1 (§4.2.9)
-**When** la migration est appliquée
-**Then** la table `promotions` existe dans le schema `shared` avec : `id`, `tenant_id`, `type` (`PERCENT` | `BUY_N_GET_M` | `CROSSED_PRICE`), `scope` (`ITEM` | `CATEGORY`), `scope_id` (catalogItemId ou categoryId), `value` (Json — contient les paramètres selon le type), `start_date`, `end_date`, `status` (`active` | `inactive`), `conflict_rule` (`BEST` | `FIRST`), `created_at`
-**And** un index existe sur `(tenant_id, status, start_date, end_date)`
-
-**AC2 — CRUD promotions :**
-
-**Given** `POST /api/v1/promotions` est appelé avec un payload typé PERCENT
-**When** la requête est validée
-**Then** une promotion est créée avec `status: active` et les dates configurées
-**And** `GET /api/v1/promotions` liste les promotions avec filtre `?status=active&type=PERCENT`
-**And** `PATCH /api/v1/promotions/:id` permet de modifier le statut, les dates, ou les paramètres
-**And** `DELETE /api/v1/promotions/:id` soft-delete la promotion
-
-**AC3 — Moteur d'éligibilité à la vente :**
-
-**Given** une transaction inclut un article éligible à une ou plusieurs promotions actives
-**When** la transaction est traitée
-**Then** le moteur évalue toutes les promotions actives dont `start_date <= now <= end_date` et dont `scope` couvre l'article (par `catalogItemId` ou `categoryId`)
-**And** pour `PERCENT` : le discount = `price × value.percent / 100`
-**And** pour `BUY_N_GET_M` : si `quantity >= value.buyN`, `value.getMQty` articles supplémentaires sont offerts (ligne séparée avec prix 0)
-**And** pour `CROSSED_PRICE` : le prix affiché = `value.newPrice`, le prix original est tracé
-**And** si plusieurs promotions sont éligibles et `conflict_rule = BEST`, la promotion avec le discount le plus élevé est sélectionnée
-**And** la réponse transaction inclut par ligne : `appliedPromotion: { id, type, originalPrice, discountedPrice }`
-
-**AC4 — Endpoint GET promotions actives pour un article :**
-
-**Given** `GET /api/v1/promotions/active?catalogItemId=:id` est appelé
-**When** le backend répond
-**Then** la réponse liste toutes les promotions actives couvrant cet article, avec leur type et valeur calculée
-
-**Notes dev :**
-- `value` est un Json flexible pour éviter d'avoir une table par type de promotion
-- Exemple PERCENT : `{ "percent": 20 }` ; BUY_N_GET_M : `{ "buyN": 3, "getM": 1, "freeItemId": null }` ; CROSSED_PRICE : `{ "originalPrice": 5000, "newPrice": 3500 }`
-
-**Files to create:**
-- `apps/backend/src/shared/promotions/promotions.module.ts`
-- `apps/backend/src/shared/promotions/promotions.service.ts`
-- `apps/backend/src/shared/promotions/promotions.controller.ts`
-- `apps/backend/src/shared/promotions/promotion-engine.service.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_promotions/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter modèle `Promotion`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — appeler `PromotionEngineService` avant calcul total
-
----
-
-### Story 25-7: Frontend — PromotionsScreen (backoffice) + application auto au POS + prix barré reçu
-
-**As a** owner or cashier,
-**I want** to manage promotions from the backoffice and see them automatically applied at the POS with struck-through prices on the receipt,
-**So that** promotional pricing is transparent and requires zero cashier intervention (FR91).
-
-**Acceptance Criteria:**
-
-**AC1 — PromotionsScreen dans le backoffice :**
-
-**Given** l'owner navigue vers la section promotions du backoffice
-**When** `PromotionsScreen` se charge
-**Then** une liste des promotions est affichée avec : nom/type, article/catégorie cible, dates, statut (badge vert/gris)
-**And** un bouton "Nouvelle promotion" ouvre `CreatePromotionSheet`
-**And** des filtres permettent de voir : Actives, Planifiées, Expirées
-
-**AC2 — Formulaire création promotion :**
-
-**Given** l'owner ouvre `CreatePromotionSheet`
-**When** il sélectionne le type "Remise %"
-**Then** les champs apparaissent : article ou catégorie (autocomplete), pourcentage de remise, date début, date fin
-**And** pour "Offre quantitative" : champs buyN, getM, article offert (optionnel)
-**And** pour "Prix barré" : champ prix original (pré-rempli depuis l'article), nouveau prix
-**And** un aperçu en temps réel montre l'effet sur le prix (ex: "5 000 F → 4 000 F (-20%)")
-
-**AC3 — Application automatique au POS :**
-
-**Given** une promotion active couvre un article
-**When** cet article est ajouté au panier POS
-**Then** la promotion est appliquée automatiquement — sans action du caissier
-**And** la ligne panier affiche : prix original barré (strikethrough) + prix après remise en vert
-**And** un badge "PROMO" apparaît sur la ligne
-
-**AC4 — Offre quantitative BUY_N_GET_M :**
-
-**Given** une promotion "3 achetés = 1 offert" est active
-**When** le caissier ajoute 3 exemplaires de l'article au panier
-**Then** une ligne supplémentaire "Article offert (×1)" est ajoutée automatiquement avec prix 0 F
-**And** si le caissier ajoute un 4ème exemplaire, la ligne offerte reste à ×1 (pas de cumul partiel)
-**And** si le caissier ajoute 6 exemplaires, ×2 articles sont offerts
-
-**AC5 — Reçu avec prix barré :**
-
-**Given** une transaction avec promotion est finalisée
-**When** le reçu s'affiche ou est imprimé
-**Then** chaque ligne remisée affiche : nom, prix original (barré), prix payé, et le label de la promotion (ex: "-20% Promo été")
-**And** le total du reçu reflète les prix après remise
-**And** le montant total d'économies est affiché en bas du reçu (ex: "Vous avez économisé 1 500 F")
-
-**Notes dev :**
-- Les promotions sont synchronisées localement (Isar) pour fonctionner offline — la promotion engine est dupliquée côté client
-- La ligne "article offert" dans le panier est de type `CartLineType.freeItem` — non modifiable par le caissier
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/promotions/presentation/screens/promotions_screen.dart`
-- `apps/frontend/lib/features/shared/promotions/presentation/widgets/create_promotion_sheet.dart`
-- `apps/frontend/lib/features/shared/promotions/data/models/promotion.dart`
-- `apps/frontend/lib/features/shared/promotions/data/repositories/promotions_repository.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/presentation/state/checkout_controller.dart` — appliquer promotions localement à l'ajout panier
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — afficher prix barré + badge PROMO
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — prix barré + total économies
-- `apps/frontend/lib/features/retail/backoffice/presentation/widgets/dashboard_shell.dart` — lien vers PromotionsScreen
-
----
-
-## Epic 26: Traçabilité Articles & Configurations Métier (FR92–FR97)
-
-### Story 26-1: Suivi numéros de série (FR92)
-
-**As a** owner or manager,
-**I want** to track serial numbers per unit sold for eligible catalog items,
-**So that** I can trace every sold unit back to its serial, customer, and sale date (FR92).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ trackSerialNumbers sur CatalogItem :**
-
-**Given** le modèle `CatalogItem` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `trackSerialNumbers Boolean @default(false)` est présent sur `catalog_items`
-**And** le modèle `SerialRecord` existe dans le schema `shared` avec : `id`, `catalogItemId`, `serial`, `soldAt`, `warrantyUntil`, `tenantId`, `createdAt`
-**And** un index unique `(tenantId, serial)` est appliqué
-
-**AC2 — Endpoints SerialRecord :**
-
-**Given** un article a `trackSerialNumbers = true`
-**When** `POST /api/v1/catalog/:id/serials` est appelé avec `{ serial, soldAt, warrantyUntil? }`
-**Then** un `SerialRecord` est créé lié à l'article et au tenant
-**And** `GET /api/v1/catalog/:id/serials` retourne la liste des séries vendues (paginée)
-**And** `GET /api/v1/serials?q=<serial>` permet la recherche par numéro de série cross-articles
-
-**AC3 — Saisie numéro de série au POS :**
-
-**Given** un article au panier a `trackSerialNumbers = true`
-**When** le caissier valide le panier
-**Then** une bottom sheet demande la saisie du numéro de série avant de finaliser la transaction
-**And** le champ est obligatoire si `trackSerialNumbers = true`, optionnel sinon
-**And** le numéro de série est transmis à la transaction et crée un `SerialRecord` côté backend
-
-**AC4 — Historique des séries dans le backoffice :**
-
-**Given** l'owner navigue sur la fiche d'un article avec `trackSerialNumbers = true`
-**When** il ouvre l'onglet "Séries"
-**Then** la liste des `SerialRecord` est affichée : numéro de série, date de vente, client (si lié)
-**And** une barre de recherche permet de filtrer par numéro de série
-
-**AC5 — Toggle dans le formulaire article :**
-
-**Given** l'owner édite ou crée un article dans `ProductFormDialog`
-**When** il active le toggle "Suivi par numéro de série"
-**Then** `trackSerialNumbers` est mis à `true` sur l'article
-**And** un avertissement s'affiche : "Le caissier devra saisir un numéro de série à chaque vente"
-
-**Notes dev :**
-- La saisie du serial au POS peut être une `AlertDialog` simple avant `CheckoutController.confirmSale()`
-- Le serial est stocké dans les metadata de la transaction (JSON field) et dans `SerialRecord`
-- Offline : le `SerialRecord` est créé côté backend lors de la sync de la transaction outbox
-
-**Files to create:**
-- `apps/backend/src/shared/catalog/serials/serials.service.ts`
-- `apps/backend/src/shared/catalog/serials/serials.controller.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_serial_records/migration.sql`
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/serial_input_dialog.dart`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — ajouter `SerialRecord` + `trackSerialNumbers` sur `CatalogItem`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — créer `SerialRecord` à la vente
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — déclencher saisie serial avant checkout
-- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — onglet Séries sur fiche article
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle trackSerialNumbers
-
----
-
-### Story 26-2: Gestion des garanties (FR93)
-
-**As a** owner or manager,
-**I want** warranty certificates auto-generated at the point of sale for eligible articles,
-**So that** customers have a traceable warranty and can be looked up by warranty number (FR93).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ warrantyMonths sur CatalogItem :**
-
-**Given** le modèle `CatalogItem` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `warrantyMonths Int?` est présent sur `catalog_items`
-**And** le champ `warrantyUntil DateTime?` est présent sur `SerialRecord` (ajouté en story 26-1)
-
-**AC2 — Génération automatique à la vente :**
-
-**Given** un article vendu a `warrantyMonths > 0` ET un `SerialRecord` est créé (26-1)
-**When** la transaction est finalisée
-**Then** `SerialRecord.warrantyUntil` est calculé : `soldAt + warrantyMonths mois`
-**And** un numéro de certificat de garantie est généré : `WAR-<tenantCode>-<serial>-<YYYYMM>`
-**And** ce numéro est retourné dans la réponse de la transaction
-
-**AC3 — Affichage certificat sur le reçu :**
-
-**Given** la transaction comporte un article avec garantie
-**When** le reçu s'affiche dans `ReceiptDialog`
-**Then** une section "Garantie" apparaît avec : article, numéro de série, date de fin de garantie, numéro de certificat
-
-**AC4 — Recherche client par numéro de garantie :**
-
-**Given** l'owner ouvre la vue contacts ou l'écran de recherche
-**When** il saisit un numéro de garantie dans la barre de recherche globale
-**Then** le `SerialRecord` correspondant est affiché avec : article, client lié, date d'achat, date fin garantie
-
-**AC5 — Toggle warrantyMonths dans le formulaire article :**
-
-**Given** l'owner édite un article dans `ProductFormDialog`
-**When** il active "Durée de garantie" et saisit un nombre de mois
-**Then** `warrantyMonths` est sauvegardé sur l'article
-**And** la valeur `0` ou champ vide désactive la garantie
-
-**Notes dev :**
-- `warrantyUntil` est calculé par le backend (`transactions.service.ts`) lors de la création du `SerialRecord`
-- Le numéro de certificat n'est pas stocké séparément : il est re-généré depuis `(serial + soldAt)`
-- Story 26-1 est un prérequis strict (SerialRecord doit exister)
-
-**Files to create:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/warranty_receipt_section.dart`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — `warrantyMonths` sur `CatalogItem`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — calculer `warrantyUntil` sur `SerialRecord`
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` — section garantie
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — champ warrantyMonths
-- `apps/frontend/lib/features/shared/contacts/presentation/screens/contacts_screen.dart` — recherche par n° garantie
-
----
-
-### Story 26-3: Prescription obligatoire (FR94)
-
-**As a** pharmacist or regulated-goods retailer,
-**I want** certain articles to require a prescription number before sale,
-**So that** I can comply with regulatory requirements and audit prescription-linked sales (FR94).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ requiresPrescription sur CatalogItem :**
-
-**Given** le modèle `CatalogItem` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `requiresPrescription Boolean @default(false)` est présent sur `catalog_items`
-**And** la fonctionnalité est désactivée par défaut sur tous les tenants
-
-**AC2 — Saisie ordonnance obligatoire au POS :**
-
-**Given** un article au panier a `requiresPrescription = true`
-**When** le caissier tente de valider le panier
-**Then** une bottom sheet s'ouvre avec deux champs obligatoires : "Numéro d'ordonnance" et "Nom du prescripteur"
-**And** la validation du panier est bloquée tant que ces champs ne sont pas remplis
-**And** les valeurs saisies sont transmises à la transaction
-
-**AC3 — Enregistrement sur la transaction :**
-
-**Given** la transaction est finalisée avec une ordonnance
-**When** `POST /api/v1/transactions` est appelé
-**Then** les champs `prescriptionNumber` et `prescriberName` sont stockés dans les metadata JSON de la transaction
-**And** `GET /api/v1/transactions/:id` retourne ces champs dans la réponse
-
-**AC4 — Recherche par numéro d'ordonnance :**
-
-**Given** l'owner accède à l'historique des transactions
-**When** il recherche par numéro d'ordonnance
-**Then** les transactions liées à cette ordonnance sont affichées
-
-**AC5 — Toggle dans le formulaire article :**
-
-**Given** l'owner édite un article dans `ProductFormDialog`
-**When** il active "Requiert une ordonnance"
-**Then** `requiresPrescription` est mis à `true` sur l'article
-**And** un avertissement s'affiche : "Le caissier devra saisir un numéro d'ordonnance à chaque vente"
-
-**Notes dev :**
-- Les données ordonnance sont stockées en JSON (champ `metadata` sur transaction) — pas de table dédiée
-- Le module "prescription" est désactivé par défaut et doit être activé explicitement dans les paramètres tenant
-- Pas d'intégration avec un système externe d'ordonnances pour cette phase
-
-**Files to create:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/prescription_input_dialog.dart`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — `requiresPrescription` sur `CatalogItem`
-- `apps/backend/src/shared/transactions/transactions.service.ts` — stocker ordonnance dans metadata
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/cart_panel.dart` — déclencher saisie ordonnance avant checkout
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle requiresPrescription
-- `apps/frontend/lib/features/shared/reports/presentation/screens/reports_screen.dart` ou historique transactions — filtre par n° ordonnance
-
----
-
-### Story 26-4: Date de garde optimale sur lot (FR95)
-
-**As a** retailer handling perishable goods with a best-before window (wine, cheese),
-**I want** each product batch to optionally carry a best-before date distinct from the expiry date,
-**So that** the freshness color code prioritises sale before the optimal consumption date (FR95).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ bestBeforeDate sur ProductBatch :**
-
-**Given** le modèle `ProductBatch` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `bestBeforeDate DateTime? @map("best_before_date")` est présent sur `product_batches`
-**And** le champ est nullable — les lots existants sans garde ne sont pas affectés
-
-**AC2 — Saisie bestBeforeDate à la réception :**
-
-**Given** l'utilisateur enregistre une réception fournisseur
-**When** il renseigne les détails du lot
-**Then** un champ optionnel "Date de garde optimale" apparaît si l'article a des lots avec expiry
-**And** ce champ accepte une date et la sauvegarde comme `bestBeforeDate` sur le `ProductBatch`
-**And** la date de garde est indépendante de `expiresAt` (les deux peuvent coexister)
-
-**AC3 — Priorité bestBeforeDate dans le code couleur fraîcheur :**
-
-**Given** un lot a `bestBeforeDate` renseigné
-**When** le code couleur fraîcheur est calculé (Epic 24)
-**Then** le calcul utilise `bestBeforeDate` au lieu de `expiresAt`
-**And** si `bestBeforeDate` est null mais `expiresAt` est renseigné, `expiresAt` est utilisé comme fallback
-**And** si les deux sont null, aucun code couleur fraîcheur n'est affiché
-
-**AC4 — Affichage bestBeforeDate dans l'onglet Fraîcheur :**
-
-**Given** l'utilisateur ouvre l'onglet Fraîcheur dans `InventoryScreen`
-**When** un lot a une `bestBeforeDate`
-**Then** la carte du lot affiche "Garde optimale : <date>" distinct de "Expire : <expiresAt>"
-
-**Notes dev :**
-- La logique de code couleur est dans `FreshnessHelper` (Epic 24) — modifier la sélection de date de référence
-- `bestBeforeDate` est inclus dans la réponse de `GET /api/v1/inventory/batches` et `GET /api/v1/inventory/batches/expiring`
-- Story 24 (Fraîcheur) est un prérequis
-
-**Files to create:**
-- `apps/backend/prisma/migrations/YYYYMMDD_add_best_before_date/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — `bestBeforeDate` sur `ProductBatch`
-- `apps/backend/src/shared/inventory/inventory.service.ts` — inclure `bestBeforeDate` dans les réponses batch
-- `apps/frontend/lib/features/shared/inventory/data/models/product_batch.dart` — ajouter `bestBeforeDate`
-- `apps/frontend/lib/core/utils/freshness_helper.dart` (ou équivalent) — logique de sélection `bestBeforeDate` vs `expiresAt`
-- `apps/frontend/lib/features/shared/inventory/presentation/screens/inventory_screen.dart` — afficher "Garde optimale" dans l'onglet Fraîcheur
-- `apps/frontend/lib/features/shared/inventory/presentation/widgets/reception_form.dart` — champ bestBeforeDate
-
----
-
-### Story 26-5: Prix dynamique avec historique (FR96)
-
-**As a** retailer selling commodities with fluctuating prices (gold, fuel, raw materials),
-**I want** articles flagged as dynamic-priced to maintain a full price history,
-**So that** the POS always uses the current price and I can audit past pricing decisions (FR96).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ dynamicPricing + modèle PriceHistory :**
-
-**Given** le modèle `CatalogItem` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `dynamicPricing Boolean @default(false)` est présent sur `catalog_items`
-**And** le modèle `PriceHistory` existe dans le schema `shared` avec : `id`, `catalogItemId`, `price`, `effectiveFrom`, `reason`, `tenantId`, `createdAt`
-**And** un index sur `(catalogItemId, effectiveFrom)` est appliqué
-
-**AC2 — Enregistrement automatique dans PriceHistory :**
-
-**Given** un article a `dynamicPricing = true`
-**When** son prix est modifié via `PATCH /api/v1/catalog/:id` (champ `price`)
-**Then** un `PriceHistory` est créé automatiquement avec `effectiveFrom = now()` et le motif optionnel (`reason`)
-**And** le prix actuel de l'article (`CatalogItem.price`) est mis à jour normalement
-**And** les articles sans `dynamicPricing` ne génèrent pas d'entrée dans `PriceHistory`
-
-**AC3 — Endpoint historique des prix :**
-
-**Given** `GET /api/v1/catalog/:id/price-history` est appelé
-**When** l'article a des entrées dans `PriceHistory`
-**Then** la liste est retournée triée par `effectiveFrom DESC` avec : prix, date effective, motif
-
-**AC4 — POS utilise toujours le dernier prix :**
-
-**Given** un article dynamicPricing a un prix mis à jour
-**When** il est ajouté au panier POS
-**Then** le prix utilisé est `CatalogItem.price` (le plus récent) — pas de calcul supplémentaire requis au POS
-
-**AC5 — Vue historique des prix dans le backoffice :**
-
-**Given** l'owner ouvre la fiche d'un article avec `dynamicPricing = true`
-**When** il ouvre l'onglet "Historique des prix"
-**Then** la liste des `PriceHistory` est affichée : date, prix, motif
-**And** un graphique linéaire simple montre l'évolution du prix dans le temps
-
-**AC6 — Toggle + champ reason dans le formulaire article :**
-
-**Given** l'owner édite un article
-**When** il active "Prix dynamique"
-**Then** `dynamicPricing` est mis à `true`
-**And** lors de chaque modification de prix, un champ optionnel "Motif de la modification" est disponible
-
-**Notes dev :**
-- Le hook de création `PriceHistory` est dans `catalog.service.ts` — intercepter `updateCatalogItem` quand `price` change et `dynamicPricing = true`
-- Le graphique peut être un simple `LineChart` du package `fl_chart` (déjà utilisé pour le dashboard)
-- Offline : la mise à jour de prix est une opération backoffice — pas de contrainte offline spécifique
-
-**Files to create:**
-- `apps/backend/src/shared/catalog/price-history/price-history.service.ts`
-- `apps/backend/prisma/migrations/YYYYMMDD_add_price_history/migration.sql`
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/price_history_tab.dart`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — `PriceHistory` + `dynamicPricing` sur `CatalogItem`
-- `apps/backend/src/shared/catalog/catalog.service.ts` — hook création `PriceHistory` sur update prix
-- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — onglet Historique des prix
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle dynamicPricing + champ reason
-
----
-
-### Story 26-6: Articles uniques (dépôt-vente) (FR97)
-
-**As a** retailer handling consignment goods, antiques, or one-off items,
-**I want** certain articles to be marked as unique with a stock cap of 1,
-**So that** they disappear from the active catalog after sale and I can duplicate them to create similar listings (FR97).
-
-**Acceptance Criteria:**
-
-**AC1 — Champ isUnique sur CatalogItem :**
-
-**Given** le modèle `CatalogItem` existe dans schema.prisma
-**When** la migration est appliquée
-**Then** le champ `isUnique Boolean @default(false)` est présent sur `catalog_items`
-
-**AC2 — Stock plafonné à 1 :**
-
-**Given** un article a `isUnique = true`
-**When** une réception fournisseur ou un ajustement de stock tente de mettre `stockQuantity > 1`
-**Then** le backend rejette la requête avec `400 Bad Request` : `"Un article unique ne peut avoir un stock supérieur à 1"`
-**And** l'UI affiche ce message d'erreur clairement
-
-**AC3 — Disparition après vente :**
-
-**Given** un article unique est vendu (stock passe à 0)
-**When** la transaction est finalisée
-**Then** `CatalogItem.isActive` est mis à `false` automatiquement
-**And** l'article n'apparaît plus dans la grille POS ni dans le catalogue actif
-**And** il reste accessible dans les transactions historiques et via recherche "articles archivés"
-
-**AC4 — Duplication depuis le backoffice :**
-
-**Given** l'owner consulte un article unique (actif ou archivé)
-**When** il clique "Dupliquer cet article"
-**Then** un nouvel article est créé avec les mêmes données (nom, prix, catégorie) mais `isUnique = true`, `stockQuantity = 0`, et un nouveau `id`
-**And** l'owner est redirigé vers la fiche du nouvel article pour compléter les détails (photos, description spécifique)
-
-**AC5 — Indicateur visuel "Article unique" :**
-
-**Given** un article a `isUnique = true` et `isActive = true`
-**When** il s'affiche dans la grille POS ou dans le catalogue backoffice
-**Then** un badge "UNIQUE" ou une icône distinctive apparaît sur la carte de l'article
-
-**AC6 — Toggle isUnique dans le formulaire article :**
-
-**Given** l'owner crée ou édite un article dans `ProductFormDialog`
-**When** il active "Article unique (dépôt-vente)"
-**Then** `isUnique` est mis à `true` et le stock est automatiquement plafonné à 1 dans l'UI
-**And** un avertissement s'affiche : "Cet article sera automatiquement archivé après la vente"
-
-**Notes dev :**
-- L'archivage automatique (`isActive = false`) est déclenché dans `transactions.service.ts` après décrémentation du stock
-- La duplication utilise un endpoint `POST /api/v1/catalog/:id/duplicate` (retourne le nouvel article)
-- La contrainte stock ≤ 1 est validée dans `inventory.service.ts` avant tout mouvement entrant
-
-**Files to create:**
-- `apps/backend/prisma/migrations/YYYYMMDD_add_is_unique/migration.sql`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — `isUnique` sur `CatalogItem`
-- `apps/backend/src/shared/catalog/catalog.service.ts` — endpoint duplication + contrainte stock
-- `apps/backend/src/shared/inventory/inventory.service.ts` — validation stock ≤ 1 pour articles uniques
-- `apps/backend/src/shared/transactions/transactions.service.ts` — archivage auto après vente
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/product_grid.dart` — badge UNIQUE
-- `apps/frontend/lib/features/shared/catalog/presentation/screens/catalog_screen.dart` — bouton Dupliquer + badge UNIQUE
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — toggle isUnique
-
----
-
-## Epic 27: Retours Articles & Réservations (FR98–FR99)
-
-Le commercial peut enregistrer un retour article au POS lié à la vente originale, avec choix de résolution (remboursement cash, avoir client, échange) et réintégration automatique du stock (FR98, Phase 2a). Le Z-report de session distingue ventes brutes et retours. Le propriétaire configure la politique de retour par tenant (délai, motif obligatoire, approbation manager). Séparément, le commercial peut créer une réservation avec acompte partiel (10–50 % configurable) ; le solde est visible sur la fiche client, le dashboard affiche un KPI "Réservations en cours" (FR99, Phase 2b).
-
----
-
-### Story 27-1: Backend — ReturnRecord + endpoints POST/GET + stock réintégré (FR98)
-
-**As a** backend developer,
-**I want** a `ReturnRecord` model, REST endpoints to create and query returns, automatic stock reinstatement, and tenant return-policy enforcement,
-**So that** the POS can process article returns with full audit trail and configurable business rules (FR98).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma ReturnRecord :**
-
-**Given** le fichier `schema.prisma` est mis à jour
-**When** la migration est appliquée
-**Then** la table `return_records` existe dans le schéma `shared` avec les colonnes : `id`, `transaction_id`, `catalog_item_id`, `variant_id` (nullable), `quantity`, `reason` (nullable), `resolution`, `approved_by` (nullable), `tenant_id`, `created_by`, `created_at`
-**And** les index `(tenant_id, transaction_id)` sont présents
-
-**AC2 — Champs politique retour sur Tenant :**
-
-**Given** la migration est appliquée
-**When** on inspecte la table `tenants`
-**Then** les colonnes `return_policy_days` (int, default 30), `return_requires_reason` (bool, default true), `return_requires_approval` (bool, default false) sont présentes
-
-**AC3 — POST /api/v1/returns — création retour :**
-
-**Given** un commercial authentifié envoie `POST /api/v1/returns` avec `{ transactionId, catalogItemId, quantity, reason?, resolution }`
-**When** la transaction originale existe et appartient au même tenant
-**And** la date de la transaction est dans la fenêtre `returnPolicyDays` du tenant
-**And** `reason` est fourni si `returnRequiresReason = true`
-**Then** un `ReturnRecord` est créé en base avec `createdBy = userId`
-**And** un `StockMovement` de type `RETURN` est créé pour réintégrer la quantité dans le stock
-**And** la réponse est `201 Created` avec le `ReturnRecord` complet
-
-**AC4 — Validation politique retour :**
-
-**Given** un commercial envoie `POST /api/v1/returns`
-**When** la date de vente originale dépasse `returnPolicyDays` du tenant
-**Then** le backend répond `400 Bad Request` : `"La période de retour autorisée est expirée"`
-
-**When** `returnRequiresReason = true` et `reason` est absent ou vide
-**Then** le backend répond `400 Bad Request` : `"Un motif est obligatoire pour les retours"`
-
-**When** `returnRequiresApproval = true` et `approvedBy` est absent
-**Then** le backend répond `403 Forbidden` : `"L'approbation d'un manager est requise"`
-
-**AC5 — GET /api/v1/returns — liste des retours :**
-
-**Given** un manager ou owner authentifié appelle `GET /api/v1/returns`
-**When** la requête est valide
-**Then** la réponse est `200 OK` avec la liste paginée des `ReturnRecord` du tenant
-**And** le filtre optionnel `?transactionId=:id` retourne uniquement les retours de cette transaction
-
-**AC6 — Isolation tenant :**
-
-**Given** un utilisateur appelle `GET /api/v1/returns` ou `POST /api/v1/returns`
-**When** la requête est traitée
-**Then** seuls les enregistrements du tenant de l'utilisateur sont accessibles ou créés
-
-**Notes dev :**
-- `ReturnModule` dans `apps/backend/src/shared/returns/` (controller, service, DTO, module)
-- La réintégration stock appelle `InventoryService.recordMovement({ type: 'RETURN', ... })` — réutiliser le pattern existant
-- `resolution` : enum `cash_refund | credit_note | exchange` — validé au niveau DTO (class-validator `@IsIn`)
-- Pour `credit_note`, un champ `creditBalance` sera incrémenté sur le `Contact` du client (prévu en FR99, pas implémenté ici — logger un TODO)
-- Le `TenantGuard` et `JwtAuthGuard` sur toutes les routes
-- Ajouter `ReturnsModule` au `AppModule`
-
-**Files to create:**
-- `apps/backend/prisma/migrations/20260319100000_add_return_records/migration.sql`
-- `apps/backend/src/shared/returns/returns.module.ts`
-- `apps/backend/src/shared/returns/returns.controller.ts`
-- `apps/backend/src/shared/returns/returns.service.ts`
-- `apps/backend/src/shared/returns/dto/create-return.dto.ts`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — modèles `ReturnRecord` + champs `returnPolicy*` sur `Tenant`
-- `apps/backend/src/app.module.ts` — importer `ReturnsModule`
-- `apps/backend/src/shared/inventory/inventory.service.ts` — exposer `recordMovement` si pas déjà public
-
----
-
-### Story 27-2: Frontend POS — Bouton retour, recherche vente originale, choix résolution (FR98)
-
-**As a** commercial (Fatou),
-**I want** a "Retour" button in the POS that lets me find the original sale by receipt number or barcode and choose how to resolve the return,
-**So that** I can process article returns quickly without leaving the POS screen (FR98).
-
-**Acceptance Criteria:**
-
-**AC1 — Bouton "Retour" dans le POS :**
-
-**Given** le commercial est sur l'écran POS
-**When** il appuie sur le bouton "Retour" (icône undo, placement : panel actions)
-**Then** une bottom sheet `ReturnSearchSheet` s'ouvre
-**And** le champ de recherche par numéro de reçu est focalisé automatiquement
-
-**AC2 — Recherche de la vente originale :**
-
-**Given** la `ReturnSearchSheet` est ouverte
-**When** le commercial saisit un numéro de reçu ou scanne un code-barres
-**And** la transaction existe dans le tenant
-**Then** la liste des articles de la vente s'affiche (nom, quantité vendue, prix unitaire)
-**And** chaque article affiche un sélecteur de quantité à retourner (défaut : 0, max : quantité achetée)
-
-**When** le numéro de reçu n'est pas trouvé
-**Then** un message "Vente introuvable — vérifiez le numéro de reçu" s'affiche
-
-**AC3 — Choix de résolution :**
-
-**Given** le commercial a sélectionné au moins un article à retourner
-**When** il appuie sur "Confirmer le retour"
-**Then** un dialogue `ReturnResolutionDialog` s'affiche avec trois options :
-- Remboursement cash (icône monnaie)
-- Avoir client — crédité sur le compte (icône portefeuille)
-- Échange article (icône refresh)
-
-**AC4 — Motif obligatoire (si configuré) :**
-
-**Given** `returnRequiresReason = true` pour le tenant
-**When** le commercial appuie sur "Confirmer" dans `ReturnResolutionDialog`
-**And** le champ "Motif du retour" est vide
-**Then** un message d'erreur inline s'affiche : "Le motif est obligatoire"
-**And** la confirmation est bloquée
-
-**AC5 — Confirmation et feedback :**
-
-**Given** le commercial a rempli tous les champs requis
-**When** il valide le retour
-**Then** l'appel `POST /api/v1/returns` est effectué
-**And** en cas de succès, un `SnackBar` affiche "Retour enregistré — [résolution]"
-**And** la `ReturnSearchSheet` se ferme et le POS revient à l'état initial (panier vide)
-
-**When** le backend répond avec une erreur (délai expiré, motif manquant)
-**Then** le message d'erreur du backend s'affiche dans le dialogue
-
-**AC6 — Mode offline :**
-
-**Given** le POS est hors ligne
-**When** le commercial tente d'ouvrir la `ReturnSearchSheet`
-**Then** un message s'affiche : "La recherche de reçu nécessite une connexion Internet"
-**And** le bouton "Retour" est visuellement désactivé (avec tooltip explicatif)
-
-**Notes dev :**
-- `ReturnSearchSheet` : `apps/frontend/lib/features/retail/pos/presentation/widgets/return_search_sheet.dart`
-- `ReturnResolutionDialog` : `apps/frontend/lib/features/retail/pos/presentation/widgets/return_resolution_dialog.dart`
-- Utiliser `ref.read(returnsRepositoryProvider)` pour `POST /api/v1/returns`
-- Le mode offline est détecté via `ConnectivityService` existant
-- Pas de persistence locale des retours (online-only pour MVP)
-
-**Files to create:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/return_search_sheet.dart`
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/return_resolution_dialog.dart`
-- `apps/frontend/lib/features/shared/returns/data/repositories/returns_repository.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — bouton "Retour" dans la barre d'actions
-- `apps/frontend/lib/features/retail/pos/presentation/providers/pos_providers.dart` — `returnsRepositoryProvider`
-
----
-
-### Story 27-3: Z-report — Distinction ventes brutes vs retours (FR98)
-
-**As a** manager or owner,
-**I want** the session Z-report to show gross sales, returns, and net sales as separate lines,
-**So that** I can reconcile cash accurately and track return volume per session (FR98).
-
-**Acceptance Criteria:**
-
-**AC1 — Données retours dans le Z-report backend :**
-
-**Given** une session POS est clôturée et a des retours enregistrés dans la même session
-**When** `GET /api/v1/sessions/:id/zreport` est appelé
-**Then** la réponse inclut :
-```json
-{
-  "grossSales": { "count": N, "amount": X },
-  "returns":    { "count": M, "amount": Y },
-  "netSales":   { "amount": X - Y },
-  ...
-}
-```
-**And** `returns.amount` est la somme des montants des `ReturnRecord` créés pendant la session (via `created_at` dans la plage `session.openedAt → session.closedAt`)
-
-**AC2 — Zéro retour :**
-
-**Given** une session n'a aucun retour
-**When** le Z-report est demandé
-**Then** `returns` est présent avec `{ count: 0, amount: 0 }` (pas d'erreur, pas de champ absent)
-
-**AC3 — Affichage Z-report frontend :**
-
-**Given** le Z-report est affiché dans `SessionReportScreen` (ou le dialogue de clôture)
-**When** la session a des retours
-**Then** trois lignes distinctes s'affichent :
-- "Ventes brutes : X FCFA (N transactions)"
-- "Retours : − Y FCFA (M retours)" — en rouge
-- "Ventes nettes : Z FCFA" — en gras
-
-**When** la session n'a pas de retours
-**Then** seule la ligne "Ventes nettes" s'affiche (identique aux ventes brutes) — pas de ligne "Retours : 0"
-
-**AC4 — Cohérence avec le cash théorique :**
-
-**Given** le Z-report calcule le montant cash théorique attendu
-**When** des retours cash (`resolution = cash_refund`) ont été effectués
-**Then** le cash théorique est ajusté : `float_ouverture + ventes_cash - remboursements_cash`
-**And** la variance = cash_compté − cash_théorique reste correcte
-
-**Notes dev :**
-- Modifier `PosSessionService.getZReport()` pour joindre les `ReturnRecord` par plage de dates de session
-- La jointure se fait via `created_at` des retours, pas via un `sessionId` sur `ReturnRecord` (les retours ne sont pas liés à une session, mais à une transaction)
-- `netSales = grossSales - returns` côté backend, pas côté frontend
-- Uniquement les retours de type `cash_refund` impactent le cash théorique
-
-**Files to modify:**
-- `apps/backend/src/shared/returns/returns.service.ts` — méthode `getReturnsSummaryForSession(sessionId, openedAt, closedAt)`
-- `apps/backend/src/retail/retail-orchestration.service.ts` (ou équivalent POS session service) — intégrer `returnsSummary` dans le Z-report
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/receipt_dialog.dart` ou `SessionReportScreen` — afficher les 3 lignes
-
----
-
-### Story 27-4: Backend — Reservation model + endpoints acompte + completion (FR99)
-
-**As a** backend developer,
-**I want** a `Reservation` model with REST endpoints to create, complete, and cancel reservations with partial deposit logic,
-**So that** the POS can offer deposit-based reservations with full lifecycle management (FR99).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma Reservation :**
-
-**Given** le fichier `schema.prisma` est mis à jour
-**When** la migration est appliquée
-**Then** la table `reservations` existe dans le schéma `shared` avec les colonnes : `id`, `customer_id`, `items_json`, `total_amount`, `deposit_amount`, `remaining_amount`, `status` (default `pending`), `deposit_transaction_id` (nullable), `completion_transaction_id` (nullable), `tenant_id`, `created_by`, `created_at`, `completed_at` (nullable)
-**And** les index `(tenant_id, status)` et `(customer_id)` sont présents
-
-**AC2 — POST /api/v1/reservations — création avec acompte :**
-
-**Given** un commercial authentifié envoie `POST /api/v1/reservations` avec `{ customerId, items: [...], totalAmount, depositAmount }`
-**When** `depositAmount` est compris entre 10 % et 50 % de `totalAmount` (bornes configurables — défaut tenant)
-**Then** une `Reservation` est créée avec `status = "pending"`, `remainingAmount = totalAmount - depositAmount`
-**And** une transaction de type `"reservation_deposit"` est créée pour l'acompte encaissé
-**And** `depositTransactionId` pointe vers cette transaction
-**And** la réponse est `201 Created` avec la réservation complète
-
-**When** `depositAmount < 10 %` ou `> 50 %` de `totalAmount`
-**Then** le backend répond `400 Bad Request` : `"L'acompte doit être compris entre 10 % et 50 % du total"`
-
-**AC3 — PATCH /api/v1/reservations/:id/complete — finalisation paiement :**
-
-**Given** une réservation est en statut `pending`
-**When** un commercial envoie `PATCH /api/v1/reservations/:id/complete` avec `{ paymentMethod, amount }`
-**And** `amount >= remainingAmount`
-**Then** `status` passe à `"completed"`, `completedAt` est renseigné
-**And** une transaction de type `"reservation_completion"` est créée
-**And** `completionTransactionId` est mis à jour
-**And** le stock des articles est décrémenté (via `InventoryService`)
-
-**AC4 — PATCH /api/v1/reservations/:id/cancel — annulation :**
-
-**Given** une réservation est en statut `pending`
-**When** un owner ou manager envoie `PATCH /api/v1/reservations/:id/cancel` avec `{ depositResolution: "credit_note" | "cash_refund" }`
-**Then** `status` passe à `"cancelled"`
-**And** si `depositResolution = "credit_note"` : `Contact.creditBalance` du client est incrémenté du montant `depositAmount`
-**And** si `depositResolution = "cash_refund"` : une transaction `"reservation_refund"` est créée pour trace audit
-**And** la réponse est `200 OK` avec la réservation mise à jour
-
-**AC5 — GET /api/v1/reservations — liste paginée :**
-
-**Given** un manager ou owner appelle `GET /api/v1/reservations`
-**When** la requête est valide
-**Then** la réponse retourne les réservations paginées du tenant
-**And** le filtre optionnel `?status=pending|completed|cancelled` fonctionne
-**And** le filtre `?customerId=:id` retourne les réservations d'un client spécifique
-
-**AC6 — GET /api/v1/reservations/kpi — KPI dashboard :**
-
-**Given** un owner ou manager appelle `GET /api/v1/reservations/kpi`
-**When** la requête est valide
-**Then** la réponse retourne `{ pendingCount: N, totalDepositAmount: X }` pour les réservations `pending` du tenant
-
-**Notes dev :**
-- `ReservationsModule` dans `apps/backend/src/shared/reservations/`
-- `items_json` est un tableau JSON : `[{ catalogItemId, variantId?, quantity, unitPrice }]`
-- Le décrémentement stock à la completion utilise `InventoryService.recordMovement({ type: 'SALE', ... })` pour chaque article
-- `Contact.creditBalance` : si le champ n'existe pas encore sur le modèle `Contact`, l'ajouter dans cette migration
-- Ajouter `ReservationsModule` au `AppModule`
-- Les transactions `reservation_deposit / reservation_completion / reservation_refund` utilisent le modèle `Transaction` existant avec un champ `type` étendu
-
-**Files to create:**
-- `apps/backend/prisma/migrations/20260319110000_add_reservations/migration.sql`
-- `apps/backend/src/shared/reservations/reservations.module.ts`
-- `apps/backend/src/shared/reservations/reservations.controller.ts`
-- `apps/backend/src/shared/reservations/reservations.service.ts`
-- `apps/backend/src/shared/reservations/dto/create-reservation.dto.ts`
-- `apps/backend/src/shared/reservations/dto/complete-reservation.dto.ts`
-- `apps/backend/src/shared/reservations/dto/cancel-reservation.dto.ts`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — modèle `Reservation` + `creditBalance` sur `Contact` si absent
-- `apps/backend/src/app.module.ts` — importer `ReservationsModule`
-- `apps/backend/src/shared/inventory/inventory.service.ts` — appelé à la completion
-
----
-
-### Story 27-5: Frontend — Écran réservations, formulaire acompte POS, KPI dashboard (FR99)
-
-**As a** commercial or owner,
-**I want** to create a reservation with deposit from the POS, view active reservations from the backoffice, complete or cancel them, and see a live KPI on the dashboard,
-**So that** reservation workflows are fully managed without paper or external tools (FR99).
-
-**Acceptance Criteria:**
-
-**AC1 — Bouton "Réservation" dans le POS :**
-
-**Given** le commercial a des articles dans le panier POS
-**When** il appuie sur "Réservation" (bouton alternatif à "Encaisser")
-**Then** un dialogue `ReservationDepositDialog` s'ouvre avec :
-- Sélecteur client (autocomplete sur `Contact`)
-- Montant total pré-rempli depuis le panier
-- Champ acompte (défaut : 30 % du total, modifiable)
-- Indicateur en temps réel : "Acompte : X FCFA — Solde restant : Y FCFA"
-- Bouton "Confirmer la réservation"
-
-**AC2 — Validation acompte côté UI :**
-
-**Given** le commercial saisit un acompte dans `ReservationDepositDialog`
-**When** la valeur est < 10 % ou > 50 % du total
-**Then** un texte d'erreur rouge s'affiche sous le champ : "L'acompte doit être entre 10 % et 50 % du total"
-**And** le bouton "Confirmer" est désactivé
-
-**AC3 — Confirmation et reçu d'acompte :**
-
-**Given** le commercial valide la réservation
-**When** `POST /api/v1/reservations` répond `201 Created`
-**Then** le panier POS est vidé
-**And** un `ReceiptDialog` adapté s'affiche avec le type "RÉSERVATION — ACOMPTE" et le numéro de réservation
-**And** un `SnackBar` confirme : "Réservation créée — Solde restant : Y FCFA"
-
-**AC4 — Écran liste des réservations (backoffice) :**
-
-**Given** le manager ou owner navigue vers "Réservations" dans le backoffice
-**When** l'écran `ReservationsScreen` s'affiche
-**Then** la liste des réservations `pending` s'affiche avec : nom client, date, montant total, acompte versé, solde restant
-**And** un onglet "Complétées" et "Annulées" permettent de consulter l'historique
-**And** chaque réservation `pending` a deux actions : "Compléter le paiement" et "Annuler"
-
-**AC5 — Compléter le paiement :**
-
-**Given** le manager appuie sur "Compléter le paiement" d'une réservation `pending`
-**When** un dialogue de paiement s'affiche avec le solde restant pré-rempli
-**And** le manager confirme le mode de paiement
-**Then** `PATCH /api/v1/reservations/:id/complete` est appelé
-**And** la réservation passe dans l'onglet "Complétées"
-**And** un reçu final est affiché
-
-**AC6 — Annuler une réservation :**
-
-**Given** le manager appuie sur "Annuler" d'une réservation `pending`
-**When** un dialogue de confirmation s'affiche avec deux options : "Rembourser l'acompte (cash)" / "Convertir en avoir client"
-**And** le manager confirme
-**Then** `PATCH /api/v1/reservations/:id/cancel` est appelé avec `depositResolution`
-**And** la réservation passe dans l'onglet "Annulées"
-**And** un `SnackBar` confirme l'action choisie
-
-**AC7 — Solde restant sur la fiche client :**
-
-**Given** un client a une ou plusieurs réservations `pending`
-**When** l'owner ou manager consulte la fiche du contact
-**Then** une section "Réservations en cours" affiche la liste avec le solde restant total
-
-**AC8 — KPI "Réservations en cours" sur le dashboard :**
-
-**Given** le dashboard est chargé
-**When** `GET /api/v1/reservations/kpi` répond avec `{ pendingCount, totalDepositAmount }`
-**Then** une `KpiCard` "Réservations en cours" s'affiche avec `pendingCount` et le sous-texte "Acomptes : X FCFA"
-**And** un tap sur la carte navigue vers `ReservationsScreen` filtré sur `pending`
-
-**Notes dev :**
-- `ReservationDepositDialog` : `apps/frontend/lib/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart`
-- `ReservationsScreen` : `apps/frontend/lib/features/shared/reservations/presentation/screens/reservations_screen.dart`
-- `ReservationsRepository` : `apps/frontend/lib/features/shared/reservations/data/repositories/reservations_repository.dart`
-- `reservationsKpiProvider` : Riverpod `FutureProvider` — appelé dans `DashboardScreen`
-- Le KPI se rafraîchit via `ref.invalidate(reservationsKpiProvider)` après tout create/complete/cancel
-- Pas de mode offline pour les réservations (online-only, cohérent avec FR99)
-
-**Files to create:**
-- `apps/frontend/lib/features/retail/pos/presentation/widgets/reservation_deposit_dialog.dart`
-- `apps/frontend/lib/features/shared/reservations/data/repositories/reservations_repository.dart`
-- `apps/frontend/lib/features/shared/reservations/presentation/screens/reservations_screen.dart`
-- `apps/frontend/lib/features/shared/reservations/presentation/providers/reservations_provider.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/pos/presentation/screens/pos_screen.dart` — bouton "Réservation" dans les actions panier
-- `apps/frontend/lib/features/retail/pos/presentation/providers/pos_providers.dart` — `reservationsRepositoryProvider`
-- `apps/frontend/lib/features/retail/backoffice/presentation/screens/dashboard_screen.dart` — KPI card réservations
-- `apps/frontend/lib/features/shared/reports/presentation/widgets/kpi_card_grid.dart` — nouveau type KPI si nécessaire
-
----
-
-## Epic 28: Plans Tarifaires & Facturation (FR100–FR103)
-
-Le superadmin peut assigner un plan tarifaire par tenant (free, standard, premium, enterprise) défini dans une table `PlanDefinition` — le changement de plan active/désactive automatiquement les modules et ajuste `maxUsers` (FR100, Phase 2a). Il peut enregistrer des frais d'installation et de formation par tenant, et gérer le cycle de vie de facturation (trial → active → overdue → suspended) avec suspension automatique configurable (FR101, Phase 2a). Le propriétaire du tenant peut consulter son plan, ses modules inclus, son statut de facturation et l'historique des paiements depuis son backoffice, et demander un upgrade (FR102, Phase 2a — self-service préparé pour Phase 3). En Phase 3, un onboarding en ligne permettra au client de choisir son plan, payer via Mobile Money ou carte, et obtenir son tenant créé et activé automatiquement (FR103).
-
----
-
-### Story 28-1: Backend — PlanDefinition model, seed 4 plans, endpoints CRUD (FR100)
-
-**As a** superadmin,
-**I want** a `PlanDefinition` model with seed data for the 4 standard plans and full CRUD REST endpoints,
-**So that** plans are configurable without deployment and serve as the source of truth for module activation and fee suggestions (FR100).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma PlanDefinition :**
-
-**Given** le fichier `schema.prisma` est mis à jour avec le modèle `PlanDefinition`
-**When** la migration est appliquée
-**Then** la table `plan_definitions` existe dans le schéma `kernel` avec les colonnes : `id`, `code` (unique), `name`, `monthly_price`, `max_users`, `included_modules` (String[]), `suggested_installation_fee` (nullable), `suggested_training_fee` (nullable), `is_active` (default true), `created_at`
-
-**AC2 — Seed 4 plans :**
-
-**Given** la commande `prisma db seed` est exécutée
-**When** la base est vide ou les plans sont absents
-**Then** 4 plans sont créés : `free` (0 FCFA, 1 user, modules: []), `standard` (15 000 FCFA, 4 users, modules: ["catalog","inventory","retail"]), `premium` (30 000 FCFA, 10 users, modules: ["catalog","inventory","retail","reporting","purchase_orders"]), `enterprise` (50 000 FCFA, 25 users, modules: ["catalog","inventory","retail","reporting","purchase_orders","variants","pricing","promotions"])
-**And** le seed est idempotent (upsert par `code`)
-
-**AC3 — GET /admin/plans — liste des plans :**
-
-**Given** un superadmin authentifié appelle `GET /api/v1/admin/plans`
-**When** la requête est valide
-**Then** la réponse est `200 OK` avec la liste de tous les `PlanDefinition` triés par `monthly_price` ASC
-**And** les plans inactifs (`isActive = false`) sont inclus (superadmin voit tout)
-
-**AC4 — POST /admin/plans — création plan :**
-
-**Given** un superadmin envoie `POST /api/v1/admin/plans` avec `{ code, name, monthlyPrice, maxUsers, includedModules, suggestedInstallationFee?, suggestedTrainingFee? }`
-**When** le `code` n'existe pas encore
-**Then** un `PlanDefinition` est créé et retourné en `201 Created`
-**When** le `code` existe déjà
-**Then** la réponse est `409 Conflict` : `"Un plan avec ce code existe déjà"`
-
-**AC5 — PATCH /admin/plans/:code — mise à jour plan :**
-
-**Given** un superadmin envoie `PATCH /api/v1/admin/plans/:code` avec les champs à modifier
-**When** le plan existe
-**Then** les champs sont mis à jour et le plan modifié est retourné en `200 OK`
-**And** les tenants déjà sur ce plan ne sont PAS rétroactivement affectés (la modification n'est effective que pour les prochaines assignations)
-
-**AC6 — DELETE /admin/plans/:code — désactivation plan :**
-
-**Given** un superadmin appelle `DELETE /api/v1/admin/plans/:code`
-**When** le plan existe
-**Then** `isActive` est passé à `false` (soft delete) et la réponse est `200 OK`
-**And** les tenants actuellement sur ce plan conservent leur assignation
-
-**Notes dev :**
-- `PlanDefinitionModule` dans `apps/backend/src/kernel/billing/`
-- `SuperadminGuard` sur toutes les routes (vérifier que le guard existe ou le créer)
-- Les `includedModules` sont des codes correspondant aux `Module.code` de la table `modules` — pas de FK (liste flexible)
-- Le seed Prisma est dans `apps/backend/prisma/seed.ts` — ajouter les plans dans la section kernel
-
-**Files to create:**
-- `apps/backend/prisma/migrations/20260320000000_add_plan_definitions/migration.sql`
-- `apps/backend/src/kernel/billing/billing.module.ts`
-- `apps/backend/src/kernel/billing/plan-definition/plan-definition.controller.ts`
-- `apps/backend/src/kernel/billing/plan-definition/plan-definition.service.ts`
-- `apps/backend/src/kernel/billing/plan-definition/dto/create-plan-definition.dto.ts`
-- `apps/backend/src/kernel/billing/plan-definition/dto/update-plan-definition.dto.ts`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — modèle `PlanDefinition`
-- `apps/backend/prisma/seed.ts` — seed 4 plans
-- `apps/backend/src/app.module.ts` — importer `BillingModule`
-
----
-
-### Story 28-2: Backend — PATCH /admin/tenants/:id/plan + activation modules auto (FR100)
-
-**As a** superadmin,
-**I want** a `PATCH /admin/tenants/:id/plan` endpoint that changes a tenant's plan, auto-applies module activation, validates user limits, and records a billing event,
-**So that** plan changes are fully automated without manual module toggling (FR100).
-
-**Acceptance Criteria:**
-
-**AC1 — Champs billing sur Tenant :**
-
-**Given** la migration est appliquée
-**When** on inspecte la table `tenants`
-**Then** les colonnes suivantes existent : `plan` (String, default "free"), `max_users` (Int, default 1), `installation_fee` (Decimal nullable), `installation_paid` (Boolean, default false), `training_fee` (Decimal nullable), `training_paid` (Boolean, default false), `billing_start_date` (DateTime nullable), `billing_status` (String, default "trial"), `trial_ends_at` (DateTime nullable), `notes` (String nullable)
-
-**AC2 — PATCH /admin/tenants/:id/plan — changement de plan :**
-
-**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/plan` avec `{ planCode, confirmDowngrade? }`
-**When** le plan cible existe et est actif
-**Then** `tenant.plan` est mis à jour avec le nouveau `planCode`
-**And** `tenant.maxUsers` est synchronisé avec `PlanDefinition.maxUsers`
-**And** les modules listés dans `PlanDefinition.includedModules` sont activés dans `TenantModule` s'ils ne l'étaient pas
-**And** un `BillingEvent` de type `"upgrade"` ou `"downgrade"` est créé selon l'écart de prix
-**And** la réponse est `200 OK` avec le tenant mis à jour
-
-**AC3 — Validation maxUsers :**
-
-**Given** le nouveau plan a un `maxUsers` inférieur au nombre d'utilisateurs actifs du tenant
-**When** le superadmin envoie la requête sans flag de force
-**Then** la réponse est `403 Forbidden` : `"Le tenant a N utilisateurs actifs, le plan cible en autorise M. Désactivez des comptes avant de downgrader."`
-
-**AC4 — Confirmation downgrade avec désactivation modules :**
-
-**Given** le nouveau plan a moins de modules que le plan actuel
-**When** le superadmin envoie la requête sans `confirmDowngrade: true`
-**Then** la réponse est `409 Conflict` avec la liste des modules qui seront désactivés : `{ modulesToDeactivate: ["promotions", "variants"] }`
-**When** le superadmin renvoie avec `confirmDowngrade: true`
-**Then** les modules hors-plan sont désactivés dans `TenantModule` et l'assignation est appliquée
-
-**AC5 — Plan "free" à la création tenant :**
-
-**Given** un nouveau tenant est créé via `POST /api/v1/admin/tenants`
-**When** aucun `planCode` n'est précisé
-**Then** `tenant.plan` vaut `"free"`, `tenant.maxUsers` vaut `1`, `tenant.billingStatus` vaut `"trial"`, `tenant.trialEndsAt` vaut `createdAt + 30 jours`
-
-**Notes dev :**
-- Étendre `TenantService` existant (ne pas créer un service dupliqué)
-- L'activation/désactivation modules appelle `ModuleRegistryService.setModuleStatus(tenantId, moduleCode, status)` — créer ou étendre cette méthode
-- Le `BillingEvent` est créé via `BillingService.recordEvent(...)` — introduit dans la Story 28-3
-- Logger un TODO si `BillingService` n'est pas encore disponible (injectable ultérieurement)
-
-**Files to create:**
-- `apps/backend/prisma/migrations/20260320010000_add_billing_fields_to_tenant/migration.sql`
-- `apps/backend/src/kernel/billing/tenant-plan/tenant-plan.controller.ts`
-- `apps/backend/src/kernel/billing/tenant-plan/tenant-plan.service.ts`
-- `apps/backend/src/kernel/billing/tenant-plan/dto/assign-plan.dto.ts`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — champs billing + `billingEvents` relation sur `Tenant`
-- `apps/backend/src/organization/organization.service.ts` — `plan: "free"`, `trialEndsAt` à la création
-- `apps/backend/src/kernel/billing/billing.module.ts` — exporter `TenantPlanService`
-
----
-
-### Story 28-3: Backend — BillingEvent model + endpoints + cron suspension auto (FR101)
-
-**As a** superadmin,
-**I want** a `BillingEvent` ledger with REST endpoints to record and query payments, automatic billing status transitions, and a daily cron job that suspends overdue tenants,
-**So that** billing is tracked exhaustively and suspended tenants are blocked automatically (FR101).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma BillingEvent :**
-
-**Given** le fichier `schema.prisma` est mis à jour avec le modèle `BillingEvent`
-**When** la migration est appliquée
-**Then** la table `billing_events` existe dans le schéma `kernel` avec les colonnes : `id`, `tenant_id` (FK tenants), `type`, `amount`, `description` (nullable), `paid_at` (nullable), `due_date` (nullable), `status` (default "pending"), `payment_method` (nullable), `payment_ref` (nullable), `created_at`
-**And** l'index `(tenant_id, status)` est présent
-
-**AC2 — POST /admin/tenants/:id/billing/events — enregistrement paiement :**
-
-**Given** un superadmin envoie `POST /api/v1/admin/tenants/:id/billing/events` avec `{ type, amount, description?, paidAt?, dueDate?, paymentMethod?, paymentRef? }`
-**When** le tenant existe
-**Then** un `BillingEvent` est créé et retourné en `201 Created`
-**When** `type` est `"subscription"` et `paidAt` est fourni
-**Then** `tenant.billingStatus` passe automatiquement à `"active"` et `tenant.billingStartDate` est défini si null
-
-**AC3 — GET /admin/tenants/:id/billing — historique facturation :**
-
-**Given** un superadmin appelle `GET /api/v1/admin/tenants/:id/billing`
-**When** le tenant existe
-**Then** la réponse est `200 OK` avec `{ tenant: { plan, billingStatus, trialEndsAt, billingStartDate, installationFee, installationPaid, trainingFee, trainingPaid, notes }, events: BillingEvent[] }` trié par `createdAt` DESC
-
-**AC4 — PATCH /admin/tenants/:id/billing — mise à jour frais et notes :**
-
-**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/billing` avec `{ installationFee?, installationPaid?, trainingFee?, trainingPaid?, notes?, billingStatus? }`
-**When** le tenant existe
-**Then** les champs sont mis à jour sur le `Tenant` et la réponse est `200 OK`
-
-**AC5 — Cron job suspension automatique :**
-
-**Given** le cron job tourne chaque jour à 02:00 UTC
-**When** un tenant a `billingStatus = "overdue"` depuis plus de 30 jours (configurable via variable d'environnement `BILLING_SUSPENSION_DAYS`, default 30)
-**Then** `tenant.billingStatus` passe à `"suspended"`
-**And** un `BillingEvent` de type `"payment"` avec `description: "Suspension automatique — impayé > 30j"` et `status: "overdue"` est créé pour traçabilité
-
-**AC6 — Transition trial → overdue :**
-
-**Given** le cron job tourne
-**When** un tenant a `billingStatus = "trial"` et `trialEndsAt < now()`
-**Then** `tenant.billingStatus` passe à `"overdue"`
-
-**Notes dev :**
-- Utiliser `@nestjs/schedule` (`@Cron(CronExpression.EVERY_DAY_AT_2AM)`) dans un `BillingSchedulerService`
-- La variable `BILLING_SUSPENSION_DAYS` est lue via `ConfigService` (valeur par défaut 30)
-- `BillingService.recordEvent(tenantId, eventDto)` est la méthode partagée appelée depuis 28-2 et 28-3
-- Ne pas réutiliser `status` de `Tenant` directement depuis le frontend — toujours passer par l'API billing
-
-**Files to create:**
-- `apps/backend/prisma/migrations/20260320020000_add_billing_events/migration.sql`
-- `apps/backend/src/kernel/billing/billing-events/billing-events.controller.ts`
-- `apps/backend/src/kernel/billing/billing-events/billing-events.service.ts`
-- `apps/backend/src/kernel/billing/billing-events/billing-scheduler.service.ts`
-- `apps/backend/src/kernel/billing/billing-events/dto/create-billing-event.dto.ts`
-- `apps/backend/src/kernel/billing/billing-events/dto/update-billing.dto.ts`
-
-**Files to modify:**
-- `apps/backend/prisma/schema.prisma` — modèle `BillingEvent` + relation `Tenant.billingEvents`
-- `apps/backend/src/kernel/billing/billing.module.ts` — déclarer `BillingSchedulerService`, importer `ScheduleModule`
-- `apps/backend/src/app.module.ts` — importer `ScheduleModule.forRoot()` si non présent
-
----
-
-### Story 28-4: Frontend admin — Dropdown plan, onglet Facturation, badge statut (FR100–FR101)
-
-**As a** superadmin,
-**I want** the admin panel to show a plan dropdown when creating a tenant, a "Facturation" tab in tenant detail, and a billing status badge in the tenant list,
-**So that** I can manage plans and billing without leaving the admin interface (FR100, FR101).
-
-**Acceptance Criteria:**
-
-**AC1 — Dropdown plan dans NewTenantForm :**
-
-**Given** le superadmin ouvre le formulaire de création de tenant
-**When** il sélectionne un plan dans le dropdown
-**Then** les champs `maxUsers`, `suggestedInstallationFee`, `suggestedTrainingFee` sont pré-remplis avec les valeurs du `PlanDefinition`
-**And** ces valeurs restent modifiables avant soumission
-**And** le plan `"free"` est sélectionné par défaut
-
-**AC2 — Onglet "Facturation" dans TenantDetailScreen :**
-
-**Given** le superadmin ouvre le détail d'un tenant
-**When** il clique sur l'onglet "Facturation"
-**Then** il voit : plan actuel (badge coloré), `billingStatus`, `trialEndsAt` (si trial), `billingStartDate`, frais d'installation (montant + statut payé/non payé), frais de formation (montant + statut), notes libres
-**And** la liste des `BillingEvent` du tenant est affichée en ordre chronologique inverse avec : date, type, montant, statut
-**And** chaque événement `pending` ou `overdue` a un bouton "Marquer payé" qui appelle `PATCH /admin/tenants/:id/billing/events/:eventId` avec `{ status: "paid", paidAt: now() }`
-
-**AC3 — Badge billing status dans la liste tenants :**
-
-**Given** le superadmin est sur l'écran liste des tenants
-**When** la liste est chargée
-**Then** chaque ligne affiche un badge coloré selon `billingStatus` : `trial` (bleu), `active` (vert), `overdue` (orange), `suspended` (rouge)
-**And** un filtre rapide permet d'afficher uniquement les tenants `overdue` ou `suspended`
-
-**AC4 — Bouton "Réactiver" pour tenants suspendus :**
-
-**Given** le superadmin est sur l'onglet Facturation d'un tenant suspendu
-**When** il clique sur "Réactiver"
-**Then** un dialog de confirmation s'affiche : "Réactiver ce tenant ? Le statut passera à 'active'."
-**When** il confirme
-**Then** `PATCH /admin/tenants/:id/billing` est appelé avec `{ billingStatus: "active" }` et le badge se met à jour
-
-**Notes dev :**
-- Le panel admin est dans `apps/frontend/lib/features/admin/` (vérifier le chemin exact du panel)
-- Utiliser `FutureProvider` Riverpod pour `planDefinitionsProvider` (chargé une fois, mis en cache)
-- Le dropdown plan appelle `GET /api/v1/admin/plans` au chargement du formulaire
-
-**Files to create:**
-- `apps/frontend/lib/features/admin/billing/data/repositories/billing_repository.dart`
-- `apps/frontend/lib/features/admin/billing/presentation/providers/billing_providers.dart`
-- `apps/frontend/lib/features/admin/billing/presentation/widgets/billing_tab.dart`
-- `apps/frontend/lib/features/admin/billing/presentation/widgets/billing_event_tile.dart`
-- `apps/frontend/lib/features/admin/billing/presentation/widgets/plan_dropdown.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/admin/presentation/screens/tenant_detail_screen.dart` — ajouter onglet "Facturation"
-- `apps/frontend/lib/features/admin/presentation/screens/tenants_list_screen.dart` — badge billingStatus + filtre
-- `apps/frontend/lib/features/admin/presentation/widgets/new_tenant_form.dart` — dropdown plan + pré-remplissage
-
----
-
-### Story 28-5: Frontend backoffice — Écran "Mon abonnement" dans Paramètres (FR102)
-
-**As a** tenant owner,
-**I want** an "Mon abonnement" screen in my backoffice Settings that shows my current plan, included modules, billing status, and payment history, with a button to request an upgrade,
-**So that** I can understand what I'm paying for and escalate upgrades without contacting Carlos directly (FR102).
-
-**Acceptance Criteria:**
-
-**AC1 — Écran "Mon abonnement" accessible depuis les Paramètres :**
-
-**Given** le propriétaire est sur l'écran Paramètres du backoffice
-**When** il tape sur "Mon abonnement"
-**Then** l'écran `SubscriptionScreen` s'ouvre avec : nom du plan actuel (badge coloré), prix mensuel, `maxUsers`, liste des modules inclus (icône + nom lisible), statut de facturation, prochaine échéance estimée (si `billingStartDate` défini : date + 30 jours)
-
-**AC2 — Historique des paiements :**
-
-**Given** le propriétaire est sur l'écran "Mon abonnement"
-**When** la section "Historique" est chargée
-**Then** la liste des `BillingEvent` du tenant est affichée (type, montant, date, statut)
-**And** les événements `pending` affichent le label "En attente de paiement"
-**And** les événements `paid` affichent la date de paiement
-
-**AC3 — Bouton "Demander un upgrade" :**
-
-**Given** le propriétaire tape sur "Demander un upgrade"
-**When** un dialog de confirmation s'affiche avec un champ texte optionnel (message libre)
-**And** il confirme
-**Then** `POST /api/v1/settings/billing/upgrade-request` est appelé avec `{ message? }`
-**And** une notification in-app est envoyée au superadmin : "Tenant [name] demande un upgrade de plan [current] → ?"
-**And** le propriétaire voit un toast : "Votre demande a été envoyée. Carlos vous contactera sous 24h."
-
-**AC4 — Message bloquant si tenant suspendu :**
-
-**Given** le tenant a `billingStatus = "suspended"`
-**When** le propriétaire ouvre n'importe quel écran du backoffice ou du POS
-**Then** un écran bloquant remplace le contenu normal : titre "Abonnement expiré", message "Votre abonnement Scalario est suspendu. Contactez votre administrateur pour régulariser votre situation.", bouton "Contacter" (ouvre WhatsApp ou appel selon `notificationPhone` du tenant)
-**And** aucun autre écran n'est accessible (navigation bloquée)
-
-**Notes dev :**
-- `GET /api/v1/settings/billing` retourne `{ plan: PlanDefinition, billingStatus, events: BillingEvent[] }` — protégé par `JwtAuthGuard` + `TenantGuard`, rôle `Owner` uniquement
-- `POST /api/v1/settings/billing/upgrade-request` crée une notification interne (pas de paiement en Phase 2a)
-- Le blocage "suspendu" est géré côté frontend dans le router guard principal (vérifier `billingStatus` au démarrage de session)
-- Le blocage backend (403) est implémenté en Story 28-6
-
-**Files to create:**
-- `apps/frontend/lib/features/shared/billing/data/repositories/subscription_repository.dart`
-- `apps/frontend/lib/features/shared/billing/presentation/providers/subscription_provider.dart`
-- `apps/frontend/lib/features/shared/billing/presentation/screens/subscription_screen.dart`
-- `apps/frontend/lib/features/shared/billing/presentation/widgets/plan_info_card.dart`
-- `apps/frontend/lib/features/shared/billing/presentation/widgets/billing_history_list.dart`
-- `apps/frontend/lib/features/shared/billing/presentation/screens/suspended_screen.dart`
-
-**Files to modify:**
-- `apps/frontend/lib/features/retail/backoffice/presentation/screens/settings_screen.dart` — lien "Mon abonnement"
-- `apps/backend/src/kernel/billing/billing-events/billing-events.controller.ts` — ajouter routes settings (`GET /settings/billing`, `POST /settings/billing/upgrade-request`)
-
----
-
-### Story 28-6: Backend + Frontend — Enforcement statut suspendu (FR101)
-
-**As a** system,
-**I want** that all API endpoints return 403 when a tenant is suspended, and the Flutter client intercepts this code to display a blocking expiry screen,
-**So that** suspended tenants cannot use the app until their subscription is regularised (FR101).
-
-**Acceptance Criteria:**
-
-**AC1 — BillingGuard backend — blocage global sur tenants suspendus :**
-
-**Given** un utilisateur d'un tenant avec `billingStatus = "suspended"` envoie une requête authentifiée
-**When** la requête atteint n'importe quel endpoint (sauf `POST /auth/login`, `POST /auth/refresh`, `GET /settings/billing`)
-**Then** le backend répond `403 Forbidden` avec le body `{ error: "TENANT_SUSPENDED", message: "Abonnement expiré — contactez votre administrateur" }`
-
-**AC2 — BillingGuard — tenants non suspendus non affectés :**
-
-**Given** un utilisateur d'un tenant avec `billingStatus ≠ "suspended"`
-**When** il envoie une requête normale
-**Then** le `BillingGuard` laisse passer sans overhead perceptible
-**And** le statut `trial` ou `overdue` ne bloque PAS l'accès (uniquement `suspended` bloque)
-
-**AC3 — Flutter — interception globale 403 TENANT_SUSPENDED :**
-
-**Given** le client Flutter reçoit une réponse `403` avec `error: "TENANT_SUSPENDED"`
-**When** l'intercepteur HTTP détecte ce code d'erreur
-**Then** la navigation est redirigée vers `SuspendedScreen` indépendamment de l'écran courant
-**And** tous les appels API suivants sont annulés tant que la session n'est pas rechargée
-
-**AC4 — Réactivation par le superadmin :**
-
-**Given** le superadmin appelle `PATCH /api/v1/admin/tenants/:id/billing` avec `{ billingStatus: "active" }`
-**When** le tenant était `"suspended"`
-**Then** `tenant.billingStatus` passe à `"active"`
-**And** un `BillingEvent` de type `"payment"` avec `description: "Réactivation manuelle par superadmin"` et `status: "paid"` est créé
-**And** les prochaines requêtes de ce tenant ne sont plus bloquées par le `BillingGuard`
-
-**AC5 — Whitelist routes exclues du guard :**
-
-**Given** un utilisateur d'un tenant suspendu
-**When** il appelle `POST /auth/login`, `POST /auth/refresh`, ou `GET /settings/billing`
-**Then** le `BillingGuard` laisse passer (whitelist hardcodée dans le guard)
-**And** l'utilisateur peut consulter son statut de facturation même si suspendu
-
-**Notes dev :**
-- `BillingGuard` est un `CanActivate` NestJS global (`APP_GUARD`) enregistré après `JwtAuthGuard` dans `AppModule` — il lit `tenant.billingStatus` depuis le contexte de requête déjà peuplé par `TenantGuard`
-- Cache en mémoire du `billingStatus` par `tenantId` (TTL 60s) pour éviter une requête DB par appel — invalider le cache sur `PATCH /admin/tenants/:id/billing`
-- Flutter : l'intercepteur est ajouté dans le `Dio` global (`apps/frontend/lib/core/network/api_client.dart`)
-- Le `SuspendedScreen` est introduit en Story 28-5 — le réutiliser ici
-
-**Files to create:**
-- `apps/backend/src/kernel/billing/guards/billing.guard.ts`
-
-**Files to modify:**
-- `apps/backend/src/app.module.ts` — enregistrer `BillingGuard` comme `APP_GUARD` global
-- `apps/frontend/lib/core/network/api_client.dart` — intercepteur `403 TENANT_SUSPENDED`
-- `apps/backend/src/kernel/billing/billing-events/billing-events.service.ts` — `reactivateTenant()` crée le `BillingEvent` de réactivation
-
----
-
-## Epic 29: Types de Business Configurables (FR104–FR106)
-
-Le superadmin peut assigner un type de business à chaque tenant lors de sa création. Les types sont définis dans une table `BusinessTypeDefinition` configurable sans déploiement — chaque type porte un code unique, un nom affiché, des flags produit par défaut (`defaultFlags`), les sections visibles dans le formulaire produit (`visibleSections`), et une liste de catégories suggérées (FR104, Phase 2a). Le formulaire de création/édition de produit dans le backoffice lit le `businessType` du tenant pour afficher en priorité les champs pertinents, pré-remplir les flags par défaut, et masquer les champs non-pertinents derrière un toggle "Afficher plus d'options" — le propriétaire peut toujours override chaque flag par produit (FR105, Phase 2a). À la création d'un tenant avec un `businessType != "generaliste"`, les catégories suggérées sont automatiquement pré-créées dans son catalogue ; le propriétaire peut les renommer, supprimer ou en ajouter (FR106, Phase 2a).
-
----
-
-### Story 29-1: Backend — BusinessTypeDefinition model, seed 13 types, endpoints (FR104)
-
-**As a** superadmin,
-**I want** a `BusinessTypeDefinition` model with seed data for 13 business types, two read endpoints listing and fetching types, and a `PATCH /admin/tenants/:id/business-type` endpoint to assign a type to a tenant,
-**So that** business types are configurable without deployment and serve as the source of truth for product form defaults and suggested categories (FR104).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma BusinessTypeDefinition :**
-
-**Given** le fichier `schema.prisma` est mis à jour avec le modèle `BusinessTypeDefinition`
-**When** la migration est appliquée
-**Then** la table `business_type_definitions` existe dans le schéma `kernel` avec les colonnes : `id`, `code` (unique), `name`, `description` (nullable), `default_flags` (Json), `visible_sections` (String[]), `suggested_categories` (String[]), `icon` (nullable), `is_active` (default true), `created_at`
-
-**AC2 — Migration Prisma Tenant.businessType :**
-
-**Given** la migration est appliquée
-**When** on inspecte la table `tenants`
-**Then** la colonne `business_type` (String, default `"generaliste"`) est présente
-**And** aucune contrainte FK stricte sur `business_type` — le code est libre (flexibilité seed)
-
-**AC3 — Seed 13 types :**
-
-**Given** la commande `prisma db seed` est exécutée
-**When** la base est vide ou les types sont absents
-**Then** 13 types sont créés par upsert sur `code` :
-
-| code | name | defaultFlags (clés non-nulles) | visibleSections | suggestedCategories |
-| :--- | :--- | :--- | :--- | :--- |
-| `generaliste` | Généraliste | tous false/null | [] | [] |
-| `epicerie` | Épicerie & Alimentation | expiryDays: 30 | ["expiry"] | ["Fruits & Légumes", "Épices", "Céréales", "Boissons", "Produits laitiers", "Conserves"] |
-| `telephonie` | Téléphonie & Accessoires | hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 | ["variants", "serial", "warranty"] | ["Smartphones", "Accessoires", "Cartes SIM", "Recharge", "Réparation"] |
-| `textile` | Textile & Habillement | hasVariants: true | ["variants"] | ["Hauts", "Bas", "Robes", "Chaussures", "Accessoires", "Tissu"] |
-| `pharmacie` | Pharmacie & Parapharmacie | expiryDays: 365, requiresPrescription: false | ["expiry", "prescription"] | ["Médicaments", "Parapharmacie", "Matériel médical", "Vitamines"] |
-| `quincaillerie` | Quincaillerie & Matériaux | hasVariants: true, unitType: "weight" | ["variants", "weight"] | ["Peinture", "Plomberie", "Électricité", "Outillage", "Ciment", "Fer"] |
-| `cosmetique` | Cosmétique & Beauté | hasVariants: true, expiryDays: 730 | ["variants", "expiry"] | ["Soin visage", "Soin corps", "Cheveux", "Parfums", "Maquillage"] |
-| `restaurant` | Restaurant & Restauration rapide | tous false/null | [] | ["Plats", "Boissons", "Entrées", "Desserts", "Menus"] |
-| `boulangerie` | Boulangerie & Pâtisserie | expiryDays: 3 | ["expiry"] | ["Pain", "Viennoiseries", "Gâteaux", "Sandwichs", "Boissons"] |
-| `services` | Services & Prestation | tous false/null | [] | ["Consultation", "Réparation", "Formation", "Livraison", "Autre"] |
-| `informatique` | Informatique & Électronique | trackSerialNumbers: true, warrantyMonths: 12, hasVariants: true | ["variants", "serial", "warranty"] | ["Ordinateurs", "Téléphones", "Accessoires", "Composants", "Imprimantes", "Réparation"] |
-| `vehicules` | Véhicules & Pièces détachées | trackSerialNumbers: true, warrantyMonths: 6 | ["serial", "warranty"] | ["Pièces moteur", "Carrosserie", "Pneumatiques", "Électronique auto", "Huiles & Filtres"] |
-| `grossiste` | Commerce de gros | hasVariants: true, unitType: "weight" | ["variants", "weight"] | ["Alimentaire", "Cosmétique", "Textile", "Quincaillerie", "Électronique"] |
-
-**And** le seed est idempotent (upsert par `code`)
-
-**AC4 — GET /admin/business-types — liste :**
-
-**Given** un superadmin authentifié appelle `GET /api/v1/admin/business-types`
-**When** la requête est valide
-**Then** la réponse est `200 OK` avec la liste de tous les `BusinessTypeDefinition` actifs triés par `name` ASC
-**And** les types inactifs (`isActive = false`) sont exclus (seuls les actifs sont affichés dans les sélecteurs)
-
-**AC5 — GET /admin/business-types/:code — détail :**
-
-**Given** un superadmin appelle `GET /api/v1/admin/business-types/:code`
-**When** le code existe
-**Then** la réponse est `200 OK` avec le `BusinessTypeDefinition` complet incluant `defaultFlags`, `visibleSections` et `suggestedCategories`
-**When** le code n'existe pas
-**Then** la réponse est `404 Not Found` : `"Type de business introuvable : :code"`
-
-**AC6 — PATCH /admin/tenants/:id/business-type — assignation :**
-
-**Given** un superadmin envoie `PATCH /api/v1/admin/tenants/:id/business-type` avec `{ businessType: "telephonie" }`
-**When** le tenant existe et le code correspond à un type actif
-**Then** `tenant.businessType` est mis à jour et le tenant mis à jour est retourné en `200 OK`
-**When** le code n'existe pas dans `business_type_definitions`
-**Then** la réponse est `404 Not Found` : `"Type de business inconnu : :code"`
-**And** le `businessType` du tenant n'est pas modifié
-
-**Notes dev :**
-
-- Module `BusinessTypeModule` dans `apps/backend/src/kernel/business-type/`
-- `BusinessTypeService` expose : `listActive()`, `getDefinition(code)`, `seedCategories(tenantId, code)` (utilisée en 29-4)
-- `SuperadminGuard` sur toutes les routes admin ; `TenantGuard` sur `PATCH /admin/tenants/:id/business-type`
-- Le `defaultFlags` est un objet JSON libre — ne pas typer rigidement côté DTO (Prisma `Json`)
-- À la création tenant (`POST /admin/tenants`), si un `businessType` est fourni, le setter appelle `BusinessTypeService.seedCategories()` — prévu pour Story 29-4
-- Seed dans `apps/backend/prisma/seed.ts` section kernel — ajouter après le seed `PlanDefinition`
-
-**Files to create:**
-
-- `apps/backend/prisma/migrations/20260320040000_add_business_type_definitions/migration.sql`
-- `apps/backend/src/kernel/business-type/business-type.module.ts`
-- `apps/backend/src/kernel/business-type/business-type.controller.ts`
-- `apps/backend/src/kernel/business-type/business-type.service.ts`
-- `apps/backend/src/kernel/business-type/dto/assign-business-type.dto.ts`
-
-**Files to modify:**
-
-- `apps/backend/prisma/schema.prisma` — modèle `BusinessTypeDefinition` + champ `businessType` sur `Tenant`
-- `apps/backend/prisma/seed.ts` — seed 13 types
-- `apps/backend/src/app.module.ts` — importer `BusinessTypeModule`
-
----
-
-### Story 29-2: Admin panel — Dropdown "Type de business" dans NewTenantForm + écran types (FR104)
-
-**As a** superadmin,
-**I want** a business type dropdown in the tenant creation form, the assigned type displayed on the tenant detail screen, and a read-only screen listing all available business types,
-**So that** I can configure the business context of each tenant at creation time and consult available types from the admin panel (FR104).
-
-**Acceptance Criteria:**
-
-**AC1 — Dropdown "Type de business" dans NewTenantForm :**
-
-**Given** le superadmin ouvre le formulaire de création de tenant dans l'admin panel Flutter
-**When** il arrive sur le champ "Type de business"
-**Then** un `DropdownButtonFormField` affiche la liste des types actifs chargée depuis `GET /api/v1/admin/business-types`
-**And** la valeur par défaut est `"generaliste"` (Généraliste)
-**And** chaque entrée affiche le nom du type (ex: "Téléphonie & Accessoires")
-
-**AC2 — Soumission du formulaire avec businessType :**
-
-**Given** le superadmin sélectionne un type (ex: `"telephonie"`) et soumet le formulaire
-**When** l'appel `POST /api/v1/admin/tenants` est envoyé
-**Then** le body inclut `businessType: "telephonie"`
-**And** en cas de succès, un message de confirmation indique que les catégories suggérées ont été créées si `businessType != "generaliste"`
-
-**AC3 — Affichage businessType dans TenantDetailScreen :**
-
-**Given** le superadmin consulte la fiche d'un tenant existant
-**When** le tenant a un `businessType` assigné
-**Then** le nom complet du type (ex: "Téléphonie & Accessoires") est affiché dans la section informations générales
-**And** un bouton "Modifier" ouvre une boîte de dialogue permettant de changer le type via `PATCH /admin/tenants/:id/business-type`
-
-**AC4 — Changement de type depuis TenantDetailScreen :**
-
-**Given** le superadmin clique sur "Modifier" dans la section type de business
-**When** il sélectionne un nouveau type et confirme
-**Then** `PATCH /api/v1/admin/tenants/:id/business-type` est appelé
-**And** la fiche se met à jour avec le nouveau type affiché
-**And** un message d'avertissement indique que les catégories suggérées du nouveau type ne sont pas recréées automatiquement (la création ne se fait qu'à la création initiale du tenant)
-
-**AC5 — Écran lecture seule "Types de business" :**
-
-**Given** le superadmin navigue vers la section "Types de business" de l'admin panel
-**When** l'écran se charge
-**Then** la liste de tous les types actifs est affichée avec : code, nom, nombre de catégories suggérées, icône (si disponible)
-**And** en tapant sur un type, un panneau de détail affiche `defaultFlags` et `suggestedCategories` en lecture seule
-**And** aucun bouton de modification n'est exposé (édition réservée à une Phase 3 du backoffice admin)
-
-**Notes dev :**
-
-- `BusinessTypeRepository` Flutter dans `apps/frontend/lib/features/admin/business_type/data/`
-- Provider Riverpod `businessTypesProvider` charge la liste depuis l'API au montage de l'écran
-- `NewTenantForm` est dans `apps/frontend/lib/features/admin/tenants/presentation/` — ajouter le champ `businessType` après le champ `plan`
-- `TenantDetailScreen` est dans le même dossier — ajouter une section "Type de business" avec badge + bouton Modifier
-- L'écran "Types de business" est accessible via la navigation latérale admin (item après "Plans tarifaires")
-
-**Files to create:**
-
-- `apps/frontend/lib/features/admin/business_type/data/business_type_repository.dart`
-- `apps/frontend/lib/features/admin/business_type/presentation/screens/business_types_screen.dart`
-- `apps/frontend/lib/features/admin/business_type/presentation/providers/business_type_providers.dart`
-
-**Files to modify:**
-
-- `apps/frontend/lib/features/admin/tenants/presentation/widgets/new_tenant_form.dart` — dropdown businessType
-- `apps/frontend/lib/features/admin/tenants/presentation/screens/tenant_detail_screen.dart` — section type + bouton Modifier
-- `apps/frontend/lib/features/admin/navigation/admin_navigation.dart` — item "Types de business"
-
----
-
-### Story 29-3: Frontend backoffice — ProductFormDialog adaptatif selon businessType (FR105)
-
-**As a** tenant owner,
-**I want** the product creation/edit form to automatically show relevant fields first, pre-fill flag defaults, and hide non-relevant fields behind an "Afficher plus d'options" toggle based on my business type,
-**So that** I can create products faster without being overwhelmed by irrelevant options, while keeping full control over every flag (FR105).
-
-**Acceptance Criteria:**
-
-**AC1 — Chargement de la config businessType au démarrage :**
-
-**Given** le propriétaire ouvre l'application backoffice
-**When** la session est établie
-**Then** la config du type de business est chargée depuis `GET /api/v1/business-type/config` (endpoint tenant-scoped qui retourne le `BusinessTypeDefinition` correspondant à `Tenant.businessType`)
-**And** la config est mise en cache localement (valide pour la durée de la session)
-
-**AC2 — Sections visibles déterminées par visibleSections :**
-
-**Given** le propriétaire ouvre `ProductFormDialog` pour créer ou éditer un produit
-**When** son `businessType` est `"telephonie"` (visibleSections: ["variants", "serial", "warranty"])
-**Then** les sections "Variantes", "Numéro de série" et "Garantie" sont affichées par défaut dans le formulaire
-**And** les autres sections (ex: "Date de péremption", "Ordonnance") sont masquées par défaut
-
-**AC3 — defaultFlags pré-remplissent les flags produit :**
-
-**Given** le propriétaire ouvre `ProductFormDialog` pour créer un nouveau produit
-**When** son `businessType` est `"telephonie"` (defaultFlags: { hasVariants: true, trackSerialNumbers: true, warrantyMonths: 12 })
-**Then** le champ `hasVariants` est coché (true) par défaut
-**And** le champ `trackSerialNumbers` est coché (true) par défaut
-**And** le champ `warrantyMonths` est pré-rempli à `12`
-**When** son `businessType` est `"generaliste"` (tous flags false/null)
-**Then** tous les flags sont décochés et tous les champs optionnels sont vides par défaut
-
-**AC4 — Toggle "Afficher plus d'options" :**
-
-**Given** des sections sont masquées par défaut (non listées dans `visibleSections`)
-**When** le propriétaire clique sur "Afficher plus d'options"
-**Then** toutes les sections cachées deviennent visibles dans le formulaire
-**And** le libellé du bouton devient "Masquer les options avancées"
-**When** il clique à nouveau
-**Then** les sections non-pertinentes sont à nouveau masquées (et non modifiées si l'utilisateur les avait remplies)
-
-**AC5 — Override libre par le propriétaire :**
-
-**Given** le formulaire est pré-rempli avec les defaults du businessType
-**When** le propriétaire déccoche `trackSerialNumbers` ou modifie `warrantyMonths`
-**Then** la valeur saisie est respectée et sauvegardée telle quelle
-**And** aucun message d'avertissement ni blocage n'est affiché — l'override est silencieux et immédiat
-
-**AC6 — Produits existants non affectés :**
-
-**Given** le propriétaire édite un produit existant dont les flags ont été saisis manuellement
-**When** le formulaire se charge
-**Then** les valeurs sauvegardées du produit sont affichées (non écrasées par les defaults du businessType)
-**And** les defaults du businessType s'appliquent uniquement à la création de nouveaux produits
-
-**Notes dev :**
-
-- Endpoint backend requis : `GET /api/v1/business-type/config` — retourne le `BusinessTypeDefinition` du tenant courant (lu depuis `Tenant.businessType`) ; protégé par `JwtAuthGuard` + `TenantGuard`
-- Ajouter ce endpoint dans `BusinessTypeController` côté backend (non admin)
-- `ProductFormDialog` est dans `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — lire la config depuis `businessTypeConfigProvider`
-- Implémenter un provider Riverpod `businessTypeConfigProvider` qui appelle `BusinessTypeRepository.getMyConfig()` et met en cache le résultat
-- La logique de masquage est purement Flutter : `visibleSections` drive `_showSection(String section)` → bool
-
-**Files to create:**
-
-- `apps/frontend/lib/features/shared/business_type/data/business_type_config_repository.dart`
-- `apps/frontend/lib/features/shared/business_type/presentation/providers/business_type_config_provider.dart`
-
-**Files to modify:**
-
-- `apps/backend/src/kernel/business-type/business-type.controller.ts` — ajouter `GET /business-type/config` (tenant-scoped)
-- `apps/frontend/lib/features/shared/catalog/presentation/widgets/product_form_dialog.dart` — adapter selon `visibleSections` et `defaultFlags`
-
----
-
-### Story 29-4: Backend + Frontend — Pré-création des catégories suggérées à la création du tenant (FR106)
-
-**As a** tenant owner,
-**I want** to find the suggested categories of my business type already created in my catalog when I first log in,
-**So that** I can start adding products immediately without manual category setup (FR106).
-
-**Acceptance Criteria:**
-
-**AC1 — Seed des catégories à la création tenant :**
-
-**Given** le superadmin crée un tenant avec `businessType = "telephonie"` (suggestedCategories: ["Smartphones", "Accessoires", "Cartes SIM", "Recharge", "Réparation"])
-**When** le tenant est créé avec succès
-**Then** `BusinessTypeService.seedCategories(tenantId, "telephonie")` est appelé automatiquement dans le flux de création
-**And** 5 `CatalogCategory` sont créées dans le schéma `shared` pour ce tenant avec les noms correspondants
-**And** chaque catégorie a `tenantId` correct, `createdBy` = id du superadmin (ou un uuid système), `isActive = true`
-
-**AC2 — Pas de seed pour le type "generaliste" :**
-
-**Given** le superadmin crée un tenant avec `businessType = "generaliste"` (suggestedCategories: [])
-**When** le tenant est créé
-**Then** `BusinessTypeService.seedCategories()` est appelé mais ne crée aucune catégorie (liste vide)
-**And** aucune erreur n'est levée
-
-**AC3 — Idempotence du seed de catégories :**
-
-**Given** `BusinessTypeService.seedCategories(tenantId, code)` est appelé deux fois pour le même tenant
-**When** la deuxième exécution se produit (ex: retry après erreur réseau)
-**Then** aucune catégorie dupliquée n'est créée (upsert ou skip si `name` + `tenantId` existent déjà)
-
-**AC4 — Propriétaire voit les catégories prêtes à l'emploi :**
-
-**Given** le propriétaire se connecte pour la première fois après la création du tenant
-**When** il navigue vers la gestion des catégories dans le backoffice
-**Then** les catégories suggérées de son type de business sont listées et actives
-**And** il peut immédiatement assigner ces catégories aux produits qu'il crée
-
-**AC5 — Propriétaire peut renommer une catégorie suggérée :**
-
-**Given** le propriétaire voit la catégorie "Cartes SIM" dans sa liste
-**When** il la renomme en "Forfaits & SIM"
-**Then** le nom est mis à jour via `PATCH /api/v1/catalog/categories/:id`
-**And** aucune contrainte ne bloque le renommage (les catégories suggérées ne sont pas verrouillées)
-
-**AC6 — Propriétaire peut supprimer une catégorie suggérée :**
-
-**Given** le propriétaire voit la catégorie "Réparation" dans sa liste
-**When** il la supprime (soft delete)
-**Then** la catégorie est marquée inactive et disparaît de la liste principale
-**And** aucune contrainte ne bloque la suppression (même si des produits y sont associés — les produits conservent leur catégorie, qui passe en état archivé)
-
-**AC7 — Propriétaire peut ajouter de nouvelles catégories :**
-
-**Given** le propriétaire a ses catégories suggérées créées
-**When** il crée une nouvelle catégorie "Dongles WiFi" via l'interface habituelle
-**Then** la nouvelle catégorie est créée normalement via `POST /api/v1/catalog/categories`
-**And** elle coexiste avec les catégories suggérées sans distinction visuelle particulière
-
-**Notes dev :**
-
-- `BusinessTypeService.seedCategories(tenantId, code)` est appelé dans `OrganizationService.createTenant()` après la création du tenant, dans un try/catch — un échec du seed ne doit PAS faire échouer la création du tenant (erreur loggée, pas propagée)
-- La méthode `seedCategories` appelle `CatalogService.createCategory()` ou insère directement via Prisma (dépendance à valider selon l'architecture du `CatalogModule`)
-- Frontend : aucun changement requis sur les écrans existants — les catégories apparaissent automatiquement via le endpoint `GET /api/v1/catalog/categories` déjà implémenté
-- Un log structuré est émis au moment du seed : `{ event: "business_type_categories_seeded", tenantId, businessType, count }` pour traçabilité admin
-
-**Files to modify:**
-
-- `apps/backend/src/kernel/business-type/business-type.service.ts` — implémenter `seedCategories(tenantId, code)`
-- `apps/backend/src/organization/organization.service.ts` — appeler `BusinessTypeService.seedCategories()` dans le flux `createTenant()`
-
----
-
-## Epic 30: Commandes Clients & Labels Rôle (FR107–FR111)
-
-Les tenants de type grossiste/distribution peuvent créer et piloter des commandes clients avec cycle de vie complet (draft → confirmed → in-progress → delivered), numérotation automatique (CO-XXXX), validation de stock à la confirmation (StockMovement RESERVATION), et génération du document de livraison selon le type de business (ticket, bon de livraison, facture). Un KPI "Commandes en cours / CA en attente" s'affiche sur le dashboard. Les labels de rôles s'affichent dans toute l'UI selon `BusinessTypeDefinition.roleLabels` du tenant sans impact sur les permissions.
-
----
-
-### Story 30-1: Backend — ClientOrder + ClientOrderLine, migration, endpoints CRUD (FR107, FR108)
-
-**As a** commercial or manager,
-**I want** a `ClientOrder` and `ClientOrderLine` backend with CRUD endpoints, automatic order numbering, stock validation at confirmation, and StockMovement RESERVATION on confirmation,
-**So that** client orders can be created, tracked, and confirmed with stock integrity guarantees (FR107, FR108).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma :**
-
-**Given** le fichier `schema.prisma` est mis à jour avec les modèles `ClientOrder` et `ClientOrderLine`
-**When** la migration est appliquée
-**Then** les tables `client_orders` et `client_order_lines` existent dans le schéma `shared` avec les colonnes définies dans l'architecture (id, orderNumber unique, tenantId, customerId, status, depositAmount, depositPaidAt, notes, createdBy, preparedBy, deliveredBy, createdAt, deliveredAt)
-
-**AC2 — POST /api/v1/client-orders — création :**
-
-**Given** un utilisateur authentifié envoie `POST /api/v1/client-orders` avec `{ customerId, lines: [{catalogItemId, variantId?, quantity, unitPrice}], notes?, depositAmount? }`
-**When** la requête est valide
-**Then** une commande est créée en statut `draft` avec un `orderNumber` auto-généré au format `CO-XXXX` (séquence par tenant, 4 chiffres minimum)
-**And** les lignes sont créées avec `deliveredQty = 0`
-**And** la commande créée est retournée en `201 Created`
-
-**AC3 — GET /api/v1/client-orders — liste avec filtres :**
-
-**Given** un utilisateur authentifié appelle `GET /api/v1/client-orders`
-**When** des filtres optionnels `status`, `customerId`, `dateFrom`, `dateTo` sont passés en query params
-**Then** la liste des commandes du tenant est retournée filtrée
-**And** les commandes sont triées par `createdAt DESC`
-
-**AC4 — GET /api/v1/client-orders/:id — détail :**
-
-**Given** un utilisateur appelle `GET /api/v1/client-orders/:id`
-**When** la commande appartient au tenant courant
-**Then** la commande complète avec ses lignes est retournée en `200 OK`
-**When** la commande n'appartient pas au tenant courant
-**Then** la réponse est `404 Not Found`
-
-**AC5 — PATCH /api/v1/client-orders/:id — modification draft :**
-
-**Given** un utilisateur envoie `PATCH /api/v1/client-orders/:id` sur une commande en statut `draft`
-**When** la requête est valide
-**Then** les champs `notes`, `depositAmount`, et les lignes sont mis à jour
-**When** la commande n'est pas en statut `draft`
-**Then** la réponse est `422 Unprocessable Entity` : `"Seules les commandes en statut draft peuvent être modifiées"`
-
-**AC6 — POST /api/v1/client-orders/:id/confirm — confirmation et validation stock :**
-
-**Given** un manager ou owner appelle `POST /api/v1/client-orders/:id/confirm` sur une commande `draft`
-**When** le stock disponible est suffisant pour toutes les lignes
-**Then** le statut passe à `confirmed`
-**And** un `StockMovement` de type `RESERVATION` est créé par ligne (quantity × unité, référence clientOrderId)
-**When** le stock est insuffisant pour au moins une ligne
-**Then** la réponse est `422 Unprocessable Entity` : `"Stock insuffisant pour : [nom article]"` (sans créer de mouvement)
-
-**AC7 — POST /api/v1/client-orders/:id/cancel — annulation :**
-
-**Given** un manager ou owner appelle `POST /api/v1/client-orders/:id/cancel` sur une commande `draft` ou `confirmed`
-**When** la commande est en statut `confirmed`
-**Then** les `StockMovement RESERVATION` liés sont annulés (mouvement inverse `RESERVATION_RELEASE`)
-**And** le statut passe à `cancelled`
-
-**AC8 — GET /api/v1/client-orders/kpis — agrégats dashboard :**
-
-**Given** un utilisateur appelle `GET /api/v1/client-orders/kpis`
-**When** la requête est valide
-**Then** la réponse est `200 OK` avec `{ inProgressCount: number, pendingRevenue: number }` pour les statuts actifs (confirmed, in-progress, ready)
-
-**Notes dev :**
-
-- Module `ClientOrderModule` dans `apps/backend/src/shared/client-orders/`
-- orderNumber séquentiel par tenant : `SELECT MAX(order_number) LIKE 'CO-%' WHERE tenant_id = ?` ; parser le numéro, incrémenter, formatter `CO-${String(n+1).padStart(4, '0')}`
-- Le type `RESERVATION` doit exister dans l'enum des types de StockMovement — vérifier et ajouter si absent
-- Routes protégées par `@Roles('owner', 'manager', 'commercial')` ; transitions confirm/cancel par `@Roles('owner', 'manager')`
-- L'endpoint `/kpis` doit être déclaré AVANT `/:id` dans le contrôleur pour éviter le conflit de routing NestJS
-
-**Files to create:**
-
-- `apps/backend/prisma/migrations/20260320050000_add_client_orders/migration.sql`
-- `apps/backend/src/shared/client-orders/client-order.module.ts`
-- `apps/backend/src/shared/client-orders/client-order.controller.ts`
-- `apps/backend/src/shared/client-orders/client-order.service.ts`
-- `apps/backend/src/shared/client-orders/dto/create-client-order.dto.ts`
-- `apps/backend/src/shared/client-orders/dto/update-client-order.dto.ts`
-
-**Files to modify:**
-
-- `apps/backend/prisma/schema.prisma` — modèles `ClientOrder`, `ClientOrderLine`
-- `apps/backend/src/app.module.ts` — importer `ClientOrderModule`
-
----
-
-### Story 30-2: Backend — roleLabels + documentType sur BusinessTypeDefinition, migration, seed 14 types (FR109, FR111)
-
-**As a** superadmin,
-**I want** `roleLabels` (JSON) and `documentType` (String) fields on `BusinessTypeDefinition`, the seed updated for all 14 types (including the new "distribution" type), and these fields returned by the existing GET endpoints,
-**So that** the UI can display business-specific role names and determine the correct delivery document type (FR109, FR111).
-
-**Acceptance Criteria:**
-
-**AC1 — Migration Prisma :**
-
-**Given** le fichier `schema.prisma` est mis à jour avec `roleLabels Json @default("{}")` et `documentType String @default("receipt")` sur `BusinessTypeDefinition`
-**When** la migration est appliquée
-**Then** les colonnes `role_labels` (jsonb, défaut `{}`) et `document_type` (text, défaut `'receipt'`) existent dans `business_type_definitions`
-**And** les lignes existantes ont les valeurs par défaut sans erreur de migration
-
-**AC2 — Seed mis à jour pour 14 types :**
-
-**Given** la commande `prisma db seed` est exécutée
-**When** les 14 types sont traités par upsert sur `code`
-**Then** chaque type a un `documentType` approprié :
-
-| code | documentType |
-| :--- | :--- |
-| `generaliste` | `receipt` |
-| `epicerie` | `receipt` |
-| `telephonie` | `receipt` |
-| `textile` | `receipt` |
-| `pharmacie` | `receipt` |
-| `quincaillerie` | `delivery_note` |
-| `cosmetique` | `receipt` |
-| `restaurant` | `receipt` |
-| `boulangerie` | `receipt` |
-| `services` | `invoice` |
-| `informatique` | `invoice` |
-| `vehicules` | `invoice` |
-| `grossiste` | `delivery_note` |
-| `distribution` | `delivery_note` |
-
-**And** chaque type a des `roleLabels` adaptés (ex: `telephonie` → `{"commercial": "Vendeur", "manager": "Responsable boutique"}` ; `distribution` → `{"commercial": "Commercial terrain", "manager": "Directeur dépôt", "cashier": "Opérateur"}` ; les types généralistes gardent `{}`)
-
-**AC3 — Type "distribution" ajouté :**
-
-**Given** le seed est exécuté
-**When** le type `distribution` n'existe pas encore
-**Then** il est créé avec : name `"Commerce de distribution"`, description `"Vente en gros, livraison clients, bons de livraison"`, defaultFlags `{ hasVariants: true }`, visibleSections `["variants"]`, suggestedCategories `["Alimentaire", "Boissons", "Hygiène", "Nettoyage", "Épicerie fine"]`, documentType `"delivery_note"`, roleLabels appropriés
-
-**AC4 — Endpoints retournent les nouveaux champs :**
-
-**Given** un appel à `GET /api/v1/admin/business-types/:code` ou `GET /api/v1/business-type/config`
-**When** la requête est valide
-**Then** la réponse inclut `roleLabels` et `documentType` dans le payload
-
-**Notes dev :**
-
-- Migration additive — pas de breaking change sur les lignes existantes
-- `roleLabels` est un objet JSON libre : clés = codes rôles existants (`owner`, `manager`, `commercial`, `cashier`) ; valeurs = labels affichés
-- Le champ `owner` dans `roleLabels` est facultatif — s'il est présent, il n'est PAS utilisé dans l'UI (le propriétaire voit toujours "Propriétaire")
-- Vérifier que le `BusinessTypeConfigRepository` Flutter (créé en 29-3) mappe `roleLabels` et `documentType` dans `BusinessTypeConfig`
-
-**Files to modify:**
-
-- `apps/backend/prisma/schema.prisma` — `roleLabels`, `documentType` sur `BusinessTypeDefinition`
-- `apps/backend/prisma/seed.ts` — mise à jour des 13 types + ajout `distribution`
-- `apps/backend/prisma/migrations/` — nouvelle migration SQL
-
----
-
-### Story 30-3: Frontend backoffice — Écran liste des commandes clients (FR107, FR110)
-
-**As a** owner or manager,
-**I want** a "Commandes" screen in the backoffice with a filterable, color-coded list of client orders and contextual action buttons,
-**So that** I can monitor all orders and take quick actions without opening each one (FR107, FR110).
-
-**Acceptance Criteria:**
-
-**AC1 — Navigation backoffice :**
-
-**Given** l'utilisateur est dans le backoffice
-**When** il consulte la navigation principale
-**Then** un item "Commandes" est présent après "Réservations" (ou dans la section Ventes)
-**And** le tap navigue vers `ClientOrdersScreen`
-
-**AC2 — Liste des commandes chargée :**
-
-**Given** `ClientOrdersScreen` s'ouvre
-**When** le provider charge les données depuis `GET /api/v1/client-orders`
-**Then** la liste des commandes du tenant est affichée sous forme de cards
-**And** un indicateur de chargement est affiché pendant le fetch
-**And** un message "Aucune commande" est affiché si la liste est vide
-
-**AC3 — Filtres :**
-
-**Given** l'utilisateur voit la liste
-**When** il utilise la barre de filtres
-**Then** il peut filtrer par statut (chips multi-sélection : Brouillon, Confirmée, En cours, Livrée, Annulée)
-**And** par client (champ recherche texte)
-**And** par période (date début / date fin via DateRangePicker)
-**And** les filtres déclenchent un rechargement de la liste avec les query params correspondants
-
-**AC4 — Carte commande :**
-
-**Given** la liste est chargée
-**When** une commande est affichée
-**Then** la card affiche : numéro (CO-XXXX), nom du client, date de création, montant total calculé, badge statut coloré
-
-**AC5 — Badge statut coloré :**
-
-**Given** une commande est affichée
-**When** son statut est `draft` → gris, `confirmed` → bleu, `in-progress` ou `ready` → orange, `delivered` ou `paid` → vert, `cancelled` → rouge
-**Then** le badge affiche la couleur correspondante et le label français du statut
-
-**AC6 — Boutons d'action contextuels :**
-
-**Given** la card affiche une commande
-**When** le statut est `draft` et le rôle est owner ou manager
-**Then** un bouton "Valider" est affiché (appelle POST /:id/confirm)
-**When** le statut est `confirmed`
-**Then** un bouton "Préparer" est affiché (appelle POST /:id/prepare)
-**When** le statut est `in-progress` ou `ready`
-**Then** un bouton "Livrer" est affiché (navigue vers l'écran de livraison)
-**When** le statut est `draft` ou `confirmed` et le rôle est owner ou manager
-**Then** un bouton "Annuler" est affiché (appelle POST /:id/cancel avec confirmation dialog)
-
-**AC7 — Navigation vers détail :**
-
-**Given** l'utilisateur tape sur le corps d'une card
-**When** la navigation s'effectue
-**Then** l'écran de détail de la commande s'ouvre
-
-**Notes dev :**
-
-- Provider Riverpod `clientOrdersProvider(ClientOrdersFilter filter)` — `family` provider avec paramètre de filtre
-- Widget `ClientOrderCard` réutilisable avec un callback `onAction`
-- Ajouter item de navigation dans le widget de navigation backoffice existant
-
-**Files to create:**
-
-- `apps/frontend/lib/features/shared/client_orders/data/client_order_repository.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_orders_screen.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_card.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/providers/client_orders_provider.dart`
-- `apps/frontend/lib/features/shared/client_orders/domain/models/client_order.dart`
-
-**Files to modify:**
-
-- Navigation backoffice widget — ajouter item "Commandes"
-
----
-
-### Story 30-4: Frontend — Formulaire de création de commande (FR107)
-
-**As a** commercial or manager,
-**I want** to create a client order by selecting a customer, adding product lines with quantities and prices, and optionally recording a deposit,
-**So that** I can register a client's order from both the backoffice and the POS before preparing it (FR107).
-
-**Acceptance Criteria:**
-
-**AC1 — Accès au formulaire :**
-
-**Given** l'utilisateur est dans l'écran Commandes du backoffice
-**When** il tape sur le bouton "Nouvelle commande"
-**Then** l'écran `ClientOrderFormScreen` s'ouvre
-**Given** l'utilisateur est dans le POS
-**When** il accède au menu secondaire ou à un bouton contextuel
-**Then** le même écran est accessible
-
-**AC2 — Sélection client :**
-
-**Given** le formulaire est ouvert
-**When** l'utilisateur tape dans le champ client
-**Then** un autocomplete affiche les contacts du tenant (réutiliser `ContactAutocomplete`)
-**And** le client sélectionné est affiché avec son nom et son solde crédit
-
-**AC3 — Ajout de lignes produit :**
-
-**Given** le formulaire est ouvert
-**When** l'utilisateur ajoute une ligne
-**Then** il peut sélectionner un article via `ProductAutocomplete`
-**And** si l'article a des variantes, un sélecteur de variante apparaît
-**And** il peut saisir la quantité (>0) et le prix unitaire (pré-rempli depuis le prix catalogue)
-**And** il peut ajouter plusieurs lignes ou supprimer une ligne
-
-**AC4 — Champs additionnels :**
-
-**Given** le formulaire est affiché
-**When** l'utilisateur remplit les champs optionnels
-**Then** il peut saisir une date souhaitée (DatePicker), un acompte (champ montant décimal, libellé "Acompte reçu"), et des notes libres (TextField multi-lignes)
-
-**AC5 — Total automatique :**
-
-**Given** des lignes sont ajoutées
-**When** les quantités ou prix sont modifiés
-**Then** le montant total est recalculé et affiché en temps réel (somme quantity × unitPrice par ligne)
-
-**AC6 — Validation et soumission :**
-
-**Given** le formulaire est rempli
-**When** l'utilisateur appuie sur "Créer la commande"
-**Then** le formulaire valide : client requis, au moins une ligne, quantité > 0 pour chaque ligne
-**And** si valide, `POST /api/v1/client-orders` est appelé
-**And** en cas de succès, l'écran navigue vers l'écran de détail de la commande créée
-**And** en cas d'erreur API, un message d'erreur est affiché sans fermer le formulaire
-
-**Notes dev :**
-
-- `ClientOrderFormScreen` est un écran dédié (pas un dialog) — le formulaire est potentiellement long
-- Réutiliser `ProductAutocomplete` (déjà implémenté dans le backoffice) et `ContactAutocomplete`
-- Le prix unitaire est pré-rempli depuis le prix catalogue de l'article sélectionné mais reste éditable
-- Accès POS : ajouter un bouton dans l'AppBar ou via un menu contextuel dans `PosScreen`
-
-**Files to create:**
-
-- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_form_screen.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_line_form_widget.dart`
-
-**Files to modify:**
-
-- `apps/frontend/lib/features/pos/presentation/screens/pos_screen.dart` — ajouter accès "Nouvelle commande"
-
----
-
-### Story 30-5: Frontend + Backend — Flux de statuts, livraison et génération document (FR107, FR108, FR109)
-
-**As a** commercial or manager,
-**I want** to move a client order through its lifecycle — prepare, mark ready, deliver with partial quantities — and have the correct delivery document (ticket, bon de livraison, or facture) generated automatically based on my business type,
-**So that** each step is traceable and the delivery document reflects my industry's standard (FR107, FR108, FR109).
-
-**Acceptance Criteria:**
-
-**AC1 — Endpoints de transition statut :**
-
-**Given** les endpoints suivants sont implémentés
-**When** ils sont appelés sur une commande au bon statut
-**Then** :
-- `POST /api/v1/client-orders/:id/prepare` : `confirmed → in-progress`
-- `POST /api/v1/client-orders/:id/mark-ready` : `in-progress → ready`
-- `POST /api/v1/client-orders/:id/deliver` : `ready → delivered` (voir AC2)
-- `POST /api/v1/client-orders/:id/invoice` : `delivered → invoiced`
-- `POST /api/v1/client-orders/:id/pay` : `invoiced → paid` (ou `partially_paid` si partiel)
-
-**When** une transition invalide est tentée (ex: deliver depuis draft)
-**Then** la réponse est `422 Unprocessable Entity` avec le message d'erreur explicite
-
-**AC2 — Livraison avec quantités et génération transaction :**
-
-**Given** un manager appelle `POST /api/v1/client-orders/:id/deliver` avec `{ lines: [{lineId, deliveredQty}], paymentMethod? }`
-**When** la requête est valide
-**Then** chaque ligne est mise à jour avec `deliveredQty`
-**And** une `Transaction` est créée (type SALE) avec les lignes livrées et le montant correspondant
-**And** le `StockMovement RESERVATION` est consommé (mouvement SALE) pour `deliveredQty` ; le reliquat est libéré (mouvement RESERVATION_RELEASE) si `deliveredQty < quantity`
-**And** le statut passe à `delivered`
-
-**AC3 — Écran de détail commande :**
-
-**Given** l'utilisateur navigue vers une commande
-**When** l'écran se charge
-**Then** les lignes sont affichées avec : nom article, variante, quantité commandée, quantité livrée, prix unitaire, sous-total
-**And** le statut courant est affiché avec les boutons d'action correspondants (Préparer / Marquer prêt / Livrer / Facturer / Encaisser)
-**And** les informations client, numéro commande, date, notes et acompte sont affichés
-
-**AC4 — Écran de livraison (saisie quantités livrées) :**
-
-**Given** l'utilisateur tape "Livrer" sur une commande `ready`
-**When** l'écran de livraison s'ouvre
-**Then** chaque ligne est affichée avec un champ de saisie "Qté livrée" pré-rempli avec la quantité commandée
-**And** l'utilisateur peut modifier la quantité livrée pour une livraison partielle
-**And** un récapitulatif du montant total livré est affiché
-**And** en confirmant, `POST /api/v1/client-orders/:id/deliver` est appelé avec les quantités saisies
-
-**AC5 — Génération du document de livraison :**
-
-**Given** la livraison est confirmée
-**When** `businessTypeConfig.documentType` est `"receipt"`
-**Then** un ticket de caisse standard est généré/affiché
-**When** `documentType` est `"delivery_note"`
-**Then** un bon de livraison est généré avec : numéro commande, client, date, lignes livrées avec quantités, signature
-**When** `documentType` est `"invoice"`
-**Then** une facture simplifiée est générée avec les informations du tenant et les lignes avec TVA (si applicable)
-
-**Notes dev :**
-
-- Les endpoints prepare, mark-ready, invoice, pay peuvent être ajoutés dans `client-order.controller.ts` comme méthodes POST `@Post(':id/prepare')` etc.
-- La génération du document côté Flutter utilise `businessTypeConfigProvider` (chargé en 29-3) — pas de nouvel appel API nécessaire
-- Pour MVP, le document peut être un simple écran résumé affichable et partageable (pas de PDF généré côté serveur)
-- Les types `RESERVATION_RELEASE` et `SALE` doivent exister dans l'enum `StockMovement.type` — vérifier
-
-**Files to create:**
-
-- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_detail_screen.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/screens/client_order_deliver_screen.dart`
-- `apps/frontend/lib/features/shared/client_orders/presentation/widgets/client_order_document_widget.dart`
-
-**Files to modify:**
-
-- `apps/backend/src/shared/client-orders/client-order.controller.ts` — ajouter endpoints de transition
-- `apps/backend/src/shared/client-orders/client-order.service.ts` — implémenter les transitions et la logique de livraison
-
----
-
-### Story 30-6: Frontend — KPI Commandes sur le dashboard (FR110)
-
-**As a** owner or manager,
-**I want** "Commandes en cours" and "CA en attente" KPI cards on the dashboard,
-**So that** I can monitor my order pipeline at a glance without navigating to the orders screen (FR110).
-
-**Acceptance Criteria:**
-
-**AC1 — Endpoint /kpis retourne les données :**
-
-**Given** `GET /api/v1/client-orders/kpis` est appelé (implémenté en Story 30-1)
-**When** la requête est authentifiée
-**Then** la réponse inclut `{ inProgressCount: number, pendingRevenue: number }` pour les statuts actifs (confirmed, in-progress, ready, delivered non-payées)
-
-**AC2 — Deux KPI cards sur le dashboard :**
-
-**Given** l'utilisateur consulte le dashboard backoffice
-**When** les KPIs sont chargés
-**Then** une card "Commandes en cours" affiche `inProgressCount` (nombre entier)
-**And** une card "CA en attente" affiche `pendingRevenue` formaté en devise du tenant (FCFA ou autre)
-
-**AC3 — Navigation depuis les cards :**
-
-**Given** l'utilisateur tape sur "Commandes en cours"
-**When** la navigation s'effectue
-**Then** l'écran `ClientOrdersScreen` s'ouvre filtré sur les statuts actifs (confirmed, in-progress, ready)
-**Given** l'utilisateur tape sur "CA en attente"
-**When** la navigation s'effectue
-**Then** le même écran s'ouvre sans filtre de statut particulier
-
-**AC4 — Affichage conditionnel :**
-
-**Given** le tenant n'a encore aucune commande
-**When** les KPIs sont chargés (inProgressCount = 0)
-**Then** les cards sont affichées avec valeur 0 (toujours visible pour inviter à créer des commandes)
-
-**Notes dev :**
-
-- Provider Riverpod `clientOrderKpisProvider` — `FutureProvider<ClientOrderKpis>`
-- Les cards s'ajoutent dans la section des KPIs du dashboard, après les cards "Réservations" existantes
-- Si le dashboard utilise le SDUI engine : ajouter les widgets dans la config JSON du dashboard layout
-- Si le dashboard est hardcodé : ajouter les deux `KpiCard` widgets directement dans `DashboardScreen`
-
-**Files to create:**
-
-- `apps/frontend/lib/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart`
-
-**Files to modify:**
-
-- Dashboard screen ou layout SDUI JSON — ajouter les deux KPI cards
-
----
-
-### Story 30-7: Frontend — Labels rôles selon businessType dans toute l'UI (FR111)
-
-**As a** tenant user,
-**I want** role labels throughout the UI to reflect my business type's configured labels (e.g. "Commercial terrain" instead of "Caissier" for a distribution company),
-**So that** the interface speaks my industry's language while underlying permissions remain unchanged (FR111).
-
-**Acceptance Criteria:**
-
-**AC1 — `roleLabels` chargés via `businessTypeConfigProvider` :**
-
-**Given** l'application est lancée et la session établie
-**When** `businessTypeConfigProvider` a chargé la config (déjà fait en Story 29-3)
-**Then** `config.roleLabels` est un `Map<String, String>` accessible dans tous les widgets via `ref.watch(businessTypeConfigProvider)`
-
-**AC2 — Labels utilisés dans l'admin panel (dropdown rôle) :**
-
-**Given** le superadmin crée ou modifie un utilisateur dans l'admin panel Flutter
-**When** le dropdown de sélection de rôle s'affiche
-**Then** chaque option affiche le label du type de business du tenant sélectionné (ex: "Commercial terrain" pour le rôle `commercial` d'un tenant `distribution`)
-**And** si aucun label n'est configuré pour ce rôle (`roleLabels` vide ou clé absente), le code du rôle est affiché en fallback
-
-**AC3 — Labels dans les rapports et historiques backoffice :**
-
-**Given** un utilisateur consulte un rapport de session, l'historique des transactions, ou la liste des membres
-**When** le nom d'un rôle est affiché
-**Then** le label du type de business est utilisé à la place du code du rôle
-
-**AC4 — Labels dans le profil utilisateur :**
-
-**Given** un utilisateur consulte son profil ou la fiche d'un autre membre
-**When** le rôle est affiché
-**Then** le label du type de business est utilisé
-
-**AC5 — Le rôle "owner" n'est pas overridable :**
-
-**Given** le type de business a un label pour `owner` dans `roleLabels`
-**When** l'UI affiche le rôle du propriétaire
-**Then** "Propriétaire" est toujours affiché (le label `owner` dans `roleLabels` est ignoré)
-
-**AC6 — Fallback propre :**
-
-**Given** `roleLabels` est vide `{}` (ex: type `generaliste`)
-**When** un rôle est affiché dans l'UI
-**Then** le code du rôle est affiché avec la première lettre en majuscule (ex: `cashier` → "Cashier") sans erreur
-
-**Notes dev :**
-
-- Créer une fonction utilitaire `getRoleLabel(String roleCode, Map<String, dynamic> roleLabels)` dans `apps/frontend/lib/features/shared/business_type/utils/role_label_utils.dart`
-- La fonction retourne `roleLabels[roleCode] as String?` si présent et `roleCode != 'owner'` ; sinon retourne le code formaté
-- Utiliser cette fonction dans tous les widgets qui affichent un rôle : `RoleChip`, `UserListTile`, session report widgets, member list, user profile
-- L'admin panel doit charger la config du tenant sélectionné pour obtenir les roleLabels — si le tenant n'est pas le tenant courant, un appel séparé `GET /api/v1/admin/business-types/:code` peut être nécessaire
-
-**Files to create:**
 
-- `apps/frontend/lib/features/shared/business_type/utils/role_label_utils.dart`
+**Given** I want to add the Reservations module after onboarding
+**When** I navigate to Settings → Modules
+**Then** I see available modules with descriptions and upgrade requirements
+**And** I can request activation (pending billing plan check) (FR-TEMPLATE-01)
 
-**Files to modify:**
+**Given** I change my business currency from XOF to GHS
+**When** the change is saved
+**Then** all future transactions use GHS
+**And** historical transactions retain their original currency — no retroactive conversion
 
-- Tous les widgets affichant un rôle utilisateur : `RoleChip`, `UserListTile`, session report widgets, member list screen, user profile screen
-- Admin panel dropdown rôle dans le formulaire utilisateur
+**Given** I update my business logo and display name
+**When** saved
+**Then** receipts, reports, and notifications immediately reflect the new branding

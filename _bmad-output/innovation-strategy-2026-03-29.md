@@ -891,4 +891,115 @@ Ces modèles sont des **configurations**, pas des développements custom. Ils s'
 
 ---
 
-_Generated using BMAD Creative Intelligence Suite - Innovation Strategy Workflow_
+## Canal d'Acquisition : Mini-Apps Métier Gratuites (Build in Public Lab)
+
+### Principe
+
+Construire et distribuer gratuitement des micro-applications métier ultra-ciblées, en Build in Public, sous la marque **Carlos Simporé | Builder**. Chaque mini-app résout **un seul problème** pour **un seul métier**. Ce canal remplit trois fonctions simultanées : acquisition de leads qualifiés pour Scalario, validation terrain des Templates Sectoriels, et laboratoire d'expérimentation GenUI.
+
+> **Fondement (Personal MBA) :** Gratuité + Réciprocité → Agrégation d'audience avec Permission → Autorité via Éducation → Conversion par Rareté réelle.
+
+---
+
+### Règles de Construction
+
+**Une app = un problème = un métier.** Pas d'app générique. Pas d'app complète.
+
+Exemples :
+
+- App Tailleur → suivi commandes clients uniquement (client, modèle, mesures, date livraison, statut payé)
+- App Coiffeur → agenda + historique clients uniquement
+- App Menuisier → devis rapide uniquement
+
+Avec Claude Code : **2–3 jours de build par app.** Le studio Remotion génère la vidéo marketing automatiquement.
+
+**Filtre avant de builder :**
+
+1. Le problème touche **tout un métier**, pas juste une personne
+2. Solvable en **une seule fonctionnalité**
+3. Mappable à un **futur module ou Template Sectoriel Scalario**
+
+Si les 3 critères ne sont pas réunis → passer au suivant.
+
+---
+
+### Community-Driven Product Lab
+
+**Mécanique :** poster sur TikTok / Facebook "Dis-moi ton métier + ta douleur principale" → choisir la demande la plus fréquente ou la plus stratégique → builder → documenter en Build in Public → livrer.
+
+La personne qui a demandé devient ambassadrice naturelle : *"j'ai dit mon problème, il a construit la solution en 3 jours"*. Partage organique sans sollicitation.
+
+Chaque demande fréquente = candidat Template Sectoriel **pré-validé par le marché** avant d'écrire une ligne dans Scalario.
+
+---
+
+### GenUI comme Laboratoire d'Expérimentation
+
+Chaque mini-app intègre la section AI dédiée (pattern identique à Scalario : panneau latéral, action chips contextuels). Objectif : collecter des données réelles sur l'usage AI avant de builder FR-AI-01/02 dans Scalario.
+
+**Ce que les données révèlent :**
+
+- Quelles actions les utilisateurs demandent le plus à l'assistant
+- Le vocabulaire métier réel (pas le vocabulaire ERP)
+- Ce qui frustre vs ce qui débloque
+
+Les patterns validés dans les mini-apps s'intègrent directement dans Scalario. Risque nul sur les clients payants.
+
+**Contrainte :** le GenUI des mini-apps doit respecter le même pattern que Scalario (section dédiée, jamais injecté sur les écrans modules). Les apprentissages doivent être transférables directement.
+
+---
+
+### Collecte WhatsApp — Lead Capture Obligatoire
+
+Onboarding de chaque mini-app : **3 champs maximum** — Prénom + Métier (pré-rempli) + Numéro WhatsApp. Durée : 30 secondes. Au-delà → abandon.
+
+Numéro WhatsApp > email en UEMOA. Chaque app constitue une liste segmentée par métier. Quand Scalario sort le Template Sectoriel correspondant, la liste est prête.
+
+**Déclencheur automatique le plus puissant :** quand l'utilisateur atteint la limite dans l'app (ex : 50 clients), c'est le Point d'entrée sur le marché en temps réel. Le CTA Scalario s'affiche à ce moment précis — pas en pop-up permanente.
+
+---
+
+### Séquence de Conversion WhatsApp
+
+Ne pas attendre. Carlos a déjà un MVO opérationnel (Scalario tourne avec des clients actifs). La liste se convertit dès que Blandine signe (première preuve sociale).
+
+| Message | Contenu | Timing |
+|:---|:---|:---|
+| **#1 — Éducation** | "Voici pourquoi cette app a ses limites" | Semaine 2 après inscription |
+| **#2 — Douleur** | "Ce que tu perds sans suivi centralisé" | Semaine 4 |
+| **#3 — Introduction** | "Les boutiques qui grandissent utilisent Scalario" | Semaine 6 |
+| **#4 — CTA + Rareté** | "X places pilotes — tarif fondateur valable 7 jours" | Semaine 7 |
+
+**Règle sur la rareté : elle doit être réelle.** La capacité réelle de Carlos à onboarder et supporter de nouveaux clients définit le nombre de places. Annoncer 10 places et en accepter 50 = destruction de confiance sur toute la liste. Pour H1 : 5–10 nouveaux clients par cohorte est honnête et tenable.
+
+---
+
+### Timing par Horizon — Ciblage des Acheteurs
+
+| Horizon | Mini-apps ciblées | Logique |
+|:---|:---|:---|
+| **H1** | Retail / commerçants uniquement | L'acheteur Scalario actuel est un commerçant. App calculateur prix de revente, suivi stock boutique, générateur de reçu, rapport ventes journalier. |
+| **H2** | + secteurs alignés sur Templates à venir (tailleur, coiffeur, restaurant, pressing) | Le Template Sectoriel Scalario est buildé 3 mois après l'app de validation. |
+| **H3+** | Tout secteur | Vision universelle active — tout métier est un prospect potentiel. |
+
+> **Principe (Personal MBA) :** une app qui attire n'importe qui = audience. Une app qui attire un commerçant = prospect Scalario qualifié. Cibler le bon acheteur potentiel est la condition d'un canal d'acquisition rentable, pas seulement un canal de notoriété.
+
+---
+
+### Ce que ce canal produit simultanément
+
+```text
+Mini-app métier gratuite (ex: App Tailleur)
+    → Build in Public → audience Carlos | Builder + crédibilité
+    → Onboarding 30s → liste WhatsApp segmentée par métier
+    → GenUI assistant → données usage AI réelles
+    → Limite atteinte → CTA Scalario contextuel
+    → Feedback hebdo → validation Template Sectoriel Atelier
+    → Studio Remotion → vidéo marketing générée automatiquement
+    → Séquence WhatsApp → conversion vers Scalario avec rareté réelle
+    → Template Scalario buildé sur demande validée, pas hypothèse
+```
+
+---
+
+*Generated using BMAD Creative Intelligence Suite - Innovation Strategy Workflow*
