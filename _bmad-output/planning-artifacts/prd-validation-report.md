@@ -1,33 +1,33 @@
 ---
 validationTarget: '_bmad-output/planning-artifacts/prd.md'
-validationDate: '2026-03-19'
+validationDate: '2026-03-30'
 inputDocuments:
-  - _bmad-output/planning-artifacts/prd.md (v6.1)
+  - _bmad-output/planning-artifacts/prd.md (v8.0)
   - docs/architecture-scalario-2026-03-08.md (available)
   - docs/design-system.md (available)
   - docs/sdui-schema.md (available)
+  - _bmad-output/innovation-strategy-2026-03-29.md (available)
 validationStepsCompleted:
   - step-v-01-discovery
-  - step-v-02-format-detection
-  - step-v-03-density-validation
-  - step-v-04-brief-coverage-validation
-  - step-v-05-measurability-validation
-  - step-v-06-traceability-validation
-  - step-v-07-implementation-leakage-validation
-  - step-v-08-domain-compliance-validation
-  - step-v-09-project-type-validation
-  - step-v-10-smart-validation
-  - step-v-11-holistic-quality-validation
-  - step-v-12-completeness-validation
+  - step-v-02-format
+  - step-v-03-density
+  - step-v-04-brief-coverage
+  - step-v-05-measurability
+  - step-v-06-traceability
+  - step-v-07-implementation-leakage
+  - step-v-08-domain-compliance
+  - step-v-09-project-type
+  - step-v-10-smart
+  - step-v-11-holistic
 validationStatus: COMPLETE
-holisticQualityRating: '4/5 — Good'
-overallStatus: Warning
 ---
 
 # PRD Validation Report
 
-**PRD Being Validated:** `_bmad-output/planning-artifacts/prd.md` (v6.1 — FR1–FR91)
-**Validation Date:** 2026-03-19
+**PRD Being Validated:** `_bmad-output/planning-artifacts/prd.md` (v8.0 — FR1–FR111 + FR-AI/TEMPLATE/MULTISTORE/MULTISERVICE/SESSION/RBAC-01/DEVIS-01…APPOINTMENT-01 + NFR1–NFR40)
+**Validation Date:** 2026-03-30
+
+> *Previous v6.1 validation (2026-03-19) archived below. New v7.0 findings follow.*
 
 ## Input Documents
 
@@ -44,14 +44,119 @@ overallStatus: Warning
 | docs/product_discovery.md | ✗ Not found (referenced in frontmatter) |
 | docs/task.md | ✗ Not found (referenced in frontmatter) |
 
-## Validation Findings
+## Validation Findings (v7.0)
 
-## Format Detection
+## 1. Format Detection — Pass ✅
 
-**PRD Structure (all ## Level 2 headers):**
-1. Historique des Versions
-2. Table des Matières
-3. Executive Summary
+**28 ## sections** — BMAD Standard, 6/6 core sections present (Executive Summary, Critères de Succès, Périmètre, User Journeys, Exigences Fonctionnelles, Exigences Non-Fonctionnelles). New v7.0 sections: Écosystème Commercial Channels, Modèle Intégrateur Mini-Opérateur SaaS, Flywheel Architecture.
+
+## 2. Information Density — Pass ✅
+
+0 anti-pattern violations. All new v7.0 sections (FR-AI, FR-INTEGRATOR, Flywheel, Écosystème, Modèle Intégrateur) maintain same direct, zero-filler standard as FR1–FR111.
+
+## 3. Product Brief Coverage — N/A
+
+No Product Brief found. Innovation Strategy 2026-03-29 served as v7.0 strategic input — all decisions integrated.
+
+## 4. Measurability — Warning ⚠️
+
+**FR violations (v7.0 new FRs only):** 2 minor
+
+- FR-AI-05: "Sélectionne et adapte le template sectoriel **approprié**" — "approprié" is subjective, no acceptance criterion
+- FR-MULTISERVICE-01: "Vue agrégée des **indicateurs clés**" — unspecified which indicators
+
+**NFR violations (NFR31–NFR40):** 5
+
+- NFR31–NFR34: No explicit test method stated (all testable via static analysis / architecture review)
+- NFR39: "**Alertes temps réel**" — no latency target. Should specify "< 60s après détection"
+- NFR40: Architectural trajectory — acceptable as documented intent
+
+**FR92–FR111:** All Pass ✅ — specific states, measurable counts, actor-capability format throughout.
+
+## 5. Traceability — Warning ⚠️
+
+Chains Executive Summary → Success Criteria → Scope ✅ all intact.
+
+**16 FRs lack a dedicated User Journey** (all Phase 2b/3 — non-blocking for Phase 1/2a):
+FR89–FR91, FR-AI-01–05, FR-TEMPLATE-01/02, FR-MULTISTORE-01, FR-MULTISERVICE-01, FR-INTEGRATOR-01–04.
+
+4 journeys would close all gaps before Phase 2b/3 story creation:
+- **Journey 9** — Propriétaire multi-sites supervise ses POS (FR-MULTISTORE-01)
+- **Journey 10** — Intégrateur configure un bundle via AI et l'active pour un client (FR-TEMPLATE, FR-INTEGRATOR, FR-AI-01/02)
+- **Journey 11** — Cabinet comptable accède aux tenants clients via délégation (FR-MULTISERVICE-01)
+- **Journey 12** — Propriétaire configure un paramètre métier via chat AI (FR-AI-01–05)
+
+## 6. Implementation Leakage — Pass ✅
+
+All identified terms are intentional stack-lock references (locked brownfield stack: Flutter + NestJS + Supabase + Prisma + Isar). No unintentional leakage in new v7.0 FRs/NFRs. "function calling" (FR-AI-02), "JSON/YAML" (FR-TEMPLATE-01/02), "/api/v1/" (NFR35) are all capability-relevant.
+
+## 7. Domain Compliance — Pass ✅ (11/11)
+
+Domain `universal_platform_any_organization` — High complexity (fintech-adjacent + custom regulated). All compliance areas met:
+
+| Compliance Area | Status |
+|:---|:---|
+| Fiscal certification (FEC/DGI) | ✅ Met |
+| TVA multi-taux + arrondi FCFA | ✅ Met |
+| Multi-jurisdiction extensibility (NFR32 pluggable) | ✅ Met — stronger than v6.1 |
+| Payroll compliance (CNSS/CARFO/ITS) as plugin | ✅ Met |
+| OHADA accounting as plugin default | ✅ Met |
+| Social declaration export | ✅ Met |
+| Data protection & privacy | ✅ Met |
+| Anti-fraud controls | ✅ Met |
+| Immutable audit trail (financial) | ✅ Met |
+| Payment compliance (adapter pattern NFR33) | ✅ Met — stronger than v6.1 |
+| Session security (FR-SESSION-01, NFR36/37) | ✅ Met — new in v7.0 |
+
+## 8. Project-Type Compliance (saas_b2b) — Pass ✅ (5/5)
+
+All required sections present: tenant_model, rbac_matrix, subscription_tiers, integration_list, compliance_reqs. No excluded sections present.
+
+## 9. SMART Requirements — Pass ✅
+
+FR1–FR111 average score ~4.7/5. New semantic FRs average ~4.5/5. Single flagged item: FR-AI-05 ("approprié" — same as measurability flag). FR92–FR111 are best-in-class with embedded test criteria throughout.
+
+## 10. Holistic Quality — 4.5/5 Very Good
+
+**Strengths:**
+- Universal platform vision is coherent and compelling throughout — Executive Summary, Classification, Scope, Positionnement all aligned
+- 4-tier architecture (Kernel/Shared/Vertical/Template) now explicit and consistent
+- Flywheel and Ecosystem sections are excellent differentiated content
+- FR-INTEGRATOR-01–04 are unusually precise for business model FRs — specific thresholds, cycle mechanics, suspension conditions
+- Domain compliance stronger than v6.1 via NFR32/NFR33
+
+**Areas to address:**
+- 16 FRs without User Journey coverage (Phase 2b/3)
+- NFR39 latency gap
+- Vertical terminology inconsistency (pre-dates user's new REQUALIFICATION request — to be addressed)
+
+## 11. Completeness — 97%
+
+One structural gap: Phase 2b/3 FRs lack User Journey anchors. No template variables. No placeholder content. Frontmatter complete (stepsCompleted includes edit + validation steps).
+
+---
+
+## Overall Validation Result
+
+**Rating: 4.5/5 — Very Good**
+
+**Status: Warning ⚠️** (same class as v6.1, improved in several dimensions)
+
+### Top 3 Actions
+
+1. **Fix NFR39** — add "< 60s après détection de l'anomalie" (one-line edit)
+2. **Add Journeys 9–12** — required before Phase 2b/3 story creation, not blocking for Phase 1/2a
+3. **REQUALIFICATION des verticaux** — pending user request (to be done next)
+
+**PRD v7.0 is ready for:** Architecture workflow, UX workflow (Phase 1/2a journeys), Phase 2b planning.
+
+---
+
+*v6.1 validation findings (2026-03-19) — archived below*
+
+---
+
+## Format Detection (v6.1)
 4. Classification du projet
 5. Critères de Succès
 6. Périmètre du Produit & Phases

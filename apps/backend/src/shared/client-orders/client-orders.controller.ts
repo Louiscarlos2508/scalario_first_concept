@@ -18,7 +18,7 @@ export class ClientOrdersController {
   @Post()
   @Roles('owner', 'manager', 'commercial', 'cashier')
   async create(@Body() dto: CreateClientOrderDto, @Req() req: any) {
-    const userId = req.user?.sub ?? dto.tenantId; // fallback for test contexts
+    const userId = req.user?.id;
     return this.service.createOrder(dto.tenantId, userId, dto);
   }
 
@@ -37,8 +37,8 @@ export class ClientOrdersController {
     @Query('limit') limit: string = '50',
     @Req() req?: any,
   ) {
-    const userId = req?.user?.sub;
-    const role = req?.user?.role;
+    const userId = req?.user?.id;
+    const role = req?.tenantRole;
     // Cashier and commercial can only see their own orders
     const restrictedRoles = ['commercial', 'cashier'];
     const effectiveCreatedBy = restrictedRoles.includes(role) ? userId : createdBy;
@@ -78,7 +78,7 @@ export class ClientOrdersController {
   @Post(':id/confirm')
   @Roles('owner', 'manager')
   async confirm(@Param('id') id: string, @Query('tenantId') tenantId: string, @Req() req: any) {
-    const userId = req.user?.sub ?? tenantId;
+    const userId = req.user?.id;
     return this.service.confirmOrder(id, tenantId, userId);
   }
 
@@ -86,7 +86,7 @@ export class ClientOrdersController {
   @Post(':id/cancel')
   @Roles('owner', 'manager')
   async cancel(@Param('id') id: string, @Query('tenantId') tenantId: string, @Req() req: any) {
-    const userId = req.user?.sub ?? tenantId;
+    const userId = req.user?.id;
     return this.service.cancelOrder(id, tenantId, userId);
   }
 
@@ -116,7 +116,7 @@ export class ClientOrdersController {
     @Body() body: { lines: Array<{ lineId: string; deliveredQty: number }> },
     @Req() req: any,
   ) {
-    const userId = req.user?.sub ?? tenantId;
+    const userId = req.user?.id;
     return this.service.deliverOrder(id, tenantId, userId, body.lines ?? []);
   }
 
@@ -131,7 +131,7 @@ export class ClientOrdersController {
   // POST /client-orders/:id/pay
   @Post(':id/pay')
   @HttpCode(200)
-  @Roles('owner', 'manager')
+  @Roles('owner', 'manager', 'commercial', 'cashier')
   async pay(
     @Param('id') id: string,
     @Query('tenantId') tenantId: string,

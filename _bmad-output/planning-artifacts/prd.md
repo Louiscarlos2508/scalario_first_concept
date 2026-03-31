@@ -1,5 +1,5 @@
 ---
-stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish']
+stepsCompleted: ['step-01-init', 'step-02-discovery', 'step-02b-vision', 'step-02c-executive-summary', 'step-03-success', 'step-04-journeys', 'step-05-domain', 'step-06-innovation', 'step-07-project-type', 'step-08-scoping', 'step-09-functional', 'step-10-nonfunctional', 'step-11-polish', 'step-e-01-discovery', 'step-e-02-review', 'step-e-03-edit']
 inputDocuments:
   - docs/product_brief.md
   - docs/ARCHITECTURE.md
@@ -14,9 +14,9 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '6.7'
+version: '8.2'
 date: '2026-03-11'
-lastEdited: '2026-03-22'
+lastEdited: '2026-03-30'
 editHistory:
   - date: '2026-03-19'
     changes: 'FR76–FR88 ajoutés (Inventaire Avancé & Vente Configurable). Phases 2a/2b mises à jour. Table des matières, Politique Notifications, UI-Driven retail mis à jour. Source: gaps proposition client Blandine.'
@@ -34,9 +34,19 @@ editHistory:
     changes: 'FR104–FR106 ajoutés (Configuration Business Type). BusinessTypeDefinition configurable sans déploiement avec flags produit par défaut, sections visibles et catégories suggérées (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — priorité et pré-remplissage des champs pertinents, masquage des champs non-pertinents, override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). Phase 2a mise à jour. Table des matières FR1–FR106. Version 6.4→6.5.'
   - date: '2026-03-22'
     changes: 'Vision stratégique documentée : 3 nouvelles sections ajoutées après Verticaux Futurs — Limites d''Usage par Plan (Phase 2a), Intelligence Artificielle Roadmap (Phase 2b→Phase 4), Scalario Platform Écosystème Inter-Entreprises (Phase 3+). Documentation uniquement — aucun epic, aucune implémentation. Version 6.6→6.7.'
+  - date: '2026-03-30'
+    changes: 'Version 8.3 — (1) Parcours Commercial H1 ajouté en section Onboarding : modèle validé Blandine (présentation → signature → Orange Money → config on-site → formation → go-live en une visite). (2) Naming tiers unifié Starter/Business/Pro/Enterprise (aligné Innovation Strategy) — remplacement "Retail Standard/Retail Premium" dans onboarding table et SLAs. (3) Blandine positionnée Pro tier client fondateur 40K FCFA/mois (vs 55K normal).'
+  - date: '2026-03-30'
+    changes: 'Version 8.2 — Ajout section Infrastructure & Déploiement : stack Railway + Supabase Pro par horizon (H1→H3+), distribution Flutter APK direct H1 → Play Store H2 → Web H3, environnements dev/staging/prod, CI/CD GitHub Actions + Fastlane, sécurité secrets + backups. 5 nouveaux NFR (NFR-INFRA-01–05) : deploy < 5 min, zero data loss, rollback < 2 min, backup quotidien, staging avant canal intégrateur. ToC mis à jour (entrée 12c).'
+  - date: '2026-03-30'
+    changes: 'Version 8.1 — Ajout section Super Admin Scalario (Backoffice Opérationnel) : interface interne équipe Scalario distincte du backoffice tenant et du dashboard intégrateur. Périmètre H1→Phase 3. 6 nouveaux FRs (FR-SUPERADMIN-01–06) : création tenant, suspension/réactivation, billing dashboard, onboarding intégrateur, feature flags par tenant, review marketplace templates. ToC mis à jour (entrée 12b). Journeys 9–12 ajoutés (multi-POS, intégrateur, cabinet comptable, AI config). NFR39 : latence alertes anomalies précisée (< 60s). Validation rapport : status IN_PROGRESS → COMPLETE.'
+  - date: '2026-03-30'
+    changes: 'Version 8.0 — (0) FR-RBAC-01 ajouté : RBAC Dynamique par Tenant avec dette technique Story 1.2 documentée (kernel.roles sans tenant_id, guard hardcodé). Migration schema H1 + API Phase 2b + AI RBAC Phase 2c. (1) REQUALIFICATION DES VERTICALS : section "Verticaux Futurs" → "Secteurs Cibles & Modules Core". Chaque secteur cible = Template Sectoriel (config) + Modules Core requis (nouveau code). 7 nouveaux FRs Phase 3+ : FR-DEVIS-01, FR-WORKORDER-01, FR-BOM-01, FR-ATELIERPLANNING-01, FR-TABLE-01, FR-KDS-01, FR-APPOINTMENT-01. Toutes les références "vertical marché" → "secteur" dans le document (Succès Business/Technique, journeys, FRs, glossaire, concurrents, tarification, registre modules, RBAC, UI-Driven section). (2) FONDATIONS ARCHITECTURALES H1 : nouvelle subsection dans Phase 1 avec tableau non-négociables (i18n NFR31, /api/v1/ NFR35, payment adapters NFR33, compliance pluggable NFR32). Règle explicite : ne pas bloquer H1 pour implémenter H2. (3) MODÈLE DE REVENU 3 HORIZONS : nouvelle section "Évolution du Modèle de Revenu" avec tableau H1/H2/H3 (abonnement → distribution → réseau). Modèle de revenu dans Critères de Succès mis à jour avec les 3 horizons. (4) ROADMAP PAR MODULES : "Roadmap des Verticaux" → "Roadmap des Modules (Publique)" — table remplacée par phases de modules Core (Phase 1–4) avec secteurs déverrouillés via template. (5) MODÈLE DE RESPONSABILITÉ : nouvelle section — qui construit quoi : Scalario team / Intégrateurs / Intégrateurs avancés / Clients finaux.'
+  - date: '2026-03-30'
+    changes: 'Version 7.0 — Décisions stratégiques session Innovation Strategy 2026-03-29 intégrées. (1) Vision universelle : Scalario n''est plus "ERP commerce UEMOA" mais plateforme universelle pour toute organisation — UEMOA = beachhead, pas plafond. Classification domain mis à jour. (2) 10 nouveaux NFR architecturaux (NFR31–NFR40) : i18n complet, compliance pluggable, payment adapter pattern, unités configurables, API versionnée /api/v1/, certificate pinning Flutter, rate limiting, subscription enforcement server-side, anomaly detection H2, trajectoire microservices. (3) 5 nouveaux FR AI (FR-AI-01 à FR-AI-05) : section LLM dédiée, actions AI-invocables par module, Excel/CSV import, NL config, Config Wizard universel. (4) 2 FR Template Builder (FR-TEMPLATE-01/02). (5) FR-MULTISTORE-01 : multi-points de vente 3 modèles. (6) FR-MULTISERVICE-01 : dashboard multi-clients professionnels. (7) FR-SESSION-01 : gestion sessions utilisateurs. (8) Nouvelles sections : Écosystème Commercial Channels, Flywheel Architecture. (9) Corrections conflits : notes plugin ajoutées sur FR64 (CNSS BF), FR69 (OHADA), FR103 (payment adapter), FR86 (i18n). (10) Positionnement et framing stratégique mis à jour pour scope universel.'
 classification:
   projectType: saas_b2b
-  domain: erp_multi_vertical_commerce
+  domain: universal_platform_any_organization
   complexity: high
   projectContext: brownfield
   elicitationInsights:
@@ -54,7 +64,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 6.6** | **Auteur :** Carlos-simpore | **Date :** 2026-03-11
+**Version 8.3** | **Auteur :** Carlos-simpore | **Date :** 2026-03-30
 
 Confidentiel — Carlos-simpore
 
@@ -76,6 +86,7 @@ Confidentiel — Carlos-simpore
 | 6.4 | 2026-03-20 | Carlos-simpore | Ajout FR100–FR103 (Plans Tarifaires & Facturation) : plan tarifaire par tenant avec PlanDefinition — free/standard/premium/enterprise, changement plan auto-applique modules et maxUsers, downgrade avec confirmation (FR100, Phase 2a) ; frais d'installation/formation + statuts facturation trial/active/overdue/suspended + suspension auto configurable (FR101, Phase 2a) ; consultation plan et demande upgrade par propriétaire tenant (FR102, Phase 2a — self-service préparé Phase 3) ; paiement en ligne Mobile Money/carte + onboarding self-service + auto-provisioning tenant (FR103, Phase 3). Architecture anticipée dès Phase 2a (champs Tenant + PlanDefinition). Mise à jour phases 2a et 3, Table des matières FR1–FR103. |
 | 6.5 | 2026-03-20 | Carlos-simpore | Ajout FR104–FR106 (Configuration Business Type) : BusinessTypeDefinition configurable sans déploiement — code unique, nom, flags produit par défaut (trackSerialNumbers, hasVariants, warrantyMonths, expiryDays, requiresPrescription, isUnique, dynamicPricing, unitType), sections visibles dans le formulaire produit, catégories suggérées, icône admin (FR104, Phase 2a) ; formulaire produit adaptatif au businessType — champs pertinents prioritaires et pré-remplis, champs non-pertinents masqués avec toggle "Afficher plus d'options", override par produit toujours possible (FR105, Phase 2a) ; pré-création automatique des catégories suggérées à la création du tenant (FR106, Phase 2a). 13 types seedés (généraliste, épicerie, téléphonie, textile, pharmacie, quincaillerie, électroménager, cave à vin, bijouterie, dépôt-vente, boulangerie, station service, grossiste). Mise à jour Phase 2a, Table des matières FR1–FR106. |
 | 6.6 | 2026-03-20 | Carlos-simpore | Ajout FR107–FR111 : Commandes clients avec lifecycle complet draft→paid, lignes produit avec variantes et quantités réelles livrées, document de livraison configurable par business type (FR107–FR109, Phase 2a) ; dashboard commandes en cours + paiements partiels + solde client (FR110, Phase 2a) ; labels de rôle par business type (commercial → "Chauffeur-livreur", etc.) via BusinessTypeDefinition.roleLabels (FR111, Phase 2a). Ajout business type "distribution" (14e type). Mise à jour Phase 2a, Table des matières FR1–FR111. |
+| 7.0 | 2026-03-30 | Carlos-simpore | Vision universelle : Scalario = plateforme universelle pour toute organisation, UEMOA = beachhead. 10 NFR architecturaux (NFR31–NFR40) : i18n, compliance pluggable, payment adapter, unités configurables, API /api/v1/, certificate pinning, rate limiting, subscription enforcement server-side, anomaly detection, trajectoire microservices. FR-AI-01 à FR-AI-05 (AI Assistant dédié, actions AI-invocables, Excel import, NL config, Config Wizard). FR-TEMPLATE-01/02 (Template Builder). FR-MULTISTORE-01 (Multi-POS). FR-MULTISERVICE-01 (Dashboard Multi-Clients Pro). FR-SESSION-01 (Sessions). Sections Écosystème Commercial Channels + Flywheel Architecture. Corrections conflits : FR64/FR69/FR103/FR86 enrichis de notes plugin/adapter. Positionnement et framing mis à jour scope global. |
 
 ---
 
@@ -86,8 +97,9 @@ Confidentiel — Carlos-simpore
 | 1 | Executive Summary | Vision, principes fondateurs, ce qui rend Scalario unique |
 | 2 | Classification du projet | Type, domaine, complexité, stack, état actuel |
 | 3 | Critères de Succès | Métriques utilisateur, business et technique |
-| 4 | Périmètre du Produit & Phases | Phase 1 (MVP), 2a, 2b (Croissance), 3 (Expansion) |
-| 5 | UI-Driven Architecture | Server-Driven UI, modules par métier, roadmap verticaux |
+| 4 | Périmètre du Produit & Phases | Phase 1 (MVP) + Fondations Architecturales H1, 2a, 2b (Croissance), 3 (Expansion) |
+| 4a | Fondations Architecturales H1 | i18n, /api/v1/, payment adapters, compliance pluggable — non-négociables H1 |
+| 5 | UI-Driven Architecture | Server-Driven UI, modules par métier, roadmap secteurs |
 | 6 | Scalario Connect | Interconnexion inter-entreprises, flux B2B, structure DB |
 | 7 | Scalario Enterprise | Multi-départements, modes Intégré / Fédéré, flux inter-dép. |
 | 8 | Programme Ambassadeurs | Modèle économique, profils, fonctionnalités, kit |
@@ -95,16 +107,30 @@ Confidentiel — Carlos-simpore
 | 10 | User Journeys (1–8) | Retail (Fatou, Blandine, Moussa, Carlos) + Enterprise (Awa, Ibrahim, Serge) + Offline |
 | 11 | Exigences SaaS B2B | Multi-tenancy, RBAC Retail & Enterprise, modules, intégrations |
 | 12 | Onboarding & Support Client | Processus par offre, SLAs, kit Ambassadeur |
+| 12b | Super Admin Scalario (Backoffice Opérationnel) | Interface interne équipe Scalario — création tenants, billing, feature flags, marketplace templates |
+| 12c | Infrastructure & Déploiement | Railway + Supabase Pro, APK direct H1, CI/CD GitHub Actions, NFR-INFRA-01–05 |
 | 13 | Protection des Données & Conformité | Cadre légal BF/OHADA/RGPD, données sensibles, droits utilisateurs |
 | 14 | Import & Migration Enterprise | Formats CSV, règles migration Retail → Enterprise, gestion erreurs |
 | 15 | Politique Notifications & Alertes | Matrice événements/canaux/destinataires, règles anti-spam |
 | 16 | Gestion des Échecs de Sync | Cycle de vie outbox, conflits financiers, monitoring admin |
 | 17 | Stratégie QA & Tests | Niveaux de tests, DoD, environnements (Local / Staging / Prod) |
-| 18 | Positionnement Concurrentiel | Retail vs Odoo/Wave/Colibris, Enterprise vs SAP/Sage, matrice |
-| 19 | Exigences Fonctionnelles (FR1–FR111) | Toutes les exigences numérotées par module |
-| 20 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau |
-| 21 | Croissance & Projections | Projections sur 10 ans, tarification complète, infrastructure |
-| 22 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
+| 18 | Positionnement Concurrentiel | vs Odoo/Wave/Colibris/SAP/Sage, matrice universelle |
+| 19 | Écosystème Commercial Channels | Cabinets comptables, franchiseurs, groupements, professionnels |
+| 19b | Modèle Intégrateur Mini-Opérateur SaaS | Canaux directs/indirects, bundles, prix plancher/plafond, fee dégressif |
+| 20 | Flywheel Architecture | Module Core → secteurs déverrouillés via templates |
+| 20b | Modèle de Responsabilité | Scalario team / Intégrateurs / Clients — qui construit quoi |
+| 21 | Exigences Fonctionnelles (FR1–FR111) | Toutes les exigences numérotées par module |
+| 21a | FR-AI-01 à FR-AI-05 | AI Assistant dédié, actions invocables, Excel import, NL config, Config Wizard |
+| 21b | FR-TEMPLATE-01 à FR-TEMPLATE-02 | Template Builder AI-driven pour intégrateurs |
+| 21c | FR-MULTISTORE-01 | Gestion Multi-Points de Vente (3 modèles) |
+| 21d | FR-MULTISERVICE-01 | Dashboard Multi-Clients Professionnels |
+| 21e | FR-SESSION-01 | Gestion des Sessions Utilisateurs |
+| 21f | FR-INTEGRATOR-01 à FR-INTEGRATOR-04 | Prix plancher/plafond intégrateur, fee dégressif, commission récurrente |
+| 21g | FR-DEVIS-01 à FR-APPOINTMENT-01 | Modules Core Sectoriels Phase 3+ : Artisan/Atelier, Restaurant, Services |
+| 21h | FR-RBAC-01 | RBAC Dynamique par Tenant — rôles data-driven, dette technique Story 1.2 documentée |
+| 22 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau, architecture (NFR1–NFR40) |
+| 23 | Croissance & Projections | Projections sur 10 ans, tarification complète, évolution revenus 3 horizons, infrastructure |
+| 24 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
 | A | Annexe A — Tests de Validation | 9 tests clés avec critères de réussite |
 | B | Annexe B — Résumé des Innovations | 9 innovations différenciantes |
 | C | Annexe C — Glossaire | 24 termes définis |
@@ -113,24 +139,27 @@ Confidentiel — Carlos-simpore
 
 ## Executive Summary
 
-Scalario est une plateforme ERP modulaire et multi-tenant conçue pour les entreprises d'Afrique et des marchés émergents. Contrairement aux ERP occidentaux (SAP, Odoo Enterprise) qui imposent des workflows rigides et supposent une connectivité permanente, Scalario adopte une approche « business-first » : le système s'adapte au métier et à la réalité terrain, pas l'inverse.
+Scalario est une plateforme de gestion universelle, modulaire et multi-tenant, conçue pour toute organisation dans le monde — commerce, industrie, éducation, santé, hôtellerie, mines, agriculture, ONG, coopératives, services juridiques et toute structure qui a besoin de gérer des opérations, des équipes et des flux financiers. Contrairement aux ERP occidentaux (SAP, Odoo Enterprise) qui imposent des workflows rigides, supposent une connectivité permanente et nécessitent des consultants à 500 €/jour, Scalario adopte une approche « business-first » : le système s'adapte au métier et à la réalité terrain, configurable sans code, déployable via AI en heures, pas en semaines.
 
-La plateforme repose sur une architecture trois niveaux — Kernel (identité, multi-tenancy, moteur de sync), Shared Modules (catalog, contacts, transactions, paiements, inventaire, reporting), et Vertical Modules (logique métier par secteur). Cette structure permet à tout nouveau vertical (retail, restaurant, pharmacie, services) de s'intégrer à l'infrastructure partagée existante sans toucher au kernel. Le même Kernel sert une boutique de quartier et une PME avec plusieurs départements.
+La plateforme repose sur une architecture quatre niveaux — Kernel (identité, multi-tenancy, moteur de sync), Shared Modules (catalog, contacts, transactions, paiements, inventaire, reporting), Modules Fonctionnels (logique métier générique, réutilisable par tous les secteurs) et Templates Sectoriels (bundles de configuration pré-définis par secteur, activables sans développement). Cette structure permet à tout nouveau secteur (éducation, hospitalité, agriculture) de s'intégrer via un template sans toucher au kernel ni au code Flutter. Le même Kernel sert une boutique de quartier, un cabinet comptable et une coopérative agricole de 500 membres.
 
-Le principe fondateur est l'offline-first : le client écrit toujours localement et synchronise dès que la connectivité revient. Ce n'est pas un mode dégradé — c'est le mode d'opération primaire, conçu pour les environnements où internet est l'exception et les coupures de courant sont fréquentes.
+Le principe fondateur est l'offline-first : le client écrit toujours localement et synchronise dès que la connectivité revient. Ce n'est pas un mode dégradé — c'est le mode d'opération primaire, conçu pour tous les environnements où internet est l'exception, des marchés émergents aux zones rurales mondiales.
 
-Le premier vertical commercial est le Retail POS, actuellement en production chez 3 clients (épiceries, cosmétiques, boissons). La feuille de route étend Scalario vers la pharmacie, les services, la restauration, la logistique, et les PME multi-départements (RH, comptabilité OHADA, secrétariat, achats). À terme, Scalario Connect permet à toute entreprise sur la plateforme d'échanger des bons de commande et factures avec ses partenaires commerciaux directement depuis l'interface métier.
+Le beachhead de validation est le Retail UEMOA — le marché le plus exigeant en termes de contraintes (offline, mobile money, unités locales, conformité OHADA) — actuellement en production chez 3 clients. Valider ici = valider pour n'importe quel marché. La feuille de route étend Scalario vers tout secteur via le mécanisme Templates Sectoriels, sans développement sectoriel dédié. À terme, Scalario Connect permet à toute organisation sur la plateforme d'échanger des documents transactionnels avec ses partenaires directement depuis l'interface métier.
 
 ### Ce qui rend Scalario unique
 
-- **Transparence réseau :** quand la connexion tombe, le commerçant ou l'employé ne le remarque pas. Les opérations continuent, la sync se fait silencieusement à la reconnexion.
-- **Contrôle passif du business :** résumés WhatsApp automatiques chaque soir pour les propriétaires absents. Tableaux de bord temps réel pour les dirigeants de PME.
-- **Business-first, pas configuration-first :** la logique métier (arrondi FCFA, poids, péremptions, paie CNSS, plan comptable OHADA) est une fonctionnalité native, pas un paramétrage caché.
-- **Couche partagée polymorphe :** base-entity + extension verticale, 60–80 % de réutilisation entre chaque nouveau métier ou département.
+- **Transparence réseau :** quand la connexion tombe, l'utilisateur ne le remarque pas. Les opérations continuent, la sync se fait silencieusement à la reconnexion. Valable partout dans le monde — pas seulement en Afrique.
+- **Contrôle passif du business :** résumés automatiques chaque soir pour les propriétaires absents. Tableaux de bord temps réel pour les dirigeants. Délégation d'accès pour les professionnels de service (comptables, consultants).
+- **Universal-first, pas configuration-first :** aucune string hardcodée, aucune devise hardcodée, aucune réglementation en dur. FCFA/OHADA/CNSS sont les plugins du beachhead UEMOA — KES/IFRS/NHIF Kenya sont le prochain plugin. La conformité locale s'adapte, le kernel ne change pas.
+- **Couche partagée polymorphe :** base-entity + extension sectorielle via Template, 60–80 % de réutilisation entre chaque nouveau secteur ou département.
+- **Templates Sectoriels AI-driven :** un intégrateur décrit le secteur en langage naturel, l'AI configure les modules, rôles, workflows et vocabulaire. Tout secteur = configurable sans développement Flutter. Aucune exclusion par taille ou secteur.
 - **UI-Driven Architecture :** une seule app Flutter, N métiers et départements. L'interface s'adapte dynamiquement au type de métier ou de département sans mise à jour Play Store.
-- **Scalario Connect (Phase 3) :** tout tenant peut passer des bons de commande à un autre tenant. Boutique → grossiste, pharmacie → distributeur, entreprise → fournisseur. Un seul réseau.
+- **AI comme couche d'interface universelle :** tout ce qui est configurable via UI est configurable via AI — dans une section dédiée, pas injecté sur les écrans modules. L'AI génère des action chips contextuels qui déclenchent des fonctions pré-définies dans les modules.
+- **Scalario Connect (Phase 3) :** tout tenant peut passer des bons de commande à un autre tenant. Boutique → grossiste, cabinet → client, coopérative → distributeur. Un seul réseau.
 - **Scalario Enterprise (Phase 3) :** un seul Kernel pour gérer une boutique et une PME avec RH, comptabilité, secrétariat et logistique. Mode Intégré (un tenant, N départements) ou Mode Fédéré (N entités liées) selon la taille.
 - **Programme Ambassadeurs (Phase 2b) :** les clients satisfaits deviennent une force de vente terrain rémunérée via Mobile Money, sans coût fixe pour Scalario.
+- **Slogan :** À définir — direction : universel, inclusif, aucune exclusion par taille ou secteur.
 
 ---
 
@@ -138,13 +167,13 @@ Le premier vertical commercial est le Retail POS, actuellement en production che
 
 | Dimension | Valeur |
 |:---|:---|
-| Type de projet | SaaS B2B — Plateforme ERP multi-tenant modulaire |
-| Domaine | ERP / Commerce multi-vertical + PME multi-départements / Marchés émergents Afrique de l'Ouest |
-| Complexité | Haute — Architecture trois niveaux, entités partagées polymorphes, sync offline-first, UI-Driven Engine, modèle départemental, contraintes marchés émergents |
-| Contexte | Brownfield — Restructuration du POS monolithique en architecture modulaire extensible |
+| Type de projet | SaaS B2B — Plateforme universelle de gestion multi-tenant modulaire |
+| Domaine | Plateforme universelle — toute organisation (commerce, industrie, éducation, santé, hôtellerie, mines, agriculture, ONG, coopératives, services, juridique et tout secteur). Beachhead : UEMOA Retail. Vision : global-first. |
+| Complexité | Haute — Architecture quatre niveaux (Kernel/Modules Fonctionnels/Templates Sectoriels/AI Config), entités partagées polymorphes, sync offline-first, UI-Driven Engine, modèle départemental, compliance pluggable, payment adapters, i18n natif |
+| Contexte | Brownfield — Restructuration du POS monolithique en architecture modulaire universelle extensible |
 | Stack | Flutter + NestJS + Supabase + Prisma + Isar |
-| État actuel | 3 clients retail actifs (Phase 1). Roadmap : Pharmacie, Services, Logistique, PME Enterprise multi-départements, Scalario Connect inter-entreprises |
-| Slogan | À définir (axe stratégique validé : Scalario s'adapte à votre métier) |
+| État actuel | 3 clients retail actifs (Phase 1). Roadmap : tout secteur via Templates Sectoriels AI-driven, sans développement Flutter dédié |
+| Slogan | À définir — direction : universel, inclusif, aucune exclusion par taille ou secteur |
 
 ---
 
@@ -169,20 +198,20 @@ Le premier vertical commercial est le Retail POS, actuellement en production che
 | Horizon | Cible | Priorité |
 |:---|:---|:---|
 | 6 mois | 3 clients migrés + 5–10 nouveaux clients retail | Qualité et fiabilité avant quantité |
-| 12 mois | 20–30 clients retail actifs + 1 nouveau vertical lancé (Pharmacie ou Services) | Premier revenu récurrent stable |
+| 12 mois | 20–30 clients retail actifs + 1 nouveau secteur servi (Pharmacie ou Services) via Template Sectoriel + Modules Core requis | Premier revenu récurrent stable |
 | Phase 3 (18–24 mois) | Scalario Connect + Scalario Enterprise lancés. Premiers clients PME multi-départements | Panier moyen clients Enterprise : 25–50k FCFA/mois |
 | Signal de succès | 5 clients satisfaits qui recommandent activement | Croissance par parrainage Ambassadeurs |
-| Modèle de revenu | Abonnement mensuel par tenant (Retail 15k, Enterprise 25–50k) + commissions Ambassadeurs (Phase 2b) + Scalario Connect (Phase 3) | Tarification finalisée post-stabilisation produit |
+| Modèle de revenu | **H1** : abonnement direct mensuel (Retail 15k, Enterprise 25–50k). **H2** : + canal intégrateur wholesale (fee dégressif, marge intégrateur — voir FR-INTEGRATOR-01–04) + commissions Ambassadeurs + pricing modulaire par composant. **H3** : + frais réseau Scalario Connect (take-rate B2B) + self-service onboarding automatisé (FR103). | 3 horizons de revenus : abonnement → distribution → réseau |
 
 ### Succès Technique
 
 | Métrique | Cible | Validation |
 |:---|:---|:---|
 | Sécurité migration | Zéro perte de données pour 3 clients existants | Fenêtre de maintenance 1–2 jours acceptable |
-| Vélocité nouveau vertical | 2–4 semaines pour 1 développeur | Utilise modules partagés sans toucher le kernel |
-| Intégrité architecture | Ajouter un vertical ou un département Enterprise ne nécessite jamais de changement kernel | Si Pharmacie ou module RH touche le kernel = échec |
+| Vélocité nouveau secteur | 2–4 semaines par Module Core requis. Template Sectoriel configuré en heures | Secteur servi via Template + Modules Core sans toucher le kernel |
+| Intégrité architecture | Ajouter un Template Sectoriel ou un département Enterprise ne nécessite jamais de changement kernel | Si template Pharmacie ou module RH touche le kernel = échec |
 | Fiabilité offline | Shift 8h, zéro perte de données, sync silencieuse | Délai sync < 30s pour journée complète |
-| Réutilisation modules partagés | 60–80 % de la couche data d'un vertical ou département | Mesuré par ratio réutilisation entités |
+| Réutilisation modules partagés | 60–80 % de la couche data d'un secteur ou département | Mesuré par ratio réutilisation entités |
 | UI-Driven Engine | Ajout d'un nouveau métier ou département via config JSON sans deploy Flutter | Le layout RH diffère du layout Retail sans branching applicatif |
 | Scalario Enterprise | Un tenant PME avec 4 départements actifs sans dégradation de performance | Isolation des vues de données par département validée par les RLS |
 
@@ -193,6 +222,19 @@ Le premier vertical commercial est le Retail POS, actuellement en production che
 ### Phase 1 — MVP : Restructuration incrémentale
 
 Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel/shared/vertical. Zéro nouvelle fonctionnalité sauf l'arrondi FCFA à 5 francs dans le module Payments. 3 clients migrés sans perte de données.
+
+#### Fondations Architecturales H1 (Non-Négociables)
+
+> **Règle :** H1 = livrer FR1–FR111 sans tout refactorer. Mais les quatre fondations suivantes **doivent** être en place dès H1 pour éviter une dette technique bloquante en H2. Ce ne sont pas des features — ce sont des contraintes d'implémentation.
+
+| Fondation | NFR | Règle d'implémentation |
+| :--- | :--- | :--- |
+| **i18n complet** | NFR31 | Aucune string UI hardcodée en français (ou toute autre langue). Toutes les labels, messages et libellés passent par le système de traduction dès le premier écran. |
+| **REST API versionnée /api/v1/** | NFR35 | Toutes les routes backend exposées sous `/api/v1/`. Aucune route sans préfixe de version. Obligatoire avant tout appel client externe. |
+| **Payment adapter pattern** | NFR33 | Wave, Orange Money, Mobile Money = adaptateurs pluggables. Aucun provider hardcodé dans la logique métier. Chaque provider est un module isolé. |
+| **Compliance pluggable** | NFR32 | OHADA, CNSS, CARFO, TVA = plugins de conformité, pas du code core. Aucune règle fiscale ou sociale hardcodée dans le kernel. |
+
+> **Ne pas bloquer H1 pour implémenter H2.** Template Builder (FR-TEMPLATE-01/02), AI Config (FR-AI-01 à FR-AI-05), Extension Module, secteurs → Templates Sectoriels : tout cela est H2+. H1 implémente ces fondations comme des patterns d'architecture (interfaces, adaptateurs, registres) sans les features H2 qui s'y branchent.
 
 ### Phase 2a — Post-restructuration immédiate
 
@@ -217,59 +259,92 @@ Même fonctionnalité, nouvelle architecture. Décomposer le monolithe en kernel
 - Variantes produit (FR89), multi-tarifs configurables (FR90)
 - Traçabilité articles : séries, garantie, ordonnance, garde, prix dynamique, articles uniques (FR92–FR97)
 - Dashboard distant propriétaire (mobile)
-- Import CSV catalogue
-- API Mobile Money (Orange Money / Moov Money)
-- Export OHADA Retail (Phase 2b) : export des écritures de ventes au format OHADA pour remise à un expert-comptable externe. Distinct de la comptabilité intégrée Enterprise (Phase 3).
+- **AI Excel/CSV Import catalogue** (FR-AI-03) : upload fichier existant → AI configure automatiquement produits, variantes, unités, prix. Onboarding catalogue 3h → 10 minutes. *(H2 early, Mois 3–6)*
+- **AI Natural Language Config produits** (FR-AI-04) : configuration produit, unités, variantes, prix par langage naturel. Résout nativement vrac→sachet, multi-unités. *(H2 early)*
+- API Mobile Money (Orange Money / Moov Money) — via payment adapter pattern (NFR33)
+- Export OHADA Retail (Phase 2b) : export des écritures de ventes au format OHADA (plugin compliance) pour remise à un expert-comptable externe. Distinct de la comptabilité intégrée Enterprise (Phase 3).
 - Réservations avec acompte (FR99)
 - Programme Ambassadeurs (voir section dédiée ci-dessous)
+- Gestion Multi-Points de Vente — 3 modèles stock (FR-MULTISTORE-01)
 
 ### Phase 3 — Expansion
 
 - Promotions configurables (remise %, X+Y gratuit, prix barré temporaire) (FR91)
 - Scalario Connect — Interconnexion inter-entreprises (voir section dédiée)
 - Scalario Enterprise — Modèle multi-départements PME : RH & Paie, Comptabilité OHADA, Secrétariat, Logistique (voir section dédiée)
-- Paiement en ligne + onboarding self-service (FR103)
+- Paiement en ligne + onboarding self-service (FR103) via payment adapter pattern
 - Facturation et abonnement intégrés
-- Reporting avancé, prédictions IA
-- Open API, multi-devises, expansion internationale
-- Verticaux non-retail (Artisan, Restaurant, Services — voir ci-dessous)
+- **AI Config Wizard Universel** (FR-AI-05) : configuration complète de l'entreprise via conversation — rôles, modules, workflows, permissions, multi-entités, comptabilité, RH, alertes, dashboards. *(H2 mid, Mois 6–12)*
+- **Template Builder AI-driven** (FR-TEMPLATE-01/02) : outil pour intégrateurs, configuration secteur complet via langage naturel, sans génération de code Flutter
+- **Dashboard Multi-Clients Professionnels** (FR-MULTISERVICE-01) : pour cabinets comptables, consultants, franchiseurs
+- **Section LLM Dédiée** (FR-AI-01) : AI assistant dans section dédiée (chat panel / command bar), non injecté sur les écrans modules
+- **AI-invocable actions par module** (FR-AI-02) : tout module expose ses actions pour l'AI
+- Reporting avancé, prédictions IA (voir Intelligence Artificielle — Phase 3)
+- Tout secteur via Templates Sectoriels — éducation, santé, agriculture, ONG, etc. (aucun développement Flutter dédié)
+- REST API versionnée /api/v1/ ouverte pour intégrations tierces (NFR35)
 
-### Verticaux Futurs (Phase 3+)
+### Secteurs Cibles & Modules Core (Phase 3+)
 
-Chaque vertical réutilise les modules shared (catalog, contacts, inventory, transactions, expenses, reports) et ajoute ses modules spécifiques. Chaque vertical a ses propres business types configurés dans `BusinessTypeDefinition` avec le champ `vertical` correspondant. Le champ `vertical` est déjà présent dans le schéma (Phase 2a anticipation) et vaut `"retail"` pour tous les types actuels.
+Le principe est : **un secteur = un Template Sectoriel + les Modules Core qu'il requiert**. Les Templates Sectoriels sont de la configuration pure (business types, rôles, vocabulaire, workflows, données par défaut) — aucun développement Flutter dédié. Les Modules Core requis sont du nouveau code métier — chacun a son propre FR et sert plusieurs secteurs simultanément.
 
-**Vertical Artisan / Atelier** — Fabrication sur commande
+Le champ `vertical` est déjà présent dans le schéma (Phase 2a anticipation) et vaut `"retail"` pour tous les types actuels. La priorisation est guidée par le Flywheel : quel Module Core déverrouille le plus de secteurs ?
 
-Business types prévus : `tailleur`, `menuisier`, `forgeron`, `cordonnier`, `imprimeur`, `artisan_general`
+---
 
-Modules spécifiques :
-- `models_gallery` : catalogue modèles/designs avec photos
-- `client_specs` : mesures et spécifications par client
-- `quotation` : devis (matériaux + main d'œuvre + marge)
-- `work_order` : commande fabrication avec étapes (kanban)
-- `material_consumption` : nomenclature (BOM) + consommation stock
-- `workshop_planning` : planning atelier, file d'attente, dates
+**Secteur Artisan / Atelier** — Fabrication sur commande
 
-**Vertical Restaurant** — Service en salle
+Business types : `tailleur`, `menuisier`, `forgeron`, `cordonnier`, `imprimeur`, `artisan_general`
 
-Business types prévus : `restaurant`, `fast_food`, `bar`, `traiteur`
+**Template Sectoriel** (configuration existante — aucun dev Flutter dédié) :
 
-Modules spécifiques :
-- `table_management` : plan de salle, attribution tables
-- `kitchen_display` : tickets cuisine, statut préparation
-- `menu_builder` : formules, menus du jour, suggestions
-- `tips` : pourboires par serveur
+- Types business configurés dans `BusinessTypeDefinition` avec flags métier (`hasVariants`, `dynamicPricing`, `unitType`, etc.)
+- Catalogue modèles/designs : module Catalog existant avec images (`itemType = design`)
+- Gestion matières premières : module Inventory existant (stock, alertes, réapprovisionnement)
 
-**Vertical Services** — Prestations pures
+**Modules Core requis** (nouveau code — FR Phase 3+) :
 
-Business types prévus : `salon_coiffure`, `lavage_auto`, `cyber_cafe`, `photographe`, `services_general`
+- `devis_fabrication` **(FR-DEVIS-01)** : devis matériaux + main d'œuvre + marge, accepté/refusé par client, lié à la commande de fabrication
+- `work_order` **(FR-WORKORDER-01)** : commande fabrication avec étapes kanban, statuts, dates estimées, lié au devis
+- `bill_of_materials` **(FR-BOM-01)** : nomenclature (BOM) — matériaux requis par produit, consommation automatique du stock à validation de l'ordre
+- `atelier_planning` **(FR-ATELIERPLANNING-01)** : planning atelier, file d'attente, capacité, dates de livraison
 
-Modules spécifiques :
-- `appointment` : prise de rendez-vous, planning
-- `service_catalog` : prestations avec durée et tarif
-- `client_history` : historique prestations par client
+---
 
-> **Note :** Ces verticaux ne sont PAS implémentés en Phase 2. Ils sont documentés pour que l'architecture shared/vertical reste cohérente et que les modules shared soient réutilisables par tous les verticaux. Le champ `vertical` sur `BusinessTypeDefinition` permet d'ajouter ces types sans migration de schéma.
+**Secteur Restaurant** — Service en salle
+
+Business types : `restaurant`, `fast_food`, `bar`, `traiteur`
+
+**Template Sectoriel** (configuration existante — aucun dev Flutter dédié) :
+
+- Types business dans `BusinessTypeDefinition`
+- Gestion stock alimentation : module Inventory (pertes, dates fraîcheur — FR84/FR85 déjà développés)
+- Menu du jour : catalog + catégories + prix temporaires via BusinessTypeDefinition
+- Pourboires : type de paiement configurable dans le module Payments
+
+**Modules Core requis** (nouveau code — FR Phase 3+) :
+
+- `table_management` **(FR-TABLE-01)** : plan de salle configurable, attribution table → commande, statuts (libre/occupée/réservée/nettoyage)
+- `kitchen_display` **(FR-KDS-01)** : tickets cuisine en temps réel, statuts préparation (reçu/en cours/prêt), notification salle
+
+---
+
+**Secteur Services** — Prestations pures
+
+Business types : `salon_coiffure`, `lavage_auto`, `cyber_cafe`, `photographe`, `services_general`
+
+**Template Sectoriel** (configuration existante — aucun dev Flutter dédié) :
+
+- Catalogue prestations : module Catalog avec `itemType = service`, durée et tarif par prestation
+- Historique client : module Contacts (transactions par client déjà disponibles dans le dashboard contacts)
+- Encaissement : POS existant avec types paiement Mobile Money
+
+**Module Core requis** (nouveau code — FR Phase 3+) :
+
+- `appointment` **(FR-APPOINTMENT-01)** : prise de rendez-vous, planning créneaux, rappels automatiques client, vue agenda opérateur
+
+---
+
+> **Approche :** On ne "build pas un vertical restaurant". On build le Module Core `table_management`, le Module Core `kitchen_display`, et on crée le Template Sectoriel "Restaurant" qui les configure. Ces mêmes modules servent hôtels (table = chambre), traiteurs (table = livraison), cafétérias. La granularité est le Module Core, pas le secteur. Les secteurs (restaurant, distribution, atelier, services) restent des **marchés cibles valides** — seul le mode d'implémentation change.
 
 ---
 
@@ -293,14 +368,19 @@ Quand un tenant atteint une limite, le système :
 - Le owner voit ses limites dans Paramètres → Mon abonnement
 
 > **Note :** Les limites sont configurées dans `PlanDefinition.limits` (Json), pas hardcodées. Carlos peut ajuster par tenant si nécessaire. Champ d'anticipation prévu dans le schéma — implémentation middleware en Phase 2a.
+>
+> **Note évolution H2+ (pricing modulaire) :** Ces limites s'appliquent aux plans fixes H1 (Standard/Premium/Enterprise). À partir de H2, la grille évolue vers un pricing par composant actif — les limites seront recalculées dynamiquement selon les modules activés (voir FR-INTEGRATOR-01 et Modèle de Tarification).
 
 ---
 
 ### Intelligence Artificielle — Roadmap (Phase 2b → Phase 4)
 
+**Principe architectural AI (s'applique à tous les horizons — voir FR-AI-01 à FR-AI-05) :**
+L'AI est la couche d'interface universelle sur tout l'ERP — pas une feature parmi d'autres. Tout ce qui est configurable via UI doit être configurable via AI (FR-AI-02). L'AI vit dans une **section dédiée** (chat panel / command bar), jamais injectée sur les écrans modules (FR-AI-01). Dans cette section, l'AI génère des action chips contextuels (listes, boutons, cards) qui déclenchent des fonctions pré-définies dans les modules. Les écrans modules restent pré-construits, propres, prévisibles. L'assistant est indisponible offline — acceptable car les screens fonctionnent normalement sans lui.
+
 L'IA est une couche transversale qui exploite les données accumulées par chaque tenant pour créer de la valeur.
 
-**Phase 2b — IA individuelle (données du tenant seul) :**
+**Phase 2b — IA individuelle (données du tenant seul) — voir aussi FR-AI-03/04 :**
 
 | Fonctionnalité | Description | Module |
 |----------------|-------------|--------|
@@ -356,7 +436,7 @@ Fournisseur ──► Distributeur ──► Retailer ──► Client final
 | 100 clients | Outil utile individuellement |
 | 1 000 clients | Connexions inter-entreprises possibles |
 | 10 000 clients | L'écosystème = la valeur principale |
-| 100 000 clients | Infrastructure commerciale de l'Afrique francophone |
+| 100 000 clients | Plateforme universelle de référence pour les marchés émergents mondiaux |
 
 **Fonctionnalités Platform :**
 - Commandes inter-entreprises (acheteur → vendeur, tout dans Scalario)
@@ -391,7 +471,7 @@ Avantages défensifs :
 
 ## UI-Driven Architecture (Dynamic Vertical UI)
 
-Scalario ne gère pas ses verticaux avec des branches de code distinctes. L'application Flutter embarque un moteur d'interface piloté par le serveur (Server-Driven UI) : le backend envoie une définition JSON du layout, et Flutter le rend dynamiquement selon le `business_type` du tenant.
+Scalario ne gère pas ses secteurs avec des branches de code distinctes. L'application Flutter embarque un moteur d'interface piloté par le serveur (Server-Driven UI) : le backend envoie une définition JSON du layout, et Flutter le rend dynamiquement selon le `business_type` du tenant.
 
 ### Principe fondamental
 
@@ -414,19 +494,18 @@ Scalario ne gère pas ses verticaux avec des branches de code distinctes. L'appl
 | enterprise_secretariat | Courrier, Agenda, Archivage | documentType, dueDate, recipientDeptId |
 | enterprise_logistics | Bons commande, Parc matériel, Fournisseurs | assetId, purchaseOrderRef, deliveryStatus |
 
-### Roadmap des Verticaux (Publique)
+### Roadmap des Modules (Publique)
 
-> *La roadmap des métiers est communicable publiquement. Elle permet aux prospects de se projeter et crée un effet de réservation (un pharmacien qui voit « Module Pharma Q3 2026 » n'ira pas chercher un autre logiciel).*
+> *La roadmap est communicable publiquement par modules — pas par secteurs. Chaque nouveau module déverrouille automatiquement des secteurs entiers via Templates Sectoriels, sans développement dédié. Les secteurs (pharmacie, restauration, etc.) deviennent ainsi accessibles dès qu'un module requis est livré.*
 
-| Phase | Métier | Statut |
-|:---|:---|:---|
-| Phase 1 (actuel) | Retail / Boutiques / Commerce de détail | En production |
-| Phase 2a | Retail Pro (poids, consignes, pertes) | À venir |
-| Phase 2b | Pharmacies & Santé | Roadmap publique Q3 2026 |
-| Phase 3 | Services (garages, agences, nettoyage) | Roadmap publique Q4 2026 |
-| Phase 3 | Logistique / Grossistes | Vision |
-| Phase 3 | Restauration | Vision |
-| Phase 3 | Enterprise PME — Multi-départements (RH, Compta, Secrétariat, Achats) | Vision |
+| Phase | Modules Core livrés | Secteurs déverrouillés via Template |
+| :--- | :--- | :--- |
+| Phase 1 (actuel) | POS + Stock + Workflows + Multi-rôles + Multi-entités + Sync offline | Commerce de détail, grossistes simples |
+| Phase 2a | Module Plans & Facturation modulaire + Module Client Orders + BusinessType Config | Tout commerce configuré (distribution, épicerie, quincaillerie, etc.) |
+| Phase 2b | Module RH & Paie + AI Excel/CSV Import + AI Natural Language Config | Toute PME avec employés. Onboarding catalogue accéléré. |
+| Phase 2c | AI Config Wizard Universel + Template Builder AI-driven | Tout intégrateur peut configurer n'importe quel secteur sans dev |
+| Phase 3 | Module Projets/Chantiers + CRM Avancé + Module Comptabilité OHADA + Dashboard Multi-clients | BTP, ONG, consultants, cabinets comptables, franchiseurs |
+| Phase 4 | Module Gestion Documentaire + Module Dossier Patient + SDK tiers | Cabinets juridiques, cliniques, pharmacies avancées, administrations |
 
 ---
 
@@ -481,7 +560,7 @@ La relation n'est pas linéaire (Grossiste → Détaillant). C'est un graphe uni
 
 ## Scalario Enterprise — Modèle Multi-Départements (Phase 3)
 
-Scalario Enterprise étend la plateforme aux entreprises structurées qui ont plusieurs départements internes (RH, Comptabilité, Secrétariat, Logistique/Achats). C'est le passage du marché « Boutique » au marché « PME », avec un panier moyen significativement plus élevé et une fidélité structurellement plus forte.
+Scalario Enterprise étend la plateforme aux entreprises structurées qui ont plusieurs départements internes. **Les départements sont des données configurables par tenant, définies par le Template — pas des valeurs hardcodées dans le système.** Chaque Template sectoriel livre une structure organisationnelle préconfigurée comme point de départ. Un tenant peut ensuite créer, renommer et structurer ses unités librement via AI Config. Exemples : Template Retail → Direction, Ventes, Stock, Caisse ; Template Enterprise PME → RH, Comptabilité, Secrétariat, Logistique ; Template Juridique → Direction, Contentieux, Conseil, Secrétariat ; Template Hôpital → Direction, Médical, Infirmier, Pharmacie. C'est le passage du marché « Boutique » au marché « PME », avec un panier moyen significativement plus élevé et une fidélité structurellement plus forte.
 
 ### Modèle de structure selon la taille
 
@@ -494,10 +573,23 @@ Deux modes coexistent selon la maturité de l'organisation :
 
 > *La décision Mode Intégré vs Mode Fédéré est configurée par l'admin à la création du tenant. Elle peut évoluer — une PME qui grandit peut migrer d'Intégré vers Fédéré sans perte de données.*
 
-### Départements ciblés (Phase 3)
+### Structures Organisationnelles par Template (valeurs par défaut)
+
+> **Principe :** La structure organisationnelle est définie par le Template — jamais hardcodée dans le système. La table `departments(id, tenantId, name, type)` est tenant-driven. H1 livre chaque Template avec une structure préconfigurée comme point de départ. Phase 2c active la personnalisation libre via AI Config (renommage, ajout, suppression d'unités).
+
+| Template Sectoriel | Départements par défaut | Secteur cible |
+| :--- | :--- | :--- |
+| Template Retail | Direction, Ventes, Stock, Caisse | Commerce de détail, épicerie, boutique |
+| Template Enterprise PME | RH, Comptabilité, Secrétariat, Logistique | PME structurée, agence, cabinet |
+| Template Juridique *(Phase 3+)* | Direction, Contentieux, Conseil, Secrétariat | Cabinet d'avocats, étude notariale |
+| Template Hôpital *(Phase 3+)* | Direction, Médical, Infirmier, Pharmacie | Clinique, hôpital, centre de santé |
+
+### Détail — Template Enterprise PME (départements par défaut)
+
+> **Ces départements sont des valeurs par défaut préconfigurées pour le Template Enterprise PME.** Ils sont modifiables par chaque tenant via AI Config : renommage libre, ajout de nouveaux départements (ex: "Direction Commerciale", "Support Client", "R&D"), suppression des départements non utilisés, configuration des modules actifs par département. Le système ne hardcode aucun nom de département — la table `departments(id, tenantId, name, type)` est entièrement tenant-driven.
 
 | Département | Modules Scalario activés | Fonctionnalités clés | Persona principal |
-|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- |
 | RH & Paie | Contacts (employés), Reporting, Payments | Fiches employés, contrats, congés, calcul de paie (SMIG Burkina), bulletins de salaire, historique disciplinaire, déclarations CNSS/CARFO | Responsable RH |
 | Comptabilité & Finance | Transactions, Payments, Reporting | Plan comptable OHADA, grand livre, balance, journaux, rapprochement bancaire, états financiers (bilan, compte de résultat), export pour expert-comptable | Comptable / DAF |
 | Secrétariat & Gestion documentaire | Contacts, module Documents (nouveau) | Gestion du courrier entrant/sortant, agenda partagé, archivage numérique des documents (contrats, attestations, factures), alertes échéances | Secrétaire / Assistant de direction |
@@ -514,6 +606,8 @@ Deux modes coexistent selon la maturité de l'organisation :
 
 ### Flux inter-départements
 
+> **Ces flux sont des exemples pour le Template Enterprise PME par défaut.** L'event bus du Kernel est générique — n'importe quel département peut émettre vers n'importe quel autre. Les flux effectifs dépendent des modules activés par le tenant dans chaque département.
+
 Les départements communiquent entre eux via des événements internes au tenant, sans exposer leurs données brutes :
 
 | Émetteur | Destinataire | Événement | Résultat |
@@ -528,16 +622,17 @@ Les départements communiquent entre eux via des événements internes au tenant
 
 | Offre | Prix estimé (Phase 3) | Inclus |
 |:---|:---|:---|
-| PME Essentiel | 25 000 FCFA / mois | Mode Intégré, 2 départements, 10 utilisateurs, modules RH + Compta de base |
-| PME Pro | 50 000 FCFA / mois | Mode Intégré, 4 départements, 25 utilisateurs, tous les modules départementaux |
+| PME Essentiel | 25 000 FCFA / mois | Mode Intégré, jusqu'à 2 départements configurables, 10 utilisateurs, 2 modules métier actifs |
+| PME Pro | 50 000 FCFA / mois | Mode Intégré, jusqu'à 4 départements configurables, 25 utilisateurs, tous les modules actifs |
 | Groupe / Holding | Sur devis | Mode Fédéré, N tenants liés, dashboard consolidation, Scalario Connect inclus |
 
 > *La tarification Enterprise est significativement plus élevée que le Retail (15 000 FCFA) car la valeur livrée est proportionnellement plus grande : une PME qui évite un comptable externe (économie de 100 000–300 000 FCFA/mois) justifie aisément 50 000 FCFA d'abonnement.*
 
 ### Structure DB à anticiper (Phase 1)
 
-| Table | Champ à ajouter | Utilité |
-|:---|:---|:---|
+| Table | Champ / Action | Utilité |
+| :--- | :--- | :--- |
+| **departments** *(nouvelle table)* | `id, tenantId, name, type, parentDepartmentId` | Unités organisationnelles tenant-driven — noms libres, définis par le Template par défaut |
 | tenants | org_mode (enum: standalone \| integrated \| federated) | Définit si le tenant supporte les départements |
 | tenants | parent_tenant_id (uuid nullable) | Pour le Mode Fédéré : lien vers le tenant Groupe |
 | users | department_ids (array uuid) | Un utilisateur peut appartenir à plusieurs départements |
@@ -552,6 +647,12 @@ Les départements communiquent entre eux via des événements internes au tenant
 ---
 
 ## Programme Ambassadeurs (Phase 2b)
+
+> **Ambassadeur ≠ Intégrateur — deux canaux distincts et complémentaires :**
+>
+> **Ambassadeur** = client Scalario satisfait qui recommande Scalario à ses pairs. Canal informel. Commission 20% de l'abonnement mensuel tant que le client référé est actif. Aucune responsabilité de déploiement ou de support.
+>
+> **Intégrateur** = professionnel (agence, développeur, revendeur sectoriel) qui déploie Scalario pour ses propres clients. Canal formel. Wholesale fee dégressif selon volume. Assure le L1 support de ses clients. Voir FR-INTEGRATOR-01–04.
 
 Le Programme Ambassadeurs est le système de parrainage natif de Scalario. Il transforme les clients satisfaits en force de vente terrain sans coût fixe.
 
@@ -588,11 +689,137 @@ Le Programme Ambassadeurs est le système de parrainage natif de Scalario. Il tr
 
 ---
 
+## Écosystème Commercial Channels (Phase 2–3)
+
+Scalario se distribue via des canaux à effet de réseau multiplicateur — chaque canal apporte plusieurs clients simultanément plutôt qu'un seul.
+
+### Cabinets Comptables & Experts-Comptables — Canal stratégique (H2 mid)
+
+Les experts-comptables en UEMOA gèrent 15–30 clients PME chacun et sont obligatoires pour les entreprises formelles (OHADA). Modèle : le cabinet gère sa propre activité dans Scalario (facturation honoraires, suivi missions, gestion équipe) + accède aux données de ses clients via délégation d'accès (FR-MULTISERVICE-01). Parallèle exact du modèle Xero (NZ) — licorne via les experts-comptables comme premier canal.
+
+Prérequis : module Comptabilité OHADA opérationnel. Cible H2 mid : 3–5 cabinets Ouaga pilotes.
+
+### Franchiseurs & Réseaux de Distribution — Adoption imposée (H2–H3)
+
+Un franchiseur ou tête de réseau adopte Scalario → toutes ses unités (franchises, agents, points de vente) l'utilisent par obligation contractuelle ou par standard réseau. Mécanisme : le franchiseur impose, 1 deal B2B = 10–50 clients instantanément. Cibles UEMOA : chaînes de pharmacies, réseaux de stations-service, distributeurs avec agents terrain, franchises restauration rapide, réseaux de collecte agricole.
+
+Features requises : dashboard tête de réseau (vue consolidée toutes unités), benchmarking inter-unités, standards de config imposés par le franchiseur, reporting consolidé groupe (couvert par FR-MULTISTORE-01 + Scalario Connect).
+
+### Groupements, Coopératives & Associations de Commerçants — Adoption collective (H2–H3)
+
+En UEMOA les commerçants s'organisent en groupements d'achat, coopératives, associations sectorielles. Scalario signe avec le groupement → tous les membres adoptent collectivement. 1 négociation = 20–100 clients. Bonus : les groupements ont souvent accès à des financements institutionnels (BOAD, AFD, USAID, Proparco) pour digitaliser leurs membres.
+
+Cibles : coopératives agricoles, associations de femmes entrepreneures (tarif groupe + microfinance), groupements d'achat marchands (stock mutualisé + commandes groupées fournisseurs).
+
+### Professionnels de Service (Avocats, Consultants, Agences) — Multi-Client (H3)
+
+Gérables via FR-MULTISERVICE-01 dès que les modules Core couvrent leur besoin métier. Templates sectoriels activent chaque profession sans développement dédié. Le professionnel est lui-même client Scalario pour sa propre gestion + dashboard multi-clients pour ses dossiers.
+
+---
+
+## Modèle Intégrateur Mini-Opérateur SaaS (Phase 2b–3)
+
+Les intégrateurs évoluent de revendeurs ponctuels vers un modèle de **mini-opérateur SaaS** : ils créent des bundles sectoriels configurés via AI, vendent l'abonnement directement à leurs clients à leur propre prix, et gèrent la relation client de proximité. Scalario prélève un fee wholesale; l'intégrateur conserve sa marge.
+
+### Canaux de Distribution
+
+| Canal | Description | Phase |
+|:---|:---|:---|
+| **Direct** — Scalario → Client | Le client souscrit via la page d'onboarding Scalario (FR103). Scalario gère la relation, le support de niveau 2 et la facturation. | Phase 1+ |
+| **Indirect** — Scalario → Intégrateur → Client | L'intégrateur souscrit en wholesale, configure les bundles pour ses clients, assure le support de proximité. Scalario facture l'intégrateur au fee wholesale. | Phase 2b |
+
+Les deux canaux coexistent. Un client acquis en direct reste en direct; un client acquis via intégrateur reste attaché à cet intégrateur pour le calcul des commissions.
+
+### Bundles Sectoriels
+
+L'intégrateur compose des offres packagées via le Template Builder (FR-TEMPLATE-01), aidé par l'AI (FR-AI-05) pour sélectionner les modules selon le budget et le secteur du marchand. Exemples :
+
+- **"Petit Commerce Starter"** — Core POS + catalogue + stock de base
+- **"Boucher Bundle"** — Core POS + gestion poids + variantes par découpe
+- **"Cabinet Médical Starter"** — Core + template Dossier Patient + agenda
+
+Chaque bundle est un template sectoriel configuré, pas un développement dédié.
+
+### Règles de Protection de la Valeur (FR-INTEGRATOR-01 à FR-INTEGRATOR-02)
+
+- **Prix plancher :** L'intégrateur ne peut pas vendre en dessous du seuil minimum fixé par Scalario par offre. Protège la valeur perçue du produit sur le marché.
+- **Prix plafond :** L'intégrateur ne peut pas vendre au-dessus du prix maximum fixé par Scalario. Protège les clients finaux contre les marges abusives et préserve l'image de marque.
+
+Les planchers et plafonds sont configurables par Scalario sans déploiement (via PlanDefinition, FR100).
+
+### Fee Dégressif par Volume (FR-INTEGRATOR-03)
+
+| Volume clients actifs de l'intégrateur | Fee wholesale |
+|:---|:---|
+| 1–5 clients | Fee standard (taux de base) |
+| 6–20 clients | -10 % sur le fee standard |
+| 21–50 clients | -20 % sur le fee standard |
+| 50+ clients | Accord négocié (contrat cadre) |
+
+Le volume est recalculé automatiquement à chaque fin de cycle de facturation. Le palier s'ajuste à la hausse immédiatement, à la baisse avec un délai d'1 cycle (protection contre les churns temporaires).
+
+### Commission Récurrente (FR-INTEGRATOR-04)
+
+L'intégrateur perçoit sa marge tant que son client est actif : marge = prix de revente – fee wholesale. Aucune commission à l'acquisition uniquement — l'intégrateur est naturellement incité à assurer la rétention et la satisfaction client. Commission suspendue si le client passe au canal direct ou si l'intégrateur est suspendu pour pratique abusive.
+
+---
+
+## Flywheel Architecture
+
+Chaque nouveau module Core déverrouille plusieurs secteurs servables via Templates Sectoriels sans développement Flutter dédié. La priorisation des modules Core doit être guidée par le nombre de secteurs qu'ils déverrouillent.
+
+### Modules Core → Secteurs Déverrouillés
+
+| Module Core | Secteurs déverrouillés via Template | Priorité |
+|:---|:---|:---|
+| Gestion Documentaire | Avocats, notaires, RH avancé, hôpitaux, administration publique | Haute |
+| Projets / Chantiers | BTP, agences créatives, consultants, ONG, gestion de missions | Haute |
+| Dossier Patient | Cliniques, pharmacies, laboratoires, médecins indépendants | Haute |
+| Production / Fabrication | Ateliers, manufactures, agroalimentaire, brasseries | Moyenne |
+| Gestion Scolaire | Écoles primaires, lycées, centres de formation, universités privées | Moyenne |
+| Gestion Hôtelière | Hôtels, auberges, campings, résidences | Moyenne |
+| Gestion Agricole | Coopératives agricoles, exploitations, collecteurs | Moyenne |
+
+### Principe Flywheel
+
+```text
+Module Core stable
+        ↓
+Template Sectoriel AI-driven configuré en heures
+        ↓
+Nouveau secteur servi sans dev Flutter
+        ↓
+Revenu + données + réseau d'intégrateurs formés
+        ↓
+Financement prochain Module Core
+        ↓
+(Boucle)
+```
+
+> **Note :** Les Templates Sectoriels sont de la configuration pure (rôles, workflows, permissions, vocabulaire, données par défaut). Aucune génération d'écran Flutter. L'UI-Driven Engine + BusinessTypeDefinition + roleLabels couvrent la totalité de la customisation UX nécessaire.
+
+---
+
+## Modèle de Responsabilité
+
+### Qui construit quoi
+
+| Acteur | Responsabilité | Outillage |
+| :--- | :--- | :--- |
+| **Scalario (équipe)** | Core Platform (Kernel, Shared Modules, moteur sync, UI-Driven Engine). Modules Fonctionnels (FR1–FR111+). Templates Officiels pour les secteurs communs (Retail, Distribution, PME). | Code Flutter + NestJS. Infrastructure Supabase. |
+| **Intégrateurs** | Créent des Templates Sectoriels pour leurs clients via Template Builder AI-driven (Phase 2c). Configuration en langage naturel — aucun code requis. Bundlent et revendent des offres Scalario à leur propre marque. | Template Builder (FR-TEMPLATE-01/02). Canal intégrateur wholesale (FR-INTEGRATOR-01–04). |
+| **Intégrateurs avancés (Phase 4+)** | Développent des Modules Custom via SDK tiers pour des besoins non couverts par les modules officiels. Contribuent au marketplace de modules. | SDK Scalario (Phase 4). API /api/v1/ ouverte (NFR35). |
+| **Clients finaux** | Personnalisent leur espace via AI Natural Language (FR-AI-04). Configurent produits, rôles, alertes, workflows en conversation. Activent les modules adaptés à leur métier. | AI Config (FR-AI-04/05). UI admin. Template Sectoriel appliqué par leur intégrateur ou en self-service. |
+
+> **Principe clé :** Template Builder = outil de configuration AI-driven, **pas de génération d'écrans Flutter**. Les écrans sont pré-construits dans le Kernel. Un intégrateur configure le *contenu et le comportement* — jamais la structure de l'application.
+
+---
+
 ## Exigences Domain-Spécifiques
 
 ### Conformité Fiscale & Réglementaire
 
-Scalario est conçu pour être déployé dans plusieurs pays de la zone UEMOA et CEMAC. La conformité fiscale n'est pas codée en dur — elle est pilotée par un moteur configurable par pays/juridiction. Chaque tenant est associé à une juridiction dès sa création, et les règles s'appliquent automatiquement.
+Scalario est conçu pour être déployé dans n'importe quelle juridiction mondiale. La conformité fiscale, la comptabilité et les règles sociales ne sont jamais codées en dur — elles sont pilotées par un moteur de plugins par pays/juridiction (NFR32). Chaque tenant est associé à une juridiction dès sa création, et les règles s'appliquent automatiquement. UEMOA/CEMAC est le beachhead de validation — les plugins Burkina Faso, Côte d'Ivoire, Sénégal sont les premiers livrés. Les plugins Kenya (KES/NSSF), Nigeria (NGN/PENCOM), Indonésie (IDR/BPJS) suivent sans modification du Kernel.
 
 #### Architecture fiscale multi-pays
 
@@ -665,9 +892,11 @@ Moussa, 35 ans, pivot opérationnel. Gère les réceptions fournisseurs, les tra
 
 ### Journey 4 : Carlos, Admin système — Onboarding Pharmacie
 
-Carlos crée un nouveau tenant Pharmacie, active les modules partagés, active le vertical Pharmacy qui ajoute ses extensions spécifiques via l'UI-Driven Engine. Le pharmacien est opérationnel en 2 heures. Zéro modification du kernel.
+Carlos crée un nouveau tenant Pharmacie, active les modules partagés, applique le Template Sectoriel Pharmacie qui configure les extensions spécifiques via l'UI-Driven Engine. Le pharmacien est opérationnel en 2 heures. Zéro modification du kernel.
 
-**Fonctionnalités révélées :** provisioning multi-tenant, configuration RBAC par vertical, système d'activation de module, import CSV catalogue, extensions CatalogItem vertical-spécifiques, isolation du kernel.
+> *Ce journey illustre le flow H1 (provisioning manuel par admin). Phase 2c : ce flow devient self-service via AI Config Wizard (FR-AI-05) — le client sélectionne le Template Sectoriel Pharmacie, décrit son activité, le tenant est configuré automatiquement sans Carlos.*
+
+**Fonctionnalités révélées :** provisioning multi-tenant, configuration RBAC par secteur, système d'activation de module, import CSV catalogue, extensions CatalogItem secteur-spécifiques via Template, isolation du kernel.
 
 ### Journey 5 : Fatou — Crise offline (journée sans internet)
 
@@ -703,6 +932,38 @@ L'antenne est en panne depuis 5h. Fatou ne le remarque pas. 127 transactions en 
 
 **Fonctionnalités révélées :** dashboard DG consolidé multi-départements, indicateurs temps réel (CA, masse salariale, engagements, trésorerie estimée), alertes critiques cross-départements, notification vers employé depuis le dashboard.
 
+### Journey 9 : Aminata, Propriétaire multi-sites — Supervision centralisée (Phase 2b)
+
+**Persona :** Aminata, 34 ans, propriétaire de 3 boutiques textile à Ouagadougou (centre-ville, Gounghin, Pissy). Elle dirige depuis la boutique principale et délègue les opérations locales à chaque caissière.
+
+**Scène :** Aminata ouvre son dashboard multi-sites depuis son téléphone le lundi matin. Elle voit en un seul écran le CA weekend de ses 3 points de vente : Centre-Ville 485 000 FCFA, Gounghin 312 000 FCFA, Pissy 198 000 FCFA. Le stock de pagnes wax est en alerte à Gounghin (3 unités) mais abondant à Centre-Ville (47 unités). Elle initie un transfert inter-sites depuis l'app. La caissière de Gounghin reçoit la confirmation du transfert entrant.
+
+**Fonctionnalités révélées :** dashboard agrégé multi-POS (FR-MULTISTORE-01), transfert inter-sites, RBAC par point de vente, consolidation reporting, alertes stock cross-sites.
+
+### Journey 10 : Moussa, Intégrateur — Déploiement d'une chaîne de boulangeries (Phase 2c)
+
+**Persona :** Moussa, 29 ans, développeur indépendant basé à Abidjan. Il a signé un contrat avec une chaîne de 5 boulangeries pour déployer Scalario.
+
+**Scène :** Moussa accède à son espace intégrateur. Il ouvre le Template Builder et décrit : "Boulangerie artisanale — vente au comptoir de pains, viennoiseries, gâteaux. Stock farine/sucre/levure. Caissière unique. Rapport journalier propriétaire." L'AI génère un draft Template : rôles Propriétaire/Caissière/Production, catégories Pains/Viennoiseries/Gâteaux pré-créées, modules POS + Inventory actifs. Moussa ajuste le vocabulaire ("Fournée" pour les transferts de production), valide et publie le template dans son espace. Il provisionne les 5 tenants de la chaîne en wholesale et applique le template à chacun en 3 clics. Les 5 boutiques sont opérationnelles. Aucune ligne de code Flutter écrite.
+
+**Fonctionnalités révélées :** espace intégrateur wholesale (FR-INTEGRATOR-01/02), Template Builder (FR-TEMPLATE-01/02), AI génération de config (FR-AI-01/02), provisioning multi-tenants, marge intégrateur, vocabulaire sectoriel configurable.
+
+### Journey 11 : Ibrahim, Expert-comptable — Clôture mensuelle multi-clients (Phase 3)
+
+**Persona :** Ibrahim, 42 ans, expert-comptable indépendant à Dakar. Il gère la comptabilité de 12 clients PME, tous sur Scalario Enterprise.
+
+**Scène :** Ibrahim ouvre son dashboard professionnel depuis son PC. Il voit ses 12 clients avec leur statut de clôture : 9 validées, 2 en attente, 1 avec anomalie (écart de 47 000 FCFA sur le compte 411). Il clique sur le client concerné — son accès délégué lui ouvre la comptabilité du tenant en lecture+écriture sur le module Finance uniquement. Il identifie l'écart : une facture client non lettrée. Il crée l'écriture de lettrage depuis le grand livre. Le propriétaire du tenant reçoit une notification "Votre comptable a finalisé la clôture de mars." Ibrahim revient à son dashboard et passe au client suivant.
+
+**Fonctionnalités révélées :** accès délégué multi-tenants (FR-MULTISERVICE-01), isolation par module (Finance uniquement), dashboard professionnel agrégé, audit trail délégation, notification cross-acteurs.
+
+### Journey 12 : Fatou, Propriétaire — Configuration métier via chat AI (Phase 2c)
+
+**Persona :** Fatou, propriétaire de l'épicerie (Journey 1). 3 mois après le démarrage, elle veut ajouter une règle de prix pour les achats en gros.
+
+**Scène :** Fatou ouvre la section AI depuis son écran principal et tape : "Je veux que les clients qui achètent 5 fois le même produit aient une remise de 8%." L'AI répond : "Je vais créer une règle de promotion : à partir de 5 unités du même article dans la même transaction, remise automatique 8%. C'est bien ce que vous voulez ?" Fatou confirme. L'AI invoque l'action `createPromotion` (FR-AI-02) avec les paramètres générés : type=QUANTITY_DISCOUNT, threshold=5, discount=8%, scope=SAME_ITEM. La règle est active immédiatement — la vente suivante applique la remise automatiquement. Aucun menu de configuration visité, aucune formation requise.
+
+**Fonctionnalités révélées :** section AI dédiée non-injectée (FR-AI-01), function calling vers module Promotions (FR-AI-02), confirmation avant action destructive, paramètres auto-générés, activation instantanée.
+
 ---
 
 ## Exigences SaaS B2B
@@ -713,13 +974,15 @@ L'antenne est en panne depuis 5h. Fatou ne le remarque pas. 127 transactions en 
 |:---|:---|
 | Modèle d'isolation | Isolation logique via tenant_id sur toutes les entités + Supabase RLS en filet de sécurité |
 | Provisioning tenant | Manuel par admin (MVP). Self-service post-MVP |
-| Configuration tenant | Devise, timezone, juridiction fiscale, modules actifs, vertical actif, type métier (UI-Driven) |
+| Configuration tenant | Devise, timezone, juridiction fiscale, modules actifs, secteur actif, type métier (UI-Driven) |
 | Cycle de vie tenant | Créer, activer, suspendre, archiver. Pas de suppression (audit trail) |
 
-### Matrice de Permissions RBAC — Retail
+### Exemple de Configuration RBAC — Template Retail (valeurs par défaut)
+
+> **Ces rôles et permissions sont des valeurs par défaut préconfigurées pour le Template Retail.** Ils sont modifiables par chaque tenant via AI Config (FR-AI-02/FR-RBAC-01). Le système ne hardcode aucun rôle — tous les noms de rôles, permissions et règles d'accès sont des données configurables en base. "Propriétaire", "Gestionnaire" et "Commercial" sont les labels du Template Retail par défaut. Un tenant peut les renommer ("Patron", "Responsable de rayon", "Vendeur"), modifier leurs permissions, ou créer de nouveaux rôles (ex: "Superviseur", "Auditeur") sans déploiement.
 
 | Permission | Propriétaire | Gestionnaire | Commercial |
-|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- |
 | Dashboard & rapports | Complet | Son emplacement | Sa session |
 | Modifier les prix | Oui | Non | Non |
 | Ajouter/modifier produits | Oui | Non | Non |
@@ -732,12 +995,16 @@ L'antenne est en panne depuis 5h. Fatou ne le remarque pas. 127 transactions en 
 | Déclarer pertes | Non | Oui | Oui |
 | Gérer utilisateurs et rôles | Oui | Non | Non |
 
-### Matrice de Permissions RBAC — Enterprise
+> **Note architecture :** L'implémentation actuelle (Phase 1) accepte ces rôles comme point de départ préconfigurés dans le Template Retail. La refactorisation vers RBAC dynamique complet (FR-RBAC-01) est obligatoire avant Phase 2c (AI Config Wizard) — sans quoi le wizard ne peut pas créer de rôles custom pour les clients. Voir dette technique documentée dans `_bmad-output/implementation-artifacts/1-2-role-based-access-control.md`.
+
+### Exemple de Configuration RBAC — Template Enterprise PME (valeurs par défaut)
+
+> **Ces rôles sont des valeurs par défaut préconfigurées pour le Template Enterprise PME (mode multi-départements).** Un tenant Enterprise peut renommer "DRH" en "Responsable Humain", "Comptable" en "DAF", ajouter un rôle "Responsable Juridique" avec accès au module Secrétariat, ou supprimer un rôle non utilisé — sans déploiement.
 
 En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, département, rôle). Le DG voit tous les départements en lecture. Chaque responsable de département écrit uniquement dans son périmètre.
 
 | Permission | DG | DRH | Comptable | Secrétaire | Resp. Achats |
-|:---|:---|:---|:---|:---|:---|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | Dashboard consolidé multi-dép. | Lecture | Non | Non | Non | Non |
 | Fiches employés & contrats | Lecture | Écriture | Lecture | Lecture | Non |
 | Calcul paie & bulletins | Lecture | Écriture | Lecture | Non | Non |
@@ -753,14 +1020,16 @@ En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, dép
 | Configurer départements & rôles | Oui | Non | Non | Non | Non |
 
 > *Règle d'or Enterprise : un utilisateur peut appartenir à plusieurs départements (department_ids). Ses permissions sont l'union de ses rôles dans chaque département. Le DG est le seul rôle avec lecture transversale sur tous les départements.*
+>
+> **Note architecture :** Même règle que pour le Template Retail — ces rôles sont des données configurables, pas des enums hardcodés. La refactorisation RBAC dynamique (FR-RBAC-01) s'applique à tous les templates, Retail et Enterprise.
 
 ### Registre & Activation des Modules
 
 | Aspect | Implémentation |
 |:---|:---|
-| Registre modules | Kernel maintient le registre des modules disponibles (shared + vertical) |
+| Registre modules | Kernel maintient le registre des modules disponibles (shared + sectoriels) |
 | Activation par tenant | TenantModule(tenantId, moduleId, activatedAt, status) |
-| Dépendances | Les modules verticaux déclarent leurs dépendances sur les modules partagés |
+| Dépendances | Les modules sectoriels déclarent leurs dépendances sur les modules partagés |
 | UI-Driven config | TenantModule inclut un JSON de configuration UI spécifique au métier |
 
 ### Architecture d'Intégration
@@ -780,21 +1049,53 @@ En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, dép
 
 ## Onboarding & Support Client
 
-### Processus d'Onboarding par Offre
+### Parcours Commercial H1 — Vente Directe Carlos (Pré-Intégrateur)
 
-| Offre | Étape 1 | Étape 2 | Étape 3 | Durée totale |
-|:---|:---|:---|:---|:---|
-| Retail Standard | Carlos crée le tenant (15 min) | Import CSV catalogue ou saisie manuelle (1–2h) | Formation caissier via vidéo (45 min) — première vente < 15 min | 1 journée |
-| Retail Premium | Idem Standard + activation multi-sites | Migration données existantes (1–2 jours) | Formation gestionnaire + propriétaire (3h) | 2–3 jours |
-| Enterprise Essentiel | Audit préalable : liste employés + plan comptable existant (1h) | Configuration 2 départements + import CSV employés et plan comptable (demi-journée) | Formation DRH + Comptable en session dédiée (4h) | 3–5 jours |
-| Enterprise Pro | Idem Essentiel + cartographie des 4 départements | Import complet + configuration flux inter-départements + validation DG | Formation par département (2h chacun) + test de clôture à blanc | 1–2 semaines |
+Modèle validé sur Blandine (premier client Pro, mars-avril 2026) :
+
+1. Présentation on-site (~30 min) — démonstration des 5 flows critiques
+2. Signature accord commercial sur place
+3. Paiement setup fee via Orange Money (manuel V1) — immédiat
+4. Configuration tenant on-site : catalogue produits, comptes utilisateurs, rôles
+5. Formation employés (~30 min par rôle)
+6. Go-live le jour même ou J+1
+
+> Ce modèle devient le template du Playbook Commercial intégrateur (Phase 2).
+
+---
+
+### Processus d'Onboarding — Évolution par Horizon
+
+> **H1 (actuel) :** Manuel — Carlos ou un intégrateur crée et configure le tenant. Valide pour l'acquisition initiale terrain. **Phase 2a :** AI Excel/CSV Import (FR-AI-03) réduit l'import catalogue de 1–2h à 10 min. **Phase 2c :** AI Config Wizard (FR-AI-05) rend le flow entièrement self-service — l'étape "Carlos/intégrateur crée le tenant" disparaît. Durée Retail : < 30 min autonome.
+
+#### H1 — Processus actuel (Manuel)
+
+| Offre | Étape 1 — Création tenant | Étape 2 — Import données | Étape 3 — Formation | Durée totale |
+| :--- | :--- | :--- | :--- | :--- |
+| Starter / Business | Carlos ou intégrateur crée le tenant (15 min) | Import CSV catalogue ou saisie manuelle (1–2h) | Formation caissier via vidéo (45 min) — première vente < 15 min | 1 journée |
+| Pro | Parcours Commercial H1 (voir ci-dessus) — présentation + signature + config on-site | Catalogue produits on-site ou pré-chargé si liste envoyée en avance | Formation par rôle ~30 min (propriétaire + gestionnaire + commerciaux) | 1 visite (demi-journée) |
+| Enterprise | Audit préalable (1h) + Carlos ou intégrateur configure tenant | Configuration départements + import CSV employés et plan comptable | Formation par département (2–4h chacun) + test clôture à blanc | 3–5 jours |
+
+> **H1 :** Processus manuel Carlos/intégrateur (ci-dessus, valide). **Phase 2a :** AI Excel Import (FR-AI-03) → catalogue 10 min. **Phase 2c :** self-service complet — l'intégrateur ou le client crée le tenant via AI Config Wizard sans Carlos (FR-AI-05).
+
+#### Phase 2a — AI Import (Mois 3–6)
+
+> AI Excel/CSV Import (FR-AI-03) : upload fichier catalogue existant → AI configure automatiquement produits, variantes, unités, prix. **Étape 2 Retail : 1–2h → 10 min.** Étape 2 Enterprise : demi-journée → < 1h pour l'import employés et plan comptable.
+
+#### Phase 2c — Self-service Complet (FR-AI-05)
+
+> Config Wizard universel : le client souscrit via FR103 (Mobile Money → provisioning instant), sélectionne son Template Sectoriel, décrit son activité en langage naturel. Le Wizard configure automatiquement rôles, modules, vocabulaire, structure organisationnelle. **Étape 1 ("Carlos/intégrateur crée le tenant") disparaît du flow.** Durée Retail : < 30 min autonome. Durée Enterprise : < 2h guidée par le Wizard.
+>
+> **Noms d'offres H1 :** Starter (15K/mois) / Business (30K/mois) / Pro (55K/mois, client fondateur Blandine à 40K) / Enterprise (sur devis). À partir de H2 (pricing modulaire par composant actif), la grille tarifaire évolue — voir Modèle de Tarification et Évolution du Modèle de Revenu (3 Horizons).
 
 ### SLAs de Support par Offre
 
+> **Niveaux de support :** Canal Direct (Scalario → Client) : Scalario assure L1 et L2. Canal Indirect (via Intégrateur) : l'intégrateur assure le **L1** (premier contact, résolution courante), Scalario assure le **L2** (bugs produit, incidents infra). Les SLAs ci-dessous s'appliquent au canal direct. Les SLAs canal indirect sont contractualisés entre Scalario et chaque intégrateur (voir FR-INTEGRATOR-02).
+
 | Offre | Canal | Première réponse | Résolution estimée | Horaires |
-|:---|:---|:---|:---|:---|
-| Retail Standard | WhatsApp | < 4h ouvrables | < 24h pour bugs bloquants | Lun–Sam 8h–18h |
-| Retail Premium | WhatsApp prioritaire | < 2h ouvrables | < 12h pour bugs bloquants | Lun–Sam 8h–18h |
+| :--- | :--- | :--- | :--- | :--- |
+| Starter / Business | WhatsApp | < 4h ouvrables | < 24h pour bugs bloquants | Lun–Sam 8h–18h |
+| Pro | WhatsApp prioritaire | < 2h ouvrables | < 12h pour bugs bloquants | Lun–Sam 8h–18h |
 | Enterprise Essentiel | WhatsApp + appel téléphonique | < 2h ouvrables | < 8h pour bugs bloquants | Lun–Sam 8h–19h |
 | Enterprise Pro | WhatsApp + appel + session TeamViewer | < 1h ouvrables | < 4h pour bugs bloquants | Lun–Sam 7h–20h |
 | Groupe / Holding | Account manager dédié | < 30 min | SLA contractuel sur devis | Sur devis |
@@ -808,6 +1109,104 @@ En mode Enterprise, les permissions s'appliquent à l'intersection (tenant, dép
 - Fiche tarifaire Ambassadeur (prix publics uniquement, sans marges)
 
 > *Les Ambassadeurs n'ont pas accès au backoffice admin. Ils reçoivent uniquement leur tableau de bord de commissions et le kit de communication.*
+
+---
+
+## Super Admin Scalario (Backoffice Opérationnel)
+
+> Interface interne réservée à l'équipe Scalario. Distincte du backoffice tenant (admin boutique) et du dashboard intégrateur.
+
+### Périmètre par Horizon
+
+#### H1 (actuel — manuel)
+
+- Création et configuration manuelle d'un tenant (business_type, plan, modules actifs)
+- Activation / suspension d'un tenant
+- Réinitialisation de mot de passe utilisateur
+- Consultation des logs de sync et erreurs critiques
+
+#### Phase 2b — Canal Intégrateur & Billing
+
+- Onboarding intégrateur : création compte, affectation tier fee, limites prix plancher/plafond
+- Dashboard billing : abonnements actifs, paiements reçus/en attente, suspensions automatiques
+- Calcul et déclenchement des commissions Ambassadeurs (Mobile Money)
+- Suivi des commissions intégrateurs (marge, volume, tier actif)
+- Feature flags par tenant : activer/désactiver un module sans déploiement
+
+#### Phase 3 — Marketplace & Monitoring avancé
+
+- Review et approbation des templates sectoriels soumis par les intégrateurs
+- Dashboard santé plateforme : uptime, volume sync, erreurs critiques, anomalies
+- Gestion des plugins pays (activation conformité fiscale/sociale par tenant)
+
+### FR Super Admin (FR-SUPERADMIN-01–06)
+
+- **FR-SUPERADMIN-01 :** Création de tenant via formulaire Super Admin — sélection du plan, des modules actifs, du template sectoriel initial, de l'intégrateur attaché (optionnel). Provisioning immédiat. *(H1)*
+
+- **FR-SUPERADMIN-02 :** Suspension / réactivation d'un tenant avec motif tracé. Suspension entraîne l'expiration des sessions actives côté client dans < 5s. *(H1)*
+
+- **FR-SUPERADMIN-03 :** Dashboard billing — vue des abonnements actifs, paiements confirmés vs en attente, alertes retard de paiement. Suspension automatique après X jours de retard configurable. *(Phase 2b)*
+
+- **FR-SUPERADMIN-04 :** Onboarding intégrateur — création compte intégrateur, configuration tier fee initial, activation des droits wholesale. Modification du tier fee rétroactive au prochain cycle. *(Phase 2b)*
+
+- **FR-SUPERADMIN-05 :** Feature flags par tenant — activer ou désactiver un module ou une fonctionnalité expérimentale sur un tenant précis sans déploiement applicatif. Stocké en base (tenant_features). *(Phase 2b)*
+
+- **FR-SUPERADMIN-06 :** Review marketplace templates — file d'attente des templates soumis par intégrateurs, interface de validation (approve / reject + commentaire), versioning des templates approuvés. *(Phase 3)*
+
+---
+
+## Infrastructure & Déploiement
+
+> Décisions d'infrastructure par horizon. Le détail opérationnel (pipeline CI/CD, commandes, rollback) est dans les implementation artifacts.
+
+### Stack d'hébergement
+
+| Composant | H1 | H2 | H3+ |
+| :--- | :--- | :--- | :--- |
+| Backend NestJS | Railway Starter (~20$/mo) | Railway scale | Hetzner VPS (optimisation coût) |
+| Base de données | Supabase Cloud Pro (25$/mo) | idem | Évaluer self-hosted Supabase |
+| Stockage fichiers | Supabase Storage | idem | S3-compatible si volumétrie |
+| CDN / Assets | Supabase CDN inclus | idem | CloudFront H3 |
+
+**Rationale Railway :** DX maximal pour fondateur solo-augmenté — deploy sur git push, env vars par environnement, rollback en 1 clic, pas d'ops serveur.
+
+**Rationale Supabase Pro obligatoire dès H1 :** backups daily automatiques inclus (rétention 7j H1 → 30j H2), point-in-time recovery, RLS natif — requis dès le premier client payant.
+
+### Distribution Flutter
+
+| Canal | Horizon | Usage |
+| :--- | :--- | :--- |
+| APK direct (WhatsApp / email) | H1 | Testers + premiers clients (Blandine). Pas de délai Play Store review. Sideloading courant en UEMOA. |
+| Google Play Store | H2 | Lancement marché large. Crédibilité + mises à jour automatiques. |
+| Flutter Web | H3 (backoffice uniquement) | Interface Super Admin Scalario. POS reste mobile-only (offline-first). |
+
+### Environnements par Horizon
+
+| Env | Horizon | Stack |
+| :--- | :--- | :--- |
+| dev | H1 | Local (machine Carlos) + Supabase projet dev |
+| prod | H1 | Railway prod + Supabase projet prod |
+| staging | H2 | Railway staging + Supabase projet staging — activé à l'ouverture du canal intégrateur |
+
+### CI/CD
+
+- **Backend :** GitHub Actions → Railway auto-deploy sur push `main`. Pre-deploy command : `npx prisma migrate deploy`. Rollback : Railway one-click previous deployment.
+- **Flutter :** GitHub Actions build APK signé sur tag `v*.*.*`. Distribution H1 : artefact GitHub Actions → WhatsApp. Distribution H2 : Fastlane → Play Store.
+- **Migrations breaking :** fenêtre de maintenance < 2h acceptable H1 (notifier clients via WhatsApp avant). Cible zero-downtime H2 (migrations additives uniquement, blue-green à évaluer H3).
+
+### Sécurité Infrastructure
+
+- Secrets : Railway environment variables (chiffrés au repos) — H1/H2. Doppler si équipe > 3 personnes (H3).
+- Backups prod : Supabase daily auto (Pro) + export manuel S3 mensuel (H2) + test restauration trimestriel (H3).
+- Isolation tenant : tenant_id applicatif + RLS Supabase (double défense — NFR8).
+
+### NFR Infrastructure (NFR-INFRA-01–05)
+
+- **NFR-INFRA-01 :** Deploy backend < 5 min de bout en bout (git push → live). *(H1)*
+- **NFR-INFRA-02 :** Zéro perte de données lors d'un deploy (migrations additives only sur prod sans fenêtre maintenance). *(H1)*
+- **NFR-INFRA-03 :** Rollback backend < 2 min en cas d'incident post-deploy. *(H1)*
+- **NFR-INFRA-04 :** Backup quotidien automatique prod avec rétention 7j minimum. Test restauration effectué avant chaque nouveau client actif. *(H1)*
+- **NFR-INFRA-05 :** Staging environment isolé activé avant ouverture canal intégrateur — aucun intégrateur ne teste sur prod. *(H2)*
 
 ---
 
@@ -863,6 +1262,8 @@ Contrairement au Retail où l'import se limite au catalogue produits, l'onboardi
 ## Politique de Notifications & Alertes
 
 Toute notification Scalario est catégorisée selon son urgence et son canal. Le propriétaire peut configurer ses préférences par catégorie depuis son profil.
+
+> **Note :** Les noms de rôles dans la colonne "Destinataire" (Propriétaire, Gestionnaire, DRH, etc.) désignent les rôles par défaut des Templates correspondants. En RBAC dynamique (FR-RBAC-01), le destinataire est résolu par code de permission (`notifications.receive_stock_alert`, etc.) — le rôle associé à cette permission reçoit la notification, quel que soit son nom.
 
 ### Matrice Urgence / Canal
 
@@ -954,16 +1355,16 @@ Une fonctionnalité est considérée terminée uniquement si :
 
 ## Positionnement Concurrentiel
 
-Scalario opère dans un espace où les concurrents sont soit trop généralistes (SAP, Odoo), soit trop limités (POS simples locaux), soit inadaptés au contexte Afrique de l'Ouest (connectivité, devise, réglementation). L'analyse ci-dessous couvre les deux segments : Retail et Enterprise.
+Scalario opère dans un espace où les concurrents sont soit trop généralistes (SAP, Odoo), soit trop limités (POS simples locaux), soit trop géo-spécifiques pour s'adapter à des marchés variés. L'avantage structurel de Scalario est son architecture universelle : offline-first natif, conformité pluggable, paiements par adaptateurs, i18n complet — conçu pour fonctionner dans n'importe quelle juridiction sans modifications core. L'UEMOA est le marché d'entrée; le positionnement vise les marchés émergents mondiaux. L'analyse ci-dessous couvre les deux segments : Retail et Enterprise.
 
 ### Segment Retail
 
 | Concurrent | Forces | Faiblesses face à Scalario | Menace |
 |:---|:---|:---|:---|
 | Odoo Community (POS) | Marque connue, open-source, multi-métier | Pas offline-first. Configuration complexe. Pas adapté FCFA/FEC. Technicien requis pour installer. | Moyenne |
-| Wave POS (Sénégal) | Simple, mobile money natif, croissance rapide | POS uniquement, pas d'ERP, pas offline robuste, pas de verticaux | Faible sur Retail Pro |
+| Wave POS (Sénégal) | Simple, mobile money natif, croissance rapide | POS uniquement, pas d'ERP, pas offline robuste, pas de Templates Sectoriels | Faible sur Retail Pro |
 | POS locaux (solutions custom) | Adaptés au marché local, prix bas | Monolithiques, pas de sync cloud, pas d'évolutivité, pas de support | Faible long terme |
-| Colibris ERP (Afrique) | Présent sur le marché, adapté OHADA | Pas offline-first. Interface complexe. Pas de vertical dédié. Peu d'innovation produit. | Moyenne |
+| Colibris ERP (Afrique) | Présent sur le marché, adapté OHADA | Pas offline-first. Interface complexe. Pas de Templates Sectoriels. Peu d'innovation produit. | Moyenne |
 | Tableur Excel / Cahier | Zéro coût, familier | Zéro contrôle, zéro rapport, zéro sécurité, zéro temps réel | Faible (c'est notre marché cible) |
 
 ### Segment Enterprise PME
@@ -981,14 +1382,15 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 | Critère | Scalario | Odoo | Wave POS | Sage | SAP B1 |
 |:---|:---|:---|:---|:---|:---|
 | Offline-first robuste | ✓ Natif | ✗ | ~ Partiel | ✗ | ✗ |
-| Adapté FCFA / FEC Burkina | ✓ | ~ Manuel | ✓ Partiel | ~ | ✗ |
+| Multi-devise / multi-juridiction | ✓ Natif (i18n + plugins) | ~ Manuel | ✗ Limité | ~ | ✓ coûteux |
 | Retail POS intégré | ✓ | ✓ | ✓ | ✗ | ✓ |
-| RH & Paie CNSS natif | ✓ Phase 3 | ~ Plugin | ✗ | ~ | ✓ |
-| Comptabilité OHADA native | ✓ Phase 3 | ~ Module | ✗ | ✓ | ✓ |
+| RH & Paie (plugin conformité locale) | ✓ Phase 3 (NFR32) | ~ Plugin | ✗ | ~ | ✓ |
+| Comptabilité (plugin référentiel actif) | ✓ Phase 3 (NFR32) | ~ Module | ✗ | ✓ | ✓ |
 | Multi-départements PME | ✓ Phase 3 | ✓ | ✗ | ~ | ✓ |
 | Interconnexion B2B (Connect) | ✓ Phase 3 | ✗ | ✗ | ✗ | ✗ |
-| Prix accessible PME BF | ✓ 25–50k FCFA | ~ Variable | ✓ | ✗ > 200k | ✗ > 500k |
+| Prix accessible marchés émergents | ✓ | ~ Variable | ✓ | ✗ | ✗ |
 | Onboarding < 1 semaine | ✓ | ✗ | ✓ | ✗ | ✗ |
+| Templates sectoriels (N secteurs) | ✓ Phase 3 | ✗ | ✗ | ✗ | ✗ |
 
 > *Légende : ✓ = oui natif, ~ = partiel ou avec effort, ✗ = non ou hors portée.*
 
@@ -996,27 +1398,29 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 ## Exigences Fonctionnelles
 
+> **Note sur les noms de rôles dans les FRs :** Les termes "propriétaire", "gestionnaire", "commercial", "DRH", "comptable", "DG" utilisés comme sujets dans les FRs ci-dessous désignent les **rôles par défaut du Template correspondant** (Retail ou Enterprise PME), pas des valeurs hardcodées dans le système. Conformément à FR-RBAC-01, tous ces noms sont configurables par tenant — un tenant peut utiliser d'autres noms pour les mêmes niveaux d'accès. Les codes de permission sous-jacents (`catalog.edit`, `session.open`, etc.) restent stables.
+
 ### Identité & Accès (FR1–FR6)
 
 - **FR1 :** L'admin peut créer et configurer un nouveau tenant (devise, timezone, juridiction fiscale, type de métier, org_mode)
 - **FR2 :** Le propriétaire peut créer des comptes utilisateurs, assigner des rôles et, en mode Enterprise, assigner des départements
-- **FR3 :** Le système applique les permissions RBAC à l'intersection (tenant, département, rôle). En mode Retail : frontières par vertical. En mode Enterprise : frontières par département.
+- **FR3 :** Le système applique les permissions RBAC à l'intersection (tenant, département, rôle). En mode Retail : frontières par secteur actif. En mode Enterprise : frontières par département.
 - **FR4 :** Authentification JWT scopée au tenant
 - **FR5 :** Isolation tenant automatique — aucun utilisateur ne peut accéder aux données d'un autre tenant
 - **FR6 :** Sessions expirées après timeout configurable
 
-### Modules & Verticaux (FR7–FR10)
+### Modules & Secteurs (FR7–FR10)
 
-- **FR7 :** L'admin peut activer ou désactiver modules partagés et verticaux par tenant
-- **FR8 :** Les modules verticaux valident leurs dépendances à l'activation
+- **FR7 :** L'admin peut activer ou désactiver modules partagés et modules sectoriels par tenant
+- **FR8 :** Les modules sectoriels valident leurs dépendances à l'activation
 - **FR9 :** Désactiver un module pour un tenant n'impacte aucun autre tenant
-- **FR10 :** En mode Retail (standalone), chaque tenant a un vertical actif. En mode Enterprise (integrated), un tenant peut avoir plusieurs `business_type` actifs simultanément selon les départements configurés.
+- **FR10 :** En mode Retail (standalone), chaque tenant a un secteur actif. En mode Enterprise (integrated), un tenant peut avoir plusieurs `business_type` actifs simultanément selon les départements configurés.
 
 ### Catalogue (FR11–FR15)
 
 - **FR11 :** Le propriétaire peut créer, modifier et désactiver des articles (nom, prix, catégorie, code-barres)
 - **FR12 :** Les articles supportent un discriminateur de type (physical, bookable, service)
-- **FR13 :** Les modules verticaux peuvent étendre les articles avec des champs spécifiques via l'UI-Driven Engine
+- **FR13 :** Les modules sectoriels peuvent étendre les articles avec des champs spécifiques via l'UI-Driven Engine
 - **FR14 :** Le propriétaire peut gérer les catégories de produits
 - **FR15 :** Les données catalogue sont disponibles offline sur le device
 
@@ -1027,7 +1431,7 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 - **FR18 :** Le système calcule les totaux avec arrondi selon la devise (XOF : 5 FCFA)
 - **FR19 :** Le système enregistre la monnaie rendue pour les paiements en espèces
 - **FR20 :** Les transactions supportent des états de cycle de vie (instant, accumulating, scheduled)
-- **FR21 :** Les modules verticaux peuvent étendre les transactions (ex: sessionId, receiptNumber pour Retail)
+- **FR21 :** Les modules sectoriels peuvent étendre les transactions (ex: sessionId, receiptNumber pour Retail)
 - **FR22 :** Toutes les transactions sont écrites localement d'abord et mises en file de sync
 
 ### Session de Caisse (FR23–FR28)
@@ -1094,10 +1498,12 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 - **FR61 :** La table TenantModule inclut `department_id` (UUID nullable) pour l'activation par département
 - **FR62 :** Le système supporte les événements inter-départements internes (ex: clôture paie → écriture comptable) via l'event bus du Kernel
 
+> **Note sur les noms de départements dans les FRs Enterprise :** Les noms "RH", "Comptabilité", "Secrétariat", "Logistique" utilisés comme sujets dans les FRs ci-dessous sont les **départements par défaut du Template Enterprise PME**. Conformément au principe de départements dynamiques, chaque tenant peut nommer ses départements librement. Les fonctionnalités décrites restent identiques quel que soit le nom du département — elles sont liées aux modules activés (Contacts-employés, Transactions, Inventory, etc.), pas aux noms.
+
 ### RH & Paie Enterprise (FR63–FR68)
 
 - **FR63 :** Le DRH peut créer et gérer des fiches employés (nom, prénom, date naissance, poste, type contrat CDI/CDD, date entrée, numéro CNSS, salaire brut)
-- **FR64 :** Le système calcule automatiquement le salaire net à partir du salaire brut en appliquant les règles SMIG, cotisations CNSS, CARFO et retenues configurables. Les taux sont mis à jour par l'admin sans déploiement.
+- **FR64 :** Le système calcule automatiquement le salaire net à partir du salaire brut en appliquant les règles du plugin paie actif du tenant (SMIG, cotisations sociales, retenues). Les taux sont mis à jour par l'admin sans déploiement. *Note plugin : SMIG/CNSS/CARFO sont les défauts du plugin Burkina Faso (NFR32). Un plugin pays différent (IPRES Sénégal, CNPS CI, NSSF Kenya) active ses propres règles sans modifier ce FR ni le code métier.*
 - **FR65 :** Le DRH peut enregistrer les absences (justifiées, non justifiées, congés payés) et les saisies sont prises en compte dans le calcul de paie du mois
 - **FR66 :** Le système génère les bulletins de salaire de tous les employés actifs en une seule opération. Un bulletin validé est immuable (audit trail légal).
 - **FR67 :** Le système génère le fichier de déclaration sociale (cotisations employés + employeur) au format attendu par l'organisme local du pays (CNSS BF, IPRES SN, CNPS CI…), exportable en CSV ou PDF. Le dépôt se fait manuellement ou via le portail de l'organisme — aucune intégration API directe n'est prévue.
@@ -1105,10 +1511,10 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 ### Comptabilité & Finance Enterprise (FR69–FR72)
 
-- **FR69 :** Le système fournit un plan comptable pré-chargé conformément au Système Comptable OHADA révisé 2017. Le comptable peut personnaliser les sous-comptes sans modifier la structure principale.
+- **FR69 :** Le système fournit un plan comptable pré-chargé conformément au référentiel comptable actif du tenant. Le comptable peut personnaliser les sous-comptes sans modifier la structure principale. *Note plugin : OHADA révisé 2017 est le plugin comptable par défaut pour les tenants UEMOA/CEMAC (NFR32). L'architecture supporte tout référentiel comptable national via un plugin équivalent (IFRS, UK GAAP, PCG France, etc.) sans modifier ce FR ni le Kernel.*
 - **FR70 :** Le comptable peut saisir des écritures manuelles au journal. Les écritures auto-générées (ventes, paie, achats) sont pré-remplies et éditables avant validation.
 - **FR71 :** Le système supporte le rapprochement bancaire : import d'un relevé (CSV ou PDF), suggestion automatique des appariements, validation manuelle des écarts
-- **FR72 :** Le comptable peut clôturer un mois. Après clôture, les écritures de la période sont gelées. Le système génère le bilan et le compte de résultat au format OHADA, exportables en PDF et Excel.
+- **FR72 :** Le comptable peut clôturer un mois. Après clôture, les écritures de la période sont gelées. Le système génère le bilan et le compte de résultat au format du référentiel comptable actif du tenant (OHADA par défaut pour UEMOA), exportables en PDF et Excel.
 
 ### Import Enterprise & Gestion des Erreurs (FR73–FR74)
 
@@ -1143,7 +1549,7 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 - **FR85 :** Les articles ayant une fenêtre de fraîcheur configurée (FR84) affichent un indicateur couleur dans la grille POS et dans les vues stock : Vert (> 50 % de la fenêtre restante), Orange (20–50 % restante), Rouge (< 20 % restante ou date dépassée). Les seuils de couleur (50 % et 20 %) sont configurables par tenant. Les articles en Orange ou Rouge sont présentés en priorité dans la grille POS. Un filtre "Articles urgents" permet d'afficher uniquement les articles en Orange/Rouge. *(Phase 2b)*
 
-- **FR86 :** Chaque jour à l'heure configurable par le tenant (défaut : 20h00 heure locale du tenant), le système génère et envoie automatiquement un résumé au propriétaire via WhatsApp (si opt-in explicite) et/ou notification push contenant : (1) chiffre d'affaires total du jour, (2) montant total des pertes déclarées du jour, (3) liste des articles dont le stock est ≤ `lowStockThreshold`, (4) top 3 articles les plus vendus en quantité. L'envoi est conditionné à l'opt-in du propriétaire. Si aucune activité dans la journée, le résumé indique "Aucune vente enregistrée". L'heure d'envoi et les canaux sont configurables par tenant depuis le profil propriétaire.
+- **FR86 :** Chaque jour à l'heure configurable par le tenant (défaut : 20h00 heure locale du tenant), le système génère et envoie automatiquement un résumé au propriétaire via WhatsApp (si opt-in explicite) et/ou notification push contenant : (1) chiffre d'affaires total du jour, (2) montant total des pertes déclarées du jour, (3) liste des articles dont le stock est ≤ `lowStockThreshold`, (4) top 3 articles les plus vendus en quantité. L'envoi est conditionné à l'opt-in du propriétaire. Si aucune activité dans la journée, le résumé indique le message i18n correspondant à la langue du tenant ("Aucune vente enregistrée" en FR). L'heure d'envoi, les canaux et la langue des messages sont configurables par tenant depuis le profil propriétaire. *Note i18n (NFR31) : les templates de messages ne contiennent aucune string hardcodée en français — toutes les chaînes passent par le système i18n du tenant.*
 
 - **FR87 :** Lors de la déclaration d'une perte (FR34), l'utilisateur doit sélectionner l'emplacement de la perte dans une liste configurable par tenant (ex: "Magasin", "Rayon"). Le champ emplacement est obligatoire si au moins un emplacement est configuré pour le tenant ; optionnel si aucun n'est configuré. L'emplacement est enregistré sur le `InventoryMovement` de type `LOSS`. Les rapports de pertes peuvent être filtrés et agrégés par emplacement pour attribution de responsabilité. La liste des emplacements est gérée depuis l'interface admin sans code.
 
@@ -1230,17 +1636,25 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 - **FR103 :** Le système supporte le paiement en ligne de
   l'abonnement via une page d'onboarding dédiée. Le client
-  peut : choisir son plan, payer via Mobile Money (Orange Money,
-  Moov Money) ou carte bancaire, et son tenant est créé et
-  activé automatiquement à la confirmation du paiement.
-  L'upgrade de plan est possible depuis le backoffice avec
-  paiement intégré. *(Phase 3 — auto-provisioning complet)*
+  peut : choisir son plan, payer via les méthodes disponibles
+  dans sa région (Mobile Money, carte bancaire, virement),
+  et son tenant est créé et activé automatiquement à la
+  confirmation du paiement. L'upgrade de plan est possible
+  depuis le backoffice avec paiement intégré. *(Phase 3 —
+  auto-provisioning complet)* *Note adapter (NFR33) : Orange Money
+  et Moov Money sont les implémentations initiales du payment
+  adapter UEMOA. Le pattern adapter permet d'ajouter M-Pesa Kenya,
+  Flutterwave Nigeria, Stripe global sans modifier ce FR ni la
+  logique métier de facturation.*
 
 > **Note d'encadrement :**
 > Phase 2a = gestion manuelle par Carlos (panel admin).
 > Phase 3 = self-service client (paiement en ligne + auto-provisioning).
 > L'architecture est conçue dès Phase 2a pour supporter Phase 3
 > sans migration (champs anticipation sur Tenant + PlanDefinition).
+
+> **Direction évolution modèle tarifaire (H2+) :**
+> Le modèle tarifaire cible est le **pricing modulaire** : le client paie uniquement pour ce qui est activé (modules + extensions). La facturation s'ajuste automatiquement à chaque activation via AI Config (FR-AI-04/FR-AI-05). À partir de H2, le modèle évolue vers : **prix de base Core + chaque module/extension activé = ligne de facturation additionnelle**. Les tiers fixes actuels (Starter/Standard/Premium/Enterprise) sont une simplification valide pour H1 avant que l'AI Config soit opérationnelle. FR100–FR103 restent valides pour H1 sans modification. L'architecture PlanDefinition doit anticiper une structure tarifaire par composant (modules, extensions, limites usage) dès sa conception en Phase 2a.
 
 ---
 
@@ -1317,14 +1731,116 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 ### Labels de Rôle par Business Type (FR111)
 
 - **FR111 :** Chaque BusinessTypeDefinition inclut un champ roleLabels
-  (Json) qui mappe les codes de rôle prédéfinis (owner, manager,
-  commercial, cashier) à des labels métier affichés dans l'UI.
-  Exemples : "commercial" → "Chauffeur-livreur" (distribution),
-  "manager" → "Pharmacien adjoint" (pharmacie).
+  (Json) qui mappe les codes de rôle du Template (owner, manager,
+  commercial, cashier pour le Template Retail H1) à des labels métier
+  affichés dans l'UI. Exemples : "commercial" → "Chauffeur-livreur"
+  (distribution), "manager" → "Pharmacien adjoint" (pharmacie).
   Les rôles sous-jacents (permissions, routing) ne changent pas —
   seul le label affiché change. Le panel admin utilise ces labels
   dans le dropdown de création d'utilisateur. Le backoffice utilise
   ces labels dans les rapports et l'historique. *(Phase 2a)*
+  *Note évolution (FR-RBAC-01) : En Phase 2c, roleLabels mappe les
+  IDs de rôles dynamiques du tenant (pas des codes fixes) vers des
+  labels d'affichage. Le champ Json est rétro-compatible — la structure
+  clé→valeur reste, les clés deviennent des role_id au lieu de noms
+  fixes.*
+
+---
+
+### AI Assistant (FR-AI-01 à FR-AI-05)
+
+> **Principe architectural :** L'IA est une couche d'interface universelle, jamais une fonctionnalité injectée dans un écran de module. Chaque FR ci-dessous respecte ce principe.
+
+- **FR-AI-01 :** Section AI dédiée — panneau latéral sur demande, raccourci clavier global, mode plein écran optionnel. Jamais injecté sur les écrans de module. Présent dans toutes les offres Standard/Premium/Pro. *(Phase 1 — architecture, Phase 2b — activation)*
+
+- **FR-AI-02 :** Actions AI invocables par module — chaque module expose un catalogue d'actions que l'IA peut invoquer via function calling (ex : créer un produit, lancer un rapport, ajuster un stock, générer une facture). L'IA ne peut invoquer que des actions déclarées — pas d'accès direct à la base de données. *(Phase 2b)*
+
+- **FR-AI-03 :** Import Excel/CSV guidé par l'IA — import de catalogues produits, listes clients, historiques de transactions depuis fichiers externes. Mapping des colonnes piloté par l'IA (suggestion automatique des correspondances). *(Phase 2b)*
+
+- **FR-AI-04 :** Configuration en langage naturel — l'utilisateur configure des paramètres métier via le chat AI (ex : "change le taux de TVA à 18%", "active le module RH pour ce tenant"). L'IA traduit en mutations JSON validées côté serveur avant application. *(Phase 2b)*
+
+- **FR-AI-05 :** Config Wizard universel — assistant guidé pour l'onboarding de tout nouveau type d'organisation. Dialogue conversationnel pour générer la configuration initiale du tenant. Sélectionne et adapte le template sectoriel approprié. *(Phase 3)*
+
+---
+
+### Template Builder (FR-TEMPLATE-01 à FR-TEMPLATE-02)
+
+- **FR-TEMPLATE-01 :** Template Builder AI-driven — outil destiné aux intégrateurs (pas aux utilisateurs finaux). Permet de créer et publier des templates sectoriels via configuration JSON/YAML. L'IA suggère les modules, workflows et paramètres par défaut selon la description du secteur fournie. **Pas de génération d'écrans Flutter** — les templates sont de la configuration pure. *(Phase 3)*
+
+- **FR-TEMPLATE-02 :** Configuration de modules en langage naturel — dans le Template Builder, l'intégrateur décrit un besoin en langage naturel, l'IA génère la configuration du module (champs, règles, workflows). Sortie : JSON/YAML validé contre le schéma Scalario avant publication. *(Phase 3)*
+
+---
+
+### Gestion Multi-Points de Vente (FR-MULTISTORE-01)
+
+- **FR-MULTISTORE-01 :** Dashboard propriétaire centralisé pour superviser N points de vente d'un même tenant. Trois modèles de stock supportés :
+  - **Modèle A — Stock central partagé** : entrepôt central → POS consommateurs (transferts sortants).
+  - **Modèle B — Stocks indépendants par POS** : chaque site gère son propre stock (pas de partage).
+  - **Modèle C — Mix** : certains articles centraux, d'autres locaux, défini par article ou catégorie.
+  Transferts inter-sites avec traçabilité, consolidation des rapports de vente, alertes de rupture par site. Le modèle de stock est configurable par tenant. *(Phase 2b)*
+
+---
+
+### Dashboard Multi-Clients Professionnels (FR-MULTISERVICE-01)
+
+- **FR-MULTISERVICE-01 :** Interface pour les professionnels de service gérant plusieurs clients (cabinets comptables, consultants, franchiseurs). Accès délégué à N tenants clients depuis un compte professionnel unique. Vue agrégée des indicateurs clés cross-tenant. Notifications cross-tenant configurables. **Modèle Xero pour cabinets** : le client-tenant invite son comptable via email → le comptable voit tous ses clients dans un dashboard dédié sans partage de mot de passe. *(Phase 3)*
+
+---
+
+### Gestion des Sessions Utilisateurs (FR-SESSION-01)
+
+- **FR-SESSION-01 :** Tableau de bord des sessions actives par utilisateur : appareil, localisation approximative, heure de connexion. Révocation instantanée d'une session individuelle depuis le backoffice admin (déconnexion forcée < 5s). Alertes connexion inhabituelle (nouveau device non reconnu, géolocalisation anormale par rapport à l'historique). Délai d'expiration de session configurable par tenant (défaut : 8h). *(Phase 2b)*
+
+---
+
+### Modèle Intégrateur (FR-INTEGRATOR-01 à FR-INTEGRATOR-04)
+
+- **FR-INTEGRATOR-01 :** Prix plancher intégrateur — Le système refuse la souscription ou la modification d'un abonnement intégrateur dont le prix de revente est inférieur au prix plancher configuré par Scalario pour cette offre. Le plancher est défini dans PlanDefinition et modifiable sans déploiement. *(Phase 2b)*
+
+- **FR-INTEGRATOR-02 :** Prix plafond intégrateur — Le système refuse la souscription ou la modification d'un abonnement intégrateur dont le prix de revente est supérieur au prix plafond configuré par Scalario pour cette offre. Le plafond est défini dans PlanDefinition et modifiable sans déploiement. *(Phase 2b)*
+
+- **FR-INTEGRATOR-03 :** Fee dégressif par volume — Le fee wholesale appliqué à l'intégrateur est recalculé automatiquement à chaque fin de cycle de facturation selon le nombre de clients actifs : fee standard (1–5 clients), fee standard −10 % (6–20 clients), fee standard −20 % (21–50 clients), accord contractuel (50+ clients). La progression vers un palier supérieur est immédiate; la régression vers un palier inférieur est retardée d'1 cycle complet. *(Phase 2b)*
+
+- **FR-INTEGRATOR-04 :** Commission récurrente intégrateur — L'intégrateur perçoit sa marge (prix de revente – fee wholesale) chaque mois tant que son client est actif et attaché à son compte intégrateur. La commission est suspendue si le client résilie, si le client migre vers le canal direct, ou si le compte intégrateur est suspendu. Aucune commission versée sur simple acquisition sans rétention (délai de grâce : 30 jours pour éviter les résiliations immédiates). *(Phase 2b)*
+
+---
+
+### Modules Core Sectoriels (FR-DEVIS-01 à FR-APPOINTMENT-01)
+
+> Ces Modules Core sont les briques nécessaires pour servir les secteurs cibles Phase 3+. Chaque module sert plusieurs secteurs simultanément via des Templates Sectoriels distincts. Aucun dev Flutter dédié par secteur — seul le template de configuration varie.
+
+- **FR-DEVIS-01 :** Module Devis / Fabrication — création de devis avec lignes matériaux, main d'œuvre et marge configurable. Lifecycle : brouillon → soumis → accepté/refusé → converti en work_order. Lié aux contacts clients et au catalogue. *(Phase 3+)*
+
+- **FR-WORKORDER-01 :** Module Ordre de Fabrication — commande de fabrication avec étapes configurables (kanban). Chaque étape a un statut (à faire/en cours/terminé), un responsable assigné et une date estimée. Lié au devis (FR-DEVIS-01) et consomme le stock via FR-BOM-01. *(Phase 3+)*
+
+- **FR-BOM-01 :** Module Nomenclature (Bill of Materials) — définition des matériaux requis par produit fabriqué (quantité, unité, article du catalog). À la validation d'un work_order, le stock des matériaux est automatiquement consommé via le module Inventory. Alerte si stock insuffisant avant lancement. *(Phase 3+)*
+
+- **FR-ATELIERPLANNING-01 :** Module Planning Atelier — vue calendrier des ordres de fabrication par atelier ou opérateur. Gestion de la file d'attente, capacité journalière configurable, dates de livraison promises vs réelles. *(Phase 3+)*
+
+- **FR-TABLE-01 :** Module Gestion de Salle — plan de salle configurable (tables, zones, capacité). Attribution table → commande active. Statuts temps réel : libre / occupée / réservée / nettoyage. Fusionne ou scinde des tables. Sert restaurants, hôtels (chambre), traiteurs (livraison), cafétérias. *(Phase 3+)*
+
+- **FR-KDS-01 :** Module Kitchen Display System — tickets de préparation en temps réel depuis le POS vers la cuisine. Statuts : reçu / en cours / prêt. Notification salle à la validation. Vue par station (entrées/plats/boissons). Sert restaurants, bars, cantines. *(Phase 3+)*
+
+- **FR-APPOINTMENT-01 :** Module Rendez-vous — prise de rendez-vous sur créneaux configurables par service et opérateur. Vue agenda opérateur (jour/semaine). Rappels automatiques client (push/SMS). Annulation et report. Lié au catalog (prestation) et aux contacts (client). Sert salons, garages, cabinets, photographes. *(Phase 3+)*
+
+---
+
+### RBAC Dynamique (FR-RBAC-01)
+
+> **Contexte :** Le RBAC actuel (implémenté Story 1.2) utilise des rôles globaux partagés entre tenants (`kernel.roles` sans `tenant_id`), avec des noms de rôles hardcodés dans les décorateurs TypeScript (`@Roles('owner')`). Cette architecture est bloquante pour la vision universelle — un template "Cabinet Juridique" ne peut pas définir des rôles "Associé / Collaborateur / Secrétaire" différents d'un template "Restaurant" avec "Gérant / Serveur / Caissier". FR-RBAC-01 spécifie la cible. La dette technique est documentée dans `_bmad-output/implementation-artifacts/1-2-role-based-access-control.md`.
+
+- **FR-RBAC-01 :** RBAC Dynamique par Tenant — les rôles sont des données stockées en base **par tenant**, pas des enums ou valeurs globales partagées. Chaque tenant définit ses propres noms de rôles (texte libre) et ses propres jeux de permissions par module via l'interface admin. Les rôles préconfigurés du Template Sectoriel appliqué sont le point de départ — le tenant peut les renommer, modifier leurs permissions, ou créer de nouveaux rôles sans déploiement. L'AI (FR-AI-02) peut créer et modifier des rôles via langage naturel ("j'ai un responsable stock qui peut voir les entrées mais pas valider les commandes" → rôle créé avec permissions exactes). Aucun nom de rôle hardcodé dans le code backend — le guard vérifie des codes de permission (`catalog.edit`, `session.open`) et non des noms de rôle. *(Architecture H1 — API de gestion Phase 2b — AI RBAC Phase 2c)*
+
+> **Dette technique identifiée (Story 1.2) :**
+>
+> | Point | État actuel | Refactorisation requise | Priorité |
+> | :--- | :--- | :--- | :--- |
+> | `kernel.roles` sans `tenant_id` | Rôles globaux partagés, `@@unique([name, vertical])` | Ajouter `tenant_id UUID FK`, changer unique en `@@unique([name, tenantId])`. Migration + backfill des tenants existants. | **H1 (fondation)** |
+> | Guard basé sur nom de rôle (`@Roles('owner')`) | `getUserRoleName()` + comparaison string | Migrer vers `@Permissions('catalog.edit')` + `hasPermission()` — déjà implémenté dans PermissionService, pas encore utilisé par le guard. | **H1 (fondation)** |
+> | Aucun CRUD API rôles | Rôles créés uniquement via seed script | Endpoints `POST/GET/PATCH/DELETE /tenants/:id/roles` + `POST /tenants/:id/roles/:roleId/permissions` | **Phase 2b** |
+> | AI config rôles | Non implémenté | Exposer les actions rôles dans FR-AI-02 function calling | **Phase 2c** |
+>
+> **Note :** La migration schema (`tenant_id` sur roles) est une fondation H1 car un Template Sectoriel ne peut pas définir des rôles sectoriels distincts tant que les rôles sont globaux. Cela bloque également la vision multi-secteur d'un seul Kernel. L'effort est limité : `hasPermission()` existe déjà dans PermissionService — la migration est principalement un changement de schema + switch du guard.
 
 ---
 
@@ -1393,6 +1909,66 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 | NFR29 : Gestion d'erreurs | Messages clairs et actionnables dans la langue de l'utilisateur. Zéro jargon technique |
 | NFR30 : Transparence offline | L'utilisateur ne perçoit pas l'état de connectivité lors des opérations normales |
 
+### Internationalisation & Localisation
+
+| Exigence | Cible |
+|:---|:---|
+| NFR31 : i18n complet | Zéro chaîne de caractères française hardcodée dans le code Flutter ou NestJS. Toutes les chaînes UI passent par le système i18n. Support multi-devise natif (FCFA par défaut, extensible). |
+
+### Conformité Pluggable
+
+| Exigence | Cible |
+|:---|:---|
+| NFR32 : Framework de conformité pluggable | OHADA, CNSS, CARFO, régimes fiscaux locaux implémentés comme plugins de pays — pas de logique de conformité codée dans le core. Chaque tenant active le plugin correspondant à sa juridiction. L'ajout d'une nouvelle juridiction ne nécessite aucune modification du core. |
+
+### Adaptateurs de Paiement
+
+| Exigence | Cible |
+|:---|:---|
+| NFR33 : Pattern adaptateur paiement | Wave, Orange Money, Moov Money, et tout futur moyen de paiement implémentés comme adaptateurs interchangeables. Le core ne contient aucune intégration directe à un prestataire de paiement. Ajout d'un nouveau prestataire = nouvel adaptateur sans toucher le core. |
+
+### Configuration Universelle
+
+| Exigence | Cible |
+|:---|:---|
+| NFR34 : Unités configurables | Unités de mesure, devises, formats de date/heure configurables par tenant. Aucune valeur par défaut non surchargeable. |
+
+### API Versionnée
+
+| Exigence | Cible |
+|:---|:---|
+| NFR35 : REST API versionnée | Toutes les routes API exposées sous `/api/v1/`. Versionning sémantique. Rétrocompatibilité garantie 12 mois sur les routes v1 avant dépréciation. |
+
+### Sécurité Mobile
+
+| Exigence | Cible |
+|:---|:---|
+| NFR36 : Certificate pinning Flutter | L'application Flutter implémente le certificate pinning pour toutes les communications vers le backend Scalario. Validation du certificat côté client à chaque requête HTTPS. |
+
+### Rate Limiting
+
+| Exigence | Cible |
+|:---|:---|
+| NFR37 : Limitation de débit | Rate limiting appliqué sur toutes les routes API publiques et authentifiées. Limites par tenant, par IP, et par endpoint. Réponses HTTP 429 avec en-tête Retry-After. |
+
+### Application des Abonnements
+
+| Exigence | Cible |
+|:---|:---|
+| NFR38 : Enforcement abonnement côté serveur uniquement | Les restrictions liées au niveau d'abonnement (features, limites utilisateurs, modules actifs) sont appliquées exclusivement côté serveur via le Kernel. Aucune logique d'enforcement dans le client Flutter — l'application cliente se contente d'afficher l'état retourné par l'API. |
+
+### Détection d'Anomalies
+
+| Exigence | Cible |
+|:---|:---|
+| NFR39 : Détection d'anomalies financières | H2 — Monitoring automatique des patterns de transactions anormaux (volumes inhabituels, modifications de prix hors plage, remises atypiques). Alertes < 60s après détection vers l'owner du tenant. Seuils configurables par tenant. |
+
+### Architecture Évolutive
+
+| Exigence | Cible |
+|:---|:---|
+| NFR40 : Trajectoire microservices | H1 : monolithe modulaire NestJS (architecture actuelle). H2 : service Python/FastAPI dédié pour les fonctionnalités AI (découplé, communicant via API interne). H3 : extraction en microservices indépendants sur les bottlenecks prouvés par les métriques de production uniquement — pas de découpage prématuré. |
+
 ---
 
 ## Croissance & Projections
@@ -1412,12 +1988,27 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 | Offre | Cible | Prix | Inclus |
 |:---|:---|:---|:---|
-| Retail Standard | Boutiques, commerces de détail | 15 000 FCFA / mois | 4 utilisateurs, sync Cloud, offline-first, rapports journaliers, 1 vertical actif |
+| Retail Standard | Boutiques, commerces de détail | 15 000 FCFA / mois | 4 utilisateurs, sync Cloud, offline-first, rapports journaliers, 1 secteur actif |
 | Retail Premium | Boutiques multi-sites, réseaux | 30 000 FCFA / mois (Phase 2b) | Multi-agences, modules avancés (poids, consignes), Scalario Connect |
 | Enterprise Essentiel | PME 5–20 employés | 25 000 FCFA / mois (Phase 3) | Mode Intégré, 2 départements, 10 utilisateurs, RH de base + Compta OHADA |
 | Enterprise Pro | PME 20–50 employés | 50 000 FCFA / mois (Phase 3) | 4 départements, 25 utilisateurs, tous modules, Scalario Connect inclus |
 | Groupe / Holding | Multi-entités, filiales | Sur devis (Phase 3) | Mode Fédéré, N tenants liés, dashboard consolidation, SLA dédié |
 | Ambassadeur | Partenaires apporteurs d'affaires | Commission 20 % (Phase 2b) | 3 000 FCFA / client Retail actif / mois. Proportionnel pour Enterprise |
+| Intégrateur wholesale | Agences, développeurs, revendeurs sectoriels | Fee wholesale (Phase 2b) | Prix plancher/plafond Scalario. Fee dégressif selon volume. Marge intégrateur = revente − wholesale. Voir FR-INTEGRATOR-01–04. |
+
+> **Deux canaux de distribution :** (1) **Direct** — client souscrit via onboarding Scalario, relation et support Scalario. (2) **Indirect** — client acquis et suivi par un intégrateur mini-opérateur SaaS, Scalario facture en wholesale. Les deux coexistent sans conflit de canal.
+
+> **Direction H2+ — Pricing modulaire :** Les tiers ci-dessus sont valides pour H1. À partir de H2 (AI Config opérationnel — FR-AI-04/FR-AI-05), le modèle évolue vers un pricing par composant : prix de base Core + chaque module/extension activé = ligne de facturation additionnelle ajustée automatiquement. Aucune modification des FRs ou de l'infrastructure H1 requise pour cette transition.
+
+### Évolution du Modèle de Revenu (3 Horizons)
+
+| Horizon | Streams actifs | Moteur de croissance |
+| :--- | :--- | :--- |
+| **H1** (Phase 1–2a) | Abonnement direct mensuel uniquement (tiers fixes Retail/Enterprise). Onboarding manuel. | Acquisition terrain + bouche-à-oreille. Valider product-market fit. |
+| **H2** (Phase 2b) | + Canal intégrateur wholesale (fee dégressif par volume, voir FR-INTEGRATOR-01–04). + Commissions Ambassadeurs (3 000 FCFA / client Retail / mois). + Pricing modulaire par composant (activer un module = ligne de facturation additionnelle). | Distribution démultipliée via réseau d'intégrateurs. Panier moyen augmenté par modules additionnels. |
+| **H3** (Phase 3) | + Frais réseau Scalario Connect (take-rate sur transactions B2B inter-tenants). + Self-service onboarding automatisé (FR103 : paiement Mobile Money → provisioning instant). + AI upsell (modules AI comme add-on facturable). | Effets de réseau platform. Croissance non-linéaire. Revenus transaction récurrents sans coût d'acquisition. |
+
+> **Note :** Les trois horizons sont séquentiels, pas parallèles. H1 = maîtriser le revenu abonnement et l'économie unitaire. H2 = scale sans coût fixe (intégrateurs = force de vente variable). H3 = monétiser le réseau (valeur inter-tenants, non-linéaire).
 
 ### Infrastructure & Coûts
 
@@ -1469,7 +2060,7 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 ### A. Tests de Validation Clés
 
 - **Test 1 — Offline complet :** Shift 8h sans internet, 127 transactions, sync < 30s à la reconnexion. Zéro perte. Zéro intervention manuelle.
-- **Test 2 — Nouveau vertical :** 1 développeur crée le vertical Pharmacie (catalog + ventes + stock) en < 4 semaines. Zéro modification kernel.
+- **Test 2 — Nouveau secteur via Template :** 1 développeur crée le Template Sectoriel Pharmacie (catalog + ventes + stock, Modules Core existants) en < 4 semaines. Zéro modification kernel.
 - **Test 3 — Migration Retail :** 3 clients existants migrés vers la nouvelle architecture sans perte de données, fonctionnalité identique, fenêtre 1–2 jours.
 - **Test 4 — Onboarding caissier :** Un caissier sans expérience ERP réalise sa première vente sans assistance en < 15 minutes de formation.
 - **Test 5 — UI-Driven :** Activer le type « Pharmacie » sur un tenant affiche les champs date de péremption et DCI sans mise à jour de l'app Flutter.
@@ -1484,7 +2075,7 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 |:---|:---|:---|
 | Architecture offline-first | Internet non fiable en Afrique de l'Ouest | Aucun ERP concurrent (SAP, Odoo, Sage) n'offre l'offline comme mode primaire — c'est toujours un mode dégradé chez eux |
 | Chaîne de garde (Chain of Custody) | Vol de stock non détectable sans système formel | Double validation émetteur/récepteur native, écart attribué automatiquement |
-| Architecture modulaire polymorphe | Duplication de code à chaque nouveau métier ou département | 60–80 % de réutilisation entre verticaux ET entre départements Enterprise |
+| Architecture modulaire polymorphe | Duplication de code à chaque nouveau métier ou département | 60–80 % de réutilisation entre secteurs ET entre départements Enterprise |
 | Conformité fiscale offline | FEC offline = numérotation séquentielle impossible | Plages pré-allouées + file DGI dédiée |
 | UI-Driven Engine | App différente par métier = maintenance exponentielle | Un seul binaire Flutter, N métiers et N départements, via config JSON serveur |
 | Scalario Connect | Commandes inter-entreprises manuelles (WhatsApp, téléphone, papier) | Graphe universel Acheteur/Vendeur. Migration concurrent = convaincre tous les partenaires simultanément. |
@@ -1496,9 +2087,9 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 
 | Terme | Définition |
 |:---|:---|
-| Kernel | Couche fondamentale : auth, multi-tenancy, RBAC, event bus, moteur sync. Ne doit jamais être modifié par un vertical ou un département. |
-| Shared Module | Module réutilisable entre tous les verticaux : Catalog, Contacts, Transactions, Payments, Inventory, Reporting |
-| Vertical Module | Logique métier spécifique à un secteur : Retail POS, Pharmacy, Services, Restaurant |
+| Kernel | Couche fondamentale : auth, multi-tenancy, RBAC, event bus, moteur sync. Ne doit jamais être modifié par un module sectoriel ou un département. |
+| Shared Module | Module réutilisable entre tous les secteurs : Catalog, Contacts, Transactions, Payments, Inventory, Reporting |
+| Vertical Module | Couche architecturale (dans Kernel/Shared/Vertical/Templates) : logique métier spécifique à un secteur. Exemples : Retail POS, Modules Core sectoriels (table_management, appointment, etc.). Distinct du concept de "vertical marché" — un secteur cible est servi par un Template Sectoriel + les Modules Core qu'il requiert. |
 | Offline-first | Mode d'opération primaire : écriture locale d'abord, sync quand connectivité disponible. Ce n'est pas un mode dégradé. |
 | Outbox | File de mutations locales en attente de synchronisation vers le serveur. Persistée sur disque (WAL). |
 | UI-Driven Engine | Système qui définit le layout Flutter via configuration JSON serveur selon le `business_type` du tenant ou le département actif. |

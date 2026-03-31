@@ -124,9 +124,10 @@ class ClientOrderDetailScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(line.catalogItemId.length > 8
-                    ? line.catalogItemId.substring(0, 8)
-                    : line.catalogItemId),
+                Text(
+                  line.itemName ?? line.catalogItemId,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
                 if (delivered > 0 && delivered < qty)
                   Text('Livré: $delivered / $qty',
                       style: const TextStyle(
@@ -146,6 +147,8 @@ class ClientOrderDetailScreen extends ConsumerWidget {
   List<Widget> _buildActions(BuildContext context, WidgetRef ref,
       ClientOrder order, String? role) {
     final isOwnerOrManager = role == 'owner' || role == 'manager';
+    final canDeliver =
+        role == 'owner' || role == 'manager' || role == 'commercial' || role == 'cashier';
 
     Future<void> callTransition(Future<void> Function() action) async {
       try {
@@ -285,6 +288,9 @@ class ClientOrderDetailScreen extends ConsumerWidget {
           ref.invalidate(clientOrdersProvider);
         }
       }));
+    }
+    if (order.status == 'delivered' && canDeliver) {
+      actions.add(_actionBtn('Encaisser', Colors.green, showPaymentDialog));
     }
     if (order.status == 'delivered' && isOwnerOrManager) {
       actions.add(_actionBtn('Facturer', Colors.purple, () => callTransition(

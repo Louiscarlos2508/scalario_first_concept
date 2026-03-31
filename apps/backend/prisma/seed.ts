@@ -197,9 +197,9 @@ async function seedPlans() {
   }
 }
 
-// ── Retail business types — Phase 2a ─────────────────────────────────────────
-// Exactly 14 types. vertical: "retail" on all.
-// Non-retail verticals (artisan, restaurant, services) are Phase 3+.
+// ── Business types — Phase 2a ────────────────────────────────────────────────
+// retail: 11 types | distribution: 3 types (grossiste, gros_detail, distribution)
+// restauration: 1 type (cafe_restaurant) | boulangerie reste retail pour l'instant
 const BUSINESS_TYPES = [
   {
     code: 'generaliste',
@@ -371,7 +371,62 @@ const BUSINESS_TYPES = [
     roleScreenAccess: { owner: ['backoffice', 'client_orders'], manager: ['backoffice_restricted', 'clients_view', 'expenses', 'client_orders'], commercial: ['pos', 'client_orders', 'transfers', 'stock_view', 'daily_sales'], cashier: ['pos'] },
     transferLabels: { sendAction: 'Préparation commande', sendButton: 'Charger', confirmAction: 'Confirmation chargement', confirmButton: 'Chargement confirmé', fromLabel: 'Dépôt', toLabel: 'Camion / Zone' },
     icon: 'warehouse',
-    vertical: 'retail',
+    vertical: 'distribution',
+  },
+  {
+    code: 'gros_detail',
+    name: 'Gros & Détail Intégré',
+    description:
+      'Commerce combinant réception en gros et vente au détail, ' +
+      'avec gestion multi-rôles, circuits de validation et dispatch interne vers les rayons',
+    defaultFlags: { expiryDays: 30, hasVariants: true },
+    visibleSections: ['expiry', 'transfers', 'variants'] as string[],
+    suggestedCategories: [
+      'Alimentation', 'Céréales', 'Boissons',
+      'Produits laitiers', 'Épices', 'Conserves',
+    ] as string[],
+    documentType: 'delivery_note',
+    roleLabels: {
+      owner: 'Propriétaire',
+      manager: 'Gestionnaire',
+      commercial: 'Commercial',
+      cashier: 'Caissier',
+    },
+    roleScreenAccess: {
+      owner: ['backoffice', 'pos'],
+      manager: [
+        'backoffice_restricted',
+        'stock_view',
+        'expenses',
+        'purchase_orders',
+        'inventory_count',
+      ],
+      commercial: [
+        'pos',
+        'client_orders',
+        'reservations',
+        'losses',
+        'transfers',
+        'stock_view',
+        'daily_sales',
+        'internal_requests',
+      ],
+      cashier: [
+        'pos',
+        'client_orders',
+        'reservations',
+      ],
+    },
+    transferLabels: {
+      sendAction: 'Sortie magasin → rayon',
+      sendButton: 'Envoyer au rayon',
+      confirmAction: 'Réception rayon',
+      confirmButton: "Confirmé reçu",
+      fromLabel: 'Magasin',
+      toLabel: 'Rayon',
+    },
+    icon: 'store_mall_directory',
+    vertical: 'distribution',
   },
   {
     code: 'distribution',
@@ -385,7 +440,7 @@ const BUSINESS_TYPES = [
     roleScreenAccess: { owner: ['backoffice', 'client_orders'], manager: ['backoffice_restricted', 'stock_view', 'expenses', 'client_orders'], commercial: ['pos', 'client_orders', 'transfers', 'deliveries', 'stock_view', 'daily_sales'], cashier: ['pos'] },
     transferLabels: { sendAction: 'Chargement livraison', sendButton: 'Charger le camion', confirmAction: 'Confirmation chargement', confirmButton: 'Camion chargé', fromLabel: 'Dépôt', toLabel: 'Véhicule' },
     icon: 'local_shipping',
-    vertical: 'retail',
+    vertical: 'distribution',
   },
   {
     code: 'cafe_restaurant',
@@ -455,7 +510,7 @@ async function main() {
   let tenant = await prisma.tenant.findFirst();
   if (!tenant) {
     tenant = await prisma.tenant.create({
-      data: { name: 'Test Store' },
+      data: { name: 'Test Store', businessType: 'gros_detail' },
     });
     console.log('Created tenant:', tenant.id);
   } else {

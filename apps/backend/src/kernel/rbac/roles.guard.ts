@@ -51,6 +51,9 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Insufficient role for this action');
     }
 
+    // 6. Attach resolved tenant role so controllers can read it
+    request.tenantRole = roleName;
+
     return true;
   }
 }

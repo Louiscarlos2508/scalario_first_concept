@@ -111,10 +111,19 @@ export class ClientOrdersService {
       select: { id: true, name: true, phone: true },
     });
     const contactMap = new Map(contacts.map(c => [c.id, c]));
+
+    const catalogIds = [...new Set(items.flatMap(o => o.lines.map(l => l.catalogItemId)).filter(Boolean))];
+    const catalogItems = await this.prisma.catalogItem.findMany({
+      where: { id: { in: catalogIds } },
+      select: { id: true, name: true },
+    });
+    const nameMap = new Map(catalogItems.map(c => [c.id, c.name]));
+
     const enriched = items.map(o => ({
       ...o,
       customerName: contactMap.get(o.customerId)?.name ?? 'Client inconnu',
       customerPhone: contactMap.get(o.customerId)?.phone ?? null,
+      lines: o.lines.map(l => ({ ...l, itemName: nameMap.get(l.catalogItemId) ?? null })),
     }));
 
     return { items: enriched, meta: { total, page, limit, hasMore: skip + items.length < total } };
@@ -130,10 +139,17 @@ export class ClientOrdersService {
       where: { id: order.customerId },
       select: { name: true, phone: true },
     });
+    const catalogIds = [...new Set(order.lines.map(l => l.catalogItemId).filter(Boolean))];
+    const catalogItems = await this.prisma.catalogItem.findMany({
+      where: { id: { in: catalogIds } },
+      select: { id: true, name: true },
+    });
+    const nameMap = new Map(catalogItems.map(c => [c.id, c.name]));
     return {
       ...order,
       customerName: contact?.name ?? 'Client inconnu',
       customerPhone: contact?.phone ?? null,
+      lines: order.lines.map(l => ({ ...l, itemName: nameMap.get(l.catalogItemId) ?? null })),
     };
   }
 
