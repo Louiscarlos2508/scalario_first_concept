@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scalario</title>
+  <!-- Favicon SVG inline — affiche le S coloré dans l'onglet sur tous les navigateurs modernes -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='32 20 64 90'%3E%3Cpath fill='none' stroke='%23FFCC00' stroke-width='10' stroke-linecap='round' d='M64 24C48 24 36 34 36 48'/%3E%3Cpath fill='none' stroke='%231A73E8' stroke-width='10' stroke-linecap='round' d='M36 48C36 60 48 66 64 66'/%3E%3Cpath fill='none' stroke='%2334A853' stroke-width='10' stroke-linecap='round' d='M64 66C78 66 90 72 90 86'/%3E%3Cpath fill='none' stroke='%23EA4335' stroke-width='10' stroke-linecap='round' d='M90 86C90 98 78 106 64 106'/%3E%3C/svg%3E">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F5F5F5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    @keyframes drawArc {
+      from { stroke-dashoffset: var(--len); }
+      to   { stroke-dashoffset: 0; }
+    }
+    @keyframes fadeInText {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .preview-wrap {
+      display: flex;
+      gap: 16px;
+    }
+
+    .splash-card {
+      flex: 1;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px 36px;
+      min-height: 260px;
+      position: relative;
+    }
+
+    .splash-dark  { background: #2B2B2B; }
+    .splash-light { background: #FFFFFF; border: 1px solid #E0E0E0; }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-top: 24px;
+      font-weight: 500;
+    }
+    .dark-label  { color: rgba(255,255,255,0.35); }
+    .light-label { color: rgba(0,0,0,0.28); }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* S arcs */
+    .arc {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+    }
+    .arc-1 {
+      stroke: #FFCC00;
+      stroke-dasharray: 55;
+      --len: 55;
+      animation: drawArc 0.22s ease-in-out 0.10s forwards;
+      stroke-dashoffset: 55;
+    }
+    .arc-2 {
+      stroke: #1A73E8;
+      stroke-dasharray: 50;
+      --len: 50;
+      animation: drawArc 0.22s ease-in-out 0.28s forwards;
+      stroke-dashoffset: 50;
+    }
+    .arc-3 {
+      stroke: #34A853;
+      stroke-dasharray: 50;
+      --len: 50;
+      animation: drawArc 0.22s ease-in-out 0.46s forwards;
+      stroke-dashoffset: 50;
+    }
+    .arc-4 {
+      stroke: #EA4335;
+      stroke-dasharray: 55;
+      --len: 55;
+      animation: drawArc 0.22s ease-in-out 0.64s forwards;
+      stroke-dashoffset: 55;
+    }
+
+    .calario-dark {
+      font-family: Impact, 'Arial Black', sans-serif;
+      font-size: 44px;
+      letter-spacing: 2px;
+      color: #FFFFFF;
+      opacity: 0;
+      animation: fadeInText 0.4s ease 0.82s forwards;
+      line-height: 1;
+    }
+    .calario-light {
+      font-family: Impact, 'Arial Black', sans-serif;
+      font-size: 44px;
+      letter-spacing: 2px;
+      color: #1A1A1A;
+      opacity: 0;
+      animation: fadeInText 0.4s ease 0.82s forwards;
+      line-height: 1;
+    }
+
+    .replay-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 14px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .replay-dark {
+      border: 1px solid rgba(255,255,255,0.18);
+      background: transparent;
+      color: rgba(255,255,255,0.45);
+    }
+    .replay-dark:hover  { opacity: 0.75; }
+    .replay-light {
+      border: 1px solid rgba(0,0,0,0.14);
+      background: transparent;
+      color: rgba(0,0,0,0.38);
+    }
+    .replay-light:hover { opacity: 0.65; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="preview-wrap">
+
+    <!-- Dark mode -->
+    <div class="splash-card splash-dark" id="card-dark">
+      <div class="logo-row" id="logo-dark">
+        <svg viewBox="32 20 64 90" width="54" height="81">
+          <path class="arc arc-1" d="M 64 24 C 48 24 36 34 36 48"/>
+          <path class="arc arc-2" d="M 36 48 C 36 60 48 66 64 66"/>
+          <path class="arc arc-3" d="M 64 66 C 78 66 90 72 90 86"/>
+          <path class="arc arc-4" d="M 90 86 C 90 98 78 106 64 106"/>
+        </svg>
+        <span class="calario-dark">CALARIO</span>
+      </div>
+      <p class="card-label dark-label">Mode sombre</p>
+      <button class="replay-btn replay-dark" onclick="replay()">↺ Rejouer</button>
+    </div>
+
+    <!-- Light mode -->
+    <div class="splash-card splash-light" id="card-light">
+      <div class="logo-row" id="logo-light">
+        <svg viewBox="32 20 64 90" width="54" height="81">
+          <path class="arc arc-1" d="M 64 24 C 48 24 36 34 36 48"/>
+          <path class="arc arc-2" d="M 36 48 C 36 60 48 66 64 66"/>
+          <path class="arc arc-3" d="M 64 66 C 78 66 90 72 90 86"/>
+          <path class="arc arc-4" d="M 90 86 C 90 98 78 106 64 106"/>
+        </svg>
+        <span class="calario-light">CALARIO</span>
+      </div>
+      <p class="card-label light-label">Mode clair</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function replay() {
+    ['logo-dark', 'logo-light'].forEach(id => {
+      const el = document.getElementById(id);
+      const clone = el.cloneNode(true);
+      el.parentNode.replaceChild(clone, el);
+    });
+    // Re-attach replay button handler after DOM replacement
+    document.querySelectorAll('.replay-btn').forEach(btn => {
+      btn.onclick = replay;
+    });
+  }
+</script>
+
+</body>
+</html>

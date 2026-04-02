@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>10.2 — Inventaire Stock · Scalario Mobile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .phone-shell {
+      width: 390px;
+      height: 844px;
+      background: #f8fafc;
+      border-radius: 44px;
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25), inset 0 0 0 1.5px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .phone-notch {
+      height: 44px;
+      background: #0f172a;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .phone-notch-bar {
+      width: 120px;
+      height: 5px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+    }
+
+    .phone-header {
+      background: #0f172a;
+      padding: 12px 16px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .header-back {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .header-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+    }
+    .header-date-badge {
+      background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.9);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .phone-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 14px 90px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .phone-content::-webkit-scrollbar { display: none; }
+
+    /* TOAST */
+    .toast-banner {
+      background: #dcfce7;
+      border: 1px solid #86efac;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .toast-icon { font-size: 16px; flex-shrink: 0; }
+    .toast-text { font-size: 13px; color: #166534; font-weight: 500; line-height: 1.4; }
+
+    /* SEARCH */
+    .search-wrap { position: relative; }
+    .search-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #1A1A1A;
+      background: white;
+      outline: none;
+    }
+    .search-input:focus { border-color: #1A73E8; }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; }
+
+    /* FILTER CHIPS */
+    .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .chip {
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1.5px solid #e2e8f0;
+      background: white;
+      color: #64748b;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip.active { background: #1A73E8; color: white; border-color: #1A73E8; }
+
+    /* STOCK CARD */
+    .stock-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 14px 16px;
+    }
+    .stock-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .stock-emoji { font-size: 20px; flex-shrink: 0; }
+    .stock-name { font-size: 14px; font-weight: 700; color: #1A1A1A; }
+    .stock-status {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .status-ok { background: #dcfce7; color: #166534; }
+    .status-bas { background: #fef3c7; color: #92400e; }
+    .status-critique { background: #fee2e2; color: #991b1b; }
+
+    .stock-levels { display: flex; align-items: stretch; gap: 10px; }
+    .stock-level-box { flex: 1; background: #f8fafc; border-radius: 10px; padding: 10px 12px; }
+    .stock-level-label { font-size: 11px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .stock-level-value { font-size: 15px; font-weight: 700; color: #1A1A1A; }
+    .stock-delta-box { flex: 1; background: #f0fdf4; border-radius: 10px; padding: 10px 12px; border: 1px solid #bbf7d0; }
+    .stock-delta-label { font-size: 11px; color: #16a34a; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .stock-delta-value { font-size: 15px; font-weight: 700; color: #15803d; }
+    .stock-frotte-note { font-size: 11px; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+
+    /* AJUSTEMENT SECTION */
+    .ajustement-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 14px 16px;
+    }
+    .ajustement-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .ajustement-icon { width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .ajustement-title { font-size: 14px; font-weight: 700; color: #1A1A1A; flex: 1; }
+    .ajustement-arrow { color: #64748b; font-size: 13px; }
+    .ajustement-empty { font-size: 13px; color: #94a3b8; margin-top: 10px; text-align: center; padding: 14px 0; }
+
+    /* STICKY BOTTOM */
+    .phone-bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid #e2e8f0;
+      padding: 14px 16px;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    }
+    .validate-btn {
+      width: 100%;
+      background: #34A853;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-shell">
+
+    <div class="phone-notch">
+      <div class="phone-notch-bar"></div>
+    </div>
+
+    <div class="phone-header">
+      <div class="header-back">←</div>
+      <div class="header-title">Inventaire stock</div>
+      <div class="header-date-badge">01 avr. 2026</div>
+    </div>
+
+    <div class="phone-content">
+
+      <!-- TOAST CONFIRMATION -->
+      <div class="toast-banner">
+        <span class="toast-icon">✓</span>
+        <div class="toast-text">Réception BC-2026-0047 enregistrée — Stock mis à jour avec succès</div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" class="search-input" placeholder="Rechercher un produit..." />
+      </div>
+
+      <!-- FILTER CHIPS -->
+      <div class="filter-chips">
+        <div class="chip active">Tous</div>
+        <div class="chip">Mis à jour</div>
+        <div class="chip">⚠ Critique</div>
+        <div class="chip">🌿 Frais</div>
+      </div>
+
+      <!-- STOCK CARDS -->
+
+      <!-- Tomates -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🍅</span>
+          <span class="stock-name">Tomates</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">12 kg</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">58 kg (+46)</div>
+          </div>
+        </div>
+        <div class="stock-frotte-note">🌿 Frotte 8% appliqué : 50 kg reçus → 46 kg ajoutés</div>
+      </div>
+
+      <!-- Oignons -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🧅</span>
+          <span class="stock-name">Oignons</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">5 kg</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">31,6 kg (+26,6)</div>
+          </div>
+        </div>
+        <div class="stock-frotte-note">🌿 Frotte 5% appliqué : 28 kg reçus → 26,6 kg ajoutés</div>
+      </div>
+
+      <!-- Huile végétale -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🫙</span>
+          <span class="stock-name">Huile végétale</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">3 bt.</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">27 bt. (+24)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Riz -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🌾</span>
+          <span class="stock-name">Riz 25 kg</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">2 sacs</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">12 sacs (+10)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savon Lux -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🧼</span>
+          <span class="stock-name">Savon Lux</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">8 pcs.</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">66 pcs. (+58)</div>
+          </div>
+        </div>
+        <div class="stock-frotte-note">⚠ Note : 2 pièces manquantes enregistrées dans la réception</div>
+      </div>
+
+      <!-- Lait en poudre -->
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <span class="stock-emoji">🥛</span>
+          <span class="stock-name">Lait en poudre</span>
+          <span class="stock-status status-ok">✓ OK</span>
+        </div>
+        <div class="stock-levels">
+          <div class="stock-level-box">
+            <div class="stock-level-label">Avant réception</div>
+            <div class="stock-level-value">2 boîtes</div>
+          </div>
+          <div class="stock-delta-box">
+            <div class="stock-delta-label">↑ Après réception</div>
+            <div class="stock-delta-value">38 boîtes (+36)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AJUSTEMENT MANUEL -->
+      <div class="ajustement-card">
+        <div class="ajustement-header">
+          <div class="ajustement-icon">✏️</div>
+          <div class="ajustement-title">Ajustement manuel</div>
+          <span class="ajustement-arrow">▸</span>
+        </div>
+        <div class="ajustement-empty">Aucun ajustement en attente</div>
+      </div>
+
+    </div>
+
+    <!-- STICKY BOTTOM BAR -->
+    <div class="phone-bottom-bar">
+      <button class="validate-btn">Valider l'inventaire ✓</button>
+    </div>
+
+  </div>
+
+</body>
+</html>

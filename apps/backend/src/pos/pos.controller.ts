@@ -1,6 +1,9 @@
-import { Controller, Get, Post, Body, UseGuards, Query, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Query, Param, Delete, Res, UseInterceptors } from '@nestjs/common';
+import type { Response } from 'express';
 import { PosService } from './pos.service';
 import { RequiresModule } from '../kernel/modules/module.decorator';
+import { SyncHeadersInterceptor } from '../kernel/interceptors/sync-headers.interceptor';
+import { POS_SCHEMA_VERSION } from './sync.constants';
 
 @Controller('pos')
 @RequiresModule('retail')
@@ -9,7 +12,12 @@ export class PosController {
         private readonly posService: PosService,
     ) { }
 
+    /**
+     * GET /pos/products
+     * Ajoute X-Sync-Timestamp via SyncHeadersInterceptor (Fix 2 Flutter).
+     */
     @Get('products')
+    @UseInterceptors(SyncHeadersInterceptor)
     async getProducts(
         @Query('q') query?: string,
         @Query('page') page: string = '1',
@@ -46,8 +54,19 @@ export class PosController {
         );
     }
 
+    /**
+     * POST /pos/heartbeat
+     * Retourne X-Schema-Version dans le header de réponse (Fix 5 Flutter).
+     * Le client compare ce numéro avec sa version locale : si divergence,
+     * il force un re-provisioning complet au lieu de parser des données
+     * potentiellement incompatibles.
+     */
     @Post('heartbeat')
-    async heartbeat(@Body() data: any) {
+    async heartbeat(
+        @Body() data: any,
+        @Res({ passthrough: true }) res: Response,
+    ) {
+        res.setHeader('X-Schema-Version', POS_SCHEMA_VERSION.toString());
         return this.posService.heartbeat(data);
     }
 
@@ -61,7 +80,12 @@ export class PosController {
         return this.posService.getTerminals(tenantId);
     }
 
+    /**
+     * GET /pos/categories
+     * Ajoute X-Sync-Timestamp via SyncHeadersInterceptor (Fix 2 Flutter).
+     */
     @Get('categories')
+    @UseInterceptors(SyncHeadersInterceptor)
     async getCategories(@Query('tenantId') tenantId: string, @Query('since') since?: string) {
         return this.posService.getCategories(tenantId, since);
     }

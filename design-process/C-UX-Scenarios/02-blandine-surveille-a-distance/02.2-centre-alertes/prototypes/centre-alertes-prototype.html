@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalario — Centre d'alertes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#f0f4ff', 100: '#e0eaff', 500: '#3b5bdb', 600: '#364fc7' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .sidebar-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; color: #94a3b8; cursor: pointer; transition: all 0.15s; }
+    .sidebar-link:hover { background: rgba(255,255,255,0.1); color: white; }
+    .sidebar-link.active { background: rgba(59,91,219,0.2); color: #93c5fd; border: 1px solid rgba(59,91,219,0.3); }
+    .card { background: white; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .alert-item { cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; }
+    .alert-item:hover { background: #f8fafc; }
+    .alert-item.selected { background: #eff6ff; border-left-color: #3b5bdb; }
+    .alert-item.critical { border-left-color: #ef4444; }
+    .alert-item.critical.selected { background: #fef2f2; border-left-color: #ef4444; }
+    .alert-item.warning { border-left-color: #f59e0b; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex">
+
+  <!-- SIDEBAR -->
+  <aside class="w-64 min-h-screen bg-slate-900 flex flex-col flex-shrink-0">
+    <div class="px-6 py-5 border-b border-white/10">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="30 14 535 104" height="26" style="display:block;"><g fill="none" stroke-width="13" stroke-linecap="round"><path d="M 64 24 C 48 24 36 34 36 48" stroke="#FFCC00"/><path d="M 36 48 C 36 60 48 66 64 66" stroke="#1A73E8"/><path d="M 64 66 C 78 66 90 72 90 86" stroke="#34A853"/><path d="M 90 86 C 90 98 78 106 64 106" stroke="#EA4335"/></g><text x="108" y="100" font-size="104" fill="#FFFFFF" letter-spacing="4" font-family="'Bebas Neue',Impact,'Arial Black',sans-serif">CALARIO</text></svg>
+    </div>
+    <div class="px-4 py-3 border-b border-white/10">
+      <div class="bg-white/5 rounded-lg px-3 py-2.5">
+        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-0.5">Boutique</p>
+        <p class="text-white text-sm font-semibold">Chez Blandine & Co.</p>
+        <div class="flex items-center gap-1.5 mt-1">
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+          <p class="text-emerald-400 text-xs font-medium">Ouverte · 12 ventes aujourd'hui</p>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      <p class="px-4 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Principal</p>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Tableau de bord
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Ventes
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Stock
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-5L13 4H9L7 6H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Caisse
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Rapports
+      </div>
+      <div class="sidebar-link active relative">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Alertes
+        <span class="ml-auto bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2</span>
+      </div>
+    </nav>
+    <div class="px-4 py-4 border-t border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center flex-shrink-0">
+          <span class="text-white text-xs font-semibold">BL</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-white text-sm font-medium truncate">Blandine Lamothe</p>
+          <p class="text-slate-400 text-xs">Propriétaire · Paris</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 overflow-y-auto flex flex-col">
+
+    <!-- Top bar -->
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div class="flex items-center gap-3">
+        <nav class="flex items-center gap-2 text-sm text-slate-500">
+          <button class="hover:text-slate-700 transition-colors">Tableau de bord</button>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span class="text-slate-900 font-medium">Centre d'alertes</span>
+        </nav>
+      </div>
+      <span class="text-slate-400 text-sm">Mardi 31 mars 2026 · 14h24</span>
+    </header>
+
+    <!-- Split layout : liste + détail -->
+    <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 65px);">
+
+      <!-- LEFT — Liste alertes -->
+      <div class="w-80 border-r border-slate-200 bg-white flex flex-col flex-shrink-0">
+
+        <!-- Liste header -->
+        <div class="px-4 py-4 border-b border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-slate-900">Alertes actives</h2>
+            <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">2</span>
+          </div>
+          <!-- Filtres -->
+          <div class="flex gap-2">
+            <button class="flex-1 py-1.5 text-xs font-semibold bg-slate-900 text-white rounded-lg">Toutes</button>
+            <button class="flex-1 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">Stock</button>
+            <button class="flex-1 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">Caisse</button>
+          </div>
+        </div>
+
+        <!-- Alertes list -->
+        <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+
+          <!-- Alerte 1 — Critique · Sélectionnée -->
+          <div class="alert-item critical selected px-4 py-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs font-bold text-red-600 uppercase tracking-wide">Critique</span>
+                </div>
+                <p class="text-sm font-semibold text-slate-900 leading-tight">Stock bas — Tomates cerise</p>
+                <p class="text-xs text-slate-500 mt-0.5">2 kg restants · seuil 5 kg</p>
+                <p class="text-xs text-slate-400 mt-1">Il y a 4h · Stock</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alerte 2 — Warning -->
+          <div class="alert-item warning px-4 py-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs font-bold text-amber-600 uppercase tracking-wide">Attention</span>
+                </div>
+                <p class="text-sm font-semibold text-slate-900 leading-tight">Stock bas — Mangues</p>
+                <p class="text-xs text-slate-500 mt-0.5">8 kg restants · seuil 10 kg</p>
+                <p class="text-xs text-slate-400 mt-1">Il y a 1h · Stock</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Historique — traitées -->
+          <div class="px-4 py-2 bg-slate-50">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Traitées récemment</p>
+          </div>
+
+          <div class="alert-item px-4 py-4 opacity-60">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-600 leading-tight">Stock bas — Bananes plantain</p>
+                <p class="text-xs text-slate-400 mt-0.5">Traitée hier à 16h22</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert-item px-4 py-4 opacity-60">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-600 leading-tight">Écart caisse — 29 mars</p>
+                <p class="text-xs text-slate-400 mt-0.5">Traitée le 29 mars à 20h05</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT — Détail alerte sélectionnée -->
+      <div class="flex-1 overflow-y-auto bg-slate-50">
+        <div class="max-w-2xl mx-auto px-8 py-8">
+
+          <!-- Détail header -->
+          <div class="flex items-start justify-between mb-6">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
+                    <div class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></div>
+                    Critique
+                  </span>
+                  <span class="text-xs text-slate-400">Stock · Il y a 4h</span>
+                </div>
+                <h1 class="text-xl font-bold text-slate-900">Stock bas — Tomates cerise</h1>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statut stock -->
+          <div class="card p-5 mb-5">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Situation actuelle</h2>
+            <div class="grid grid-cols-3 gap-4 mb-5">
+              <div class="text-center p-3 bg-red-50 rounded-xl border border-red-200">
+                <p class="text-xs text-red-500 font-medium mb-1">En stock</p>
+                <p class="text-2xl font-bold text-red-600">2 kg</p>
+              </div>
+              <div class="text-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-xs text-slate-500 font-medium mb-1">Seuil d'alerte</p>
+                <p class="text-2xl font-bold text-slate-700">5 kg</p>
+              </div>
+              <div class="text-center p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <p class="text-xs text-slate-500 font-medium mb-1">Stock normal</p>
+                <p class="text-2xl font-bold text-slate-700">20 kg</p>
+              </div>
+            </div>
+
+            <!-- Barre de stock -->
+            <div>
+              <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+                <span>Niveau actuel</span>
+                <span class="font-semibold text-red-600">10%</span>
+              </div>
+              <div class="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                <div class="h-full bg-red-500 rounded-full" style="width: 10%"></div>
+              </div>
+              <div class="flex justify-between text-xs text-slate-400 mt-1">
+                <span>0</span>
+                <span class="text-amber-500">│ seuil 5 kg</span>
+                <span>20 kg</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Historique -->
+          <div class="card p-5 mb-5">
+            <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Historique des 7 derniers jours</h2>
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600">31 mars · 09h14</span>
+                <span class="text-red-600 font-semibold">−3 kg (ventes)</span>
+                <span class="font-semibold text-slate-900">→ 2 kg restants</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600">30 mars · 16h00</span>
+                <span class="text-emerald-600 font-semibold">+8 kg (réception)</span>
+                <span class="font-semibold text-slate-900">→ 5 kg restants</span>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-slate-600">29 mars · 18h30</span>
+                <span class="text-red-600 font-semibold">−4 kg (ventes)</span>
+                <span class="font-semibold text-slate-900">→ -3 kg restants</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Note optionnelle -->
+          <div class="card p-5 mb-6">
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+              Note <span class="text-slate-400 font-normal normal-case tracking-normal">(optionnel)</span>
+            </label>
+            <textarea
+              class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none bg-white"
+              rows="2"
+              placeholder="Ex : Demander à Amadou de commander chez le fournisseur habituel…"
+            ></textarea>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3">
+            <button class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Marquer comme traitée
+            </button>
+            <button class="px-5 py-3 border border-slate-300 text-slate-600 font-medium rounded-xl hover:bg-slate-100 transition-colors">
+              Ignorer
+            </button>
+          </div>
+
+          <p class="text-xs text-center text-slate-400 mt-3">L'alerte sera archivée avec votre note et l'horodatage.</p>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

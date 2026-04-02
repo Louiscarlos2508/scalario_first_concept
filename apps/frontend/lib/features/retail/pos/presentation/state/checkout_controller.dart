@@ -24,13 +24,17 @@ class CheckoutController extends StateNotifier<AsyncValue<void>> {
       final session = _ref.read(sessionProvider).valueOrNull;
       final selectedCustomer = _ref.read(selectedCustomerProvider);
       
+      // remoteId is the Supabase UUID — always prefer it over local uuid.
+      // If null (unsynced customer), sale proceeds without customer link.
+      final customerId = selectedCustomer?.remoteId;
+
       final order = Order()
         ..totalAmount = cart.totalAmount
         ..sessionId = sessionId
         ..tenantId = session?.tenantId
         ..paymentMethod = cart.paymentMethod
         ..paymentSplits = cart.paymentSplits.isNotEmpty ? jsonEncode(cart.paymentSplits) : null
-        ..customerId = selectedCustomer?.remoteId
+        ..customerId = customerId
         ..items = cart.items.map((e) {
           final isWeighted = e.product.unitType != 'piece';
           final effectivePrice = isWeighted && e.product.pricePerUnit != null

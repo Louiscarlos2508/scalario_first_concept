@@ -62,4 +62,9 @@ class SessionRepository {
   Future<DateTime?> getLastSync(String key) => _isarService.getLastSync(key);
   Future<void> updateLastSync(String key, DateTime timestamp) =>
       _isarService.updateLastSync(key, timestamp);
+
+  // --- Fix 5: Schema Version ---
+  Future<int> getSchemaVersion() => _isarService.getSchemaVersion();
+  Future<void> updateSchemaVersion(int version) =>
+      _isarService.updateSchemaVersion(version);
 }

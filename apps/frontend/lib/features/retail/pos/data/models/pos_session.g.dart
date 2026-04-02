@@ -223,11 +223,13 @@ const _PosSessionsyncStatusEnumValueMap = {
   r'pending': r'pending',
   r'synced': r'synced',
   r'error': r'error',
+  r'failed': r'failed', // Fix 3 — additive
 };
 const _PosSessionsyncStatusValueEnumMap = {
   r'pending': SyncStatus.pending,
   r'synced': SyncStatus.synced,
   r'error': SyncStatus.error,
+  r'failed': SyncStatus.failed, // Fix 3 — additive
 };
 
 Id _posSessionGetId(PosSession object) {

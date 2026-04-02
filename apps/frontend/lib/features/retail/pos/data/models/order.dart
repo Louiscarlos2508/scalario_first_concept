@@ -31,6 +31,11 @@ class Order {
   @Enumerated(EnumType.name)
   SyncStatus syncStatus = SyncStatus.pending;
 
+  /// Fix 3 — nombre de tentatives réseau/5xx consécutives pour cet ordre.
+  /// Persisté en Isar (property id 13, additive) — survit aux redémarrages app.
+  /// Remplace le Map<String,int> in-isolate qui se réinitialisait au kill du process.
+  int retryCount = 0;
+
   Map<String, dynamic> toJson() {
     return {
       'uuid': uuid,

@@ -1,0 +1,26 @@
+scenario_id: "03"
+scenario_name: "Bernard Découvre Scalario Seul"
+design_intent: S
+current_page_index: 3
+
+pages_list:
+  - id: "03.1"
+    slug: splash
+    folder: 03.1-splash
+    status: structure-created
+    prototype: prototypes/splash-prototype.html
+    spec: 03.1-p4-spec.md
+
+  - id: "03.2"
+    slug: login
+    folder: 03.2-login
+    status: structure-created
+    prototype: prototypes/login-prototype.html
+    spec: 03.2-p4-spec.md
+
+  - id: "03.3"
+    slug: onboarding-wizard
+    folder: 03.3-onboarding-wizard
+    status: structure-created
+    prototype: prototypes/onboarding-wizard-prototype.html
+    spec: 03.3-p4-spec.md

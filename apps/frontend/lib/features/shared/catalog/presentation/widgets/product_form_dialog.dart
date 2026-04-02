@@ -63,6 +63,8 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
   String? _selectedParentName;
   List<Map<String, dynamic>> _allItems = [];
   List<Map<String, dynamic>> _childItems = [];
+  final _parentItemCtrl = TextEditingController();
+  List<Map<String, dynamic>> _parentSuggestions = [];
 
   // Photo produit
   Uint8List? _selectedImageBytes;
@@ -265,6 +267,7 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
     _minStockController.dispose();
     _warrantyMonthsController.dispose();
     _priceReasonController.dispose();
+    _parentItemCtrl.dispose();
     super.dispose();
   }
 
@@ -478,43 +481,85 @@ class _ProductFormDialogState extends ConsumerState<ProductFormDialog> {
               if (_isChildItem) ...[
                 const SizedBox(height: 8),
                 // Parent item autocomplete
-                Autocomplete<Map<String, dynamic>>(
-                  displayStringForOption: (opt) =>
-                      '${opt['name']} (${opt['unitType'] ?? 'piece'})',
-                  initialValue: _selectedParentName != null
-                      ? TextEditingValue(text: _selectedParentName!)
-                      : null,
-                  optionsBuilder: (textEditingValue) {
-                    final q = textEditingValue.text.toLowerCase();
-                    if (q.length < 2) return const [];
-                    return _allItems.where((item) {
-                      final isNotChild = item['parentItemId'] == null;
-                      final isNotSelf =
-                          item['id'] != widget.product?.remoteId;
-                      final matchesQuery = (item['name'] as String? ?? '')
-                          .toLowerCase()
-                          .contains(q);
-                      return isNotChild && isNotSelf && matchesQuery;
-                    }).toList();
-                  },
-                  onSelected: (opt) => setState(() {
-                    _selectedParentItemId = opt['id'] as String?;
-                    _selectedParentName = opt['name'] as String?;
-                  }),
-                  fieldViewBuilder:
-                      (context, controller, focusNode, onFieldSubmitted) =>
-                          TextFormField(
-                    key: const Key('product_parent_item_field'),
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(
-                      labelText: 'Article parent (≥ 2 car. pour chercher)',
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      key: const Key('product_parent_item_field'),
+                      controller: _parentItemCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Article parent (≥ 2 car. pour chercher)',
+                      ),
+                      onChanged: (v) {
+                        final q = v.toLowerCase();
+                        setState(() {
+                          _selectedParentItemId = null;
+                          _selectedParentName = null;
+                          _parentSuggestions = q.length < 2
+                              ? []
+                              : _allItems.where((item) {
+                                  final isNotChild =
+                                      item['parentItemId'] == null;
+                                  final isNotSelf =
+                                      item['id'] != widget.product?.remoteId;
+                                  final matchesQuery =
+                                      (item['name'] as String? ?? '')
+                                          .toLowerCase()
+                                          .contains(q);
+                                  return isNotChild && isNotSelf && matchesQuery;
+                                }).toList();
+                        });
+                      },
+                      validator: (_) =>
+                          _isChildItem && _selectedParentItemId == null
+                              ? 'Sélectionnez un article parent'
+                              : null,
                     ),
-                    validator: (_) => _isChildItem &&
-                            _selectedParentItemId == null
-                        ? 'Sélectionnez un article parent'
-                        : null,
-                  ),
+                    if (_parentSuggestions.isNotEmpty)
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black12),
+                          borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(8)),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3)),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: _parentSuggestions.length,
+                          itemBuilder: (_, i) {
+                            final opt = _parentSuggestions[i];
+                            final label =
+                                '${opt['name']} (${opt['unitType'] ?? 'piece'})';
+                            return InkWell(
+                              onTap: () => setState(() {
+                                _parentItemCtrl.text = label;
+                                _selectedParentItemId =
+                                    opt['id'] as String?;
+                                _selectedParentName =
+                                    opt['name'] as String?;
+                                _parentSuggestions = [];
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                child: Text(label,
+                                    style:
+                                        const TextStyle(fontSize: 14)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 TextFormField(

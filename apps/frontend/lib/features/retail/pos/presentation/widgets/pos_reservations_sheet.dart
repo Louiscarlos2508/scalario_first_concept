@@ -3,21 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:frontend/core/theme/sheet_style.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 
-String _fcfa(double v) => NumberFormat.currency(
-      locale: 'fr_FR',
-      symbol: 'FCFA',
-      decimalDigits: 0,
-    ).format(v);
+String _fcfa(double v) =>
+    NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
+        .format(v);
 
 double _toDouble(dynamic v) {
   if (v is num) return v.toDouble();
   return double.tryParse(v?.toString() ?? '') ?? 0.0;
 }
 
-/// POS bottom sheet — liste des réservations en attente avec actions
-/// Compléter / Annuler directement depuis la caisse.
 class PosReservationsSheet extends ConsumerWidget {
   const PosReservationsSheet({super.key});
 
@@ -27,79 +24,91 @@ class PosReservationsSheet extends ConsumerWidget {
     final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
     final canCancel = role == 'manager' || role == 'owner';
 
-    // Enabled methods, minus CREDIT and SPLIT (not valid for reservation settlement)
-    final allMethods = ref.watch(enabledPaymentMethodsProvider).valueOrNull ??
-        kDefaultPaymentMethods;
+    final allMethods =
+        ref.watch(enabledPaymentMethodsProvider).valueOrNull ??
+            kDefaultPaymentMethods;
     final reservationPaymentMethods =
-        allMethods.where((m) => m != 'CREDIT' && m != 'SPLIT').toList();
+        allMethods.where((m) => m.code != 'CREDIT' && m.code != 'SPLIT').toList();
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Réservations en cours',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        children: [
+          // ── Header ────────────────────────────────────────────────────
+          SheetTitleRow(
+            title: 'Réservations en cours',
+            icon: Icons.bookmark_outlined,
+            iconColor: kSheetBlue,
+            trailing: IconButton(
+              icon: const Icon(Icons.refresh_outlined,
+                  size: 18, color: kSheetSlate500),
+              tooltip: 'Rafraîchir',
+              onPressed: () =>
+                  ref.invalidate(reservationsListProvider('pending')),
+            ),
+          ),
+          const SheetDivider(),
+          const SizedBox(height: 12),
+
+          // ── List ──────────────────────────────────────────────────────
+          Expanded(
+            child: listAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 40, color: kSheetRed),
+                    const SizedBox(height: 8),
+                    Text('Erreur : $e',
+                        style: const TextStyle(color: kSheetSlate500)),
+                  ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Rafraîchir',
-                onPressed: () =>
-                    ref.invalidate(reservationsListProvider('pending')),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: listAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Erreur : $e')),
-            data: (items) {
-              if (items.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.bookmark_border, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'Aucune réservation en cours',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
+              data: (items) {
+                if (items.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.bookmark_border_outlined,
+                            size: 48, color: kSheetSlate200),
+                        const SizedBox(height: 12),
+                        const Text('Aucune réservation en cours',
+                            style: TextStyle(
+                                color: kSheetSlate500, fontSize: 14)),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  itemCount: items.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) => _ReservationCard(
+                    reservation: items[i] as Map<String, dynamic>,
+                    canCancel: canCancel,
+                    paymentMethods: reservationPaymentMethods,
                   ),
                 );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: items.length,
-                itemBuilder: (context, i) => _PosReservationCard(
-                  reservation: items[i] as Map<String, dynamic>,
-                  canCancel: canCancel,
-                  paymentMethods: reservationPaymentMethods,
-                ),
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 // ── Reservation card ──────────────────────────────────────────────────────────
 
-class _PosReservationCard extends ConsumerWidget {
+class _ReservationCard extends ConsumerWidget {
   final Map<String, dynamic> reservation;
   final bool canCancel;
-  final List<String> paymentMethods;
+  final List<PaymentMethod> paymentMethods;
 
-  const _PosReservationCard({
+  const _ReservationCard({
     required this.reservation,
     required this.canCancel,
     required this.paymentMethods,
@@ -124,33 +133,44 @@ class _PosReservationCard extends ConsumerWidget {
         ? (reservation['itemsJson'] as List)
         : <dynamic>[];
 
-    final initial =
-        customerName.isNotEmpty && customerName != '—' ? customerName[0].toUpperCase() : '?';
+    final letter = customerName.isNotEmpty && customerName != '—'
+        ? customerName[0].toUpperCase()
+        : '?';
+    final avatarColors = [
+      Colors.teal, Colors.blue, Colors.orange,
+      Colors.purple, Colors.green,
+    ];
+    final avatarColor = customerName != '—' && customerName.isNotEmpty
+        ? avatarColors[customerName.codeUnitAt(0) % avatarColors.length]
+        : Colors.grey;
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: kSheetSlate200, width: 1.5),
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE0E0E0)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header: avatar + name + date ──
+            // ── Customer row ─────────────────────────────────────────────
             Row(
               children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.teal.withValues(alpha: 0.15),
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: avatarColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(letter,
+                        style: TextStyle(
+                            color: avatarColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -158,71 +178,82 @@ class _PosReservationCard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        customerName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      if (customerPhone != null)
-                        Text(
-                          customerPhone,
+                      Text(customerName,
                           style: const TextStyle(
-                              color: Colors.grey, fontSize: 12),
-                        ),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: kSheetSlate900)),
+                      if (customerPhone != null)
+                        Text(customerPhone,
+                            style: const TextStyle(
+                                color: kSheetSlate500, fontSize: 12)),
                     ],
                   ),
                 ),
                 if (createdAt != null)
-                  Text(
-                    DateFormat('dd/MM HH:mm').format(createdAt),
-                    style:
-                        const TextStyle(color: Colors.grey, fontSize: 11),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kSheetSlate50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      DateFormat('dd/MM HH:mm').format(createdAt),
+                      style: const TextStyle(
+                          color: kSheetSlate500, fontSize: 11),
+                    ),
                   ),
               ],
             ),
 
             const SizedBox(height: 10),
-            const Divider(height: 1),
+            const SheetDivider(),
             const SizedBox(height: 10),
 
-            // ── Items list ──
+            // ── Items preview ────────────────────────────────────────────
             if (items.isNotEmpty) ...[
-              Text(
-                '${items.length} article(s) réservé(s)',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
-              const SizedBox(height: 4),
+              Text('${items.length} article(s) réservé(s)',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: kSheetSlate500,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(height: 6),
               ...items.take(3).map((item) {
-                final name = item['name']?.toString() ?? 'Article inconnu';
+                final name =
+                    item['name']?.toString() ?? 'Article inconnu';
                 final qty = item['quantity'];
                 final price = (item['unitPrice'] as num?)?.toDouble();
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
+                  padding: const EdgeInsets.only(bottom: 3),
                   child: Row(
                     children: [
-                      const Text('• ',
-                          style: TextStyle(color: Colors.grey)),
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
+                      Container(
+                        width: 5,
+                        height: 5,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: const BoxDecoration(
+                          color: kSheetSlate200,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      Text(
-                        '× $qty',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.grey),
+                      Expanded(
+                        child: Text(name,
+                            style: const TextStyle(
+                                fontSize: 12, color: kSheetSlate900),
+                            overflow: TextOverflow.ellipsis),
                       ),
+                      Text('×$qty',
+                          style: const TextStyle(
+                              fontSize: 11, color: kSheetSlate500)),
                       if (price != null) ...[
                         const SizedBox(width: 8),
                         Text(
                           _fcfa(price * (qty as num).toDouble()),
                           style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: kSheetSlate900),
                         ),
                       ],
                     ],
@@ -230,27 +261,35 @@ class _PosReservationCard extends ConsumerWidget {
                 );
               }),
               if (items.length > 3)
-                Text(
-                  '+ ${items.length - 3} autre(s)…',
-                  style:
-                      const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
+                Text('+ ${items.length - 3} autre(s)…',
+                    style: const TextStyle(
+                        color: kSheetSlate500, fontSize: 11)),
               const SizedBox(height: 10),
             ],
 
-            // ── Amounts ──
+            // ── Amounts ──────────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
+                color: kSheetSlate50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: kSheetSlate200),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _amountCol('Total', total, Colors.black87),
-                  _amountCol('Acompte reçu', deposit, Colors.blue),
-                  _amountCol('Solde à payer', remaining, Colors.orange,
+                  _AmountChip(
+                      label: 'Total', amount: total, color: kSheetSlate900),
+                  _vDivider(),
+                  _AmountChip(
+                      label: 'Acompte',
+                      amount: deposit,
+                      color: kSheetBlue),
+                  _vDivider(),
+                  _AmountChip(
+                      label: 'Solde',
+                      amount: remaining,
+                      color: kSheetAmber,
                       bold: true),
                 ],
               ),
@@ -258,24 +297,36 @@ class _PosReservationCard extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // ── Actions ──
+            // ── Actions ──────────────────────────────────────────────────
             Row(
               children: [
                 Expanded(
                   child: FilledButton.icon(
-                    icon: const Icon(Icons.payments_outlined, size: 16),
-                    label: Text('Encaisser ${_fcfa(remaining)}'),
-                    onPressed: () =>
-                        _showCompleteDialog(context, ref, remaining, paymentMethods),
+                    style: sheetPrimaryButtonStyle(color: kSheetGreen),
+                    icon: const Icon(Icons.payments_outlined, size: 15),
+                    label: Text('Encaisser ${_fcfa(remaining)}',
+                        style: const TextStyle(fontSize: 12)),
+                    onPressed: () => _showCompleteDialog(
+                        context, ref, remaining, paymentMethods),
                   ),
                 ),
                 if (canCancel) ...[
                   const SizedBox(width: 8),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red),
-                    onPressed: () => _showCancelDialog(context, ref, deposit),
-                    child: const Text('Annuler'),
+                      foregroundColor: kSheetRed,
+                      side: BorderSide(
+                          color: kSheetRed.withValues(alpha: 0.5)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () =>
+                        _showCancelDialog(context, ref, deposit),
+                    child: const Text('Annuler',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ],
@@ -286,123 +337,137 @@ class _PosReservationCard extends ConsumerWidget {
     );
   }
 
-  IconData _methodIcon(String method) {
-    switch (method.toUpperCase()) {
-      case 'CASH':
-        return Icons.payments_outlined;
-      case 'MOBILE_MONEY':
-        return Icons.phone_android_outlined;
-      case 'CARD':
-        return Icons.credit_card_outlined;
-      case 'TRANSFER':
-        return Icons.swap_horiz_outlined;
-      default:
-        return Icons.attach_money;
-    }
-  }
+  Widget _vDivider() => Container(
+      width: 1, height: 32, color: kSheetSlate200,
+      margin: const EdgeInsets.symmetric(horizontal: 12));
 
-  Widget _amountCol(String label, double amount, Color color,
-      {bool bold = false}) {
-    return Column(
-      children: [
-        Text(label,
-            style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        const SizedBox(height: 2),
-        Text(
-          _fcfa(amount),
-          style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-            color: color,
-            fontSize: bold ? 14 : 12,
-          ),
-        ),
-      ],
-    );
-  }
+  IconData _methodIcon(String method) => switch (method.toUpperCase()) {
+        'CASH' => Icons.payments_outlined,
+        'MOBILE_MONEY' => Icons.phone_android_outlined,
+        'CARD' => Icons.credit_card_outlined,
+        'TRANSFER' => Icons.swap_horiz_outlined,
+        _ => Icons.attach_money,
+      };
 
   Future<void> _showCompleteDialog(
     BuildContext context,
     WidgetRef ref,
     double remaining,
-    List<String> paymentMethods,
+    List<PaymentMethod> paymentMethods,
   ) async {
-    String paymentMethod =
-        paymentMethods.contains('CASH') ? 'CASH' : paymentMethods.first;
+    String paymentMethod = paymentMethods.any((m) => m.code == 'CASH')
+        ? 'CASH'
+        : paymentMethods.first.code;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Encaisser le solde'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
+        builder: (context, setState) => Dialog(
+          shape: kSheetDialogShape,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SheetDialogHeader(
+                  icon: Icons.payments_outlined,
+                  iconColor: kSheetGreen,
+                  title: 'Encaisser le solde',
+                  subtitle: 'Finaliser la réservation',
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Montant à encaisser'),
-                    Text(
-                      _fcfa(remaining),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.green,
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: kSheetGreen.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: kSheetGreen.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Solde à encaisser',
+                          style: TextStyle(
+                              fontSize: 13, color: kSheetSlate500)),
+                      Text(
+                        _fcfa(remaining),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            color: kSheetGreen),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: paymentMethod,
-                decoration: const InputDecoration(
-                  labelText: 'Mode de paiement',
-                  border: OutlineInputBorder(),
-                ),
-                items: paymentMethods
-                    .map((m) => DropdownMenuItem(
-                          value: m,
-                          child: Row(
-                            children: [
-                              Icon(_methodIcon(m), size: 18),
-                              const SizedBox(width: 8),
-                              Text(paymentMethodLabel(m)),
-                            ],
+                const SizedBox(height: 16),
+                const SheetSectionLabel('Mode de paiement'),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: paymentMethods.map((m) {
+                    final selected = m.code == paymentMethod;
+                    return GestureDetector(
+                      onTap: () =>
+                          setState(() => paymentMethod = m.code),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: selected ? kSheetBlue : Colors.white,
+                          border: Border.all(
+                            color: selected
+                                ? kSheetBlue
+                                : kSheetSlate200,
+                            width: 1.5,
                           ),
-                        ))
-                    .toList(),
-                onChanged: (v) => setState(() => paymentMethod = v!),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Le stock sera automatiquement mis à jour.',
-                style: TextStyle(fontSize: 11, color: Colors.grey),
-              ),
-            ],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_methodIcon(m.code),
+                                size: 14,
+                                color: selected
+                                    ? Colors.white
+                                    : kSheetSlate500),
+                            const SizedBox(width: 6),
+                            Text(m.label,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: selected
+                                        ? Colors.white
+                                        : kSheetSlate500)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Le stock sera automatiquement mis à jour.',
+                  style: TextStyle(fontSize: 11, color: kSheetSlate500),
+                ),
+                const SizedBox(height: 20),
+                SheetActionRow(
+                  confirmLabel: 'Confirmer',
+                  confirmColor: kSheetGreen,
+                  onConfirm: () => Navigator.pop(context, true),
+                  onCancel: () => Navigator.pop(context, false),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Annuler'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirmer'),
-            ),
-          ],
         ),
       ),
     );
 
     if (confirmed != true || !context.mounted) return;
-
     try {
       final tenantId = ref.read(activeTenantProvider) ?? '';
       await ref.read(reservationsRepositoryProvider).completeReservation(
@@ -417,7 +482,7 @@ class _PosReservationCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Paiement encaissé — Réservation clôturée'),
-            backgroundColor: Colors.green,
+            backgroundColor: kSheetGreen,
           ),
         );
       }
@@ -425,7 +490,8 @@ class _PosReservationCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Erreur : $e'), backgroundColor: Colors.red),
+              content: Text('Erreur : $e'),
+              backgroundColor: kSheetRed),
         );
       }
     }
@@ -438,75 +504,79 @@ class _PosReservationCard extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Annuler la réservation'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
+        builder: (context, setState) => Dialog(
+          shape: kSheetDialogShape,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SheetDialogHeader(
+                  icon: Icons.cancel_outlined,
+                  iconColor: kSheetRed,
+                  title: 'Annuler la réservation',
+                  subtitle: 'Choisissez comment restituer l\'acompte',
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Acompte à restituer'),
-                    Text(
-                      _fcfa(deposit),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: kSheetAmber.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: kSheetAmber.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Acompte à restituer',
+                          style: TextStyle(
+                              fontSize: 13, color: kSheetSlate500)),
+                      Text(_fcfa(deposit),
+                          style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: kSheetAmber)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text("Comment restituer l'acompte ?"),
-              const SizedBox(height: 8),
-              RadioListTile<String>(
-                value: 'cash_refund',
-                groupValue: resolution,
-                onChanged: (v) => setState(() => resolution = v!),
-                title: const Text('Rembourser en espèces'),
-                subtitle: Text(
-                  'Remettre ${_fcfa(deposit)} en cash au client',
-                  style: const TextStyle(fontSize: 11),
+                const SizedBox(height: 16),
+                _CancelOption(
+                  value: 'cash_refund',
+                  groupValue: resolution,
+                  icon: Icons.payments_outlined,
+                  label: 'Rembourser en espèces',
+                  subtitle: 'Remettre ${_fcfa(deposit)} en cash',
+                  onTap: () => setState(() => resolution = 'cash_refund'),
                 ),
-              ),
-              RadioListTile<String>(
-                value: 'credit_note',
-                groupValue: resolution,
-                onChanged: (v) => setState(() => resolution = v!),
-                title: const Text('Avoir client'),
-                subtitle: Text(
-                  '${_fcfa(deposit)} créditées sur son compte',
-                  style: const TextStyle(fontSize: 11),
+                const SizedBox(height: 8),
+                _CancelOption(
+                  value: 'credit_note',
+                  groupValue: resolution,
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Avoir client',
+                  subtitle: '${_fcfa(deposit)} crédités sur son compte',
+                  onTap: () => setState(() => resolution = 'credit_note'),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+                SheetActionRow(
+                  cancelLabel: 'Retour',
+                  confirmLabel: "Confirmer l'annulation",
+                  confirmColor: kSheetRed,
+                  onConfirm: () => Navigator.pop(context, true),
+                  onCancel: () => Navigator.pop(context, false),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Retour'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Confirmer l'annulation"),
-            ),
-          ],
         ),
       ),
     );
 
     if (confirmed != true || !context.mounted) return;
-
     try {
       final tenantId = ref.read(activeTenantProvider) ?? '';
       final userProfile = ref.read(userProfileProvider).value;
@@ -520,8 +590,9 @@ class _PosReservationCard extends ConsumerWidget {
       ref.invalidate(reservationsListProvider('pending'));
       ref.invalidate(reservationsKpiProvider);
       if (context.mounted) {
-        final label =
-            resolution == 'cash_refund' ? 'Remboursement cash' : 'Avoir client';
+        final label = resolution == 'cash_refund'
+            ? 'Remboursement cash'
+            : 'Avoir client';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Réservation annulée — $label')),
         );
@@ -530,9 +601,118 @@ class _PosReservationCard extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Erreur : $e'), backgroundColor: Colors.red),
+              content: Text('Erreur : $e'),
+              backgroundColor: kSheetRed),
         );
       }
     }
+  }
+}
+
+// ── Amount chip ───────────────────────────────────────────────────────────────
+
+class _AmountChip extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+  final bool bold;
+  const _AmountChip(
+      {required this.label,
+      required this.amount,
+      required this.color,
+      this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label,
+              style: const TextStyle(fontSize: 10, color: kSheetSlate500)),
+          const SizedBox(height: 2),
+          Text(
+            _fcfa(amount),
+            style: TextStyle(
+              fontSize: bold ? 13 : 11,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Cancel option tile ────────────────────────────────────────────────────────
+
+class _CancelOption extends StatelessWidget {
+  final String value;
+  final String groupValue;
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _CancelOption({
+    required this.value,
+    required this.groupValue,
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = value == groupValue;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? kSheetBlue.withValues(alpha: 0.05) : Colors.white,
+          border: Border.all(
+              color: selected ? kSheetBlue : kSheetSlate200, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: selected
+                    ? kSheetBlue.withValues(alpha: 0.12)
+                    : kSheetSlate50,
+                borderRadius: BorderRadius.circular(7),
+              ),
+              child: Icon(icon,
+                  size: 16,
+                  color: selected ? kSheetBlue : kSheetSlate500),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              selected ? kSheetBlue : kSheetSlate900)),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          fontSize: 11, color: kSheetSlate500)),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check_circle, size: 16, color: kSheetBlue),
+          ],
+        ),
+      ),
+    );
   }
 }

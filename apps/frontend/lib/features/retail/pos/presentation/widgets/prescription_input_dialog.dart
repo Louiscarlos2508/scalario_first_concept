@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/core/theme/sheet_style.dart';
 
 /// Prescription data captured at POS before checkout (AC2 — FR94).
 class PrescriptionData {
@@ -22,7 +23,8 @@ class _PrescriptionInputDialog extends StatefulWidget {
   const _PrescriptionInputDialog();
 
   @override
-  State<_PrescriptionInputDialog> createState() => _PrescriptionInputDialogState();
+  State<_PrescriptionInputDialog> createState() =>
+      _PrescriptionInputDialogState();
 }
 
 class _PrescriptionInputDialogState extends State<_PrescriptionInputDialog> {
@@ -30,7 +32,8 @@ class _PrescriptionInputDialogState extends State<_PrescriptionInputDialog> {
   final _prescriberCtrl = TextEditingController();
 
   bool get _isValid =>
-      _numberCtrl.text.trim().isNotEmpty && _prescriberCtrl.text.trim().isNotEmpty;
+      _numberCtrl.text.trim().isNotEmpty &&
+      _prescriberCtrl.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -41,57 +44,61 @@ class _PrescriptionInputDialogState extends State<_PrescriptionInputDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Ordonnance requise'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Un ou plusieurs articles requièrent une ordonnance médicale.',
-            style: TextStyle(fontSize: 13),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            key: const Key('prescription_number_field'),
-            controller: _numberCtrl,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Numéro d\'ordonnance *',
-              hintText: 'Ex: ORD-2026-00123',
+    return Dialog(
+      shape: kSheetDialogShape,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ───────────────────────────────────────────────────
+            const SheetDialogHeader(
+              icon: Icons.medical_services_outlined,
+              iconColor: Color(0xFF8B5CF6),
+              title: 'Ordonnance requise',
+              subtitle: 'Un article nécessite une ordonnance médicale',
             ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('prescriber_name_field'),
-            controller: _prescriberCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nom du prescripteur *',
-              hintText: 'Ex: Dr. Ouédraogo',
+            const SizedBox(height: 20),
+
+            // ── Fields ───────────────────────────────────────────────────
+            TextField(
+              key: const Key('prescription_number_field'),
+              controller: _numberCtrl,
+              autofocus: true,
+              decoration: sheetInputDecoration(
+                label: "Numéro d'ordonnance *",
+                hint: 'Ex: ORD-2026-00123',
+              ),
+              onChanged: (_) => setState(() {}),
             ),
-            onChanged: (_) => setState(() {}),
-          ),
-        ],
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('prescriber_name_field'),
+              controller: _prescriberCtrl,
+              decoration: sheetInputDecoration(
+                label: 'Nom du prescripteur *',
+                hint: 'Ex: Dr. Ouédraogo',
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 24),
+
+            SheetActionRow(
+              confirmLabel: 'Confirmer',
+              onConfirm: _isValid
+                  ? () => Navigator.pop(
+                        context,
+                        PrescriptionData(
+                          number: _numberCtrl.text.trim(),
+                          prescriberName: _prescriberCtrl.text.trim(),
+                        ),
+                      )
+                  : null,
+            ),
+          ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
-        ),
-        ElevatedButton(
-          key: const Key('prescription_confirm_button'),
-          onPressed: _isValid
-              ? () => Navigator.pop(
-                    context,
-                    PrescriptionData(
-                      number: _numberCtrl.text.trim(),
-                      prescriberName: _prescriberCtrl.text.trim(),
-                    ),
-                  )
-              : null,
-          child: const Text('Confirmer'),
-        ),
-      ],
     );
   }
 }

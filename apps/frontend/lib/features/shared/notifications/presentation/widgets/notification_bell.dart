@@ -4,6 +4,8 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/features/shared/notifications/data/models/notification_model.dart';
 import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart';
 import 'package:intl/intl.dart';
 
 // ── Bell icon button ──────────────────────────────────────────────────────────
@@ -34,12 +36,20 @@ class NotificationBell extends ConsumerWidget {
   }
 
   void _openPanel(BuildContext context, WidgetRef ref) {
+    final nav = Navigator.of(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (_) => const _NotificationPanel(),
+      builder: (sheetCtx) => _NotificationPanel(
+        onViewStockAlerts: () {
+          Navigator.of(sheetCtx).pop();
+          nav.push(MaterialPageRoute(
+            builder: (_) => const StockAlertsScreen(),
+          ));
+        },
+      ),
     );
   }
 }
@@ -47,7 +57,9 @@ class NotificationBell extends ConsumerWidget {
 // ── Notification panel ────────────────────────────────────────────────────────
 
 class _NotificationPanel extends ConsumerStatefulWidget {
-  const _NotificationPanel();
+  final VoidCallback? onViewStockAlerts;
+
+  const _NotificationPanel({this.onViewStockAlerts});
 
   @override
   ConsumerState<_NotificationPanel> createState() => _NotificationPanelState();
@@ -130,6 +142,9 @@ class _NotificationPanelState extends ConsumerState<_NotificationPanel> {
               ),
             ),
             const Divider(height: 1),
+            // ── Stock alerts shortcut ────────────────────────────────────
+            if (widget.onViewStockAlerts != null)
+              _StockAlertsBanner(onTap: widget.onViewStockAlerts!),
             Expanded(
               child: notificationsAsync.when(
                 loading: () =>
@@ -265,5 +280,65 @@ class _NotificationTile extends StatelessWidget {
     if (diff.inDays < 1) return 'Il y a ${diff.inHours} h';
     if (diff.inDays < 7) return 'Il y a ${diff.inDays} j';
     return DateFormat('dd/MM/yyyy').format(dt);
+  }
+}
+
+// ── Stock alerts banner ───────────────────────────────────────────────────────
+
+class _StockAlertsBanner extends ConsumerWidget {
+  final VoidCallback onTap;
+  const _StockAlertsBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countAsync = ref.watch(stockAlertCountProvider);
+    final count = countAsync.valueOrNull ?? 0;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: count > 0
+              ? AppColors.warning.withValues(alpha: 0.08)
+              : AppColors.success.withValues(alpha: 0.06),
+          border: Border(
+            bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              count > 0 ? Icons.inventory_2_outlined : Icons.check_circle_outline,
+              size: 18,
+              color: count > 0 ? AppColors.warning : AppColors.success,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                count > 0
+                    ? '$count article${count > 1 ? 's' : ''} en stock bas'
+                    : 'Aucun stock critique',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: count > 0 ? FontWeight.w600 : FontWeight.normal,
+                  color: count > 0 ? AppColors.warning : AppColors.success,
+                ),
+              ),
+            ),
+            if (count > 0) ...[
+              const Text(
+                'Voir →',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

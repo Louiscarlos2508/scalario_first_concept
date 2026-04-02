@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>09.3 — Paramètres Général · Scalario</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; min-height: 100vh; font-family: 'Inter', sans-serif; background: #f1f5f9; }
+
+    /* SIDEBAR */
+    .sidebar { width: 220px; background: #0f172a; flex-shrink: 0; min-height: 100vh; display: flex; flex-direction: column; }
+    .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-shop { padding: 10px 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .shop-label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
+    .shop-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); }
+    .sidebar-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-section-label { font-size: 10px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 12px 4px; margin-top: 4px; }
+    .nav-item { padding: 9px 12px; border-radius: 10px; color: rgba(255,255,255,0.5); font-size: 13.5px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .nav-item.active { background: #1A73E8; color: white; font-weight: 500; }
+    .nav-icon { width: 18px; text-align: center; font-size: 15px; }
+    .sidebar-user { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px; }
+    .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: #1A73E8; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; flex-shrink: 0; }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    /* MAIN */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+    .topbar { background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .topbar-breadcrumb { font-size: 13px; color: #64748b; }
+    .topbar-breadcrumb span { color: #1A1A1A; font-weight: 500; }
+    .topbar-actions { display: flex; gap: 12px; }
+    .topbar-notif { width: 34px; height: 34px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+
+    .content-wrapper { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    .content { flex: 1; padding: 28px 32px; padding-bottom: 100px; }
+
+    /* SETTINGS TABS */
+    .settings-tabs { display: flex; gap: 0; border-bottom: 2px solid #e2e8f0; margin-bottom: 28px; }
+    .settings-tab { padding: 10px 18px; font-size: 14px; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .settings-tab.active { color: #1A73E8; border-bottom-color: #1A73E8; }
+
+    /* PAGE HEADER */
+    .page-header { margin-bottom: 24px; }
+    .page-title { font-size: 22px; font-weight: 700; color: #1A1A1A; }
+    .page-subtitle { font-size: 13.5px; color: #64748b; margin-top: 3px; }
+
+    /* SETTINGS CARDS */
+    .settings-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 24px; margin-bottom: 20px; }
+    .settings-card-title { font-size: 15px; font-weight: 700; color: #1A1A1A; margin-bottom: 4px; }
+    .settings-card-desc { font-size: 13px; color: #64748b; margin-bottom: 22px; }
+    .settings-divider { border: none; border-top: 1px solid #f1f5f9; margin: 20px 0; }
+
+    /* FORM ELEMENTS */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+    .form-group { margin-bottom: 0; }
+    .form-group-full { grid-column: 1 / -1; }
+    .form-label { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
+    .form-label .optional { font-weight: 400; color: #94a3b8; font-size: 12px; margin-left: 4px; }
+    .form-input { width: 100%; padding: 10px 13px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; color: #1A1A1A; outline: none; }
+    .form-input:focus { border-color: #1A73E8; box-shadow: 0 0 0 3px rgba(26,115,232,0.08); }
+    .form-select { width: 100%; padding: 10px 13px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-family: 'Inter', sans-serif; color: #1A1A1A; outline: none; background: white; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; }
+
+    /* LOGO UPLOAD */
+    .logo-upload { display: flex; align-items: center; gap: 20px; margin-bottom: 22px; }
+    .logo-circle { width: 80px; height: 80px; border-radius: 50%; border: 2px dashed #cbd5e1; background: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .logo-circle-text { font-size: 11px; color: #94a3b8; text-align: center; margin-top: 4px; line-height: 1.3; }
+    .logo-upload-info { font-size: 13px; color: #64748b; line-height: 1.6; }
+    .logo-upload-info strong { color: #1A1A1A; }
+
+    /* DANGER ZONE */
+    .danger-card { background: #fef2f2; border-radius: 14px; border: 1.5px solid #fca5a5; padding: 24px; margin-bottom: 20px; }
+    .danger-card-title { font-size: 15px; font-weight: 700; color: #b91c1c; margin-bottom: 6px; }
+    .danger-card-desc { font-size: 13px; color: #7f1d1d; margin-bottom: 18px; line-height: 1.5; }
+    .btn-danger { background: #EA4335; color: white; border: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+
+    /* STICKY SAVE BAR */
+    .save-bar { position: fixed; bottom: 0; left: 220px; right: 0; background: white; border-top: 1px solid #e2e8f0; padding: 14px 32px; display: flex; align-items: center; justify-content: flex-end; gap: 12px; z-index: 100; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
+    .save-label { font-size: 13px; color: #64748b; flex: 1; }
+    .btn-secondary { background: white; color: #64748b; border: 1.5px solid #e2e8f0; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .btn-primary { background: #1A73E8; color: white; border: none; padding: 10px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="30 14 535 104" height="26">
+        <g fill="none" stroke-width="13" stroke-linecap="round">
+          <path d="M 64 24 C 48 24 36 34 36 48" stroke="#FFCC00"/>
+          <path d="M 36 48 C 36 60 48 66 64 66" stroke="#1A73E8"/>
+          <path d="M 64 66 C 78 66 90 72 90 86" stroke="#34A853"/>
+          <path d="M 90 86 C 90 98 78 106 64 106" stroke="#EA4335"/>
+        </g>
+        <text x="108" y="100" font-size="104" fill="#FFFFFF" letter-spacing="4"
+              font-family="'Bebas Neue', Impact, 'Arial Black', sans-serif">CALARIO</text>
+      </svg>
+    </div>
+    <div class="sidebar-shop">
+      <div class="shop-label">Boutique</div>
+      <div class="shop-name">Blandine Fresh</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item"><span class="nav-icon">📊</span> Tableau de bord</div>
+      <div class="nav-item"><span class="nav-icon">🛒</span> Point de vente</div>
+      <div class="nav-section-label">Gestion</div>
+      <div class="nav-item"><span class="nav-icon">📦</span> Stock</div>
+      <div class="nav-item"><span class="nav-icon">📋</span> Rapports</div>
+      <div class="nav-item"><span class="nav-icon">👥</span> Clients</div>
+      <div class="nav-section-label">Configuration</div>
+      <div class="nav-item"><span class="nav-icon">👤</span> Équipe</div>
+      <div class="nav-item active"><span class="nav-icon">⚙️</span> Paramètres</div>
+      <div class="nav-item"><span class="nav-icon">🔗</span> Intégrations</div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">BK</div>
+      <div class="user-info">
+        <div class="user-name">Blandine Konaté</div>
+        <div class="user-role">Propriétaire</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-breadcrumb">Configuration · <span>Paramètres</span></div>
+      <div class="topbar-actions">
+        <div class="topbar-notif">🔔</div>
+        <div class="topbar-notif">❓</div>
+      </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+
+        <div class="page-header">
+          <div class="page-title">Paramètres</div>
+          <div class="page-subtitle">Configurez votre boutique Blandine Fresh</div>
+        </div>
+
+        <div class="settings-tabs">
+          <div class="settings-tab active">Général</div>
+          <div class="settings-tab">Notifications</div>
+          <div class="settings-tab">Taux de Frotte</div>
+          <div class="settings-tab">Sécurité</div>
+        </div>
+
+        <!-- SECTION 1 — IDENTITÉ -->
+        <div class="settings-card">
+          <div class="settings-card-title">Identité de la boutique</div>
+          <div class="settings-card-desc">Ces informations apparaissent sur vos tickets de caisse et documents</div>
+
+          <div class="logo-upload">
+            <div class="logo-circle">
+              <span style="font-size:24px;">📷</span>
+              <div class="logo-circle-text">Uploader<br/>le logo</div>
+            </div>
+            <div class="logo-upload-info">
+              <strong>Logo de la boutique</strong><br/>
+              Format recommandé : PNG ou SVG, fond transparent.<br/>
+              Taille maximale : 2 Mo. Résolution min : 200×200 px.
+            </div>
+          </div>
+
+          <div class="form-grid-2" style="margin-bottom:18px;">
+            <div class="form-group">
+              <label class="form-label">Nom de la boutique</label>
+              <input type="text" class="form-input" value="Blandine Fresh" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Secteur d'activité</label>
+              <select class="form-select">
+                <option selected>Produits frais / Épicerie</option>
+                <option>Restauration</option>
+                <option>Vêtements & Mode</option>
+                <option>Électronique</option>
+                <option>Pharmacie</option>
+                <option>Autre</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Téléphone boutique</label>
+              <input type="text" class="form-input" value="+226 70 45 67 89" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email <span class="optional">(optionnel)</span></label>
+              <input type="email" class="form-input" placeholder="boutique@exemple.com" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Adresse complète</label>
+            <input type="text" class="form-input" value="Secteur 15, Avenue de la Liberté, Ouagadougou" />
+          </div>
+        </div>
+
+        <!-- SECTION 2 — LOCALISATION -->
+        <div class="settings-card">
+          <div class="settings-card-title">Localisation & Devise</div>
+          <div class="settings-card-desc">Ces paramètres affectent l'affichage des prix et les formats de dates dans toute l'application</div>
+
+          <div class="form-grid-2" style="margin-bottom:18px;">
+            <div class="form-group">
+              <label class="form-label">Pays</label>
+              <select class="form-select">
+                <option selected>Burkina Faso</option>
+                <option>Côte d'Ivoire</option>
+                <option>Sénégal</option>
+                <option>Mali</option>
+                <option>Niger</option>
+                <option>Bénin</option>
+                <option>Togo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ville</label>
+              <input type="text" class="form-input" value="Ouagadougou" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Devise</label>
+              <select class="form-select">
+                <option selected>XOF — Franc CFA (UEMOA)</option>
+                <option>XAF — Franc CFA (CEMAC)</option>
+                <option>GHS — Cedi ghanéen</option>
+                <option>NGN — Naira nigérian</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Fuseau horaire</label>
+              <select class="form-select">
+                <option selected>Africa/Ouagadougou (UTC+0)</option>
+                <option>Africa/Abidjan (UTC+0)</option>
+                <option>Africa/Dakar (UTC+0)</option>
+                <option>Africa/Lagos (UTC+1)</option>
+                <option>Africa/Nairobi (UTC+3)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3 — LANGUE & FORMAT -->
+        <div class="settings-card">
+          <div class="settings-card-title">Langue & Format d'affichage</div>
+          <div class="settings-card-desc">Personnalisez l'affichage des dates, heures et de la langue de l'interface</div>
+
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label class="form-label">Langue de l'application</label>
+              <select class="form-select">
+                <option selected>Français</option>
+                <option>English</option>
+                <option>Dioula</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Format de date</label>
+              <select class="form-select">
+                <option selected>JJ/MM/AAAA</option>
+                <option>MM/JJ/AAAA</option>
+                <option>AAAA-MM-JJ</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Format d'heure</label>
+              <select class="form-select">
+                <option selected>24h (14:30)</option>
+                <option>12h AM/PM (2:30 PM)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4 — DANGER ZONE -->
+        <div class="danger-card">
+          <div class="danger-card-title">⚠ Zone dangereuse</div>
+          <div class="danger-card-desc">
+            La suppression de la boutique est <strong>définitive et irréversible</strong>. Toutes les données (ventes, stock, utilisateurs, rapports) seront effacées. Cette action ne peut pas être annulée.
+          </div>
+          <button class="btn-danger">Supprimer la boutique</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- STICKY SAVE BAR -->
+    <div class="save-bar">
+      <span class="save-label">Modifications non enregistrées</span>
+      <button class="btn-secondary">Annuler</button>
+      <button class="btn-primary">Enregistrer les modifications</button>
+    </div>
+  </main>
+
+</body>
+</html>

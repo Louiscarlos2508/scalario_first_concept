@@ -389,9 +389,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                 ...(ref.watch(enabledPaymentMethodsProvider).valueOrNull ?? kDefaultPaymentMethods).map((m) => Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: _MethodChip(
-                          label: _methodLabel(m),
-                          selected: _method == m,
-                          onTap: () => _setMethod(m)),
+                          label: m.label,
+                          selected: _method == m.code,
+                          onTap: () => _setMethod(m.code)),
                     )),
               ],
             ),

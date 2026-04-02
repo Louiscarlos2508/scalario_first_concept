@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +19,8 @@ import 'package:frontend/features/shared/business_type/presentation/providers/bu
 import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/features/shared/inventory/presentation/providers/loss_locations_provider.dart';
+import 'package:frontend/features/retail/pos/presentation/screens/team_pin_screen.dart';
+import 'package:frontend/core/printing/printer_setup_sheet.dart';
 
 // ── SharedPreferences keys ────────────────────────────────────────────────────
 const _kReceiptHeader = 'settings_receipt_header';
@@ -140,6 +144,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _requiresApproval = false;
   bool _savingReturnPolicy = false;
 
+  // Session lock timeout (minutes; -1 = disabled)
+  int _lockTimeout = 10;
+
   @override
   void initState() {
     super.initState();
@@ -190,7 +197,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _receiptHeaderCtrl.text = prefs.getString(_kReceiptHeader) ?? '';
       _receiptFooterCtrl.text = prefs.getString(_kReceiptFooter) ?? '';
+      _lockTimeout = prefs.getInt(kLockTimeoutPrefKey) ?? 10;
     });
+    // Sync provider with persisted value
+    ref.read(sessionLockTimeoutProvider.notifier).state = _lockTimeout;
+  }
+
+  Future<void> _saveLockTimeout(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kLockTimeoutPrefKey, minutes);
+    if (!mounted) return;
+    setState(() => _lockTimeout = minutes);
+    ref.read(sessionLockTimeoutProvider.notifier).state = minutes;
   }
 
   // ── Save actions ────────────────────────────────────────────────────────────
@@ -692,6 +710,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildUsersSection(roleLabels),
             ],
 
+            // ── 4e. Caissiers & PINs (owner seulement) ───────────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildTeamPinSection(context),
+            ],
+
+            // ── 4f. Sécurité (owner seulement) ───────────────────────────────
+            if (isOwner) ...[
+              const SizedBox(height: 16),
+              _buildSecuritySection(),
+            ],
+
             // ── 4b. Fraîcheur (owner seulement) ──────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
@@ -727,6 +757,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 16),
               _buildReceiptSection(),
             ],
+
+            // ── 7b. Imprimante (tous les rôles — config locale à l'appareil) ──
+            const SizedBox(height: 16),
+            _buildPrinterSection(),
 
             // ── 7. Synchronisation (tous les rôles) ──────────────────────────
             const SizedBox(height: 16),
@@ -1121,6 +1155,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ]);
   }
 
+  Widget _buildTeamPinSection(BuildContext context) {
+    return _section('Caissiers & PINs', [
+      const Text(
+        'Gérez les profils PIN des employés qui partagent ce terminal de caisse.',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      ),
+      const SizedBox(height: 12),
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const CircleAvatar(
+          backgroundColor: AppColors.primary,
+          radius: 18,
+          child: Icon(Icons.badge_outlined, color: Colors.white, size: 18),
+        ),
+        title: const Text('Gérer les caissiers',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: const Text('Ajouter, modifier ou supprimer des profils PIN'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const TeamPinScreen()),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildSecuritySection() {
+    const options = [
+      (-1, 'Désactivé'),
+      (5, '5 minutes'),
+      (10, '10 minutes'),
+      (30, '30 minutes'),
+    ];
+    return _section('Sécurité', [
+      const Text(
+        'Durée d\'inactivité avant verrouillage automatique de la caisse.',
+        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+      ),
+      const SizedBox(height: 8),
+      ...options.map((opt) {
+        final (value, label) = opt;
+        return RadioListTile<int>(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: Text(label),
+          value: value,
+          groupValue: _lockTimeout,
+          onChanged: (v) { if (v != null) _saveLockTimeout(v); },
+        );
+      }),
+    ]);
+  }
+
   Widget _buildBusinessTypeSection(
       AsyncValue<Map<String, dynamic>> tenantInfo) {
     final config = ref.watch(businessTypeConfigProvider).valueOrNull;
@@ -1206,25 +1292,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final enabled = enabledAsync.valueOrNull ?? kDefaultPaymentMethods;
     final tenantId = ref.read(activeTenantProvider);
 
-    Future<void> toggle(String code, bool currentlyOn) async {
-      final next = currentlyOn
-          ? enabled.where((m) => m != code).toList()
-          : [...enabled, code];
-      // CASH is mandatory — cannot be disabled
-      if (!next.contains('CASH')) return;
-
+    Future<void> save(List<PaymentMethod> next) async {
+      if (!next.any((m) => m.code == 'CASH')) return; // CASH mandatory
       try {
-        final token = _token();
         final response = await http.patch(
           Uri.parse('${ApiConstants.baseUrl}/tenant/my-info'),
-          headers: ApiConstants.headers(tenantId: tenantId, token: token),
-          body: jsonEncode({'paymentMethods': next}),
+          headers: ApiConstants.headers(tenantId: tenantId, token: _token()),
+          body: jsonEncode({
+            'paymentMethods': next.map((m) => m.toJson()).toList()
+          }),
         );
         if (response.statusCode == 200 || response.statusCode == 204) {
           ref.invalidate(enabledPaymentMethodsProvider);
         }
       } catch (_) {}
     }
+
+    void toggle(PaymentMethod method, bool currentlyOn) {
+      final next = currentlyOn
+          ? enabled.where((m) => m.code != method.code).toList()
+          : [...enabled, method];
+      save(next);
+    }
+
+    void addCustom(String label) {
+      final code = label
+          .trim()
+          .toUpperCase()
+          .replaceAll(RegExp(r'[^A-Z0-9]'), '_');
+      if (enabled.any((m) => m.code == code)) return;
+      save([...enabled, PaymentMethod(code, label.trim())]);
+    }
+
+    void removeCustom(String code) {
+      save(enabled.where((m) => m.code != code).toList());
+    }
+
+    final customMethods =
+        enabled.where((m) => !kBuiltinCodes.contains(m.code)).toList();
 
     return _section('Méthodes de paiement', [
       const Padding(
@@ -1234,19 +1339,85 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ),
-      ...kAllPaymentMethods.map((entry) {
-        final code = entry.$1;
-        final label = entry.$2;
-        final isCash = code == 'CASH';
-        final isOn = enabled.contains(code);
+
+      // ── Built-in toggles ─────────────────────────────────────────────
+      ...kBuiltinPaymentMethods.map((method) {
+        final isCash = method.code == 'CASH';
+        final isOn = enabled.any((m) => m.code == method.code);
         return SwitchListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
-          title: Text(label),
+          title: Text(method.label),
           value: isOn,
-          onChanged: isCash ? null : (_) => toggle(code, isOn),
+          onChanged: isCash ? null : (_) => toggle(method, isOn),
         );
       }),
+
+      const Divider(height: 24),
+
+      // ── Custom methods ───────────────────────────────────────────────
+      Row(
+        children: [
+          const Text('Méthodes personnalisées',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          TextButton.icon(
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Ajouter'),
+            onPressed: () async {
+              final ctrl = TextEditingController();
+              final label = await showDialog<String>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Nouvelle méthode'),
+                  content: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom (ex: Orange Money, Wave…)',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (v) =>
+                        Navigator.pop(context, v.trim()),
+                  ),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler')),
+                    FilledButton(
+                      onPressed: () =>
+                          Navigator.pop(context, ctrl.text.trim()),
+                      child: const Text('Ajouter'),
+                    ),
+                  ],
+                ),
+              );
+              ctrl.dispose();
+              if (label != null && label.isNotEmpty) addCustom(label);
+            },
+          ),
+        ],
+      ),
+      if (customMethods.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('Aucune méthode personnalisée',
+              style: TextStyle(fontSize: 12, color: Colors.grey)),
+        ),
+      ...customMethods.map((m) => ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.payment_outlined, size: 20),
+            title: Text(m.label),
+            subtitle: Text(m.code,
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline,
+                  size: 18, color: Colors.red),
+              tooltip: 'Supprimer',
+              onPressed: () => removeCustom(m.code),
+            ),
+          )),
     ]);
   }
 
@@ -1276,6 +1447,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     ]);
+  }
+
+  Widget _buildPrinterSection() {
+    return _section('Imprimante', [const PrinterSetupContent()]);
   }
 
   Widget _buildSyncSection(

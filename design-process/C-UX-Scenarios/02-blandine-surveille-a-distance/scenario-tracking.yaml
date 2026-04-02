@@ -1,0 +1,22 @@
+scenario_number: "02"
+scenario_name: "Blandine Surveille Sa Boutique à Distance"
+design_intent: "S"
+total_pages: 2
+current_page_index: 2
+
+pages_list:
+  - number: "02.1"
+    name: "Dashboard Propriétaire"
+    slug: "dashboard-proprietaire"
+    actor: "Blandine"
+    platform: "Desktop"
+    status: "structure-created"
+    folder: "02.1-dashboard-proprietaire"
+
+  - number: "02.2"
+    name: "Centre d'alertes"
+    slug: "centre-alertes"
+    actor: "Blandine"
+    platform: "Desktop"
+    status: "structure-created"
+    folder: "02.2-centre-alertes"

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/services/retention_service.dart';
+import 'package:frontend/features/retail/pos/data/services/employee_pin_service.dart';
 import 'package:frontend/features/shared/inventory/data/repositories/inventory_repository.dart';
 import 'package:frontend/core/services/isar_service.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/core/services/realtime_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
-import 'package:frontend/core/services/barcode_scanner_service.dart';
-export 'package:frontend/core/services/barcode_scanner_service.dart' show ScanEvent;
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/data/repositories/category_repository.dart';
 import 'package:frontend/features/retail/pos/data/models/category.dart';
@@ -112,22 +111,15 @@ final syncStatusProvider = StreamProvider<SyncUiStatus>((ref) {
 final realtimeServiceProvider = Provider<RealtimeService>((ref) {
   final supabase = Supabase.instance.client;
   final syncService = ref.watch(syncServiceProvider);
-  return RealtimeService(supabase, syncService, ref);
-});
-
-final barcodeScannerServiceProvider = Provider<BarcodeScannerService>((ref) {
-  final repo = ref.watch(productRepositoryProvider);
-  final cart = ref.watch(cartProvider.notifier);
-  final service = BarcodeScannerService(repo, cart);
-
-  ref.onDispose(() => service.dispose());
-
+  // Scale fix: passer le tenantId pour filtrer les channels par tenant.
+  // Quand activeTenantProvider change (login), Riverpod recrée ce provider
+  // → nouvelle instance avec le bon filtre.
+  final tenantId = ref.watch(activeTenantProvider);
+  final service = RealtimeService(supabase, syncService, ref, tenantId: tenantId);
+  ref.onDispose(service.dispose);
   return service;
 });
 
-final scanEventsProvider = StreamProvider<ScanEvent>((ref) {
-  return ref.watch(barcodeScannerServiceProvider).events;
-});
 
 // UI State
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
@@ -338,3 +330,28 @@ final returnsRepositoryProvider = Provider<ReturnsRepository>((ref) {
         Supabase.instance.client.auth.currentSession?.accessToken,
   );
 });
+
+// ── Employee PIN identification ───────────────────────────────────────────────
+
+/// Service for storing and validating employee PIN profiles locally.
+final employeePinServiceProvider = Provider<EmployeePinService>((ref) {
+  return EmployeePinService();
+});
+
+/// The employee currently identified at the POS terminal.
+/// Set by [EmployeePinScreen] after successful PIN validation.
+/// Cleared by [SessionGuard] when a session is reset (new shift).
+final selectedEmployeeProvider = StateProvider<EmployeeProfile?>((ref) => null);
+
+// ── Session inactivity lock ───────────────────────────────────────────────────
+
+const kLockTimeoutPrefKey = 'settings_lock_timeout_minutes';
+
+/// Whether the POS is currently locked due to inactivity.
+/// Set to true by [SessionLockWrapper] when the inactivity timer fires.
+/// Reset to false by [SessionLockScreen] after PIN is validated.
+final sessionLockedProvider = StateProvider<bool>((ref) => false);
+
+/// Inactivity timeout in minutes before the POS auto-locks.
+/// -1 = disabled. Default 10 min. Persisted in SharedPreferences.
+final sessionLockTimeoutProvider = StateProvider<int>((ref) => 10);

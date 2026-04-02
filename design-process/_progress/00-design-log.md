@@ -99,4 +99,47 @@
 
 ---
 
+---
+
+### 2026-04-01 — Phase 4 : UX Design Complet (33 pages)
+
+**Mode :** [S] Suggest scénarios 01–04 · [D] Dream scénarios 05–11
+**Pages :** 33 pages · 11 scénarios · 8 HTML prototypes + specs par session
+**Qualité :** Validé (S) ou auto-généré (D) · logo Sc corrigé en cours de session
+
+**Artefacts créés :**
+
+- 33 prototypes HTML (`*/prototypes/*.html`) + 33 specs (`*-p4-spec.md`)
+- 11 `scenario-tracking.yaml` (01→11)
+- Décisions clés : PIN identification additive (pas redondante), sidebar desktop + bottom nav mobile, Taux de Frotte → scénario 10, GenUI → scénario 11 (Premium differentiator)
+
+**Suivant :** Phase 5 — Agentic Development
+
+---
+
+### 2026-04-01 — Phase 5 : [A] Analysis — Architecture Flutter
+
+**Scope :** Codebase Flutter entier (`apps/frontend/lib/`)
+**Output :** `G-Product-Development/flutter-architecture-analysis.md`
+
+**Findings clés :**
+- Architecture : Clean Architecture feature-first · Riverpod · Isar · Supabase · SDUI dashboard
+- Navigation : NavigationRail (≥600dp) / BottomNav (<600dp) · module-gated · role-driven (BusinessTypeConfig)
+- Rôles : superadmin · owner · manager · commercial · cashier
+- SDUI enregistré : product_grid · cart_panel · kpi_card_grid · line_chart · terminal_status_list
+
+**Gap analysis (33 pages UX) :**
+- ✅ Existe : 14 pages (POS complet, dashboard SDUI, freshness, stock, contacts, splash/login)
+- ⚠️ Partiel : 12 pages (fermeture caisse éparpillée, alertes non unifiées, rapports sans GenUI)
+- ❌ Manque : 7 items (PIN employé 04.1, onboarding 03.3, team management 09.1/09.2, intégrations 09.4, AI Config 08.1, GenUI 11.x)
+
+**Priorités :**
+1. Démo Blandine (avant mi-avril) : PIN 04.1 · flow caisse 01.x · alertes unifiées 02.2
+2. Post-démo H1 : gestion équipe (09.x) · Taux de Frotte complet (10.1)
+3. H2 : GenUI Analytics · onboarding wizard · Ibrahim panel
+
+**Suivant :** Phase 5 [D] Development ou [E] Evolution — implémenter par priorité
+
+---
+
 _Design Log Scalario · WDS · 2026-03-31_

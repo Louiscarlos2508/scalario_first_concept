@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalario — Arrêt de caisse · Soumission</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#f0f4ff',
+              100: '#e0eaff',
+              500: '#3b5bdb',
+              600: '#364fc7',
+              700: '#2f44b0',
+              900: '#1a2a6c',
+            },
+            slate: {
+              850: '#1e2a3a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .sidebar-link { @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer; }
+    .sidebar-link.active { @apply bg-brand-500/20 text-brand-300 border border-brand-500/30; }
+    .card { @apply bg-white rounded-xl border border-slate-200 shadow-sm; }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex">
+
+  <!-- ═══════════════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════════════ -->
+  <aside class="w-64 min-h-screen bg-slate-900 flex flex-col flex-shrink-0">
+
+    <!-- Logo -->
+    <div class="px-6 py-5 border-b border-white/10">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="30 14 535 104" height="26" style="display:block;"><g fill="none" stroke-width="13" stroke-linecap="round"><path d="M 64 24 C 48 24 36 34 36 48" stroke="#FFCC00"/><path d="M 36 48 C 36 60 48 66 64 66" stroke="#1A73E8"/><path d="M 64 66 C 78 66 90 72 90 86" stroke="#34A853"/><path d="M 90 86 C 90 98 78 106 64 106" stroke="#EA4335"/></g><text x="108" y="100" font-size="104" fill="#FFFFFF" letter-spacing="4" font-family="'Bebas Neue',Impact,'Arial Black',sans-serif">CALARIO</text></svg>
+    </div>
+
+    <!-- Boutique info -->
+    <div class="px-4 py-3 border-b border-white/10">
+      <div class="bg-white/5 rounded-lg px-3 py-2.5">
+        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-0.5">Boutique</p>
+        <p class="text-white text-sm font-semibold">Chez Blandine & Co.</p>
+        <p class="text-slate-400 text-xs">Ouagadougou, Burkina Faso</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      <p class="px-4 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Principal</p>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Tableau de bord
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        Ventes
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Stock
+      </div>
+      <div class="sidebar-link active">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 20h16a2 2 0 002-2V8a2 2 0 00-2-2h-5L13 4H9L7 6H4a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Caisse
+      </div>
+      <div class="sidebar-link">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Rapports
+      </div>
+    </nav>
+
+    <!-- User profile -->
+    <div class="px-4 py-4 border-t border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+          <span class="text-white text-xs font-semibold">KT</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-white text-sm font-medium truncate">Koné Tiéba</p>
+          <p class="text-slate-400 text-xs">Caissier</p>
+        </div>
+        <svg class="w-4 h-4 text-slate-500 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════════════════ -->
+  <main class="flex-1 overflow-y-auto">
+
+    <!-- Top bar -->
+    <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div class="flex items-center gap-3">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-slate-500">
+          <span>Caisse</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span class="text-slate-900 font-medium">Arrêt de caisse</span>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+          <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+          <span class="text-amber-700 text-xs font-semibold">Session ouverte</span>
+        </div>
+        <span class="text-slate-400 text-sm">Mardi 31 mars 2026 · 19h42</span>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <div class="max-w-4xl mx-auto px-8 py-8">
+
+      <!-- Page title -->
+      <div class="mb-8">
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900">Arrêt de caisse</h1>
+            <p class="text-slate-500 mt-1 text-sm">Soumission de fin de journée — Étape 1 sur 3</p>
+          </div>
+          <!-- Progress steps -->
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
+              <div class="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
+                <span class="text-white text-xs font-bold">1</span>
+              </div>
+              <span class="text-xs font-semibold text-brand-500">Soumission</span>
+            </div>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center">
+                <span class="text-slate-400 text-xs font-bold">2</span>
+              </div>
+              <span class="text-xs text-slate-400">Validation</span>
+            </div>
+            <div class="w-8 h-px bg-slate-300"></div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center">
+                <span class="text-slate-400 text-xs font-bold">3</span>
+              </div>
+              <span class="text-xs text-slate-400">Signature</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session info card -->
+      <div class="card p-5 mb-6">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Informations de session</h2>
+        <div class="grid grid-cols-4 gap-6">
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Date</p>
+            <p class="text-sm font-semibold text-slate-900">Mardi 31 mars 2026</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Caissier</p>
+            <p class="text-sm font-semibold text-slate-900">Koné Tiéba</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Ouverture</p>
+            <p class="text-sm font-semibold text-slate-900">07h15</p>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 mb-1">Fermeture</p>
+            <p class="text-sm font-semibold text-slate-900">19h42 <span class="text-slate-400 font-normal">(maintenant)</span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two column layout -->
+      <div class="grid grid-cols-2 gap-6 mb-6">
+
+        <!-- Récapitulatif système -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Ventes système</h2>
+            <span class="text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded-full px-2.5 py-0.5 font-medium">Calculé auto</span>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between py-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                <span class="text-sm text-slate-700">Espèces</span>
+              </div>
+              <span class="text-sm font-semibold text-slate-900">127 500 FCFA</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-orange-400"></div>
+                <span class="text-sm text-slate-700">Orange Money</span>
+              </div>
+              <span class="text-sm font-semibold text-slate-900">84 200 FCFA</span>
+            </div>
+            <div class="flex items-center justify-between py-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+                <span class="text-sm text-slate-700">Moov Money</span>
+              </div>
+              <span class="text-sm font-semibold text-slate-900">31 000 FCFA</span>
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-sm font-bold text-slate-900">Total système</span>
+              <span class="text-base font-bold text-slate-900">242 700 FCFA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comptage physique -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Comptage physique</h2>
+            <span class="text-xs bg-amber-50 text-amber-600 border border-amber-200 rounded-full px-2.5 py-0.5 font-medium">À saisir</span>
+          </div>
+          <div class="space-y-3">
+            <!-- Espèces input -->
+            <div>
+              <label class="text-xs text-slate-500 font-medium mb-1.5 block">Espèces comptées</label>
+              <div class="relative">
+                <input
+                  type="number"
+                  value="127000"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent pr-16 bg-white"
+                  placeholder="0"
+                />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">FCFA</span>
+              </div>
+            </div>
+
+            <!-- Orange Money - readonly -->
+            <div>
+              <label class="text-xs text-slate-500 font-medium mb-1.5 block">Orange Money <span class="text-slate-400 font-normal">(confirmé système)</span></label>
+              <div class="relative">
+                <input
+                  type="number"
+                  value="84200"
+                  readonly
+                  class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-500 bg-slate-50 cursor-not-allowed pr-16"
+                />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">FCFA</span>
+              </div>
+            </div>
+
+            <!-- Moov Money - readonly -->
+            <div>
+              <label class="text-xs text-slate-500 font-medium mb-1.5 block">Moov Money <span class="text-slate-400 font-normal">(confirmé système)</span></label>
+              <div class="relative">
+                <input
+                  type="number"
+                  value="31000"
+                  readonly
+                  class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-500 bg-slate-50 cursor-not-allowed pr-16"
+                />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">FCFA</span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-sm font-bold text-slate-900">Total compté</span>
+              <span class="text-base font-bold text-slate-900">242 200 FCFA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Écart calculé -->
+      <div class="card p-5 mb-6 border-red-200 bg-red-50">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-red-800">Écart détecté</p>
+              <p class="text-xs text-red-600">Total système — Total compté</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-2xl font-bold text-red-700">−500 FCFA</p>
+            <p class="text-xs text-red-500 font-medium">Espèces manquantes</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- État : pas d'écart (commenté, pour référence future) -->
+      <!--
+      <div class="card p-5 mb-6 border-green-200 bg-green-50">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-green-800">Caisse équilibrée</p>
+              <p class="text-xs text-green-600">Aucun écart détecté</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-2xl font-bold text-green-700">0 FCFA</p>
+          </div>
+        </div>
+      </div>
+      -->
+
+      <!-- Note / commentaire -->
+      <div class="card p-5 mb-8">
+        <label class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 block">
+          Note ou commentaire
+          <span class="text-slate-400 font-normal normal-case tracking-normal ml-1">(optionnel)</span>
+        </label>
+        <textarea
+          class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none"
+          rows="3"
+          placeholder="Ex : 500 FCFA manquants sur espèces, erreur de rendu probable lors de la vente 18h30…"
+        >500 FCFA manquants — probable erreur de rendu monnaie vente #127 à 18h32.</textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <div class="flex items-center gap-2 text-slate-500 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          La soumission notifiera <strong class="text-slate-700 mx-1">Amadou Traoré</strong> (Gestionnaire) pour validation.
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="px-4 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+            Annuler
+          </button>
+          <button class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            Soumettre au gestionnaire
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

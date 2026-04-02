@@ -14,7 +14,7 @@ documentCounts:
   projectDocs: 5
 workflowType: 'prd'
 projectType: 'brownfield'
-version: '8.2'
+version: '8.3'
 date: '2026-03-11'
 lastEdited: '2026-03-30'
 editHistory:
@@ -36,6 +36,8 @@ editHistory:
     changes: 'Vision stratégique documentée : 3 nouvelles sections ajoutées après Verticaux Futurs — Limites d''Usage par Plan (Phase 2a), Intelligence Artificielle Roadmap (Phase 2b→Phase 4), Scalario Platform Écosystème Inter-Entreprises (Phase 3+). Documentation uniquement — aucun epic, aucune implémentation. Version 6.6→6.7.'
   - date: '2026-03-30'
     changes: 'Version 8.3 — (1) Parcours Commercial H1 ajouté en section Onboarding : modèle validé Blandine (présentation → signature → Orange Money → config on-site → formation → go-live en une visite). (2) Naming tiers unifié Starter/Business/Pro/Enterprise (aligné Innovation Strategy) — remplacement "Retail Standard/Retail Premium" dans onboarding table et SLAs. (3) Blandine positionnée Pro tier client fondateur 40K FCFA/mois (vs 55K normal).'
+  - date: '2026-04-01'
+    changes: 'Version 8.3 — Ajout FR-WORKFLOW-01/02 (moteur workflow documentaire machines à états + ownership SOD par étape WorkflowStep), FR-SDUI-01 (permission filtering SDUI — capabilities évaluées backend, client Flutter rend sans logique permission), feuille de route ABAC Phase 3+ (RBAC dynamique → RBAC+SOD → ABAC simplifié → ABAC complet, rétro-compatible via champs optionnels sur table permissions). ToC mis à jour (21h, 21i, 21j).'
   - date: '2026-03-30'
     changes: 'Version 8.2 — Ajout section Infrastructure & Déploiement : stack Railway + Supabase Pro par horizon (H1→H3+), distribution Flutter APK direct H1 → Play Store H2 → Web H3, environnements dev/staging/prod, CI/CD GitHub Actions + Fastlane, sécurité secrets + backups. 5 nouveaux NFR (NFR-INFRA-01–05) : deploy < 5 min, zero data loss, rollback < 2 min, backup quotidien, staging avant canal intégrateur. ToC mis à jour (entrée 12c).'
   - date: '2026-03-30'
@@ -64,7 +66,7 @@ classification:
 
 # SCALARIO — Product Requirements Document
 
-**Version 8.3** | **Auteur :** Carlos-simpore | **Date :** 2026-03-30
+**Version 8.3** | **Auteur :** Carlos-simpore | **Date :** 2026-04-01
 
 Confidentiel — Carlos-simpore
 
@@ -127,7 +129,9 @@ Confidentiel — Carlos-simpore
 | 21e | FR-SESSION-01 | Gestion des Sessions Utilisateurs |
 | 21f | FR-INTEGRATOR-01 à FR-INTEGRATOR-04 | Prix plancher/plafond intégrateur, fee dégressif, commission récurrente |
 | 21g | FR-DEVIS-01 à FR-APPOINTMENT-01 | Modules Core Sectoriels Phase 3+ : Artisan/Atelier, Restaurant, Services |
-| 21h | FR-RBAC-01 | RBAC Dynamique par Tenant — rôles data-driven, dette technique Story 1.2 documentée |
+| 21h | FR-RBAC-01 | RBAC Dynamique par Tenant — rôles data-driven, dette technique Story 1.2 documentée, feuille de route ABAC |
+| 21i | FR-WORKFLOW-01/02 | Moteur workflow documentaire (machines à états) + Ownership SOD par étape |
+| 21j | FR-SDUI-01 | Permission filtering SDUI — capabilities évaluées backend, client rend sans logique permission |
 | 22 | Exigences Non-Fonctionnelles | Performance, sécurité, fiabilité, scalabilité, réseau, architecture (NFR1–NFR40) |
 | 23 | Croissance & Projections | Projections sur 10 ans, tarification complète, évolution revenus 3 horizons, infrastructure |
 | 24 | Gestion des Risques | Risques techniques, marché, ressources avec mitigations |
@@ -1840,6 +1844,39 @@ Scalario opère dans un espace où les concurrents sont soit trop généralistes
 > | AI config rôles | Non implémenté | Exposer les actions rôles dans FR-AI-02 function calling | **Phase 2c** |
 >
 > **Note :** La migration schema (`tenant_id` sur roles) est une fondation H1 car un Template Sectoriel ne peut pas définir des rôles sectoriels distincts tant que les rôles sont globaux. Cela bloque également la vision multi-secteur d'un seul Kernel. L'effort est limité : `hasPermission()` existe déjà dans PermissionService — la migration est principalement un changement de schema + switch du guard.
+>
+> **Évolution vers ABAC (Attribute-Based Access Control) — Phase 3+ :**
+>
+> FR-RBAC-01 (capability-based, Phase 2b) couvre les besoins PME — permissions attachées à des capabilities atomiques par tenant. Pour les clients enterprise (grande entreprise, holding multi-entités, secteur réglementé), une couche ABAC est nécessaire : les permissions intègrent des conditions contextuelles (`montant_max`, `département`, `région`, `statut_document`, `heure_journée`…).
+>
+> | Niveau | Modèle | Horizon | Cas d'usage |
+> | :--- | :--- | :--- | :--- |
+> | RBAC dynamique | Rôles par tenant + capabilities | Phase 2b | PME standard |
+> | RBAC + Ownership SOD | WorkflowStep assigné par étape | Phase 2b–V2 | Workflow multi-acteurs |
+> | ABAC simplifié | Capabilities + conditions département/montant | Phase 3 | Enterprise multi-départements |
+> | ABAC complet | Conditions contextuelles complexes | Phase 4+ | Grande enterprise, secteur réglementé |
+>
+> L'architecture FR-RBAC-01 (permissions en base, guard sur codes) est rétro-compatible avec l'ABAC — les conditions s'ajoutent comme champs optionnels sur la table `permissions` sans modifier les guards existants.
+
+---
+
+### Moteur de Workflow Documentaire (FR-WORKFLOW-01)
+
+> **Contexte :** Les documents métier (ticket de caisse, facture, commande, session d'inventaire, bon de livraison) ne sont pas des entités statiques — ce sont des machines à états. Chaque document a un type, un état courant, et une liste de transitions autorisées selon les permissions de l'utilisateur. Cette architecture permet de couvrir des workflows complexes (ticket → facture normalisée, commande → BL → facture) sans coder des écrans séparés par chemin.
+
+- **FR-WORKFLOW-01 :** Moteur de workflow documentaire — chaque document métier a un `type` (ticket_caisse, facture, commande, session_inventaire, bon_livraison…) et un `state` (draft, validated, normalized, closed…). Les transitions autorisées sont filtrées par les capabilities de l'utilisateur courant. Le backend renvoie uniquement les transitions que l'utilisateur peut déclencher — le client Flutter rend les boutons d'action dynamiquement sans logique de permission côté client. Exemples de transitions : ticket_caisse → [normaliser_en_facture] → facture_normalisée ; commande_client → [valider] → bon_livraison → [facturer] → facture. *(Architecture H1 — implémentation V2, après les 10 premiers clients actifs)*
+
+- **FR-WORKFLOW-02 :** Ownership par étape de workflow — chaque instance de workflow est décomposée en étapes (`WorkflowStep`) avec assignation distincte par étape. Exemple : session_inventaire = étape 1 "créer_session" (manager) + étape 2 "exécuter_comptage" (opérateur terrain) + étape 3 "valider_écarts" (directeur). Principe de ségrégation des tâches (SOD) : celui qui initie ≠ celui qui exécute ≠ celui qui valide. Chaque étape a un statut (pending / in_progress / done), un assigné (userId ou roleId), et une deadline optionnelle. Ce pattern est déjà partiellement présent dans l'arrêt de caisse 3 niveaux (Blandine) — FR-WORKFLOW-02 le généralise à tous les modules. *(Architecture H1 — implémentation V2)*
+
+> **Règle fondamentale :** la logique métier (calculs, transitions, validations) reste côté NestJS — jamais dans le SDUI. Le SDUI dit quoi afficher. Le backend dit quoi autoriser. Ce sont deux couches strictement séparées.
+
+---
+
+### UI-Driven Filtré par Capabilities (FR-SDUI-01)
+
+> **Contexte :** Le moteur UI-Driven (SDUI) existant envoie des définitions JSON de layout au client Flutter. Pour supporter des permissions granulaires jusqu'au widget et au bouton, chaque composant du layout doit porter un champ `requires` que le backend évalue avant envoi. Le client Flutter ne connaît jamais les règles de permission — il rend ce que le backend lui envoie, rien de plus.
+
+- **FR-SDUI-01 :** Permission filtering sur les composants SDUI — chaque composant du layout JSON (bouton, widget, section, liste) peut porter un champ `requires: "capability.code"`. Avant de renvoyer le layout au client, le backend évalue les capabilities de l'utilisateur connecté et supprime silencieusement tout composant dont la capability est absente. Le client Flutter ne sait pas pourquoi un bouton est absent — il ne le rend simplement pas. Exemples : bouton "Normaliser en facture" → `requires: "billing.normalize_to_invoice"` ; widget "Solde caisse" → `requires: "session.view_cash_balance"` ; section "Paramètres avancés" → `requires: "admin.advanced_settings"`. *(Architecture H1 — implémentation V2)*
 
 ---
 

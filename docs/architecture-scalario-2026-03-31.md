@@ -1045,6 +1045,66 @@ At scale (H3), integrators build and publish their own templates:
 
 ---
 
+### ADR-011: Document State Machine — Workflow Engine Pattern
+
+**Date:** 2026-04-01
+**Status:** Accepted — Architecture H1, Implementation V2
+
+**Context:** Business documents (ticket, invoice, order, inventory session, delivery note) currently have ad-hoc lifecycle states per module. As client complexity grows (ticket → normalized invoice, order → delivery note → invoice, multi-step inventory with SOD), hardcoded per-module state logic becomes unmaintainable. Observed in enterprise ERP review: document workflows vary per client — same document type, different transition rules.
+
+**Decision:** Every business document has a `type`, a `state`, and allowed `transitions` — evaluated server-side against the current user's capabilities. Flutter renders action buttons from the transitions array returned by the backend. No permission logic client-side. WorkflowStep ownership (FR-WORKFLOW-02) enables SOD: the person who creates a session ≠ the person who executes ≠ the person who validates.
+
+**Consequences:**
+
+- New `WorkflowDefinition` and `WorkflowStep` tables required (V2 schema addition)
+- Document state transitions become a backend responsibility (NestJS service), never Flutter
+- SDUI action buttons are rendered from `allowedTransitions[]` — consistent with existing SDUI pattern
+- Enables any client workflow complexity via template configuration, not custom code
+
+**Why not now (H1):** The current 3 clients have simple enough workflows. The architecture must not block this extension — it must not hardcode transitions in Flutter or in business logic that bypasses a state check.
+
+---
+
+### ADR-012: SDUI Capability Filtering — Permissions Down to Widget Level
+
+**Date:** 2026-04-01
+**Status:** Accepted — Architecture H1, Implementation V2
+
+**Context:** Enterprise clients require permissions granular to the button and widget level — not just module access. Observed: same screen, different users see different actions based on individual permissions. RBAC per role is insufficient; permission must propagate to every rendered component.
+
+**Decision:** Every SDUI layout component carries an optional `requires: "capability.code"` field. The backend filters the layout JSON before sending to the client, silently removing components whose capability the current user lacks. Flutter never receives components it cannot render. Fundamental rule: SDUI = presentation layer only. Business logic, permission evaluation, and state transitions stay in NestJS.
+
+**Consequences:**
+
+- Backend layout serialization adds a capability filter pass before response
+- Flutter rendering logic unchanged — it renders what it receives
+- Permission changes are immediate server-side — no app update required
+- Enables per-user UI customization without custom Flutter code
+
+**Why this matters for Scalario's vision:** A Template Sectoriel can define which capabilities are required for each widget. An integrator can create a "Pharmacist" role that sees dispensing actions but not pricing override buttons — without writing Flutter code.
+
+---
+
+### ADR-013: RBAC → ABAC Evolution Trajectory
+
+**Date:** 2026-04-01
+**Status:** Accepted — Trajectory documented, ABAC Phase 3+
+
+**Context:** Current FR-RBAC-01 (capability-based RBAC per tenant, Phase 2b) covers PME needs. Enterprise clients and regulated sectors require conditions on permissions: amount thresholds, department scope, document state, time-of-day, geographic zone. This is ABAC (Attribute-Based Access Control).
+
+**Decision:** The RBAC → ABAC evolution is planned in 4 stages. The current architecture does not block this evolution — the `permissions` table accepts optional condition columns additive to the existing schema.
+
+| Stage | Model | Horizon | Coverage |
+|---|---|---|---|
+| 1 | Dynamic RBAC (capability codes per tenant) | Phase 2b | PME standard |
+| 2 | RBAC + SOD (WorkflowStep ownership) | V2 | Multi-actor workflows |
+| 3 | ABAC simplified (conditions: department, amount) | Phase 3 | Enterprise multi-department |
+| 4 | ABAC full (contextual conditions: state, time, zone) | Phase 4+ | Large enterprise, regulated sectors |
+
+**Consequences:** No rework required at Phase 2b. Stage 3 adds optional `conditions JSONB` column to permissions table. Guard evaluation adds condition check when column is non-null. Fully additive, non-breaking.
+
+---
+
 ## 9. Migration Path v1 → v2
 
 ### 9.1 What Is Already v2

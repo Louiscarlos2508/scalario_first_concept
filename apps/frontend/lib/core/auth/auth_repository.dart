@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user_profile.dart';
 
@@ -21,20 +22,45 @@ class AuthRepository {
     );
   }
 
+  Future<AuthResponse> signUp({
+    required String email,
+    required String password,
+    String? fullName,
+  }) async {
+    return _supabase.auth.signUp(
+      email: email,
+      password: password,
+      data: fullName != null ? {'full_name': fullName} : null,
+    );
+  }
+
   Future<void> signOut() async {
     await _supabase.auth.signOut();
+  }
+
+  Future<void> updateFullName(String fullName) async {
+    // Stored in Supabase Auth user_metadata — no extra table column needed.
+    await _supabase.auth.updateUser(
+      UserAttributes(data: {'full_name': fullName}),
+    );
+  }
+
+  Future<void> changePassword(String newPassword) async {
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
   
   // Method to get all tenant IDs and Roles from organization_members
   Future<UserProfile?> getUserProfile() async {
     final user = currentUser;
     if (user == null) {
-      print('[AuthRepo] No current user found.');
+      debugPrint('[AuthRepo] No current user found.');
       return null;
     }
 
     try {
-      print('[AuthRepo] Fetching profile for user: ${user.id}');
+      debugPrint('[AuthRepo] Fetching profile for user: ${user.id}');
       final response = await _supabase
           .useSchema('kernel')
           .from('organization_members')
@@ -42,20 +68,23 @@ class AuthRepository {
           .eq('user_id', user.id);
 
       if (response == null) {
-        print('[AuthRepo] Null response from organization_members fetch.');
+        debugPrint('[AuthRepo] Null response from organization_members fetch.');
         return null;
       }
       
       final rows = List<Map<String, dynamic>>.from(response as List);
       if (rows.isEmpty) {
-        print('[AuthRepo] No organization memberships found for user: ${user.id}. Confirm RLS or manual data entry.');
+        debugPrint('[AuthRepo] No organization memberships found for user: ${user.id}. Confirm RLS or manual data entry.');
         return null;
       }
 
-      print('[AuthRepo] Found ${rows.length} memberships.');
-      return UserProfile.fromMemberships(rows, user.email ?? '', user.id);
+      debugPrint('[AuthRepo] Found ${rows.length} memberships.');
+      // full_name comes from Supabase Auth user_metadata, not the members table.
+      final fullName = user.userMetadata?['full_name'] as String?;
+      return UserProfile.fromMemberships(
+          rows, user.email ?? '', user.id, fullName: fullName);
     } catch (e) {
-      print('[AuthRepo] Error fetching user profile: $e');
+      debugPrint('[AuthRepo] Error fetching user profile: $e');
       rethrow; // Rethrow to let FutureProvider handle the error state
     }
   }

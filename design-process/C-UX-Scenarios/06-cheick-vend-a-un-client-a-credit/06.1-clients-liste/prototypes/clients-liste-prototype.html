@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalario — Clients</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f1f5f9; display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px; background: #0f172a;
+      display: flex; flex-direction: column; flex-shrink: 0;
+      min-height: 100vh; position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-shop { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-shop-inner { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px 12px; }
+    .sidebar-shop-label { font-size: 10px; color: rgba(255,255,255,0.4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .sidebar-shop-name { font-size: 13px; font-weight: 600; color: white; }
+    .sidebar-shop-plan { font-size: 11px; color: #FFCC00; margin-top: 2px; font-weight: 500; }
+    .sidebar-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 10px 4px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); cursor: pointer;
+      text-decoration: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
+    .nav-item.active { background: #1A73E8; color: white; }
+    .nav-sep { height: 1px; background: rgba(255,255,255,0.06); margin: 6px 10px; }
+    .sidebar-user {
+      padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-avatar {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: #34A853; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .user-name { font-size: 13px; font-weight: 600; color: white; }
+    .user-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .topbar {
+      background: white; border-bottom: 1px solid #e2e8f0;
+      padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+    }
+    .topbar-title { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .topbar-sub { font-size: 13px; color: #64748b; margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .btn-primary {
+      display: flex; align-items: center; gap: 6px;
+      padding: 9px 16px; background: #1A73E8; border: none;
+      border-radius: 10px; font-family: 'Inter',sans-serif;
+      font-size: 13px; font-weight: 600; color: white; cursor: pointer;
+    }
+    .btn-secondary {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px; background: white; border: 1.5px solid #e2e8f0;
+      border-radius: 10px; font-family: 'Inter',sans-serif;
+      font-size: 13px; font-weight: 600; color: #374151; cursor: pointer;
+    }
+
+    .content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+
+    /* Toolbar */
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-wrap { position: relative; flex: 1; min-width: 220px; max-width: 300px; }
+    .search-input {
+      width: 100%; padding: 9px 12px 9px 36px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-family: 'Inter',sans-serif; font-size: 13px; color: #0f172a;
+      background: white; outline: none;
+    }
+    .search-input:focus { border-color: #1A73E8; }
+    .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+    .filter-chips { display: flex; gap: 6px; }
+    .fchip {
+      padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      border: 1.5px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;
+    }
+    .fchip.on { border-color: #1A73E8; background: #eff6ff; color: #1A73E8; }
+
+    /* Summary cards */
+    .kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+    .kpi-card {
+      background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+    }
+    .kpi-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+    .kpi-value { font-size: 20px; font-weight: 700; color: #0f172a; }
+
+    /* Table */
+    .table-card { background: white; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #f8fafc; }
+    th {
+      padding: 10px 16px; text-align: left;
+      font-size: 11px; font-weight: 700; color: #64748b;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+    }
+    td { padding: 13px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; cursor: pointer; }
+    tr.selected td { background: #eff6ff; border-left: 3px solid #1A73E8; }
+    tr.selected td:first-child { padding-left: 13px; }
+
+    .client-cell { display: flex; align-items: center; gap: 10px; }
+    .client-av {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .client-name { font-size: 14px; font-weight: 600; color: #0f172a; }
+    .client-meta { font-size: 12px; color: #94a3b8; margin-top: 1px; }
+    .phone-cell { font-size: 13px; color: #374151; font-family: 'Inter',sans-serif; }
+
+    .credit-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    }
+    .credit-zero { background: #f0fdf4; color: #16a34a; }
+    .credit-low { background: #fffbeb; color: #92400e; }
+    .credit-high { background: #fef2f2; color: #991b1b; }
+    .credit-none { background: #f1f5f9; color: #64748b; }
+
+    .date-cell { font-size: 12px; color: #94a3b8; }
+    .status-chip {
+      display: inline-block; padding: 3px 9px; border-radius: 6px;
+      font-size: 11px; font-weight: 600;
+    }
+    .status-active { background: #f0fdf4; color: #166534; }
+    .status-inactive { background: #f1f5f9; color: #64748b; }
+    .status-new { background: #eff6ff; color: #1e40af; }
+
+    .table-footer {
+      padding: 12px 20px; border-top: 1px solid #f1f5f9;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-count { font-size: 13px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="30 14 535 104" height="26">
+        <g fill="none" stroke-width="13" stroke-linecap="round">
+          <path d="M 64 24 C 48 24 36 34 36 48" stroke="#FFCC00"/>
+          <path d="M 36 48 C 36 60 48 66 64 66" stroke="#1A73E8"/>
+          <path d="M 64 66 C 78 66 90 72 90 86" stroke="#34A853"/>
+          <path d="M 90 86 C 90 98 78 106 64 106" stroke="#EA4335"/>
+        </g>
+        <text x="108" y="100" font-size="104" fill="#FFFFFF" letter-spacing="4"
+              font-family="'Bebas Neue', Impact, 'Arial Black', sans-serif">CALARIO</text>
+      </svg>
+    </div>
+    <div class="sidebar-shop">
+      <div class="sidebar-shop-inner">
+        <div class="sidebar-shop-label">Boutique</div>
+        <div class="sidebar-shop-name">Pharmacie Cheick &amp; Co</div>
+        <div class="sidebar-shop-plan">✦ Standard+</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <a class="nav-item" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Tableau de bord
+      </a>
+      <a class="nav-item" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        Point de vente
+      </a>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Catalogue</div>
+      <a class="nav-item" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Produits
+      </a>
+      <a class="nav-item" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><path d="M7 7h.01"/></svg>
+        Stock
+      </a>
+      <a class="nav-item active" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Clients
+      </a>
+      <div class="nav-sep"></div>
+      <div class="nav-section">Gestion</div>
+      <a class="nav-item" href="#">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Rapports
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar">CK</div>
+      <div>
+        <div class="user-name">Cheick Koné</div>
+        <div class="user-role">Propriétaire</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Clients</div>
+        <div class="topbar-sub">Pharmacie Cheick &amp; Co · 8 clients enregistrés</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-secondary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exporter
+        </button>
+        <button class="btn-primary">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nouveau client
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- KPIs -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#eff6ff;">
+            <svg width="18" height="18" fill="none" stroke="#1A73E8" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <div class="kpi-label">Total clients</div>
+            <div class="kpi-value">8</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#fef9c3;">
+            <svg width="18" height="18" fill="none" stroke="#ca8a04" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div>
+            <div class="kpi-label">Avec crédit</div>
+            <div class="kpi-value" style="color:#92400e;">5</div>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:#fef2f2;">
+            <svg width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <div>
+            <div class="kpi-label">Dette totale</div>
+            <div class="kpi-value" style="color:#dc2626;">47 500 F</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" placeholder="Rechercher un client…" />
+        </div>
+        <div class="filter-chips">
+          <div class="fchip on">Tous</div>
+          <div class="fchip">Avec crédit</div>
+          <div class="fchip">Soldés</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Téléphone</th>
+              <th>Solde crédit</th>
+              <th>Dernière vente</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="selected">
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#9333ea;">MK</div>
+                  <div>
+                    <div class="client-name">Moussa Koné</div>
+                    <div class="client-meta">Client régulier · 12 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 70 12 34 56</td>
+              <td><span class="credit-badge credit-high">— 18 500 F</span></td>
+              <td class="date-cell">Aujourd'hui 10h32</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#1A73E8;">AD</div>
+                  <div>
+                    <div class="client-name">Aminata Diallo</div>
+                    <div class="client-meta">Client régulier · 8 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 65 98 77 33</td>
+              <td><span class="credit-badge credit-low">— 7 000 F</span></td>
+              <td class="date-cell">Hier 15h18</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#34A853;">OT</div>
+                  <div>
+                    <div class="client-name">Oumar Traoré</div>
+                    <div class="client-meta">3 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 76 54 32 10</td>
+              <td><span class="credit-badge credit-zero">0 F</span></td>
+              <td class="date-cell">28 mars 2026</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#EA4335;">FB</div>
+                  <div>
+                    <div class="client-name">Fatou Barry</div>
+                    <div class="client-meta">Client régulier · 22 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 70 88 11 45</td>
+              <td><span class="credit-badge credit-high">— 22 000 F</span></td>
+              <td class="date-cell">25 mars 2026</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#FFCC00; color:#0f172a;">IS</div>
+                  <div>
+                    <div class="client-name">Ibrahim Sawadogo</div>
+                    <div class="client-meta">2 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 62 34 56 78</td>
+              <td><span class="credit-badge credit-zero">0 F</span></td>
+              <td class="date-cell">20 mars 2026</td>
+              <td><span class="status-chip status-new">Nouveau</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#64748b;">RC</div>
+                  <div>
+                    <div class="client-name">Raïssa Compaoré</div>
+                    <div class="client-meta">5 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 71 45 67 89</td>
+              <td><span class="credit-badge credit-none">Non défini</span></td>
+              <td class="date-cell">15 mars 2026</td>
+              <td><span class="status-chip status-inactive">Inactif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#0891b2;">SM</div>
+                  <div>
+                    <div class="client-name">Salif Maïga</div>
+                    <div class="client-meta">Client régulier · 17 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 70 23 45 67</td>
+              <td><span class="credit-badge credit-zero">0 F</span></td>
+              <td class="date-cell">12 mars 2026</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="client-cell">
+                  <div class="client-av" style="background:#7c3aed;">NZ</div>
+                  <div>
+                    <div class="client-name">Nadia Zerbo</div>
+                    <div class="client-meta">Client régulier · 9 achats</div>
+                  </div>
+                </div>
+              </td>
+              <td class="phone-cell">+226 65 77 88 99</td>
+              <td><span class="credit-badge credit-none">Non défini</span></td>
+              <td class="date-cell">10 mars 2026</td>
+              <td><span class="status-chip status-active">Actif</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="table-footer">
+          <span class="table-count">8 clients · Page 1/1</span>
+          <span style="font-size:12px;color:#1A73E8;cursor:pointer;font-weight:500;">Voir la fiche ›</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

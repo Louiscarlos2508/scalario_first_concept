@@ -1,10 +1,15 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:frontend/core/services/sync_adapters/sync_adapter.dart';
+import 'package:frontend/core/services/sync_auth_exception.dart';
 import 'package:frontend/features/retail/pos/data/repositories/session_repository.dart';
 
 /// Handles POS session push to POST /pos/sessions.
 /// Sessions flow POS → server only (no delta pull needed).
+///
+/// ## Fix 4 — JWT 401 handling
+/// A 401/403 on open OR close throws [SyncAuthException] to suspend the
+/// sync engine and trigger a silent token refresh before retrying.
 class SessionSyncAdapter implements SyncAdapter {
   final SessionRepository _sessionRepo;
 
@@ -14,13 +19,13 @@ class SessionSyncAdapter implements SyncAdapter {
   /// Push pending sessions.
   /// OPEN sessions  → POST /retail/sessions/open  (idempotent via uuid)
   /// CLOSED sessions → POST /retail/sessions/close/:uuid
+  ///
+  /// Throws [SyncAuthException] on 401/403.
   @override
   Future<void> pushPending(String baseUrl, String tenantId,
       {String? token}) async {
     final pendingSessions = await _sessionRepo.getPendingSessions();
     if (pendingSessions.isEmpty) return;
-
-    print('[SessionAdapter] Pushing ${pendingSessions.length} pending sessions');
 
     final headers = {
       'Content-Type': 'application/json',
@@ -51,12 +56,24 @@ class SessionSyncAdapter implements SyncAdapter {
             )
             .timeout(const Duration(seconds: 10));
 
+        // Fix 4 — vérification 401 avant tout autre traitement.
+        if (openResponse.statusCode == 401 ||
+            openResponse.statusCode == 403) {
+          throw SyncAuthException(openResponse.statusCode);
+        }
+
         final openOk = openResponse.statusCode == 200 ||
             openResponse.statusCode == 201 ||
             openResponse.statusCode == 409; // already exists
 
         if (!openOk) {
-          print('[SessionAdapter] Open failed for ${session.uuid}: ${openResponse.statusCode}');
+          print('[SessionAdapter] Open failed for ${session.uuid}: '
+              '${openResponse.statusCode}');
+          // 400 = terminal rejection (invalid data, already in a closed state, etc.)
+          // Mark as synced to stop infinite retries — data will not become valid.
+          if (openResponse.statusCode == 400) {
+            await _sessionRepo.markAsSynced(session.id, session.uuid);
+          }
           continue;
         }
 
@@ -75,18 +92,24 @@ class SessionSyncAdapter implements SyncAdapter {
               )
               .timeout(const Duration(seconds: 10));
 
+          // Fix 4 — 401 sur le close = même traitement.
+          if (closeResponse.statusCode == 401 ||
+              closeResponse.statusCode == 403) {
+            throw SyncAuthException(closeResponse.statusCode);
+          }
+
           if (closeResponse.statusCode == 200 ||
               closeResponse.statusCode == 201) {
             await _sessionRepo.markAsSynced(session.id, session.uuid);
-            print('[SessionAdapter] Session ${session.uuid} closed & synced');
           } else {
-            print('[SessionAdapter] Close failed for ${session.uuid}: ${closeResponse.statusCode}');
+            print('[SessionAdapter] Close failed for ${session.uuid}: '
+                '${closeResponse.statusCode}');
           }
         } else {
           await _sessionRepo.markAsSynced(session.id, session.uuid);
-          print('[SessionAdapter] Session ${session.uuid} opened & synced');
         }
       } catch (e) {
+        if (e is SyncAuthException) rethrow;
         print('[SessionAdapter] Failed to push session ${session.uuid}: $e');
       }
     }

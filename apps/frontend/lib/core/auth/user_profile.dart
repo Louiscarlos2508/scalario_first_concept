@@ -29,7 +29,12 @@ class UserProfile {
   String get role => memberships.first.role;
   String get tenantId => memberships.first.tenantId;
 
-  factory UserProfile.fromMemberships(List<Map<String, dynamic>> memberRows, String email, String userId) {
+  factory UserProfile.fromMemberships(
+    List<Map<String, dynamic>> memberRows,
+    String email,
+    String userId, {
+    String? fullName,
+  }) {
     final memberships = memberRows.map((row) => TenantMembership(
       tenantId: row['organization_id'] as String,
       role: (row['role'] as Map?)?['name'] as String? ?? row['role_id'] as String,
@@ -39,7 +44,7 @@ class UserProfile {
     return UserProfile(
       id: userId,
       email: email,
-      fullName: memberRows.first['full_name'] as String?,
+      fullName: fullName,
       memberships: memberships,
     );
   }

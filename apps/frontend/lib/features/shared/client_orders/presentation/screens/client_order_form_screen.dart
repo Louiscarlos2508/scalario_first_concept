@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/theme/sheet_style.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
@@ -124,7 +125,6 @@ class _ClientOrderFormScreenState
       if (!mounted) return;
 
       if (widget.isEmbedded) {
-        // Reset form so user can create another order
         setState(() {
           _lineValues.clear();
           _lineCount = 0;
@@ -165,8 +165,8 @@ class _ClientOrderFormScreenState
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Client selection ──────────────────────────────────────────
-        Text('Client', style: Theme.of(context).textTheme.titleSmall),
+        // ── Client ────────────────────────────────────────────────────
+        const SheetSectionLabel('Client'),
         const SizedBox(height: 6),
         _CustomerAutocomplete(
           controller: _customerController,
@@ -174,18 +174,39 @@ class _ClientOrderFormScreenState
         ),
         const SizedBox(height: 16),
 
-        // ── Lines ─────────────────────────────────────────────────────
+        // ── Articles ──────────────────────────────────────────────────
         Row(
           children: [
-            Text('Articles', style: Theme.of(context).textTheme.titleSmall),
+            const SheetSectionLabel('Articles'),
             const Spacer(),
-            TextButton.icon(
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Ajouter un article'),
-              onPressed: _addLine,
+            GestureDetector(
+              onTap: _addLine,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: kSheetBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: kSheetBlue.withValues(alpha: 0.2), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.add, size: 14, color: kSheetBlue),
+                    SizedBox(width: 4),
+                    Text('Ajouter un article',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: kSheetBlue)),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
+        const SizedBox(height: 10),
         ...List.generate(_lineCount, (i) {
           return ClientOrderLineFormWidget(
             key: ValueKey('line_$i'),
@@ -196,31 +217,31 @@ class _ClientOrderFormScreenState
           );
         }),
         if (_lineCount == 0)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Aucun article — tapez "Ajouter un article"',
-              style: TextStyle(color: Colors.grey),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            decoration: BoxDecoration(
+              color: kSheetSlate50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: kSheetSlate200),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.inventory_2_outlined,
+                    size: 28, color: kSheetSlate200),
+                SizedBox(height: 8),
+                Text('Aucun article ajouté',
+                    style: TextStyle(fontSize: 12, color: kSheetSlate500)),
+              ],
             ),
           ),
         const SizedBox(height: 16),
 
-        // ── Optional fields ───────────────────────────────────────────
-        Text('Options', style: Theme.of(context).textTheme.titleSmall),
+        // ── Options ───────────────────────────────────────────────────
+        const SheetSectionLabel('Options'),
         const SizedBox(height: 8),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.calendar_today_outlined),
-          title: Text(_desiredDeliveryDate == null
-              ? 'Date souhaitée (optionnel)'
-              : 'Date souhaitée : ${DateFormat('dd/MM/yyyy').format(_desiredDeliveryDate!)}'),
-          trailing: _desiredDeliveryDate != null
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () =>
-                      setState(() => _desiredDeliveryDate = null),
-                )
-              : null,
+
+        // Date picker
+        GestureDetector(
           onTap: () async {
             final picked = await showDatePicker(
               context: context,
@@ -232,16 +253,63 @@ class _ClientOrderFormScreenState
               setState(() => _desiredDeliveryDate = picked);
             }
           },
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: _desiredDeliveryDate != null
+                  ? kSheetBlue.withValues(alpha: 0.04)
+                  : Colors.white,
+              border: Border.all(
+                color: _desiredDeliveryDate != null
+                    ? kSheetBlue.withValues(alpha: 0.3)
+                    : kSheetSlate200,
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 16,
+                  color: _desiredDeliveryDate != null
+                      ? kSheetBlue
+                      : kSheetSlate500,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _desiredDeliveryDate == null
+                        ? 'Date souhaitée (optionnel)'
+                        : DateFormat('dd/MM/yyyy')
+                            .format(_desiredDeliveryDate!),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: _desiredDeliveryDate != null
+                          ? kSheetSlate900
+                          : kSheetSlate500,
+                    ),
+                  ),
+                ),
+                if (_desiredDeliveryDate != null)
+                  GestureDetector(
+                    onTap: () =>
+                        setState(() => _desiredDeliveryDate = null),
+                    child: const Icon(Icons.close,
+                        size: 16, color: kSheetSlate500),
+                  ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: _depositController,
-          decoration: const InputDecoration(
-            labelText: 'Acompte reçu (optionnel)',
-            suffixText: 'FCFA',
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: sheetInputDecoration(
+              label: 'Acompte reçu (optionnel)', suffix: 'FCFA'),
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
           ],
@@ -249,34 +317,57 @@ class _ClientOrderFormScreenState
         const SizedBox(height: 8),
         TextFormField(
           controller: _notesController,
-          decoration: const InputDecoration(
-            labelText: 'Notes (optionnel)',
-            border: OutlineInputBorder(),
-          ),
+          decoration: sheetInputDecoration(label: 'Notes (optionnel)'),
           maxLines: 3,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
-        // ── Total + submit ────────────────────────────────────────────
-        Row(
-          children: [
-            Text(
-              'Total : ${_fcfa(_total)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Créer la commande'),
-            ),
-          ],
+        // ── Total + submit ─────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: kSheetBlue.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10),
+            border:
+                Border.all(color: kSheetBlue.withValues(alpha: 0.15)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.receipt_outlined,
+                  size: 16, color: kSheetBlue),
+              const SizedBox(width: 8),
+              Text('Total estimé',
+                  style: const TextStyle(
+                      fontSize: 12, color: kSheetSlate500)),
+              const Spacer(),
+              Text(
+                _fcfa(_total),
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: kSheetSlate900),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: FilledButton(
+            style: sheetPrimaryButtonStyle(),
+            onPressed: _isSubmitting ? null : _submit,
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Créer la commande',
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+          ),
         ),
         const SizedBox(height: 24),
       ],
@@ -311,7 +402,7 @@ class _ClientOrderFormScreenState
   }
 }
 
-// ── Inline customer autocomplete ─────────────────────────────────────────────
+// ── Customer autocomplete ─────────────────────────────────────────────────────
 
 class _CustomerAutocomplete extends ConsumerStatefulWidget {
   final TextEditingController controller;
@@ -350,37 +441,74 @@ class _CustomerAutocompleteState
     }
   }
 
+  void _pick(Customer c) {
+    widget.controller.text = c.name;
+    setState(() => _suggestions = []);
+    widget.onSelected(c);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Autocomplete<Customer>(
-      displayStringForOption: (c) => c.name,
-      optionsBuilder: (_) async => _suggestions,
-      onSelected: (c) {
-        widget.controller.text = c.name;
-        widget.onSelected(c);
-      },
-      fieldViewBuilder: (ctx, ctrl, focusNode, _) => TextFormField(
-        controller: ctrl,
-        focusNode: focusNode,
-        decoration: InputDecoration(
-          labelText: 'Client *',
-          hintText: 'Rechercher un client…',
-          prefixIcon: const Icon(Icons.person_outline),
-          suffixIcon: _loading
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                )
-              : null,
-          border: const OutlineInputBorder(),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextFormField(
+          controller: widget.controller,
+          decoration: sheetInputDecoration(
+            label: 'Client *',
+            hint: 'Rechercher un client…',
+            prefixIcon: const Icon(Icons.person_outline,
+                size: 18, color: kSheetSlate500),
+          ).copyWith(
+            suffixIcon: _loading
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                : null,
+          ),
+          onChanged: _search,
+          validator: (v) =>
+              (v == null || v.isEmpty) ? 'Veuillez sélectionner un client' : null,
         ),
-        onChanged: _search,
-        validator: (v) =>
-            (v == null || v.isEmpty) ? 'Veuillez sélectionner un client' : null,
-      ),
+        if (_suggestions.isNotEmpty)
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.black12),
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(8)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3))
+              ],
+            ),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: _suggestions.length,
+              itemBuilder: (_, i) {
+                final c = _suggestions[i];
+                return InkWell(
+                  onTap: () => _pick(c),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: Text(c.name,
+                        style: const TextStyle(fontSize: 14)),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
     );
   }
 }

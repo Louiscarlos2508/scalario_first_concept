@@ -1,0 +1,19 @@
+scenario_id: "08"
+scenario_name: "Ibrahim Déploie Son Premier Client"
+design_intent: D
+current_page_index: 2
+
+pages_list:
+  - id: "08.1"
+    slug: ai-config-wizard
+    folder: 08.1-ai-config-wizard
+    status: structure-created
+    prototype: prototypes/ai-config-wizard-prototype.html
+    spec: 08.1-p4-spec.md
+
+  - id: "08.2"
+    slug: dashboard-integrateur
+    folder: 08.2-dashboard-integrateur
+    status: structure-created
+    prototype: prototypes/dashboard-integrateur-prototype.html
+    spec: 08.2-p4-spec.md

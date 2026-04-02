@@ -1,0 +1,33 @@
+scenario_id: "05"
+scenario_name: "Cheick Configure Ses Variantes"
+design_intent: D
+current_page_index: 4
+
+pages_list:
+  - id: "05.1"
+    slug: produits-liste-catalogue
+    folder: 05.1-produits-liste-catalogue
+    status: structure-created
+    prototype: prototypes/produits-liste-prototype.html
+    spec: 05.1-p4-spec.md
+
+  - id: "05.2"
+    slug: produits-creation-edition
+    folder: 05.2-produits-creation-edition
+    status: structure-created
+    prototype: prototypes/produits-creation-prototype.html
+    spec: 05.2-p4-spec.md
+
+  - id: "05.3"
+    slug: variantes-gestion-multi-sku
+    folder: 05.3-variantes-gestion-multi-sku
+    status: structure-created
+    prototype: prototypes/variantes-prototype.html
+    spec: 05.3-p4-spec.md
+
+  - id: "05.4"
+    slug: stock-fiche-produit-variantes
+    folder: 05.4-stock-fiche-produit-variantes
+    status: structure-created
+    prototype: prototypes/fiche-produit-prototype.html
+    spec: 05.4-p4-spec.md

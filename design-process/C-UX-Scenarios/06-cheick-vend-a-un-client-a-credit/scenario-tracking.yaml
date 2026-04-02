@@ -1,0 +1,19 @@
+scenario_id: "06"
+scenario_name: "Cheick Vend à un Client à Crédit"
+design_intent: D
+current_page_index: 2
+
+pages_list:
+  - id: "06.1"
+    slug: clients-liste
+    folder: 06.1-clients-liste
+    status: structure-created
+    prototype: prototypes/clients-liste-prototype.html
+    spec: 06.1-p4-spec.md
+
+  - id: "06.2"
+    slug: clients-fiche-solde-credit
+    folder: 06.2-clients-fiche-solde-credit
+    status: structure-created
+    prototype: prototypes/fiche-client-prototype.html
+    spec: 06.2-p4-spec.md

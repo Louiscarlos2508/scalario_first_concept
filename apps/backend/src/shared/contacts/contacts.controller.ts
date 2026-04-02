@@ -9,10 +9,12 @@ import {
   Query,
   Req,
   HttpCode,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ContactsService } from './contacts.service';
 import { RequiresModule } from '../../kernel/modules/module.decorator';
 import { Roles } from '../../kernel/rbac/roles.decorator';
+import { SyncHeadersInterceptor } from '../../kernel/interceptors/sync-headers.interceptor';
 
 @Controller('contacts')
 @RequiresModule('clients')
@@ -26,7 +28,9 @@ export class ContactsController {
     return this.contactsService.createContact(body, userId);
   }
 
+  /** GET /contacts — ajoute X-Sync-Timestamp (Fix 2 Flutter). */
   @Get()
+  @UseInterceptors(SyncHeadersInterceptor)
   async getContacts(
     @Query('tenantId') tenantId?: string,
     @Query('since') since?: string,

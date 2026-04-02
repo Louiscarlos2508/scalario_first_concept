@@ -159,13 +159,36 @@ class IsarService {
   Future<void> updateLastSync(String key, DateTime timestamp) async {
     final isar = await db;
     await isar.writeTxn(() async {
-      final existing = await isar.syncMetadatas.filter().keyEqualTo(key).findFirst();
+      final existing =
+          await isar.syncMetadatas.filter().keyEqualTo(key).findFirst();
       if (existing != null) {
         existing.lastSync = timestamp;
         await isar.syncMetadatas.put(existing);
       } else {
-        await isar.syncMetadatas.put(SyncMetadata(key: key, lastSync: timestamp));
+        await isar.syncMetadatas
+            .put(SyncMetadata(key: key, lastSync: timestamp));
       }
     });
+  }
+
+  // --- Fix 5: Schema Version Helpers ---
+  // Le schemaVersion est encodé comme millisecondsSinceEpoch dans le champ
+  // lastSync d'une entrée SyncMetadata dédiée (clé '__schema_v__').
+  // Migration additive — pas de nouveau champ Isar, pas de build_runner.
+
+  static const _schemaVersionKey = '__schema_v__';
+
+  /// Retourne la version de schéma stockée localement (0 si absente).
+  Future<int> getSchemaVersion() async {
+    final meta = await getLastSync(_schemaVersionKey);
+    return meta?.millisecondsSinceEpoch ?? 0;
+  }
+
+  /// Stocke [version] comme version de schéma locale.
+  Future<void> updateSchemaVersion(int version) async {
+    await updateLastSync(
+      _schemaVersionKey,
+      DateTime.fromMillisecondsSinceEpoch(version),
+    );
   }
 }

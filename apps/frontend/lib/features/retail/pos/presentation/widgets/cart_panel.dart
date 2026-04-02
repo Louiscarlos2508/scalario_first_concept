@@ -43,7 +43,7 @@ class CartPanel extends ConsumerWidget {
     });
 
     return Container(
-      color: Colors.grey.shade100,
+      color: Colors.white,
       child: Column(
         children: [
           const CartHeader(),

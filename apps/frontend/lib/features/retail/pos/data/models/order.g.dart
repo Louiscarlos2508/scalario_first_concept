@@ -83,6 +83,13 @@ const OrderSchema = CollectionSchema(
       id: 12,
       name: r'uuid',
       type: IsarType.string,
+    ),
+    // Fix 3 — additive migration: id 13 inexistant dans les records anciens
+    // → readLongOrNull retourne null → ?? 0 = valeur par défaut sûre.
+    r'retryCount': PropertySchema(
+      id: 13,
+      name: r'retryCount',
+      type: IsarType.long,
     )
   },
   estimateSize: _orderEstimateSize,
@@ -163,6 +170,7 @@ int _orderEstimateSize(
     }
   }
   bytesCount += 3 + object.uuid.length * 3;
+  bytesCount += 8; // retryCount: IsarType.long = 8 bytes
   return bytesCount;
 }
 
@@ -190,6 +198,7 @@ void _orderSerialize(
   writer.writeDouble(offsets[10], object.totalAmount);
   writer.writeString(offsets[11], object.userId);
   writer.writeString(offsets[12], object.uuid);
+  writer.writeLong(offsets[13], object.retryCount);
 }
 
 Order _orderDeserialize(
@@ -221,6 +230,7 @@ Order _orderDeserialize(
   object.totalAmount = reader.readDouble(offsets[10]);
   object.userId = reader.readStringOrNull(offsets[11]);
   object.uuid = reader.readString(offsets[12]);
+  object.retryCount = reader.readLongOrNull(offsets[13]) ?? 0;
   return object;
 }
 
@@ -264,6 +274,8 @@ P _orderDeserializeProp<P>(
       return (reader.readStringOrNull(offset)) as P;
     case 12:
       return (reader.readString(offset)) as P;
+    case 13:
+      return (reader.readLongOrNull(offset) ?? 0) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -273,11 +285,13 @@ const _OrdersyncStatusEnumValueMap = {
   r'pending': r'pending',
   r'synced': r'synced',
   r'error': r'error',
+  r'failed': r'failed', // Fix 3 — additive, aucun index impacté (EnumType.name)
 };
 const _OrdersyncStatusValueEnumMap = {
   r'pending': SyncStatus.pending,
   r'synced': SyncStatus.synced,
   r'error': SyncStatus.error,
+  r'failed': SyncStatus.failed, // Fix 3 — additive
 };
 
 Id _orderGetId(Order object) {

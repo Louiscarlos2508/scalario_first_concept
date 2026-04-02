@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   file_selector_windows
   isar_flutter_libs
+  print_bluetooth_thermal
   printing
   url_launcher_windows
 )

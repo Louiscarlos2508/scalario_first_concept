@@ -1,105 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../core/auth/auth_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 import '../../core/auth/auth_state.dart';
 import '../../core/theme/app_logos.dart';
 
-// ---------------------------------------------------------------------------
-// State notifier local — isole la logique métier du widget.
-// ---------------------------------------------------------------------------
+// ── Palette (matches login-prototype.html) ────────────────────────────────────
 
-class _LoginState {
-  const _LoginState({
-    this.isLoading = false,
-    this.emailError,
-    this.passwordError,
-  });
+const _kBg        = Colors.white;
+const _kSlate900  = Color(0xFF0F172A);
+const _kSlate700  = Color(0xFF374151);
+const _kSlate400  = Color(0xFF94A3B8);
+const _kSlate200  = Color(0xFFE2E8F0);
+const _kSlate100  = Color(0xFFF1F5F9);
+const _kSlate50   = Color(0xFFF8FAFC);
+const _kBlue      = Color(0xFF1A73E8);
 
-  final bool isLoading;
-  final String? emailError;
-  final String? passwordError;
+// ── Tab enum ──────────────────────────────────────────────────────────────────
 
-  _LoginState copyWith({
-    bool? isLoading,
-    // null = pas de changement, const _sentinel = effacer l'erreur
-    Object? emailError = _sentinel,
-    Object? passwordError = _sentinel,
-  }) {
-    return _LoginState(
-      isLoading: isLoading ?? this.isLoading,
-      emailError:
-          emailError == _sentinel ? this.emailError : emailError as String?,
-      passwordError: passwordError == _sentinel
-          ? this.passwordError
-          : passwordError as String?,
-    );
-  }
+enum _Tab { login, signup }
 
-  bool get canSubmit =>
-      !isLoading && emailError == null && passwordError == null;
-}
-
-const _sentinel = Object();
-
-class _LoginNotifier extends StateNotifier<_LoginState> {
-  _LoginNotifier() : super(const _LoginState());
-
-  void validateEmail(String value) {
-    final trimmed = value.trim();
-    final error = trimmed.isEmpty
-        ? 'Adresse e-mail requise'
-        : !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(trimmed)
-            ? 'Format d\'e-mail invalide'
-            : null;
-    state = state.copyWith(emailError: error);
-  }
-
-  void validatePassword(String value) {
-    final error = value.isEmpty
-        ? 'Mot de passe requis'
-        : value.length < 8
-            ? 'Minimum 8 caractères'
-            : null;
-    state = state.copyWith(passwordError: error);
-  }
-
-  Future<void> signIn({
-    required String email,
-    required String password,
-    required AuthRepository repo,
-    required void Function(String) onError,
-  }) async {
-    validateEmail(email);
-    validatePassword(password);
-    if (state.emailError != null || state.passwordError != null) return;
-
-    state = state.copyWith(isLoading: true);
-    try {
-      await repo.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-      // La navigation est gérée par authStateProvider dans main.dart.
-    } on AuthException catch (e) {
-      onError(e.message);
-    } catch (_) {
-      onError('Une erreur inattendue s\'est produite. Réessayez.');
-    } finally {
-      if (mounted) state = state.copyWith(isLoading: false);
-    }
-  }
-}
-
-final _loginProvider =
-    StateNotifierProvider.autoDispose<_LoginNotifier, _LoginState>(
-  (_) => _LoginNotifier(),
-);
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -109,60 +29,298 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _emailFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-  bool _obscurePassword = true;
+  _Tab _tab = _Tab.login;
+  bool _loading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _emailFocus.addListener(() {
-      if (!_emailFocus.hasFocus) {
-        ref
-            .read(_loginProvider.notifier)
-            .validateEmail(_emailController.text);
-      }
-    });
-    _passwordFocus.addListener(() {
-      if (!_passwordFocus.hasFocus) {
-        ref
-            .read(_loginProvider.notifier)
-            .validatePassword(_passwordController.text);
-      }
-    });
-  }
+  // Login
+  final _loginEmailCtrl    = TextEditingController();
+  final _loginPasswordCtrl = TextEditingController();
+  bool _obscureLoginPwd    = true;
+  String? _loginEmailError;
+  String? _loginPasswordError;
+
+  // Signup
+  final _signupNameCtrl     = TextEditingController();
+  final _signupEmailCtrl    = TextEditingController();
+  final _signupPasswordCtrl = TextEditingController();
+  bool _obscureSignupPwd    = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _emailFocus.dispose();
-    _passwordFocus.dispose();
+    _loginEmailCtrl.dispose();
+    _loginPasswordCtrl.dispose();
+    _signupNameCtrl.dispose();
+    _signupEmailCtrl.dispose();
+    _signupPasswordCtrl.dispose();
     super.dispose();
   }
 
-  void _submit(_LoginState loginState, AuthRepository repo,
-      ColorScheme colorScheme) {
-    ref.read(_loginProvider.notifier).signIn(
-          email: _emailController.text,
-          password: _passwordController.text,
-          repo: repo,
-          onError: (msg) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  msg,
-                  style: TextStyle(color: colorScheme.onError),
+  // ── Submit ───────────────────────────────────────────────────────────────────
+
+  Future<void> _submitLogin() async {
+    final email    = _loginEmailCtrl.text.trim();
+    final password = _loginPasswordCtrl.text;
+    setState(() {
+      _loginEmailError = email.isEmpty
+          ? 'Adresse e-mail requise'
+          : !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
+              ? 'Format invalide'
+              : null;
+      _loginPasswordError = password.isEmpty ? 'Mot de passe requis' : null;
+    });
+    if (_loginEmailError != null || _loginPasswordError != null) return;
+
+    setState(() => _loading = true);
+    try {
+      await ref.read(authRepositoryProvider).signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      // Navigation handled by authStateProvider in main.dart
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _submitSignup() async {
+    final name     = _signupNameCtrl.text.trim();
+    final email    = _signupEmailCtrl.text.trim();
+    final password = _signupPasswordCtrl.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showError('Tous les champs sont requis.');
+      return;
+    }
+    if (password.length < 8) {
+      _showError('Le mot de passe doit contenir au moins 8 caractères.');
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await ref.read(authRepositoryProvider).signUp(
+        email: email,
+        password: password,
+        fullName: name,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Compte créé ! Vérifiez votre e-mail pour confirmer.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on AuthException catch (e) {
+      if (mounted) _showError(e.message);
+    } catch (_) {
+      if (mounted) _showError('Une erreur inattendue s\'est produite.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ── Build ────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: _kBg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _TopBar(onBack: Navigator.of(context).canPop()
+                  ? () => Navigator.of(context).pop()
+                  : null),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Title
+                      Text(
+                        _tab == _Tab.login
+                            ? 'Bon retour !'
+                            : 'Créez votre compte',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: _kSlate900,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _tab == _Tab.login
+                            ? 'Connectez-vous pour accéder à votre espace.'
+                            : 'Rejoignez Scalario et commencez à gérer votre boutique.',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: _kSlate400,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Tab switcher
+                      _TabSwitcher(
+                        active: _tab,
+                        onSelect: (t) => setState(() {
+                          _tab = t;
+                          _loginEmailError = null;
+                          _loginPasswordError = null;
+                        }),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Form (no animation — instant swap, simpler)
+                      if (_tab == _Tab.login)
+                        _buildLoginForm()
+                      else
+                        _buildSignupForm(),
+                    ],
+                  ),
                 ),
-                backgroundColor: colorScheme.error,
-                behavior: SnackBarBehavior.floating,
               ),
-            );
-          },
-        );
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoginForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _FieldLabel('Adresse e-mail'),
+        const SizedBox(height: 6),
+        _InputField(
+          controller: _loginEmailCtrl,
+          hint: 'exemple@domaine.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          errorText: _loginEmailError,
+          onChanged: (_) => setState(() => _loginEmailError = null),
+        ),
+        const SizedBox(height: 16),
+
+        _FieldLabel('Mot de passe'),
+        const SizedBox(height: 6),
+        _PasswordField(
+          controller: _loginPasswordCtrl,
+          obscure: _obscureLoginPwd,
+          hint: '8 caractères minimum',
+          errorText: _loginPasswordError,
+          onToggle: () => setState(() => _obscureLoginPwd = !_obscureLoginPwd),
+          onChanged: (_) => setState(() => _loginPasswordError = null),
+          onSubmit: _loading ? null : _submitLogin,
+        ),
+
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _onForgotPassword,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Mot de passe oublié ?',
+              style: TextStyle(fontSize: 13, color: _kBlue),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 8),
+        _PrimaryButton(
+          label: 'Se connecter',
+          onPressed: _loading ? null : _submitLogin,
+          loading: _loading,
+        ),
+        const SizedBox(height: 20),
+        const _Divider(),
+        const SizedBox(height: 20),
+        _OtpButton(onTap: _onOtpTap),
+        const SizedBox(height: 20),
+        const _LegalText(),
+      ],
+    );
+  }
+
+  Widget _buildSignupForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _InviteBanner(),
+        const SizedBox(height: 20),
+
+        _FieldLabel('Votre nom complet'),
+        const SizedBox(height: 6),
+        _InputField(
+          controller: _signupNameCtrl,
+          hint: 'Ex : Bernard Ouédraogo',
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 16),
+
+        _FieldLabel('Adresse e-mail'),
+        const SizedBox(height: 6),
+        _InputField(
+          controller: _signupEmailCtrl,
+          hint: 'exemple@domaine.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 16),
+
+        _FieldLabel('Mot de passe'),
+        const SizedBox(height: 6),
+        _PasswordField(
+          controller: _signupPasswordCtrl,
+          obscure: _obscureSignupPwd,
+          hint: '8 caractères minimum',
+          onToggle: () => setState(() => _obscureSignupPwd = !_obscureSignupPwd),
+          onSubmit: _loading ? null : _submitSignup,
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Utilisé pour sécuriser votre compte',
+          style: TextStyle(fontSize: 12, color: _kSlate400),
+        ),
+
+        const SizedBox(height: 24),
+        _PrimaryButton(
+          label: 'Créer mon compte',
+          onPressed: _loading ? null : _submitSignup,
+          loading: _loading,
+        ),
+        const SizedBox(height: 20),
+        const _Divider(),
+        const SizedBox(height: 20),
+        _OtpButton(onTap: _onOtpTap),
+        const SizedBox(height: 20),
+        const _LegalText(),
+      ],
+    );
   }
 
   void _onForgotPassword() {
@@ -174,223 +332,465 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
+  void _onOtpTap() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Connexion par téléphone — bientôt disponible.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
+// ── Sub-widgets ───────────────────────────────────────────────────────────────
+
+class _TopBar extends StatelessWidget {
+  final VoidCallback? onBack;
+  const _TopBar({this.onBack});
+
   @override
   Widget build(BuildContext context) {
-    final loginState = ref.watch(_loginProvider);
-    final repo = ref.read(authRepositoryProvider);
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: colorScheme.surface,
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 64),
-
-                // --- Logo ---
-                SvgPicture.asset(
-                  AppLogos.wordmarkPath(context),
-                  width: 200,
-                  fit: BoxFit.contain,
-                  semanticsLabel: 'Scalario',
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      decoration: const BoxDecoration(
+        color: _kBg,
+        border: Border(bottom: BorderSide(color: _kSlate100)),
+      ),
+      child: Row(
+        children: [
+          if (onBack != null) ...[
+            GestureDetector(
+              onTap: onBack,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _kSlate50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _kSlate200),
                 ),
+                child: const Icon(
+                  Icons.chevron_left,
+                  size: 20,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          AppLogos.monogram(context, size: 28),
+        ],
+      ),
+    );
+  }
+}
 
-                const SizedBox(height: 48),
+class _TabSwitcher extends StatelessWidget {
+  final _Tab active;
+  final ValueChanged<_Tab> onSelect;
 
-                // --- Formulaire ---
-                Card(
-                  color: colorScheme.surfaceContainerHigh,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Email
-                        Semantics(
-                          label: 'Champ adresse e-mail',
-                          child: TextFormField(
-                            controller: _emailController,
-                            focusNode: _emailFocus,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            onFieldSubmitted: (_) => FocusScope.of(context)
-                                .requestFocus(_passwordFocus),
-                            decoration: _fieldDecoration(
-                              colorScheme: colorScheme,
-                              label: 'Adresse e-mail',
-                              hint: 'exemple@domaine.com',
-                              icon: Icons.email_outlined,
-                              errorText: loginState.emailError,
-                            ),
-                          ),
-                        ),
+  const _TabSwitcher({required this.active, required this.onSelect});
 
-                        const SizedBox(height: 16),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _kSlate100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          _TabBtn(
+            label: 'Créer un compte',
+            active: active == _Tab.signup,
+            onTap: () => onSelect(_Tab.signup),
+          ),
+          _TabBtn(
+            label: 'Se connecter',
+            active: active == _Tab.login,
+            onTap: () => onSelect(_Tab.login),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                        // Mot de passe
-                        Semantics(
-                          label: 'Champ mot de passe',
-                          child: TextFormField(
-                            controller: _passwordController,
-                            focusNode: _passwordFocus,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) =>
-                                _submit(loginState, repo, colorScheme),
-                            decoration: _fieldDecoration(
-                              colorScheme: colorScheme,
-                              label: 'Mot de passe',
-                              icon: Icons.lock_outline,
-                              errorText: loginState.passwordError,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                                tooltip: _obscurePassword
-                                    ? 'Afficher le mot de passe'
-                                    : 'Masquer le mot de passe',
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+class _TabBtn extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
 
-                        const SizedBox(height: 8),
+  const _TabBtn({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
-                        // Mot de passe oublié
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: loginState.isLoading
-                                ? null
-                                : _onForgotPassword,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(0, 32),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'Mot de passe oublié ?',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Bouton Se connecter
-                        Semantics(
-                          label: loginState.isLoading
-                              ? 'Connexion en cours'
-                              : 'Se connecter',
-                          button: true,
-                          child: SizedBox(
-                            height: 48,
-                            child: FilledButton(
-                              onPressed: loginState.isLoading
-                                  ? null
-                                  : () => _submit(loginState, repo, colorScheme),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                foregroundColor: colorScheme.onPrimary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                minimumSize: const Size.fromHeight(48),
-                              ),
-                              child: loginState.isLoading
-                                  ? SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: colorScheme.onPrimary,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Se connecter',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: colorScheme.onPrimary,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-              ],
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: active ? _kSlate900 : _kSlate400,
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  InputDecoration _fieldDecoration({
-    required ColorScheme colorScheme,
-    required String label,
-    required IconData icon,
-    String? hint,
-    String? errorText,
-    Widget? suffixIcon,
-  }) {
-    final radius = BorderRadius.circular(8);
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      errorText: errorText,
-      prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
-      suffixIcon: suffixIcon,
-      filled: true,
-      fillColor: colorScheme.surfaceContainerHighest,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: colorScheme.outline),
+// ── Form atoms ────────────────────────────────────────────────────────────────
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: _kSlate700,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: colorScheme.outline),
+    );
+  }
+}
+
+InputDecoration _buildInputDecoration({
+  String? hint,
+  String? errorText,
+  Widget? suffix,
+}) {
+  const radius = BorderRadius.all(Radius.circular(12));
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: _kSlate400, fontSize: 15),
+    errorText: errorText,
+    errorStyle: const TextStyle(fontSize: 12),
+    suffixIcon: suffix,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+    border: const OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: _kSlate200, width: 1.5),
+    ),
+    enabledBorder: const OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: _kSlate200, width: 1.5),
+    ),
+    focusedBorder: const OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: _kBlue, width: 1.5),
+    ),
+    errorBorder: const OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: Colors.red, width: 1.5),
+    ),
+    focusedErrorBorder: const OutlineInputBorder(
+      borderRadius: radius,
+      borderSide: BorderSide(color: Colors.red, width: 2),
+    ),
+  );
+}
+
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String? hint;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final TextCapitalization textCapitalization;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
+
+  const _InputField({
+    required this.controller,
+    this.hint,
+    this.keyboardType,
+    this.textInputAction,
+    this.textCapitalization = TextCapitalization.none,
+    this.errorText,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      textCapitalization: textCapitalization,
+      autocorrect: false,
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 15, color: _kSlate900),
+      decoration: _buildInputDecoration(hint: hint, errorText: errorText),
+    );
+  }
+}
+
+class _PasswordField extends StatelessWidget {
+  final TextEditingController controller;
+  final bool obscure;
+  final VoidCallback onToggle;
+  final String? hint;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onSubmit;
+
+  const _PasswordField({
+    required this.controller,
+    required this.obscure,
+    required this.onToggle,
+    this.hint,
+    this.errorText,
+    this.onChanged,
+    this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      textInputAction: TextInputAction.done,
+      onSubmitted: onSubmit != null ? (_) => onSubmit!() : null,
+      onChanged: onChanged,
+      style: const TextStyle(fontSize: 15, color: _kSlate900),
+      decoration: _buildInputDecoration(
+        hint: hint,
+        errorText: errorText,
+        suffix: IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            size: 18,
+            color: _kSlate400,
+          ),
+          onPressed: onToggle,
+        ),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
+    );
+  }
+}
+
+// ── CTA + secondary ───────────────────────────────────────────────────────────
+
+class _PrimaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final bool loading;
+
+  const _PrimaryButton({
+    required this.label,
+    required this.onPressed,
+    required this.loading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _kBlue,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: _kBlue.withValues(alpha: 0.55),
+          disabledForegroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shadowColor: _kBlue.withValues(alpha: 0.4),
+          elevation: onPressed != null ? 4 : 0,
+        ),
+        child: loading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: colorScheme.error),
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: _kSlate200)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'ou continuer avec',
+            style: TextStyle(
+              fontSize: 12,
+              color: _kSlate400,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider(color: _kSlate200)),
+      ],
+    );
+  }
+}
+
+class _OtpButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _OtpButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.phone_outlined, size: 18, color: _kSlate700),
+      label: const Text(
+        'Continuer avec le téléphone (OTP)',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: _kSlate700,
+        ),
       ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: radius,
-        borderSide: BorderSide(color: colorScheme.error, width: 2),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: _kSlate50,
+        side: const BorderSide(color: _kSlate200, width: 1.5),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        minimumSize: const Size.fromHeight(52),
+        padding: const EdgeInsets.symmetric(vertical: 14),
       ),
-      floatingLabelStyle: TextStyle(color: colorScheme.primary),
+    );
+  }
+}
+
+class _LegalText extends StatelessWidget {
+  const _LegalText();
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      const TextSpan(
+        text: 'En continuant, vous acceptez les ',
+        children: [
+          TextSpan(
+            text: 'Conditions d\'utilisation',
+            style: TextStyle(color: _kBlue),
+          ),
+          TextSpan(text: ' et la '),
+          TextSpan(
+            text: 'Politique de confidentialité',
+            style: TextStyle(color: _kBlue),
+          ),
+          TextSpan(text: ' de Scalario.'),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: 11,
+        color: _kSlate400,
+        height: 1.6,
+      ),
+    );
+  }
+}
+
+// ── Invitation banner ─────────────────────────────────────────────────────────
+
+class _InviteBanner extends StatelessWidget {
+  const _InviteBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+        ),
+        border: Border.all(color: const Color(0xFF86EFAC)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFF22C55E),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.storefront_outlined,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invitation de votre intégrateur',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Boutique pré-configurée · Prêt à démarrer',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF15803D),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

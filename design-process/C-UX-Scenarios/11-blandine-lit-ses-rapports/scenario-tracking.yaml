@@ -1,0 +1,19 @@
+scenario_id: "11"
+scenario_name: "Blandine Lit Ses Rapports"
+design_intent: D
+current_page_index: 2
+
+pages_list:
+  - id: "11.1"
+    slug: rapports-ventes
+    folder: 11.1-rapports-ventes
+    status: structure-created
+    prototype: prototypes/rapports-ventes-prototype.html
+    spec: 11.1-p4-spec.md
+
+  - id: "11.2"
+    slug: rapports-stock
+    folder: 11.2-rapports-stock
+    status: structure-created
+    prototype: prototypes/rapports-stock-prototype.html
+    spec: 11.2-p4-spec.md

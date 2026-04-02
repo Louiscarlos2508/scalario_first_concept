@@ -21,6 +21,7 @@ import 'package:frontend/core/services/sync_adapters/contact_sync_adapter.dart';
 import 'package:frontend/core/services/sync_adapters/transaction_sync_adapter.dart';
 import 'package:frontend/core/services/sync_adapters/session_sync_adapter.dart';
 import 'package:frontend/core/services/sync_adapters/inventory_sync_adapter.dart';
+import 'package:frontend/core/services/sync_auth_exception.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -40,6 +41,11 @@ class SyncService {
 
   final _statusController = StreamController<SyncUiStatus>.broadcast();
   Stream<SyncUiStatus> get statusStream => _statusController.stream;
+
+  /// Fix 4 — Émet le code HTTP (401/403) quand le JWT est expiré.
+  /// L'UI peut s'abonner pour afficher un bandeau ou forcer la reconnexion.
+  final _authExpiredController = StreamController<int>.broadcast();
+  Stream<int> get authExpiredStream => _authExpiredController.stream;
 
   Future<void> startSync(String? tenantId, {String? authToken}) async {
     if (_isolate != null || _isStarting) return;
@@ -70,6 +76,12 @@ class SyncService {
           _statusController.add(SyncUiStatus.connected);
         } else if (message is SyncUiStatus) {
           _statusController.add(message);
+        } else if (message is _AuthExpiredEvent) {
+          // Fix 4 — JWT expiré : notifier l'UI, le sync est suspendu dans l'isolate.
+          _statusController.add(SyncUiStatus.error);
+          _authExpiredController.add(message.statusCode);
+          print('[SyncManager] Auth expired (HTTP ${message.statusCode}) — '
+              'sync suspended until token refresh');
         } else {
           print('[SyncManager] Message from isolate: $message');
         }
@@ -116,7 +128,9 @@ class SyncService {
     _sendPort?.send(_TokenUpdate(token));
   }
 
-  // --- Isolate Entry Point ---
+  // ---------------------------------------------------------------------------
+  // Isolate Entry Point
+  // ---------------------------------------------------------------------------
 
   static void _syncIsolateEntryPoint(_SyncIsolateConfig config) async {
     final receivePort = ReceivePort();
@@ -148,7 +162,11 @@ class SyncService {
     const baseDelay = Duration(seconds: 30);
     const maxDelay = Duration(minutes: 5);
     bool isFirstPass = true;
-    String? currentToken = config.authToken; // mutable — mis à jour via _TokenUpdate
+    String? currentToken = config.authToken;
+
+    // Fix 4 — quand true, le sync est suspendu (JWT expiré).
+    // Reprend uniquement quand un _TokenUpdate est reçu.
+    bool authSuspended = false;
 
     Timer? periodicTimer;
 
@@ -157,6 +175,9 @@ class SyncService {
     }
 
     void runSyncPass() async {
+      // Fix 4 — ne pas relancer de pass si l'auth est suspendue.
+      if (authSuspended) return;
+
       try {
         notifyStatus(SyncUiStatus.syncing);
         print('[SyncIsolate] Starting sync pass...');
@@ -179,6 +200,14 @@ class SyncService {
         if (hadChanges) {
           print('[SyncIsolate] Sync pass completed successfully.');
         }
+      } on SyncAuthException catch (e) {
+        // Fix 4 — JWT expiré : suspendre le timer, notifier le thread principal.
+        authSuspended = true;
+        periodicTimer?.cancel();
+        periodicTimer = null;
+        sendPort.send(_AuthExpiredEvent(e.statusCode));
+        print('[SyncIsolate] Auth expired (${e.statusCode}) — sync suspended');
+        return; // Ne pas planifier le prochain pass.
       } catch (e) {
         retryCount++;
         notifyStatus(SyncUiStatus.error);
@@ -198,9 +227,12 @@ class SyncService {
 
     receivePort.listen((message) async {
       if (message == 'sync_now') {
+        periodicTimer?.cancel();
         runSyncPass();
       } else if (message is _TokenUpdate) {
         currentToken = message.token;
+        // Fix 4 — token rafraîchi : lever la suspension et relancer.
+        authSuspended = false;
         print('[SyncIsolate] Auth token refreshed — resetting error orders');
         await orderRepo.resetErrorOrders();
         runSyncPass();
@@ -223,10 +255,27 @@ class SyncService {
     required SessionRepository sessionRepo,
     bool forceFullCatalogPull = false,
   }) async {
-    await _sendHeartbeat(baseUrl, tenantId: tenantId, deviceId: deviceId);
+    // Fix 5 — heartbeat retourne la version de schéma du serveur.
+    final serverSchemaVersion = await _sendHeartbeat(
+      baseUrl,
+      tenantId: tenantId,
+      deviceId: deviceId,
+    );
 
-    // Snapshot pending counts before pushing to detect actual changes.
-    bool hadChanges = forceFullCatalogPull;
+    // Fix 5 — si la version diverge, forcer un re-provisioning complet.
+    bool forceFullPull = forceFullCatalogPull;
+    if (serverSchemaVersion != null) {
+      final localSchemaVersion = await sessionRepo.getSchemaVersion();
+      if (serverSchemaVersion != localSchemaVersion) {
+        print('[SyncEngine] Schema version mismatch '
+            '(local=$localSchemaVersion, server=$serverSchemaVersion) — '
+            'forcing full re-provisioning');
+        forceFullPull = true;
+        await sessionRepo.updateSchemaVersion(serverSchemaVersion);
+      }
+    }
+
+    bool hadChanges = forceFullPull;
 
     final pendingInventory = await inventoryAdapter.pendingCount();
     if (pendingInventory > 0) hadChanges = true;
@@ -245,10 +294,9 @@ class SyncService {
       token: authToken,
     );
 
-    // Delta pulls — first pass forces full replace to flush stale local-only products.
-    final lastProductSync = forceFullCatalogPull
-        ? null
-        : await sessionRepo.getLastSync('products');
+    // Delta pulls — forceFullPull force un full replace si schema change.
+    final lastProductSync =
+        forceFullPull ? null : await sessionRepo.getLastSync('products');
     await catalogAdapter.pullDelta(
       baseUrl,
       tenantId ?? '',
@@ -257,9 +305,8 @@ class SyncService {
     );
 
     if (tenantId != null) {
-      final lastCustomerSync = forceFullCatalogPull
-          ? null
-          : await sessionRepo.getLastSync('customers');
+      final lastCustomerSync =
+          forceFullPull ? null : await sessionRepo.getLastSync('customers');
       await contactAdapter.pullDelta(
         baseUrl,
         tenantId,
@@ -271,13 +318,15 @@ class SyncService {
     return hadChanges;
   }
 
-  static Future<void> _sendHeartbeat(
+  /// Fix 5 — retourne la version de schéma du serveur lue dans le header
+  /// `X-Schema-Version`, ou `null` si le heartbeat échoue / header absent.
+  static Future<int?> _sendHeartbeat(
     String baseUrl, {
     String? tenantId,
     String? deviceId,
   }) async {
     try {
-      await http
+      final response = await http
           .post(
             Uri.parse('$baseUrl/pos/heartbeat'),
             headers: {'Content-Type': 'application/json'},
@@ -290,8 +339,13 @@ class SyncService {
             }),
           )
           .timeout(const Duration(seconds: 5));
+
+      // Fix 5 — lire X-Schema-Version depuis la réponse heartbeat.
+      final versionHeader = response.headers['x-schema-version'];
+      return versionHeader != null ? int.tryParse(versionHeader) : null;
     } catch (_) {
-      // Heartbeat failure shouldn't stop sync
+      // Heartbeat failure ne doit pas bloquer le sync.
+      return null;
     }
   }
 }
@@ -317,6 +371,12 @@ class _SyncIsolateConfig {
 class _TokenUpdate {
   final String? token;
   _TokenUpdate(this.token);
+}
+
+/// Fix 4 — message isolate → main thread quand le JWT est expiré.
+class _AuthExpiredEvent {
+  final int statusCode;
+  _AuthExpiredEvent(this.statusCode);
 }
 
 /// Special IsarService for the isolate — opens DB using pre-resolved directory path

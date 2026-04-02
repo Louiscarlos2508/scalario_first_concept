@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:frontend/core/theme/sheet_style.dart';
 import 'package:frontend/features/retail/pos/data/services/z_report_service.dart';
 
 String _fcfa(double amount) =>
@@ -33,244 +34,317 @@ class SessionReportDialog extends ConsumerWidget {
     final userProfile = ref.watch(userProfileProvider).value;
     final cashCollected = totalsByMethod['CASH'] ?? 0.0;
 
-    return AlertDialog(
-      title: Row(
-        children: const [
-          Icon(Icons.summarize, color: Colors.blue),
-          SizedBox(width: 10),
-          Text('Rapport de caisse (Z-Report)'),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── SECTION 1 : VENTES ──────────────────────────────────────
-            _buildSectionTitle('Ventes de la session'),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                '$orderCount vente${orderCount != 1 ? 's' : ''} au total'
-                '${splitCount > 0 ? ' — dont $splitCount mixte${splitCount > 1 ? 's' : ''}' : ''}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey),
+    return Dialog(
+      shape: kSheetDialogShape,
+      child: SizedBox(
+        width: 460,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ───────────────────────────────────────────────────
+              const SheetDialogHeader(
+                icon: Icons.summarize_outlined,
+                iconColor: kSheetBlue,
+                title: 'Rapport de caisse',
+                subtitle: 'Z-Report — Résumé de la session',
               ),
-            ),
+              const SizedBox(height: 16),
+              const SheetDivider(),
 
-            // Ligne par méthode de paiement
-            ...totalsByMethod.entries
-                .where((e) => e.value > 0)
-                .map((e) => _buildPaymentMethodRow(
-                      method: e.key,
-                      amount: e.value,
-                      count: countsByMethod[e.key] ?? 0,
-                    )),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── SECTION 1 : VENTES ──────────────────────────────
+                      const SheetSectionLabel('Ventes de la session'),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$orderCount vente${orderCount != 1 ? 's' : ''}'
+                        '${splitCount > 0 ? ' — dont $splitCount mixte${splitCount > 1 ? 's' : ''}' : ''}',
+                        style: const TextStyle(
+                            fontSize: 11, color: kSheetSlate500),
+                      ),
+                      const SizedBox(height: 10),
 
-            // Total ventes
-            const Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total ($orderCount vente${orderCount != 1 ? "s" : ""})',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  _fcfa(summary['totalSales'] as double),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-              ],
-            ),
+                      ...totalsByMethod.entries
+                          .where((e) => e.value > 0)
+                          .map((e) => _MethodRow(
+                                method: e.key,
+                                amount: e.value,
+                                count: countsByMethod[e.key] ?? 0,
+                              )),
 
-            // Retours si présents
-            Builder(builder: (context) {
-              final returns = summary['returns'] as Map<String, dynamic>?;
-              final returnsCount = (returns?['count'] as num?)?.toInt() ?? 0;
-              if (returnsCount == 0) return const SizedBox.shrink();
+                      const SheetDivider(),
+                      const SizedBox(height: 8),
+                      _SummaryRow(
+                        label:
+                            'Total ($orderCount vente${orderCount != 1 ? "s" : ""})',
+                        value: summary['totalSales'] as double,
+                        bold: true,
+                      ),
 
-              final grossSales =
-                  summary['grossSales'] as Map<String, dynamic>?;
-              final netSales = summary['netSales'] as Map<String, dynamic>?;
-              final grossAmount = (grossSales?['amount'] as num?)?.toDouble() ??
-                  (summary['totalSales'] as double);
-              final returnsAmount =
-                  (returns?['amount'] as num?)?.toDouble() ?? 0.0;
-              final netAmount =
-                  (netSales?['amount'] as num?)?.toDouble() ?? grossAmount;
-              final grossCount =
-                  (grossSales?['count'] as num?)?.toInt() ?? orderCount;
+                      // Retours si présents
+                      Builder(builder: (context) {
+                        final returns =
+                            summary['returns'] as Map<String, dynamic>?;
+                        final returnsCount =
+                            (returns?['count'] as num?)?.toInt() ?? 0;
+                        if (returnsCount == 0) return const SizedBox.shrink();
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  const Divider(height: 1),
-                  const SizedBox(height: 4),
-                  _buildRow(
-                      'Ventes brutes ($grossCount transactions)', grossAmount),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Retours ($returnsCount)'),
-                        Text(
-                          '− ${_fcfa(returnsAmount)}',
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w500,
+                        final grossSales =
+                            summary['grossSales'] as Map<String, dynamic>?;
+                        final netSales =
+                            summary['netSales'] as Map<String, dynamic>?;
+                        final grossAmount =
+                            (grossSales?['amount'] as num?)?.toDouble() ??
+                                (summary['totalSales'] as double);
+                        final returnsAmount =
+                            (returns?['amount'] as num?)?.toDouble() ?? 0.0;
+                        final netAmount =
+                            (netSales?['amount'] as num?)?.toDouble() ??
+                                grossAmount;
+                        final grossCount =
+                            (grossSales?['count'] as num?)?.toInt() ??
+                                orderCount;
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            const SheetDivider(),
+                            const SizedBox(height: 6),
+                            _SummaryRow(
+                                label:
+                                    'Ventes brutes ($grossCount transactions)',
+                                value: grossAmount),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Retours ($returnsCount)',
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          color: kSheetSlate900)),
+                                  Text(
+                                    '− ${_fcfa(returnsAmount)}',
+                                    style: const TextStyle(
+                                        color: kSheetRed,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SheetDivider(),
+                            const SizedBox(height: 4),
+                            _SummaryRow(
+                                label: 'Ventes nettes',
+                                value: netAmount,
+                                bold: true),
+                          ],
+                        );
+                      }),
+
+                      const SizedBox(height: 20),
+
+                      // ── SECTION 2 : RÉCONCILIATION ESPÈCES ─────────────
+                      const SheetSectionLabel('Réconciliation espèces'),
+                      const SizedBox(height: 10),
+
+                      _SummaryRow(
+                          label: "Fond d'ouverture",
+                          value: summary['openingBalance'] as double),
+                      _SummaryRow(
+                          label: '+ Espèces encaissées',
+                          value: cashCollected,
+                          valueColor: kSheetGreen),
+                      const SheetDivider(),
+                      const SizedBox(height: 4),
+                      _SummaryRow(
+                          label: '= Caisse théorique',
+                          value: theoreticalCash,
+                          valueColor: kSheetBlue,
+                          bold: true),
+                      const SizedBox(height: 8),
+                      _SummaryRow(
+                          label: 'Comptage physique',
+                          value: physicalCount,
+                          bold: true),
+                      const SheetDivider(),
+                      const SizedBox(height: 4),
+                      _SummaryRow(
+                        label: 'Écart',
+                        value: variance,
+                        valueColor: variance == 0
+                            ? kSheetGreen
+                            : variance > 0
+                                ? kSheetAmber
+                                : kSheetRed,
+                        bold: true,
+                      ),
+
+                      // Explication de l'écart
+                      if (variance != 0 && varianceExplanation != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: kSheetAmber.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: kSheetAmber.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Explication de l\'écart',
+                                  style: TextStyle(
+                                      fontSize: 11, color: kSheetSlate500)),
+                              const SizedBox(height: 4),
+                              Text(varianceExplanation!,
+                                  style: const TextStyle(
+                                      fontSize: 13, color: kSheetSlate900)),
+                            ],
                           ),
                         ),
                       ],
-                    ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                  const Divider(height: 8),
-                  _buildRow('Ventes nettes', netAmount, bold: true),
-                ],
-              );
-            }),
-
-            const SizedBox(height: 16),
-
-            // ── SECTION 2 : RÉCONCILIATION ESPÈCES ─────────────────────
-            _buildSectionTitle('Réconciliation espèces'),
-
-            _buildRow('Fond d\'ouverture', summary['openingBalance'] as double),
-            _buildRow('+ Espèces encaissées', cashCollected,
-                color: Colors.green),
-            const Divider(height: 8),
-            _buildRow('= Caisse théorique', theoreticalCash,
-                color: Colors.blue, bold: true),
-
-            const SizedBox(height: 8),
-            _buildRow('Comptage physique', physicalCount, bold: true),
-            const Divider(height: 8),
-            _buildRow(
-              'Écart',
-              variance,
-              color: variance == 0
-                  ? Colors.green
-                  : (variance > 0 ? Colors.orange : Colors.red),
-              bold: true,
-            ),
-
-            // Explication de l'écart
-            if (variance != 0 && varianceExplanation != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Explication de l\'écart',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(varianceExplanation!),
-                  ],
                 ),
               ),
+
+              // ── Actions ───────────────────────────────────────────────────
+              const SheetDivider(),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton(
+                    style: sheetCancelButtonStyle(),
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Retour'),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: kSheetBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        side: const BorderSide(color: kSheetBlue),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        await ZReportService.generateAndPrintZReport(
+                          summary: summary,
+                          physicalCount: physicalCount,
+                          userName: userProfile?.fullName ??
+                              userProfile?.email ??
+                              'User',
+                          tenantName: 'Scalario POS',
+                        );
+                      },
+                      icon: const Icon(Icons.print_outlined, size: 16),
+                      label: const Text('Imprimer Z-Report'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    style: sheetPrimaryButtonStyle(color: kSheetRed),
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Confirmer fermeture'),
+                  ),
+                ],
+              ),
             ],
-          ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Retour'),
-        ),
-        OutlinedButton.icon(
-          onPressed: () async {
-            await ZReportService.generateAndPrintZReport(
-              summary: summary,
-              physicalCount: physicalCount,
-              userName: userProfile?.fullName ?? userProfile?.email ?? 'User',
-              tenantName: 'Scalario POS',
-            );
-          },
-          icon: const Icon(Icons.print),
-          label: const Text('Imprimer Z-Report'),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, foregroundColor: Colors.white),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Confirmer la fermeture'),
-        ),
-      ],
     );
   }
+}
 
-  Widget _buildPaymentMethodRow({
-    required String method,
-    required double amount,
-    required int count,
-  }) {
-    final icon = _methodIcon(method);
-    final label = paymentMethodLabel(method);
+// ── Payment method row ────────────────────────────────────────────────────────
+
+class _MethodRow extends StatelessWidget {
+  final String method;
+  final double amount;
+  final int count;
+
+  const _MethodRow(
+      {required this.method, required this.amount, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey),
-          const SizedBox(width: 8),
-          Expanded(child: Text(label)),
-          Text(
-            '$count tx',
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: kSheetBlue.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(_icon(method), size: 15, color: kSheetBlue),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(paymentMethodLabel(method),
+                style: const TextStyle(fontSize: 13, color: kSheetSlate900)),
+          ),
+          Text('$count tx',
+              style: const TextStyle(fontSize: 11, color: kSheetSlate500)),
           const SizedBox(width: 12),
           Text(
             _fcfa(amount),
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: kSheetSlate900),
           ),
         ],
       ),
     );
   }
 
-  IconData _methodIcon(String method) {
-    switch (method.toUpperCase()) {
-      case 'CASH':
-        return Icons.payments_outlined;
-      case 'MOBILE_MONEY':
-        return Icons.phone_android_outlined;
-      case 'CARD':
-        return Icons.credit_card_outlined;
-      case 'CREDIT':
-        return Icons.account_balance_wallet_outlined;
-      case 'TRANSFER':
-        return Icons.swap_horiz_outlined;
-      case 'SPLIT':
-        return Icons.call_split_outlined;
-      default:
-        return Icons.attach_money;
-    }
-  }
+  IconData _icon(String m) => switch (m.toUpperCase()) {
+        'CASH' => Icons.payments_outlined,
+        'MOBILE_MONEY' => Icons.phone_android_outlined,
+        'CARD' => Icons.credit_card_outlined,
+        'CREDIT' => Icons.account_balance_wallet_outlined,
+        'TRANSFER' => Icons.swap_horiz_outlined,
+        'SPLIT' => Icons.call_split_outlined,
+        _ => Icons.attach_money,
+      };
+}
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-      ),
-    );
-  }
+// ── Summary row ───────────────────────────────────────────────────────────────
 
-  Widget _buildRow(String label, double value,
-      {Color? color, bool bold = false}) {
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color? valueColor;
+  final bool bold;
+
+  const _SummaryRow(
+      {required this.label,
+      required this.value,
+      this.valueColor,
+      this.bold = false});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -278,12 +352,15 @@ class SessionReportDialog extends ConsumerWidget {
         children: [
           Text(label,
               style: TextStyle(
-                  fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+                  fontSize: 13,
+                  fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+                  color: kSheetSlate900)),
           Text(
             _fcfa(value),
             style: TextStyle(
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              color: color,
+              fontSize: 13,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+              color: valueColor ?? kSheetSlate900,
             ),
           ),
         ],

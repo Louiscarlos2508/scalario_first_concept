@@ -28,13 +28,14 @@ class ReceiptService {
     );
   }
 
-  static Future<void> printOrder(Order order, String tenantName, {String documentType = 'receipt'}) async {
+  static Future<void> printOrder(Order order, String tenantName, {String documentType = 'receipt', String? customerName}) async {
     await _generatePdf(
       tenantName: tenantName,
       documentType: documentType,
       date: order.createdAt,
       orderRef: order.uuid.substring(0, 8),
       paymentMethod: order.paymentMethod ?? 'CASH',
+      customerName: customerName,
       items: order.items.map((i) => ReceiptItem(
         name: i.name ?? 'Unknown Item',
         quantity: i.quantity,
@@ -61,6 +62,7 @@ class ReceiptService {
     required DateTime date,
     required String orderRef,
     required String paymentMethod,
+    String? customerName,
     required List<ReceiptItem> items,
     required double totalAmount,
     required double subtotal,
@@ -90,8 +92,10 @@ class ReceiptService {
               ),
               
               pw.Text('Date: ${formatter.format(date)}', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Order Ref: $orderRef', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Payment: $paymentMethod', style: const pw.TextStyle(fontSize: 8)),
+              pw.Text('Ref: $orderRef', style: const pw.TextStyle(fontSize: 8)),
+              if (customerName != null)
+                pw.Text('Client: $customerName', style: const pw.TextStyle(fontSize: 8)),
+              pw.Text('Paiement: $paymentMethod', style: const pw.TextStyle(fontSize: 8)),
               
               pw.SizedBox(height: 5),
               pw.Divider(thickness: 0.5),

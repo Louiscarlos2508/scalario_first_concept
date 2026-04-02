@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Wraps [child] and listens for USB/HID barcode scanner input globally.
+///
+/// USB barcode scanners emulate a keyboard: they send characters very rapidly
+/// (< 50 ms apart) and terminate the sequence with an Enter key. This listener
+/// accumulates those characters using [HardwareKeyboard.instance.addHandler],
+/// which is focus-independent — it works even when a text field is focused.
+///
+/// The 100 ms threshold distinguishes scanner bursts from manual typing.
 class BarcodeScannerListener extends StatefulWidget {
   final Widget child;
-  final Function(String barcode) onBarcodeScanned;
+  final void Function(String barcode) onBarcodeScanned;
 
   const BarcodeScannerListener({
     super.key,
@@ -16,53 +24,49 @@ class BarcodeScannerListener extends StatefulWidget {
 }
 
 class _BarcodeScannerListenerState extends State<BarcodeScannerListener> {
-  final List<String> _barcodeBuffer = [];
-  DateTime? _lastKeyPressTime;
-  late final FocusNode _focusNode;
+  String _buffer = '';
+  DateTime? _lastKeyPress;
+
+  static const _threshold = Duration(milliseconds: 100);
+  static final _validChar = RegExp(r'^[A-Za-z0-9\-\.\$\/\+\% ]+$');
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
-    // Ensure we keep focus for hardware scanner
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKey);
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: (KeyEvent event) {
-        if (event is KeyDownEvent) {
-          final now = DateTime.now();
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
 
-          // Clear buffer if current key is too far from last (reset)
-          // Scanners typically send keys < 20ms apart
-          if (_lastKeyPressTime != null && now.difference(_lastKeyPressTime!).inMilliseconds > 100) {
-            _barcodeBuffer.clear();
-          }
-          _lastKeyPressTime = now;
+    final now = DateTime.now();
+    final isRapid = _lastKeyPress == null ||
+        now.difference(_lastKeyPress!) < _threshold;
+    _lastKeyPress = now;
 
-          if (event.logicalKey == LogicalKeyboardKey.enter) {
-            if (_barcodeBuffer.isNotEmpty) {
-              widget.onBarcodeScanned(_barcodeBuffer.join());
-              _barcodeBuffer.clear();
-            }
-          } else if (event.character != null && event.character!.isNotEmpty) {
-             _barcodeBuffer.add(event.character!);
-          }
-        }
-      },
-      child: widget.child,
-    );
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      if (_buffer.length >= 3) {
+        widget.onBarcodeScanned(_buffer);
+      }
+      _buffer = '';
+      // Don't consume Enter — other widgets (e.g. text fields) still need it.
+      return false;
+    }
+
+    final char = event.character;
+    if (char != null && _validChar.hasMatch(char)) {
+      _buffer = isRapid ? (_buffer + char) : char;
+    }
+
+    return false;
   }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

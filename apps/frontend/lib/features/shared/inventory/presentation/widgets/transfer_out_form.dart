@@ -42,6 +42,7 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
   final _notesController = TextEditingController();
 
   Product? _selectedProduct;
+  List<String> _destSuggestions = [];
   bool _isSubmitting = false;
 
   @override
@@ -231,34 +232,67 @@ class _TransferOutFormState extends ConsumerState<TransferOutForm> {
             const SizedBox(height: 12),
 
             // Destination (toLabel — texte libre avec suggestions de session)
-            Autocomplete<String>(
-              optionsBuilder: (textValue) {
-                if (textValue.text.isEmpty) return suggestions;
-                return suggestions.where((s) =>
-                    s.toLowerCase().contains(textValue.text.toLowerCase()));
-              },
-              fieldViewBuilder:
-                  (ctx, fieldController, focusNode, onSubmitted) {
-                // Keep our controller in sync with autocomplete's internal controller
-                fieldController.text = _destinationController.text;
-                fieldController.addListener(() {
-                  if (_destinationController.text != fieldController.text) {
-                    _destinationController.text = fieldController.text;
-                  }
-                });
-                return TextField(
-                  controller: fieldController,
-                  focusNode: focusNode,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _destinationController,
                   decoration: InputDecoration(
                     labelText: config.toLabel,
                     hintText: 'ex. Rayon 1, Comptoir…',
                     border: const OutlineInputBorder(),
                   ),
-                );
-              },
-              onSelected: (value) {
-                _destinationController.text = value;
-              },
+                  onChanged: (v) {
+                    final q = v.toLowerCase();
+                    setState(() {
+                      _destSuggestions = q.isEmpty
+                          ? suggestions
+                          : suggestions
+                              .where((s) => s.toLowerCase().contains(q))
+                              .toList();
+                    });
+                  },
+                  onTap: () {
+                    if (_destSuggestions.isEmpty && suggestions.isNotEmpty) {
+                      setState(() => _destSuggestions = suggestions);
+                    }
+                  },
+                ),
+                if (_destSuggestions.isNotEmpty)
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 160),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: Colors.black12),
+                      borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(8)),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3)),
+                      ],
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: _destSuggestions.length,
+                      itemBuilder: (_, i) => InkWell(
+                        onTap: () => setState(() {
+                          _destinationController.text = _destSuggestions[i];
+                          _destSuggestions = [];
+                        }),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          child: Text(_destSuggestions[i],
+                              style: const TextStyle(fontSize: 14)),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
 

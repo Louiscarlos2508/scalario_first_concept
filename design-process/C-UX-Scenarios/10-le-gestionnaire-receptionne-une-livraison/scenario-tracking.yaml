@@ -1,0 +1,19 @@
+scenario_id: "10"
+scenario_name: "Le Gestionnaire Réceptionne une Livraison"
+design_intent: D
+current_page_index: 2
+
+pages_list:
+  - id: "10.1"
+    slug: stock-reception-marchandise
+    folder: 10.1-stock-reception-marchandise
+    status: structure-created
+    prototype: prototypes/reception-prototype.html
+    spec: 10.1-p4-spec.md
+
+  - id: "10.2"
+    slug: stock-inventaire-ajustement
+    folder: 10.2-stock-inventaire-ajustement
+    status: structure-created
+    prototype: prototypes/inventaire-prototype.html
+    spec: 10.2-p4-spec.md

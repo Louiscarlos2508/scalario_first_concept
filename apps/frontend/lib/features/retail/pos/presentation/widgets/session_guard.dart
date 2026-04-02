@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/pos_providers.dart';
+import '../screens/employee_pin_screen.dart';
 import '../../data/models/pos_session.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/services/device_identity_service.dart';
@@ -66,9 +67,20 @@ class SessionGuard extends ConsumerWidget {
           );
         }
 
+        // Shared-device mode: owner or manager is logged in, employees
+        // identify themselves at the start of each shift via PIN.
+        // Cashiers/commercials who have their own Supabase account are already
+        // identified — no PIN needed.
+        final needsPin = profile.role == 'owner';
+
         return sessionAsync.when(
           data: (session) {
             if (session == null) {
+              // PIN gate: show employee selection before opening a new session.
+              if (needsPin) {
+                final employee = ref.watch(selectedEmployeeProvider);
+                if (employee == null) return const EmployeePinScreen();
+              }
               return OpenSessionScreen(profile: profile);
             }
             if (session.status == 'CLOSED') {
@@ -141,8 +153,11 @@ class SessionClosedScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.add_box_outlined),
                   label: const Text('Ouvrir une nouvelle session'),
-                  onPressed: () =>
-                      ref.read(sessionProvider.notifier).resetForNewSession(),
+                  onPressed: () {
+                    // Clear identified employee so next shift requires PIN.
+                    ref.read(selectedEmployeeProvider.notifier).state = null;
+                    ref.read(sessionProvider.notifier).resetForNewSession();
+                  },
                 ),
               ),
             ],

@@ -34,6 +34,8 @@ class _CreatePurchaseOrderSheetState
 
   List<Map<String, dynamic>> _suppliersCache = [];
   bool _suppliersLoaded = false;
+  final _supplierCtrl = TextEditingController();
+  List<Map<String, dynamic>> _supplierSuggestions = [];
 
   @override
   void initState() {
@@ -61,6 +63,7 @@ class _CreatePurchaseOrderSheetState
   @override
   void dispose() {
     _notesCtrl.dispose();
+    _supplierCtrl.dispose();
     for (final l in _lines) {
       l.qtyCtrl.dispose();
     }
@@ -169,42 +172,82 @@ class _CreatePurchaseOrderSheetState
               const SizedBox(height: 12),
 
               // Supplier autocomplete
-              _suppliersLoaded
-                  ? Autocomplete<Map<String, dynamic>>(
-                      displayStringForOption: (s) =>
-                          s['name']?.toString() ?? '',
-                      optionsBuilder: (textEditingValue) {
-                        if (textEditingValue.text.isEmpty) {
-                          return _suppliersCache;
-                        }
-                        final q = textEditingValue.text.toLowerCase();
-                        return _suppliersCache.where((s) =>
-                            (s['name']?.toString() ?? '')
-                                .toLowerCase()
-                                .contains(q));
-                      },
-                      onSelected: (s) {
+              if (!_suppliersLoaded)
+                const LinearProgressIndicator()
+              else
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextFormField(
+                      key: const Key('po_supplier_field'),
+                      controller: _supplierCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Fournisseur *',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (v) {
+                        final q = v.toLowerCase();
                         setState(() {
-                          _selectedSupplierId = s['id']?.toString();
+                          _supplierSuggestions = q.isEmpty
+                              ? _suppliersCache
+                              : _suppliersCache
+                                  .where((s) => (s['name']?.toString() ?? '')
+                                      .toLowerCase()
+                                      .contains(q))
+                                  .toList();
+                          if (v.isEmpty) _selectedSupplierId = null;
                         });
                       },
-                      fieldViewBuilder:
-                          (ctx, ctrl, focusNode, onFieldSubmitted) {
-                        return TextFormField(
-                          key: const Key('po_supplier_field'),
-                          controller: ctrl,
-                          focusNode: focusNode,
-                          decoration: const InputDecoration(
-                            labelText: 'Fournisseur *',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (_) => _selectedSupplierId == null
-                              ? 'Sélectionnez un fournisseur'
-                              : null,
-                        );
+                      onTap: () {
+                        if (_supplierSuggestions.isEmpty) {
+                          setState(() => _supplierSuggestions = _suppliersCache);
+                        }
                       },
-                    )
-                  : const LinearProgressIndicator(),
+                      validator: (_) => _selectedSupplierId == null
+                          ? 'Sélectionnez un fournisseur'
+                          : null,
+                    ),
+                    if (_supplierSuggestions.isNotEmpty)
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: Colors.black12),
+                          borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(8)),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3)),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: _supplierSuggestions.length,
+                          itemBuilder: (_, i) {
+                            final s = _supplierSuggestions[i];
+                            return InkWell(
+                              onTap: () => setState(() {
+                                _supplierCtrl.text =
+                                    s['name']?.toString() ?? '';
+                                _selectedSupplierId = s['id']?.toString();
+                                _supplierSuggestions = [];
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
+                                child: Text(s['name']?.toString() ?? '',
+                                    style: const TextStyle(fontSize: 14)),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
 
               const SizedBox(height: 12),
 

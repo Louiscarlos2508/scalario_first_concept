@@ -23,90 +23,104 @@ class CartActionsBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return OverflowBar(
-      spacing: 8,
-      overflowSpacing: 4,
-      children: [
-        OutlinedButton.icon(
-          onPressed: cartState.items.isEmpty
-              ? null
-              : () => showCartParkDialog(context, ref, cartState),
-          icon: const Icon(Icons.pause),
-          label: const Text('ATTENTE'),
-        ),
-        if (userRole != 'cashier')
+    final style = OutlinedButton.styleFrom(
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+    );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
           OutlinedButton.icon(
-            onPressed: () {
-              final isCommercial = userRole == 'commercial';
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SalesHistoryScreen(
-                    fixedUserId: isCommercial ? userId : null,
-                    initialPeriod: isCommercial ? 'today' : '7d',
-                  ),
-                ),
-              );
-            },
-            icon: const Icon(Icons.undo, color: Colors.orange),
-            label: const Text(
-              'RETOUR',
-              style: TextStyle(color: Colors.orange),
-            ),
+            style: style,
+            onPressed: cartState.items.isEmpty
+                ? null
+                : () => showCartParkDialog(context, ref, cartState),
+            icon: const Icon(Icons.pause, size: 16),
+            label: const Text('ATTENTE'),
           ),
-        OutlinedButton.icon(
-          onPressed: cartState.items.isEmpty
-              ? null
-              : () => showDialog<void>(
-                    context: context,
-                    builder: (_) => ReservationDepositDialog(
-                      cartState: cartState,
+          if (userRole != 'cashier') ...[
+            const SizedBox(width: 6),
+            OutlinedButton.icon(
+              style: style.copyWith(
+                foregroundColor: WidgetStatePropertyAll(Colors.orange),
+                side: const WidgetStatePropertyAll(BorderSide(color: Colors.orange)),
+              ),
+              onPressed: () {
+                final isCommercial = userRole == 'commercial';
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SalesHistoryScreen(
+                      fixedUserId: isCommercial ? userId : null,
+                      initialPeriod: isCommercial ? 'today' : '7d',
                     ),
                   ),
-          icon: const Icon(Icons.bookmark_border, color: Colors.purple),
-          label: const Text(
-            'RÉSERVATION',
-            style: TextStyle(color: Colors.purple),
-          ),
-        ),
-        OutlinedButton.icon(
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            showDragHandle: true,
-            builder: (_) => const FractionallySizedBox(
-              heightFactor: 0.85,
-              child: PosReservationsSheet(),
+                );
+              },
+              icon: const Icon(Icons.undo, size: 16),
+              label: const Text('RETOUR'),
             ),
-          ),
-          icon: const Icon(Icons.bookmark_added_outlined,
-              color: Colors.teal),
-          label: const Text(
-            'EN COURS',
-            style: TextStyle(color: Colors.teal),
-          ),
-        ),
-        if (canAccessClientOrders)
-          OutlinedButton.icon(
-            key: const Key('pos_client_order_button'),
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              useSafeArea: true,
-              showDragHandle: true,
-              builder: (_) => const FractionallySizedBox(
-                heightFactor: 0.92,
-                child: ClientOrdersPosSheet(),
+            const SizedBox(width: 6),
+            OutlinedButton.icon(
+              style: style.copyWith(
+                foregroundColor: WidgetStatePropertyAll(Colors.purple),
+                side: const WidgetStatePropertyAll(BorderSide(color: Colors.purple)),
               ),
+              onPressed: cartState.items.isEmpty
+                  ? null
+                  : () => showDialog<void>(
+                        context: context,
+                        builder: (_) => ReservationDepositDialog(cartState: cartState),
+                      ),
+              icon: const Icon(Icons.bookmark_border, size: 16),
+              label: const Text('RÉSA'),
             ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.indigo,
-              side: const BorderSide(color: Colors.indigo),
+            const SizedBox(width: 6),
+            OutlinedButton.icon(
+              style: style.copyWith(
+                foregroundColor: WidgetStatePropertyAll(Colors.teal),
+                side: const WidgetStatePropertyAll(BorderSide(color: Colors.teal)),
+              ),
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                showDragHandle: true,
+                builder: (_) => const FractionallySizedBox(
+                  heightFactor: 0.85,
+                  child: PosReservationsSheet(),
+                ),
+              ),
+              icon: const Icon(Icons.bookmark_added_outlined, size: 16),
+              label: const Text('EN COURS'),
             ),
-            icon: const Icon(Icons.assignment_outlined, size: 18),
-            label: const Text('Commande'),
-          ),
-      ],
+          ],
+          if (canAccessClientOrders) ...[
+            const SizedBox(width: 6),
+            OutlinedButton.icon(
+              key: const Key('pos_client_order_button'),
+              style: style.copyWith(
+                foregroundColor: const WidgetStatePropertyAll(Colors.indigo),
+                side: const WidgetStatePropertyAll(BorderSide(color: Colors.indigo)),
+              ),
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                showDragHandle: true,
+                builder: (_) => const FractionallySizedBox(
+                  heightFactor: 0.92,
+                  child: ClientOrdersPosSheet(),
+                ),
+              ),
+              icon: const Icon(Icons.assignment_outlined, size: 16),
+              label: const Text('COMMANDE'),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

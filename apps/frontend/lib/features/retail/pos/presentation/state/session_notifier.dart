@@ -67,11 +67,9 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final serverId = data['id']?.toString() ?? data['uuid']?.toString();
-        if (serverId != null) {
-          await _repository.markAsSynced(session.id, serverId);
-        }
+        // Preserve the local UUID — it is the stable key linking orders to
+        // this session. Never overwrite it with the server's numeric id.
+        await _repository.markAsSynced(session.id, session.uuid);
       }
     } catch (_) {
       // Réseau indisponible — sync adapter reprendra
@@ -88,7 +86,14 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     // If we have remoteId, use it, otherwise use local Id as fallback if needed
     // But sessionId in Order model is usually remote UUID or app UUID
     final sessionId = currentSession.remoteId;
-    final orders = await _orderRepository.getOrdersBySession(sessionId);
+    var orders = await _orderRepository.getOrdersBySession(sessionId);
+    // Fallback: si aucune vente trouvée par UUID (cas où l'UUID a été écrasé
+    // par l'ID serveur avant le fix), on récupère toutes les ventes créées
+    // depuis l'ouverture de la session. Une seule session active à la fois
+    // sur l'appareil → pas de risque de collision.
+    if (orders.isEmpty) {
+      orders = await _orderRepository.getOrdersSince(currentSession.openedAt);
+    }
 
     final Map<String, double> totalsByMethod = {};
     final Map<String, int> countsByMethod = {};

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scalario — Arrêt de caisse · Signature Blandine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 500: '#3b5bdb', 600: '#364fc7' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem 1rem; }
+    .phone-frame { width: 390px; min-height: 844px; background: white; border-radius: 2.5rem; box-shadow: 0 25px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.08); overflow: hidden; position: relative; }
+    .phone-notch { width: 126px; height: 34px; background: #0f172a; border-radius: 0 0 1.25rem 1.25rem; margin: 0 auto; }
+    .status-bar { background: #0f172a; padding: 0.5rem 1.5rem 0; display: flex; justify-content: space-between; align-items: center; }
+    .card { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; }
+    .card-inner { background: #f8fafc; border-radius: 0.75rem; border: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+
+  <div class="phone-frame">
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="phone-notch"></div>
+    </div>
+    <div class="bg-slate-900 px-5 py-2 flex justify-between items-center">
+      <span class="text-white text-xs font-semibold">19:54</span>
+      <div class="flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M1.5 8.5a13 13 0 0121 0M5 12a10 10 0 0114 0M8.5 15.5a6 6 0 017 0M12 19h.01"/></svg>
+        <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2 7h3v10H2zm4-3h3v13H6zm4-2h3v15h-3zm4 5h3v10h-3z"/></svg>
+        <div class="flex items-center gap-0.5">
+          <div class="w-5 h-2.5 border border-white rounded-sm relative">
+            <div class="absolute left-0.5 top-0.5 bottom-0.5 w-3 bg-white rounded-sm"></div>
+            <div class="absolute -right-0.5 top-1 bottom-1 w-0.5 bg-white rounded-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- App header -->
+    <div class="bg-slate-900 px-5 pb-4 pt-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 130" height="26" style="display:block;"><g fill="none" stroke-width="13" stroke-linecap="round"><path d="M 64 24 C 48 24 36 34 36 48" stroke="#FFCC00"/><path d="M 36 48 C 36 60 48 66 64 66" stroke="#1A73E8"/><path d="M 64 66 C 78 66 90 72 90 86" stroke="#34A853"/><path d="M 90 86 C 90 98 78 106 64 106" stroke="#EA4335"/></g><path d="M 180.7 47 A 34 34 0 1 0 180.7 83" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round"/></svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Notification indicator -->
+          <div class="relative">
+            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            </div>
+            <div class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-slate-900"></div>
+          </div>
+          <!-- Avatar -->
+          <div class="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center">
+            <span class="text-white text-xs font-semibold">BL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="overflow-y-auto bg-slate-50" style="height: calc(844px - 130px);">
+
+      <!-- Page header -->
+      <div class="bg-white px-5 pt-5 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-2 mb-1">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          <span class="text-xs text-slate-400 font-medium">Caisse</span>
+        </div>
+        <h1 class="text-lg font-bold text-slate-900">Arrêt de caisse</h1>
+        <p class="text-xs text-slate-500 mt-0.5">Signature propriétaire — Étape finale</p>
+
+        <!-- Progress steps compact -->
+        <div class="flex items-center gap-2 mt-3">
+          <div class="flex items-center gap-1">
+            <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+              <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-xs text-emerald-600 font-medium">Soumis</span>
+          </div>
+          <div class="flex-1 h-px bg-emerald-300"></div>
+          <div class="flex items-center gap-1">
+            <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+              <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-xs text-emerald-600 font-medium">Validé</span>
+          </div>
+          <div class="flex-1 h-px bg-slate-300"></div>
+          <div class="flex items-center gap-1">
+            <div class="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center">
+              <span class="text-white text-xs font-bold" style="font-size:9px">3</span>
+            </div>
+            <span class="text-xs font-semibold text-brand-500">Signature</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-4 py-4 space-y-3">
+
+        <!-- Session info -->
+        <div class="card p-4">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Session du jour</p>
+            <span class="text-xs bg-amber-50 border border-amber-200 text-amber-700 font-semibold px-2 py-0.5 rounded-full">En attente de vous</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <p class="text-xs text-slate-400">Date</p>
+              <p class="text-sm font-semibold text-slate-900">31 mars 2026</p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">Durée</p>
+              <p class="text-sm font-semibold text-slate-900">07h15 → 19h42</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Récapitulatif financier compact -->
+        <div class="card p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Récapitulatif</p>
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-slate-600">Total ventes système</span>
+              <span class="text-sm font-semibold text-slate-900">242 700 FCFA</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-slate-600">Total compté caissier</span>
+              <span class="text-sm font-semibold text-slate-900">242 200 FCFA</span>
+            </div>
+            <div class="border-t border-slate-200 pt-2 flex justify-between items-center">
+              <span class="text-sm font-medium text-red-600">Écart constaté</span>
+              <span class="text-sm font-bold text-red-600">−500 FCFA</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audit trail — 3 niveaux -->
+        <div class="card p-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Audit trail</p>
+          <div class="space-y-0">
+
+            <!-- Étape 1 — Caissier -->
+            <div class="flex gap-3">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <span class="text-emerald-700 text-xs font-semibold">KT</span>
+                </div>
+                <div class="w-px flex-1 bg-emerald-200 my-1"></div>
+              </div>
+              <div class="pb-4 flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <p class="text-sm font-semibold text-slate-900">Koné Tiéba</p>
+                  <span class="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">Caissier</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-1.5">Soumis le 31 mars à 19h42</p>
+                <div class="card-inner px-3 py-2">
+                  <p class="text-xs text-slate-600 italic">"500 FCFA manquants — probable erreur de rendu monnaie vente #127 à 18h32."</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 2 — Gestionnaire -->
+            <div class="flex gap-3">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <span class="text-emerald-700 text-xs font-semibold">AT</span>
+                </div>
+                <div class="w-px flex-1 bg-slate-200 my-1"></div>
+              </div>
+              <div class="pb-4 flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <p class="text-sm font-semibold text-slate-900">Amadou Traoré</p>
+                  <span class="text-xs bg-emerald-50 text-emerald-600 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">Gestionnaire</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-1.5">Validé le 31 mars à 19h51</p>
+                <div class="card-inner px-3 py-2">
+                  <p class="text-xs text-slate-600 italic">"Écart de 500 FCFA accepté — erreur de rendu monnaie plausible, vente #127 vérifiée."</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Étape 3 — Blandine (en attente) -->
+            <div class="flex gap-3">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center flex-shrink-0 ring-4 ring-brand-500/20">
+                  <span class="text-white text-xs font-semibold">BL</span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <p class="text-sm font-semibold text-slate-900">Blandine Lamothe</p>
+                  <span class="text-xs bg-violet-50 text-violet-600 border border-violet-200 px-1.5 py-0.5 rounded font-medium">Propriétaire</span>
+                </div>
+                <p class="text-xs text-brand-500 font-medium">En attente de votre signature</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Commentaire optionnel Blandine -->
+        <div class="card p-4">
+          <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+            Note personnelle <span class="text-slate-400 font-normal normal-case tracking-normal">(optionnel)</span>
+          </label>
+          <textarea
+            class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none bg-white"
+            rows="2"
+            placeholder="Ex : Vérifier avec Amadou l'origine de l'écart demain…"
+          ></textarea>
+        </div>
+
+        <!-- Zone signature -->
+        <div class="bg-white rounded-2xl border-2 border-brand-500/30 p-5">
+          <div class="text-center mb-4">
+            <div class="w-12 h-12 rounded-full bg-brand-500/10 flex items-center justify-center mx-auto mb-2">
+              <svg class="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </div>
+            <p class="text-sm font-semibold text-slate-900">Votre signature engage la clôture</p>
+            <p class="text-xs text-slate-500 mt-0.5">Cette action est horodatée et archivée de façon permanente.</p>
+          </div>
+
+          <!-- CTA principal -->
+          <button class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-md shadow-brand-500/25 mb-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            Signer et clôturer la caisse
+          </button>
+
+          <!-- Option rejeter -->
+          <button class="w-full py-2.5 text-sm font-medium text-red-500 hover:text-red-700 transition-colors flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Rejeter et renvoyer au gestionnaire
+          </button>
+        </div>
+
+        <!-- Breathing room -->
+        <div class="h-4"></div>
+
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

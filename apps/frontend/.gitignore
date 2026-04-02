@@ -1,3 +1,6 @@
+# Local dev config
+local.env.json
+
 # Miscellaneous
 *.class
 *.log

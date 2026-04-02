@@ -1,0 +1,33 @@
+scenario_id: "09"
+scenario_name: "Blandine Ajuste Sa Configuration"
+design_intent: D
+current_page_index: 4
+
+pages_list:
+  - id: "09.1"
+    slug: utilisateurs-liste-roles
+    folder: 09.1-utilisateurs-liste-roles
+    status: structure-created
+    prototype: prototypes/utilisateurs-liste-prototype.html
+    spec: 09.1-p4-spec.md
+
+  - id: "09.2"
+    slug: utilisateurs-creation-edition
+    folder: 09.2-utilisateurs-creation-edition
+    status: structure-created
+    prototype: prototypes/utilisateurs-creation-prototype.html
+    spec: 09.2-p4-spec.md
+
+  - id: "09.3"
+    slug: parametres-general
+    folder: 09.3-parametres-general
+    status: structure-created
+    prototype: prototypes/parametres-general-prototype.html
+    spec: 09.3-p4-spec.md
+
+  - id: "09.4"
+    slug: parametres-integrations
+    folder: 09.4-parametres-integrations
+    status: structure-created
+    prototype: prototypes/parametres-integrations-prototype.html
+    spec: 09.4-p4-spec.md

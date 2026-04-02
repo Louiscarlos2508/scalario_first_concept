@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Connexion à l'imprimante thermique Bluetooth</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Connexion à l'imprimante thermique Bluetooth</string>
 </dict>
 </plist>

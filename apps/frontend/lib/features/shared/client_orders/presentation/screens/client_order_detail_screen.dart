@@ -187,9 +187,9 @@ class ClientOrderDetailScreen extends ConsumerWidget {
       final enabledMethods =
           ref.read(enabledPaymentMethodsProvider).valueOrNull ??
               kDefaultPaymentMethods;
-      final methods = enabledMethods.where((m) => m != 'SPLIT').toList();
+      final methods = enabledMethods.where((m) => m.code != 'SPLIT').toList();
       String paymentMethod =
-          methods.contains('CASH') ? 'CASH' : methods.first;
+          methods.any((m) => m.code == 'CASH') ? 'CASH' : methods.first.code;
 
       final confirmed = await showDialog<bool>(
         context: context,
@@ -232,8 +232,8 @@ class ClientOrderDetailScreen extends ConsumerWidget {
                       isDense: true,
                       items: methods
                           .map((m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(paymentMethodLabel(m)),
+                                value: m.code,
+                                child: Text(m.label),
                               ))
                           .toList(),
                       onChanged: (v) => setState(() => paymentMethod = v!),

@@ -1,10 +1,11 @@
 class ApiConstants {
   ApiConstants._(); // prevent instantiation
 
-  static const String baseUrl = String.fromEnvironment(
-    'API_URL',
-    defaultValue: 'http://127.0.0.1:3000',
+  static const String _apiHost = String.fromEnvironment(
+    'API_HOST',
+    defaultValue: '127.0.0.1:3000',
   );
+  static const String baseUrl = 'http://$_apiHost';
 
   /// Build request headers. Includes Content-Type always.
   /// x-tenant-id and Authorization are added only when provided.
