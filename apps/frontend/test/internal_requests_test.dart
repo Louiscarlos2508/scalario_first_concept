@@ -14,6 +14,7 @@ import 'package:frontend/features/shared/inventory/data/repositories/internal_re
 import 'package:frontend/features/shared/inventory/presentation/providers/internal_requests_provider.dart';
 import 'package:frontend/features/shared/inventory/presentation/screens/internal_requests_screen.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/internal_request_form.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -97,6 +98,7 @@ Widget _buildForm({
           .overrideWith((ref) => Future.value(0)),
       internalRequestsPendingCountProvider('owner')
           .overrideWith((ref) => Future.value(0)),
+      unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
     child: MaterialApp(
       home: Scaffold(body: InternalRequestForm()),
@@ -133,6 +135,7 @@ Widget _buildScreen({
           .overrideWith((ref) => Future.value(requests.where((r) => r['status'] == 'pending').length)),
       internalRequestsPendingCountProvider('owner')
           .overrideWith((ref) => Future.value(requests.where((r) => r['status'] == 'prepared').length)),
+      unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
     child: const MaterialApp(home: InternalRequestsScreen()),
   );

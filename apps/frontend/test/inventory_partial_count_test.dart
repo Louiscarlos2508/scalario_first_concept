@@ -12,6 +12,7 @@ import 'package:frontend/features/shared/inventory/data/repositories/inventory_r
 import 'package:frontend/features/shared/inventory/presentation/screens/inventory_count_screen.dart';
 import 'package:frontend/features/retail/pos/data/models/product.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -59,6 +60,7 @@ Widget _buildScreen(InventoryRepository repo) {
           'totalPages': 1,
         }),
       ),
+      unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
     child: MaterialApp(
       home: InventoryCountScreen(repository: repo),

@@ -51,7 +51,7 @@ void main() {
         find.byKey(const Key('quantity_input_field')),
         '2.3',
       );
-      await tester.tap(find.byKey(const Key('quantity_confirm_button')));
+      await tester.tap(find.text('Confirmer'));
       await tester.pumpAndSettle();
 
       expect(poppedQty, 2.3);
@@ -68,7 +68,7 @@ void main() {
         find.byKey(const Key('quantity_input_field')),
         '0',
       );
-      await tester.tap(find.byKey(const Key('quantity_confirm_button')));
+      await tester.tap(find.text('Confirmer'));
       await tester.pump();
 
       expect(find.text('Doit être > 0'), findsOneWidget);
@@ -79,7 +79,7 @@ void main() {
         MaterialApp(home: QuantityInputDialog(product: buildWeightProduct())),
       );
 
-      await tester.tap(find.byKey(const Key('quantity_confirm_button')));
+      await tester.tap(find.text('Confirmer'));
       await tester.pump();
 
       expect(find.text('Obligatoire'), findsOneWidget);

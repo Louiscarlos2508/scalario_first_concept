@@ -26,6 +26,7 @@ import 'package:frontend/features/shared/client_orders/presentation/providers/cl
 import 'package:frontend/features/shared/expenses/data/models/expense.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/reports/data/models/sales_stat.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
@@ -34,6 +35,7 @@ import 'package:frontend/features/shared/reservations/data/repositories/reservat
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 import 'package:frontend/features/shared/reservations/presentation/screens/reservations_screen.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:isar/isar.dart';
@@ -84,7 +86,6 @@ final _mockSession = PosSession()
   ..openingBalance = 0
   ..openedAt = DateTime.now();
 
-/// CartState avec un article à 10 000 FCFA.
 CartState _cartWith10k() {
   final product = Product()
     ..id = 1
@@ -99,6 +100,7 @@ CartState _cartWith10k() {
 final _pendingReservation = <String, dynamic>{
   'id': 'res-uuid-001',
   'customerId': 'cust-0001',
+  'customerName': 'Client Test',
   'totalAmount': 10000,
   'depositAmount': 3000,
   'remainingAmount': 7000,
@@ -132,6 +134,8 @@ Widget _buildCartPanel() {
       activeTenantProvider.overrideWith((ref) => 'tenant-1'),
       sessionProvider.overrideWith((ref) => _FakeSessionNotifier(_mockSession)),
       syncServiceProvider.overrideWithValue(_StubSyncService()),
+      enabledPaymentMethodsProvider
+          .overrideWith((ref) => Future.value([const PaymentMethod('CASH', 'Espèces')])),
     ],
     child: const MaterialApp(home: Scaffold(body: CartPanel())),
   );
@@ -159,6 +163,7 @@ Widget _buildReservationsScreen({
           .overrideWith((ref) => Future.value(<dynamic>[])),
       reservationsListProvider('cancelled')
           .overrideWith((ref) => Future.value(<dynamic>[])),
+      unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
     child: const MaterialApp(home: ReservationsScreen()),
   );
@@ -210,7 +215,6 @@ Widget _buildKpiCardGrid({int reservationsPending = 0}) {
 
 void main() {
   group('ReservationDepositDialog', () {
-    // Test 1 : champs présents
     testWidgets('champs Client et Acompte présents dans le dialog',
         (tester) async {
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
@@ -219,10 +223,9 @@ void main() {
 
       expect(find.textContaining('Client'), findsWidgets);
       expect(find.textContaining('Acompte'), findsWidgets);
-      expect(find.text('Confirmer la réservation'), findsOneWidget);
+      expect(find.text('Confirmer'), findsOneWidget);
     });
 
-    // Test 2 : acompte 5 % → errorText visible + bouton désactivé
     testWidgets('acompte 5% → erreur visible et bouton désactivé',
         (tester) async {
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
@@ -233,20 +236,17 @@ void main() {
       await tester.enterText(find.byType(TextField).last, '500');
       await tester.pump();
 
-      expect(
-        find.text("L'acompte doit être entre 10 % et 50 % du total"),
-        findsOneWidget,
-      );
+      // Error message format: "Acompte entre X (10%) et Y (50%)"
+      expect(find.textContaining('Acompte entre'), findsOneWidget);
 
       final btn = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Confirmer la réservation'),
+        find.widgetWithText(FilledButton, 'Confirmer'),
       );
       expect(btn.onPressed, isNull,
           reason:
               'Bouton désactivé : acompte invalide et aucun client sélectionné');
     });
 
-    // Test 3 : acompte 30 % → pas d'erreur + solde restant affiché
     testWidgets('acompte 30% → aucune erreur et solde restant affiché',
         (tester) async {
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
@@ -256,19 +256,13 @@ void main() {
       await tester.enterText(find.byType(TextField).last, '3000');
       await tester.pump();
 
-      // Aucune erreur de validation
-      expect(
-        find.text("L'acompte doit être entre 10 % et 50 % du total"),
-        findsNothing,
-      );
-      // Indicateur solde restant visible
+      expect(find.textContaining('Acompte entre'), findsNothing);
       expect(find.textContaining('Solde'), findsOneWidget);
     });
   });
 
   group('CartPanel — bouton Réservation', () {
-    // Test 4 : bouton RÉSERVATION présent dans le widget tree
-    testWidgets('bouton RÉSERVATION présent dans le widget tree', (tester) async {
+    testWidgets('bouton RÉSA présent dans le widget tree', (tester) async {
       tester.view.physicalSize = const Size(800, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -278,31 +272,27 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('RÉSERVATION'), findsOneWidget);
+      expect(find.text('RÉSA'), findsOneWidget);
     });
   });
 
   group('ReservationsScreen', () {
-    // Test 5 : TabBar avec 3 onglets
     testWidgets('TabBar contient les 3 onglets', (tester) async {
       await tester.pumpWidget(_buildReservationsScreen());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
       expect(find.text('En cours'), findsOneWidget);
       expect(find.text('Complétées'), findsOneWidget);
       expect(find.text('Annulées'), findsOneWidget);
     });
 
-    // Test 6 : onglet pending → boutons Compléter et Annuler visibles
     testWidgets(
       'onglet "En cours" affiche boutons Compléter et Annuler pour chaque réservation',
       (tester) async {
         await tester.pumpWidget(
           _buildReservationsScreen(pending: [_pendingReservation]),
         );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
         expect(find.text('Compléter'), findsOneWidget);
         expect(find.text('Annuler'), findsOneWidget);
@@ -311,7 +301,6 @@ void main() {
   });
 
   group('KpiCardGrid — alerte réservations', () {
-    // Test 7 : alerte "X réservation(s) en cours" visible pour owner
     testWidgets(
       'alerte "réservation(s) en cours" visible pour owner avec 3 pending',
       (tester) async {
