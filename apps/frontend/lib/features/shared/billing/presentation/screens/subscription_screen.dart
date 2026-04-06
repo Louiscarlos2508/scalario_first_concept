@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/plan_info_card.dart';
 import '../widgets/billing_history_list.dart';
@@ -134,7 +135,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     final subscriptionAsync = ref.watch(subscriptionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mon abonnement')),
+      appBar: const ScalarioAppBar(title: 'Mon abonnement'),
       body: subscriptionAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Erreur: $e')),

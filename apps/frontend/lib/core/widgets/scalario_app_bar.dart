@@ -5,25 +5,32 @@ import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/features/shared/notifications/presentation/widgets/notification_bell.dart';
 import '../theme/app_logos.dart';
 
-/// App bar Scalario (Material 3, hauteur 56 dp + bottom optionnel).
+const _kBg = Color(0xFF0F172A);
+const _kFg = Colors.white;
+
+/// App bar Scalario — fond sombre `#0F172A`, texte et icônes blancs.
+/// Cohérent avec le POS AppBar sur toute l'application.
 ///
-/// Leading : monogramme `scalario-monogram-dark.svg` 24×24 dp (ou [leadingOverride]).
-/// Titre   : [title] centré en texte.
-/// Thème   : fond et couleurs adaptés à la luminosité courante.
-///
+/// Leading : monogramme SVG (ou [leadingOverride] / bouton retour auto).
+/// Titre   : [title] (String) ou [titleWidget] (Widget) si besoin d'un widget custom.
 /// Pour les rôles owner et manager, la cloche de notifications est automatiquement
 /// ajoutée en dernière action.
 class ScalarioAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const ScalarioAppBar({
     super.key,
-    required this.title,
+    this.title,
+    this.titleWidget,
     this.actions,
     this.bottom,
     this.leadingOverride,
-  });
+  }) : assert(title != null || titleWidget != null,
+            'Provide title or titleWidget');
 
-  /// Titre textuel affiché au centre de la barre.
-  final String title;
+  /// Titre textuel (usage standard).
+  final String? title;
+
+  /// Titre widget — pour les cas avec Chip, Row, etc.
+  final Widget? titleWidget;
 
   /// Actions affichées à droite.
   final List<Widget>? actions;
@@ -41,10 +48,6 @@ class ScalarioAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF2B2B2B) : const Color(0xFFFFFFFF);
-    final iconColor = isDark ? Colors.white : const Color(0xFF1A1A1A);
-
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
     final showBell = role == 'owner' || role == 'manager';
 
@@ -54,34 +57,36 @@ class ScalarioAppBar extends ConsumerWidget implements PreferredSizeWidget {
     ];
 
     return AppBar(
-      backgroundColor: bgColor,
+      backgroundColor: _kBg,
+      foregroundColor: _kFg,
       elevation: 0,
       scrolledUnderElevation: 0,
       toolbarHeight: 56,
-      iconTheme: IconThemeData(color: iconColor),
-      actionsIconTheme: IconThemeData(color: iconColor),
+      iconTheme: const IconThemeData(color: _kFg),
+      actionsIconTheme: const IconThemeData(color: _kFg),
       leading: leadingOverride ??
           (Navigator.canPop(context)
-              ? BackButton(color: iconColor)
+              ? const BackButton(color: _kFg)
               : Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: SvgPicture.asset(
-                    AppLogos.monogramPath(context),
+                    AppLogos.monogramDark,
                     width: 24,
                     height: 24,
                     fit: BoxFit.contain,
                   ),
                 )),
       leadingWidth: 56,
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: iconColor,
-          height: 1.2,
-        ),
-      ),
+      title: titleWidget ??
+          Text(
+            title!,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: _kFg,
+              height: 1.2,
+            ),
+          ),
       centerTitle: true,
       actions: allActions.isEmpty ? null : allActions,
       bottom: bottom,

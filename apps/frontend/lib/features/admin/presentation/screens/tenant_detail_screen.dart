@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../../data/models/business_type_summary.dart';
 import '../../data/models/tenant_summary.dart';
 import '../providers/admin_providers.dart';
@@ -24,39 +25,37 @@ class TenantDetailScreen extends StatelessWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        appBar: ScalarioAppBar(
+          titleWidget: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      tenant.name,
-                      style: Theme.of(context).textTheme.titleLarge,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              Flexible(
+                child: Text(
+                  tenant.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 8),
-                  Chip(
-                    backgroundColor: statusColor.withValues(alpha: 0.15),
-                    label: Text(statusLabel,
-                        style: TextStyle(color: statusColor, fontSize: 12)),
-                    side: BorderSide(color: statusColor, width: 1),
-                    padding: EdgeInsets.zero,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Text(
-                '${tenant.currency} • ${tenant.activeModules.length} modules actifs',
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(width: 8),
+              Chip(
+                backgroundColor: statusColor.withValues(alpha: 0.2),
+                label: Text(statusLabel,
+                    style: TextStyle(color: statusColor, fontSize: 12)),
+                side: BorderSide(color: statusColor, width: 1),
+                padding: EdgeInsets.zero,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ],
           ),
-          toolbarHeight: 72,
-          bottom: const TabBar(
-            tabs: [
+          bottom: TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white54,
+            indicatorColor: Colors.white,
+            tabs: const [
               Tab(text: 'Infos'),
               Tab(text: 'Modules'),
               Tab(text: 'Users'),

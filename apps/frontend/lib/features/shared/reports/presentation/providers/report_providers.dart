@@ -17,9 +17,6 @@ Map<String, String> _authHeaders({String? tenantId}) {
   };
 }
 
-/// Set to true to programmatically open SessionHistoryScreen inside ReportsScreen.
-final showSessionHistoryProvider = StateProvider<bool>((ref) => false);
-
 final salesStatsDateRangeProvider = StateProvider<DateTimeRange?>(
   (ref) => null,
 );

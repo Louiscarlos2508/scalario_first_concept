@@ -92,7 +92,7 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('x3'), findsWidgets);
+      expect(find.textContaining('×3'), findsWidgets);
     });
   });
 }

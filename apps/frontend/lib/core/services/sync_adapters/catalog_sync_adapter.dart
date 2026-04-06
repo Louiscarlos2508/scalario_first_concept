@@ -84,8 +84,7 @@ class CatalogSyncAdapter implements SyncAdapter {
 
         if (products.isNotEmpty) {
           if (since == null) {
-            await _productRepo.clearProducts();
-            await _productRepo.saveProducts(products);
+            await _productRepo.replaceProducts(products);
             print('[CatalogAdapter] Full replace: ${products.length} products');
           } else {
             await _productRepo.upsertProducts(products);

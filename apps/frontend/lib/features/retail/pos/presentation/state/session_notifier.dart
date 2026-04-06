@@ -86,14 +86,17 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
     // If we have remoteId, use it, otherwise use local Id as fallback if needed
     // But sessionId in Order model is usually remote UUID or app UUID
     final sessionId = currentSession.remoteId;
-    var orders = await _orderRepository.getOrdersBySession(sessionId);
-    // Fallback: si aucune vente trouvée par UUID (cas où l'UUID a été écrasé
-    // par l'ID serveur avant le fix), on récupère toutes les ventes créées
-    // depuis l'ouverture de la session. Une seule session active à la fois
-    // sur l'appareil → pas de risque de collision.
-    if (orders.isEmpty) {
-      orders = await _orderRepository.getOrdersSince(currentSession.openedAt);
-    }
+    // Fusion des deux requêtes pour couvrir le cas où l'UUID de session a été
+    // écrasé par l'ID serveur en cours de session (certaines ventes stockées
+    // avec l'ancien UUID, d'autres avec le nouveau).
+    // getOrdersSince(openedAt) est la source fiable : une seule session active
+    // à la fois → toutes les ventes depuis openedAt appartiennent à cette session.
+    final byId = await _orderRepository.getOrdersBySession(sessionId);
+    final since = await _orderRepository.getOrdersSince(currentSession.openedAt);
+    final seen = <int>{};
+    final orders = [...byId, ...since]
+        .where((o) => seen.add(o.id))
+        .toList();
 
     final Map<String, double> totalsByMethod = {};
     final Map<String, int> countsByMethod = {};
@@ -156,6 +159,7 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
       currentSession.closingBalance = closingBalance;
       currentSession.theoreticalBalance = theoreticalBalance;
       currentSession.variance = closingBalance - theoreticalBalance;
+      currentSession.varianceExplanation = varianceExplanation;
       currentSession.status = 'CLOSED';
       currentSession.closedAt = DateTime.now();
       currentSession.syncStatus = SyncStatus.pending; // re-sync to push CLOSED status
@@ -188,8 +192,8 @@ class SessionNotifier extends StateNotifier<AsyncValue<PosSession?>> {
               if (session.theoreticalBalance != null)
                 'theoreticalBalance': session.theoreticalBalance,
               if (session.variance != null) 'variance': session.variance,
-              if (varianceExplanation != null)
-                'varianceExplanation': varianceExplanation,
+              if (varianceExplanation case final v?)
+                'varianceExplanation': v,
             }),
           )
           .timeout(const Duration(seconds: 10));

@@ -4,21 +4,23 @@ import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/core/theme/app_theme.dart';
-import 'package:frontend/features/retail/pos/data/services/z_report_service.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 
 String _fcfa(double v) =>
     NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
         .format(v);
 
-/// Full-screen session close flow — replaces the multi-dialog chain.
+/// Arrêt de caisse — Étape 1/3 : Soumission
 ///
-/// Single page:
-///   • Session info (date, cashier, opened at)
-///   • Ventes de la session (breakdown by payment method)
-///   • Comptage de caisse (editable cash field + live reconciliation)
-///   • Explication de l'écart (shown if variance != 0)
-///   • Actions: Print Z-Report + Confirmer la fermeture
+/// Affiche :
+///   • Stepper 3 étapes (Soumission · Validation · Signature)
+///   • Infos session (date, caissier, ouverture, fermeture)
+///   • Ventes système par méthode (lecture seule)
+///   • Comptage physique (espèces éditables, mobile money auto-confirmé)
+///   • Écart calculé en temps réel
+///   • Note optionnelle
+///   • Action : Soumettre au gestionnaire
 class SessionCloseScreen extends ConsumerStatefulWidget {
   const SessionCloseScreen({super.key});
 
@@ -28,13 +30,12 @@ class SessionCloseScreen extends ConsumerStatefulWidget {
 
 class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
   final _cashController = TextEditingController();
-  final _explanationController = TextEditingController();
+  final _noteController = TextEditingController();
 
   Map<String, dynamic>? _summary;
   bool _isLoadingSummary = true;
   bool _loadError = false;
-  bool _isClosing = false;
-  bool _showExplanationError = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -47,7 +48,7 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
   void dispose() {
     _cashController.removeListener(_onCashChanged);
     _cashController.dispose();
-    _explanationController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -68,12 +69,7 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
       }
     } catch (e, stack) {
       debugPrint('[SessionClose] calculateSessionSummary error: $e\n$stack');
-      if (mounted) {
-        setState(() {
-          _loadError = true;
-          _isLoadingSummary = false;
-        });
-      }
+      if (mounted) setState(() { _loadError = true; _isLoadingSummary = false; });
     }
   }
 
@@ -95,24 +91,26 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
 
   double get _variance => _physicalCash - _theoreticalCash;
 
-  bool get _hasVariance => _cashController.text.isNotEmpty && _variance != 0;
+  bool get _cashEntered => _cashController.text.isNotEmpty;
 
-  Future<void> _onConfirmClose() async {
+  double get _systemTotal {
+    final m = (_summary?['totalsByMethod'] as Map<String, double>?) ?? {};
+    return m.values.fold(0.0, (a, b) => a + b);
+  }
+
+  double get _physicalTotal {
+    final m = (_summary?['totalsByMethod'] as Map<String, double>?) ?? {};
+    final nonCash = m.entries
+        .where((e) => e.key.toUpperCase() != 'CASH')
+        .fold(0.0, (a, e) => a + e.value);
+    return (_cashEntered ? _physicalCash : 0.0) + nonCash;
+  }
+
+  Future<void> _onSubmit() async {
     if (_cashController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez saisir le comptage physique.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    if (_hasVariance && _explanationController.text.trim().isEmpty) {
-      setState(() => _showExplanationError = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Un écart a été détecté. Veuillez l\'expliquer.'),
+          content: Text('Veuillez saisir le comptage physique des espèces.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -122,9 +120,10 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmer la fermeture'),
+        title: const Text('Confirmer la soumission'),
         content: const Text(
-          'La session sera définitivement fermée. Cette action est irréversible.',
+          'La session sera soumise au gestionnaire pour validation. '
+          'Vous ne pourrez plus modifier les données.',
         ),
         actions: [
           TextButton(
@@ -132,38 +131,24 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Fermer la caisse'),
+            child: const Text('Soumettre'),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
 
-    setState(() => _isClosing = true);
+    setState(() => _isSubmitting = true);
 
     await ref.read(sessionProvider.notifier).closeSession(
           _physicalCash,
           _theoreticalCash,
-          varianceExplanation: _hasVariance
-              ? _explanationController.text.trim()
-              : null,
+          varianceExplanation:
+              _noteController.text.trim().isNotEmpty ? _noteController.text.trim() : null,
         );
 
     if (mounted) Navigator.of(context).pop();
-  }
-
-  Future<void> _onPrintZReport() async {
-    if (_summary == null) return;
-    final profile = ref.read(userProfileProvider).valueOrNull;
-    final employee = ref.read(selectedEmployeeProvider);
-    await ZReportService.generateAndPrintZReport(
-      summary: _summary!,
-      physicalCount: _physicalCash,
-      userName: employee?.name ?? profile?.fullName ?? profile?.email ?? 'Caissier',
-      tenantName: profile?.memberships.firstOrNull?.tenantName ?? 'Scalario POS',
-    );
   }
 
   @override
@@ -176,268 +161,149 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        scrolledUnderElevation: 0,
-        title: const Text('Fermer la caisse'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+      appBar: const ScalarioAppBar(title: 'Arrêt de caisse'),
       body: _isLoadingSummary
           ? const Center(child: CircularProgressIndicator())
           : _loadError
               ? _buildErrorState()
-              : _buildContent(context, session, cashierName),
-      bottomNavigationBar: (_isLoadingSummary || _loadError)
-          ? null
-          : _buildBottomBar(context),
+              : _buildContent(session, cashierName),
+      bottomNavigationBar: (_isLoadingSummary || _loadError) ? null : _buildBottomBar(),
     );
   }
 
-  Widget _buildContent(
-    BuildContext context,
-    dynamic session,
-    String cashierName,
-  ) {
+  // ── Content ────────────────────────────────────────────────────────────────
+
+  Widget _buildContent(dynamic session, String cashierName) {
     final summary = _summary!;
     final totalsByMethod = summary['totalsByMethod'] as Map<String, double>;
-    final countsByMethod =
-        (summary['countsByMethod'] as Map<String, int>?) ?? {};
-    final totalSales = summary['totalSales'] as double;
-    final orderCount = (summary['orderCount'] as int?) ?? 0;
-    final openingBalance = (summary['openingBalance'] as double?) ?? 0.0;
-    final cashSales = totalsByMethod['CASH'] ?? 0.0;
+    final openedAt = session?.openedAt as DateTime?;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Session info ─────────────────────────────────────────────────
+          // ── Progress stepper ───────────────────────────────────────────────
+          _ProgressStepper(currentStep: 0),
+
+          const SizedBox(height: 20),
+
+          // ── Session info ───────────────────────────────────────────────────
           _SectionCard(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.store_outlined,
-                      size: 16, color: AppColors.textSecondary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      cashierName,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  if (session?.openedAt != null)
-                    Text(
-                      'Ouvert à ${DateFormat('HH:mm').format(session!.openedAt!)}',
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now()),
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary),
+              _InfoGrid(rows: [
+                _InfoCell(label: 'Date', value: DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now())),
+                _InfoCell(label: 'Caissier', value: cashierName),
+                _InfoCell(
+                  label: 'Ouverture',
+                  value: openedAt != null ? DateFormat('HH:mm').format(openedAt) : '—',
+                ),
+                _InfoCell(
+                  label: 'Fermeture',
+                  value: '${DateFormat('HH:mm').format(DateTime.now())} (maintenant)',
+                  muted: true,
+                ),
+              ]),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── Two-panel: system sales vs physical count ──────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _SystemSalesPanel(totalsByMethod: totalsByMethod)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _PhysicalCountPanel(
+                  totalsByMethod: totalsByMethod,
+                  cashController: _cashController,
+                  physicalTotal: _physicalTotal,
+                ),
               ),
             ],
           ),
 
           const SizedBox(height: 12),
 
-          // ── Ventes de la session ─────────────────────────────────────────
-          _SectionTitle(
-            label: 'Ventes de la session',
-            badge: '$orderCount vente${orderCount != 1 ? 's' : ''}',
-          ),
-          _SectionCard(
-            children: [
-              ...totalsByMethod.entries
-                  .where((e) => e.value > 0)
-                  .map((e) => _PaymentRow(
-                        method: e.key,
-                        amount: e.value,
-                        count: countsByMethod[e.key] ?? 0,
-                      )),
-              const Divider(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(
-                    _fcfa(totalSales),
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ],
-              ),
-            ],
+          // ── Écart ──────────────────────────────────────────────────────────
+          if (_cashEntered) _VarianceCard(
+            variance: _variance,
+            systemTotal: _systemTotal,
+            physicalTotal: _physicalTotal,
           ),
 
-          const SizedBox(height: 12),
+          if (_cashEntered) const SizedBox(height: 12),
 
-          // ── Comptage de caisse ───────────────────────────────────────────
-          _SectionTitle(label: 'Comptage de caisse'),
+          // ── Note optionnelle ───────────────────────────────────────────────
+          _SectionLabel(label: 'Note ou commentaire', optional: true),
           _SectionCard(
             children: [
-              // Readonly rows
-              _ReconciliationRow(
-                label: 'Fond d\'ouverture',
-                value: openingBalance,
-              ),
-              _ReconciliationRow(
-                label: '+ Espèces encaissées',
-                value: cashSales,
-                valueColor: Colors.green.shade700,
-              ),
-              const Divider(height: 16),
-              _ReconciliationRow(
-                label: 'Caisse théorique',
-                value: _theoreticalCash,
-                valueColor: AppColors.primary,
-                bold: true,
-              ),
-              const SizedBox(height: 16),
-
-              // Editable physical count
               TextField(
-                controller: _cashController,
-                autofocus: true,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                controller: _noteController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 13),
                 decoration: const InputDecoration(
-                  labelText: 'Comptage physique',
-                  suffixText: 'FCFA',
-                  border: OutlineInputBorder(),
-                  helperText: 'Comptez les billets et pièces dans le tiroir',
+                  border: InputBorder.none,
+                  hintText: 'Ex : 500 FCFA manquants, probable erreur de rendu monnaie…',
+                  hintStyle: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  isDense: true,
                 ),
               ),
-
-              // Live variance
-              if (_cashController.text.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Divider(height: 4),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Écart',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: _variance == 0
-                            ? Colors.green.shade700
-                            : (_variance > 0
-                                ? Colors.orange.shade800
-                                : AppColors.error),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        if (_variance != 0)
-                          Icon(
-                            _variance > 0
-                                ? Icons.arrow_upward
-                                : Icons.arrow_downward,
-                            size: 14,
-                            color: _variance > 0
-                                ? Colors.orange.shade800
-                                : AppColors.error,
-                          ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _variance == 0
-                              ? '${_fcfa(_variance)} ✓'
-                              : '${_variance > 0 ? '+' : ''}${_fcfa(_variance)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: _variance == 0
-                                ? Colors.green.shade700
-                                : (_variance > 0
-                                    ? Colors.orange.shade800
-                                    : AppColors.error),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
 
-          // ── Variance explanation ─────────────────────────────────────────
-          if (_hasVariance) ...[
-            const SizedBox(height: 12),
-            _SectionTitle(label: 'Explication de l\'écart'),
-            _SectionCard(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: (_variance > 0
-                            ? Colors.orange
-                            : AppColors.error)
-                        .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: (_variance > 0
-                              ? Colors.orange
-                              : AppColors.error)
-                          .withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: _variance > 0
-                            ? Colors.orange.shade800
-                            : AppColors.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Écart de ${_variance > 0 ? '+' : ''}${_fcfa(_variance)} détecté',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _variance > 0
-                              ? Colors.orange.shade800
-                              : AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _explanationController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Expliquer l\'écart',
-                    hintText: 'Ex: Rendu de monnaie non enregistré, erreur de comptage…',
-                    border: const OutlineInputBorder(),
-                    errorText: _showExplanationError &&
-                            _explanationController.text.trim().isEmpty
-                        ? 'Explication requise'
-                        : null,
-                  ),
-                  onChanged: (_) =>
-                      setState(() => _showExplanationError = false),
-                ),
-              ],
-            ),
-          ],
+          const SizedBox(height: 8),
+
+          // ── Info notice ────────────────────────────────────────────────────
+          _NoticeRow(
+            text: 'La soumission notifiera le gestionnaire pour validation.',
+          ),
         ],
       ),
     );
   }
+
+  // ── Bottom bar ─────────────────────────────────────────────────────────────
+
+  Widget _buildBottomBar() {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                child: const Text('Annuler'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: FilledButton.icon(
+                onPressed: _isSubmitting ? null : _onSubmit,
+                icon: _isSubmitting
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.send_outlined, size: 18),
+                label: Text(_isSubmitting ? 'Envoi…' : 'Soumettre au gestionnaire'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Error ──────────────────────────────────────────────────────────────────
 
   Widget _buildErrorState() {
     return Center(
@@ -470,65 +336,367 @@ class _SessionCloseScreenState extends ConsumerState<SessionCloseScreen> {
       ),
     );
   }
+}
 
-  Widget _buildBottomBar(BuildContext context) {
-    return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-              top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
-        ),
-        child: Row(
-          children: [
-            // Print Z-Report
-            OutlinedButton.icon(
-              onPressed: _isClosing ? null : _onPrintZReport,
-              icon: const Icon(Icons.print_outlined, size: 18),
-              label: const Text('Z-Report'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+// ── Progress stepper ──────────────────────────────────────────────────────────
+
+class _ProgressStepper extends StatelessWidget {
+  final int currentStep; // 0=Soumission, 1=Validation, 2=Signature
+
+  const _ProgressStepper({required this.currentStep});
+
+  static const _steps = ['Soumission', 'Validation', 'Signature'];
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (int i = 0; i < _steps.length; i++) ...[
+          if (i > 0)
+            Expanded(
+              child: Container(
+                height: 2,
+                color: i <= currentStep ? AppColors.primary : Colors.grey.shade300,
               ),
             ),
-            const SizedBox(width: 12),
-            // Confirm close
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _isClosing ? null : _onConfirmClose,
-                icon: _isClosing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.lock_outline, size: 18),
-                label: Text(_isClosing ? 'Fermeture…' : 'Confirmer la fermeture'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
+          _StepDot(index: i, label: _steps[i], currentStep: currentStep),
+        ],
+      ],
+    );
+  }
+}
+
+class _StepDot extends StatelessWidget {
+  final int index;
+  final String label;
+  final int currentStep;
+
+  const _StepDot({required this.index, required this.label, required this.currentStep});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = index < currentStep;
+    final isCurrent = index == currentStep;
+    final color = (isDone || isCurrent) ? AppColors.primary : Colors.grey.shade300;
+    final textColor = (isDone || isCurrent) ? AppColors.primary : AppColors.textSecondary;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color,
+          ),
+          child: Center(
+            child: isDone
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: (isCurrent) ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
+            color: textColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── System sales panel ────────────────────────────────────────────────────────
+
+class _SystemSalesPanel extends StatelessWidget {
+  final Map<String, double> totalsByMethod;
+
+  const _SystemSalesPanel({required this.totalsByMethod});
+
+  double get _total => totalsByMethod.values.fold(0.0, (a, b) => a + b);
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Ventes système',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 0.5),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Text(
+                'Auto',
+                style: TextStyle(fontSize: 10, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
               ),
             ),
           ],
         ),
+        const SizedBox(height: 10),
+        ...totalsByMethod.entries
+            .where((e) => e.value > 0)
+            .map((e) => _MethodRow(
+                  method: e.key,
+                  amount: e.value,
+                  dotColor: _dotColor(e.key),
+                )),
+        if (totalsByMethod.isEmpty)
+          const Text('Aucune vente', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        const Divider(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total système', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(_fcfa(_total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Color _dotColor(String method) {
+    switch (method.toUpperCase()) {
+      case 'CASH': return Colors.green;
+      case 'MOBILE_MONEY': return Colors.orange;
+      case 'CARD': return Colors.blue;
+      default: return Colors.grey;
+    }
+  }
+}
+
+// ── Physical count panel ──────────────────────────────────────────────────────
+
+class _PhysicalCountPanel extends StatelessWidget {
+  final Map<String, double> totalsByMethod;
+  final TextEditingController cashController;
+  final double physicalTotal;
+
+  const _PhysicalCountPanel({
+    required this.totalsByMethod,
+    required this.cashController,
+    required this.physicalTotal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nonCashEntries = totalsByMethod.entries
+        .where((e) => e.key.toUpperCase() != 'CASH' && e.value > 0)
+        .toList();
+
+    return _SectionCard(
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Comptage physique',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textSecondary,
+                    letterSpacing: 0.5),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Text(
+                'À saisir',
+                style: TextStyle(fontSize: 10, color: Colors.amber.shade800, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Cash — editable
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Espèces comptées',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            TextField(
+              controller: cashController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              decoration: const InputDecoration(
+                suffixText: 'FCFA',
+                suffixStyle: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+
+        // Non-cash — readonly
+        ...nonCashEntries.map((e) => Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(paymentMethodLabel(e.key),
+                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      const SizedBox(width: 4),
+                      const Text('(système)',
+                          style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      border: Border.all(color: Colors.grey.shade200),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _fcfa(e.value),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+
+        const Divider(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Total compté', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(_fcfa(physicalTotal), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Variance card ─────────────────────────────────────────────────────────────
+
+class _VarianceCard extends StatelessWidget {
+  final double variance;
+  final double systemTotal;
+  final double physicalTotal;
+
+  const _VarianceCard({
+    required this.variance,
+    required this.systemTotal,
+    required this.physicalTotal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isBalanced = variance == 0;
+    final isOver = variance > 0;
+
+    final bgColor = isBalanced ? Colors.green.shade50 : Colors.red.shade50;
+    final borderColor = isBalanced ? Colors.green.shade200 : Colors.red.shade200;
+    final iconBgColor = isBalanced ? Colors.green.shade100 : Colors.red.shade100;
+    final iconColor = isBalanced ? Colors.green.shade700 : Colors.red.shade700;
+    final titleColor = isBalanced ? Colors.green.shade800 : Colors.red.shade800;
+    final amountColor = isBalanced ? Colors.green.shade700 : Colors.red.shade700;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: iconBgColor, borderRadius: BorderRadius.circular(8)),
+            child: Icon(
+              isBalanced ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+              size: 18,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isBalanced ? 'Caisse équilibrée' : 'Écart détecté',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: titleColor),
+                ),
+                Text(
+                  'Système − Comptage',
+                  style: TextStyle(fontSize: 11, color: titleColor.withValues(alpha: 0.7)),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                isBalanced
+                    ? '0 FCFA'
+                    : '${isOver ? '+' : ''}${_fcfa(variance)}',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: amountColor),
+              ),
+              if (!isBalanced)
+                Text(
+                  isOver ? 'Excédent' : 'Manquant',
+                  style: TextStyle(fontSize: 11, color: amountColor, fontWeight: FontWeight.w500),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Shared widgets ─────────────────────────────────────────────────────────────
 
-class _SectionTitle extends StatelessWidget {
+class _SectionLabel extends StatelessWidget {
   final String label;
-  final String? badge;
+  final bool optional;
 
-  const _SectionTitle({required this.label, this.badge});
+  const _SectionLabel({required this.label, this.optional = false});
 
   @override
   Widget build(BuildContext context) {
@@ -545,22 +713,11 @@ class _SectionTitle extends StatelessWidget {
               letterSpacing: 0.5,
             ),
           ),
-          if (badge != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                badge!,
-                style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600),
-              ),
+          if (optional) ...[
+            const SizedBox(width: 6),
+            const Text(
+              '(optionnel)',
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.normal),
             ),
           ],
         ],
@@ -578,7 +735,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -592,97 +749,100 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _PaymentRow extends StatelessWidget {
+class _InfoGrid extends StatelessWidget {
+  final List<_InfoCell> rows;
+
+  const _InfoGrid({required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      childAspectRatio: 3.5,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: rows,
+    );
+  }
+}
+
+class _InfoCell extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool muted;
+
+  const _InfoCell({required this.label, required this.value, this.muted = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: muted ? AppColors.textSecondary : null,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+class _MethodRow extends StatelessWidget {
   final String method;
   final double amount;
-  final int count;
+  final Color dotColor;
 
-  const _PaymentRow(
-      {required this.method, required this.amount, required this.count});
+  const _MethodRow({required this.method, required this.amount, required this.dotColor});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(_icon(), size: 16, color: AppColors.textSecondary),
-          const SizedBox(width: 8),
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+          ),
+          const SizedBox(width: 6),
           Expanded(
-              child: Text(paymentMethodLabel(method),
-                  style: const TextStyle(fontSize: 13))),
-          Text(
-            '$count tx',
-            style: const TextStyle(
-                fontSize: 11, color: AppColors.textSecondary),
+            child: Text(paymentMethodLabel(method),
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           ),
-          const SizedBox(width: 12),
-          Text(
-            _fcfa(amount),
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 13),
-          ),
+          Text(_fcfa(amount),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
-
-  IconData _icon() {
-    switch (method.toUpperCase()) {
-      case 'CASH':
-        return Icons.payments_outlined;
-      case 'MOBILE_MONEY':
-        return Icons.phone_android_outlined;
-      case 'CARD':
-        return Icons.credit_card_outlined;
-      case 'CREDIT':
-        return Icons.account_balance_wallet_outlined;
-      case 'TRANSFER':
-        return Icons.swap_horiz_outlined;
-      default:
-        return Icons.attach_money;
-    }
-  }
 }
 
-class _ReconciliationRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final Color? valueColor;
-  final bool bold;
+class _NoticeRow extends StatelessWidget {
+  final String text;
 
-  const _ReconciliationRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.bold = false,
-  });
+  const _NoticeRow({required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight:
-                    bold ? FontWeight.bold : FontWeight.normal,
-                color: bold ? null : AppColors.textSecondary),
+    return Row(
+      children: [
+        const Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
           ),
-          Text(
-            _fcfa(value),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-              color: valueColor,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

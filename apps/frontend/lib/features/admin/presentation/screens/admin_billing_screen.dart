@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../providers/admin_providers.dart';
 
 class AdminBillingScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,7 @@ class _AdminBillingScreenState extends ConsumerState<AdminBillingScreen> {
     final tenantsAsync = ref.watch(adminTenantsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Facturation')),
+      appBar: const ScalarioAppBar(title: 'Facturation'),
       body: Column(
         children: [
           // ── KPI Bar ─────────────────────────────────────────────────────────

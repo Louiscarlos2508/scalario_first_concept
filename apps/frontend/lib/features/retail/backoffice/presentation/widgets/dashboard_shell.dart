@@ -13,21 +13,24 @@ import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
 
 /// Navigation destination item.
 /// [moduleCode] null = always visible; non-null = visible only when module is active.
+/// [shortLabel] optional label for the BottomNavigationBar (shorter than [label]).
 class NavItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final String? shortLabel;
   final String? moduleCode;
   const NavItem({
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.shortLabel,
     this.moduleCode,
   });
 }
 
-// Phone: max 5 items in BottomNavigationBar (AC3 — MVP overflow handling)
-const int _maxBottomItems = 5;
+// Phone: primary items before overflow "Plus" tab
+const int _kPrimaryBottomItems = 4;
 
 class DashboardShell extends ConsumerStatefulWidget {
   final Widget child;
@@ -119,30 +122,134 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
     );
   }
 
-  // ── Phone layout (< 600dp) — BottomNavigationBar ─────────────────────────
+  // ── Phone layout (< 600dp) — NavigationBar (Material 3, Telegram-style) ──
+
+  static final _navBarTheme = NavigationBarThemeData(
+    backgroundColor: const Color(0xFF0F172A),
+    indicatorColor: AppColors.primary.withValues(alpha: 0.18),
+    labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+    iconTheme: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return const IconThemeData(color: AppColors.primary, size: 22);
+      }
+      return const IconThemeData(color: Colors.white54, size: 22);
+    }),
+    labelTextStyle: WidgetStateProperty.resolveWith((states) {
+      if (states.contains(WidgetState.selected)) {
+        return const TextStyle(
+          color: AppColors.primary,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        );
+      }
+      return const TextStyle(color: Colors.white54, fontSize: 11);
+    }),
+  );
+
+  NavigationDestination _dest(NavItem item) => NavigationDestination(
+        icon: _navIcon(ref, item.label, item.icon),
+        selectedIcon: _navIcon(ref, item.label, item.selectedIcon),
+        label: item.shortLabel ?? item.label,
+      );
 
   Widget _buildPhoneLayout(BuildContext context) {
-    final visibleBottom = widget.items.take(_maxBottomItems).toList();
-    final bottomIndex = widget.selectedIndex.clamp(0, visibleBottom.length - 1);
+    final items = widget.items;
+    final total = items.length;
+
+    // No overflow: fit everything
+    if (total <= _kPrimaryBottomItems + 1) {
+      final bottomIndex = widget.selectedIndex.clamp(0, total - 1);
+      return Scaffold(
+        body: SafeArea(bottom: false, child: widget.child),
+        bottomNavigationBar: NavigationBarTheme(
+          data: _navBarTheme,
+          child: NavigationBar(
+            selectedIndex: bottomIndex,
+            onDestinationSelected: widget.onDestinationSelected,
+            destinations: items.map(_dest).toList(),
+          ),
+        ),
+      );
+    }
+
+    // Overflow: 4 primary items + "Plus" as 5th slot
+    final primary = items.take(_kPrimaryBottomItems).toList();
+    final overflow = items.skip(_kPrimaryBottomItems).toList();
+    final selectedInOverflow = widget.selectedIndex >= _kPrimaryBottomItems;
+    final overflowItemIndex =
+        selectedInOverflow ? widget.selectedIndex - _kPrimaryBottomItems : -1;
+    final bottomIndex =
+        selectedInOverflow ? _kPrimaryBottomItems : widget.selectedIndex;
 
     return Scaffold(
       body: SafeArea(bottom: false, child: widget.child),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: bottomIndex,
-        onTap: widget.onDestinationSelected,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        items: visibleBottom
-            .asMap()
-            .entries
-            .map(
-              (e) => BottomNavigationBarItem(
-                icon: _navIcon(ref, e.value.label, e.value.icon),
-                activeIcon: _navIcon(ref, e.value.label, e.value.selectedIcon),
-                label: e.value.label,
+      bottomNavigationBar: NavigationBarTheme(
+        data: _navBarTheme,
+        child: NavigationBar(
+          selectedIndex: bottomIndex,
+          onDestinationSelected: (i) {
+            if (i == _kPrimaryBottomItems) {
+              _showOverflowSheet(context, overflow, overflowItemIndex);
+            } else {
+              widget.onDestinationSelected(i);
+            }
+          },
+          destinations: [
+            ...primary.map(_dest),
+            // "Plus" slot — morphs to active overflow item when one is selected
+            NavigationDestination(
+              icon: selectedInOverflow
+                  ? Icon(overflow[overflowItemIndex].selectedIcon,
+                      color: AppColors.primary)
+                  : const Icon(Icons.more_horiz),
+              selectedIcon: selectedInOverflow
+                  ? Icon(overflow[overflowItemIndex].selectedIcon)
+                  : const Icon(Icons.more_horiz),
+              label: selectedInOverflow
+                  ? (overflow[overflowItemIndex].shortLabel ??
+                      overflow[overflowItemIndex].label)
+                  : 'Plus',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOverflowSheet(
+      BuildContext context, List<NavItem> overflow, int activeIndex) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 8),
+          ...overflow.asMap().entries.map((e) {
+            final isActive = e.key == activeIndex;
+            return ListTile(
+              leading: Icon(
+                isActive ? e.value.selectedIcon : e.value.icon,
+                color: isActive ? AppColors.primary : null,
               ),
-            )
-            .toList(),
+              title: Text(
+                e.value.label,
+                style: TextStyle(
+                  fontWeight:
+                      isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? AppColors.primary : null,
+                ),
+              ),
+              selected: isActive,
+              onTap: () {
+                Navigator.pop(context);
+                widget.onDestinationSelected(
+                    _kPrimaryBottomItems + e.key);
+              },
+            );
+          }),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -236,23 +343,36 @@ class _Sidebar extends ConsumerWidget {
           // ── Bottom actions ─────────────────────────────────────────────
           const Divider(color: Colors.white12, height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (canOpenPos)
-                  _NavTile(
-                    icon: const Icon(Icons.point_of_sale_outlined,
-                        size: 18, color: Colors.white60),
-                    label: 'Ouvrir la caisse',
-                    isSelected: false,
-                    onTap: onOpenPos,
+                if (canOpenPos) ...[
+                  FilledButton.icon(
+                    onPressed: onOpenPos,
+                    icon: const Icon(Icons.point_of_sale_outlined, size: 16),
+                    label: const Text('Ouvrir la caisse',
+                        style: TextStyle(fontSize: 13)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
-                _NavTile(
-                  icon: const Icon(Icons.logout,
-                      size: 18, color: Colors.white60),
-                  label: 'Déconnexion',
-                  isSelected: false,
-                  onTap: onSignOut,
+                  const SizedBox(height: 4),
+                ],
+                TextButton.icon(
+                  onPressed: onSignOut,
+                  icon: const Icon(Icons.logout, size: 16,
+                      color: Colors.white38),
+                  label: const Text('Déconnexion',
+                      style: TextStyle(fontSize: 12, color: Colors.white38)),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    alignment: Alignment.centerLeft,
+                  ),
                 ),
               ],
             ),

@@ -53,43 +53,41 @@ const OrderSchema = CollectionSchema(
       name: r'receiptNumber',
       type: IsarType.string,
     ),
-    r'sessionId': PropertySchema(
+    r'retryCount': PropertySchema(
       id: 7,
+      name: r'retryCount',
+      type: IsarType.long,
+    ),
+    r'sessionId': PropertySchema(
+      id: 8,
       name: r'sessionId',
       type: IsarType.string,
     ),
     r'syncStatus': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'syncStatus',
       type: IsarType.string,
       enumMap: _OrdersyncStatusEnumValueMap,
     ),
     r'tenantId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'tenantId',
       type: IsarType.string,
     ),
     r'totalAmount': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'totalAmount',
       type: IsarType.double,
     ),
     r'userId': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'userId',
       type: IsarType.string,
     ),
     r'uuid': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'uuid',
       type: IsarType.string,
-    ),
-    // Fix 3 — additive migration: id 13 inexistant dans les records anciens
-    // → readLongOrNull retourne null → ?? 0 = valeur par défaut sûre.
-    r'retryCount': PropertySchema(
-      id: 13,
-      name: r'retryCount',
-      type: IsarType.long,
     )
   },
   estimateSize: _orderEstimateSize,
@@ -170,7 +168,6 @@ int _orderEstimateSize(
     }
   }
   bytesCount += 3 + object.uuid.length * 3;
-  bytesCount += 8; // retryCount: IsarType.long = 8 bytes
   return bytesCount;
 }
 
@@ -192,13 +189,13 @@ void _orderSerialize(
   writer.writeString(offsets[4], object.paymentMethod);
   writer.writeString(offsets[5], object.paymentSplits);
   writer.writeString(offsets[6], object.receiptNumber);
-  writer.writeString(offsets[7], object.sessionId);
-  writer.writeString(offsets[8], object.syncStatus.name);
-  writer.writeString(offsets[9], object.tenantId);
-  writer.writeDouble(offsets[10], object.totalAmount);
-  writer.writeString(offsets[11], object.userId);
-  writer.writeString(offsets[12], object.uuid);
-  writer.writeLong(offsets[13], object.retryCount);
+  writer.writeLong(offsets[7], object.retryCount);
+  writer.writeString(offsets[8], object.sessionId);
+  writer.writeString(offsets[9], object.syncStatus.name);
+  writer.writeString(offsets[10], object.tenantId);
+  writer.writeDouble(offsets[11], object.totalAmount);
+  writer.writeString(offsets[12], object.userId);
+  writer.writeString(offsets[13], object.uuid);
 }
 
 Order _orderDeserialize(
@@ -222,15 +219,15 @@ Order _orderDeserialize(
   object.paymentMethod = reader.readStringOrNull(offsets[4]);
   object.paymentSplits = reader.readStringOrNull(offsets[5]);
   object.receiptNumber = reader.readStringOrNull(offsets[6]);
-  object.sessionId = reader.readStringOrNull(offsets[7]);
+  object.retryCount = reader.readLong(offsets[7]);
+  object.sessionId = reader.readStringOrNull(offsets[8]);
   object.syncStatus =
-      _OrdersyncStatusValueEnumMap[reader.readStringOrNull(offsets[8])] ??
+      _OrdersyncStatusValueEnumMap[reader.readStringOrNull(offsets[9])] ??
           SyncStatus.pending;
-  object.tenantId = reader.readStringOrNull(offsets[9]);
-  object.totalAmount = reader.readDouble(offsets[10]);
-  object.userId = reader.readStringOrNull(offsets[11]);
-  object.uuid = reader.readString(offsets[12]);
-  object.retryCount = reader.readLongOrNull(offsets[13]) ?? 0;
+  object.tenantId = reader.readStringOrNull(offsets[10]);
+  object.totalAmount = reader.readDouble(offsets[11]);
+  object.userId = reader.readStringOrNull(offsets[12]);
+  object.uuid = reader.readString(offsets[13]);
   return object;
 }
 
@@ -262,20 +259,20 @@ P _orderDeserializeProp<P>(
     case 6:
       return (reader.readStringOrNull(offset)) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
       return (_OrdersyncStatusValueEnumMap[reader.readStringOrNull(offset)] ??
           SyncStatus.pending) as P;
-    case 9:
-      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readDouble(offset)) as P;
-    case 11:
       return (reader.readStringOrNull(offset)) as P;
+    case 11:
+      return (reader.readDouble(offset)) as P;
     case 12:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 13:
-      return (reader.readLongOrNull(offset) ?? 0) as P;
+      return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -285,13 +282,13 @@ const _OrdersyncStatusEnumValueMap = {
   r'pending': r'pending',
   r'synced': r'synced',
   r'error': r'error',
-  r'failed': r'failed', // Fix 3 — additive, aucun index impacté (EnumType.name)
+  r'failed': r'failed',
 };
 const _OrdersyncStatusValueEnumMap = {
   r'pending': SyncStatus.pending,
   r'synced': SyncStatus.synced,
   r'error': SyncStatus.error,
-  r'failed': SyncStatus.failed, // Fix 3 — additive
+  r'failed': SyncStatus.failed,
 };
 
 Id _orderGetId(Order object) {
@@ -1301,6 +1298,59 @@ extension OrderQueryFilter on QueryBuilder<Order, Order, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Order, Order, QAfterFilterCondition> retryCountEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> retryCountGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> retryCountLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'retryCount',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterFilterCondition> retryCountBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'retryCount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Order, Order, QAfterFilterCondition> sessionIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2143,6 +2193,18 @@ extension OrderQuerySortBy on QueryBuilder<Order, Order, QSortBy> {
     });
   }
 
+  QueryBuilder<Order, Order, QAfterSortBy> sortByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> sortByRetryCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.desc);
+    });
+  }
+
   QueryBuilder<Order, Order, QAfterSortBy> sortBySessionId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sessionId', Sort.asc);
@@ -2301,6 +2363,18 @@ extension OrderQuerySortThenBy on QueryBuilder<Order, Order, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Order, Order, QAfterSortBy> thenByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Order, Order, QAfterSortBy> thenByRetryCountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'retryCount', Sort.desc);
+    });
+  }
+
   QueryBuilder<Order, Order, QAfterSortBy> thenBySessionId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'sessionId', Sort.asc);
@@ -2420,6 +2494,12 @@ extension OrderQueryWhereDistinct on QueryBuilder<Order, Order, QDistinct> {
     });
   }
 
+  QueryBuilder<Order, Order, QDistinct> distinctByRetryCount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'retryCount');
+    });
+  }
+
   QueryBuilder<Order, Order, QDistinct> distinctBySessionId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2508,6 +2588,12 @@ extension OrderQueryProperty on QueryBuilder<Order, Order, QQueryProperty> {
   QueryBuilder<Order, String?, QQueryOperations> receiptNumberProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'receiptNumber');
+    });
+  }
+
+  QueryBuilder<Order, int, QQueryOperations> retryCountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'retryCount');
     });
   }
 

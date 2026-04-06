@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
@@ -11,6 +12,10 @@ import 'package:frontend/features/shared/inventory/presentation/widgets/action_c
 import 'package:frontend/features/shared/inventory/presentation/widgets/product_detail_sheet.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/product_stock_card.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/stock_summary_row.dart';
+import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart'
+    show salesStatsProvider;
+import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart';
 
 class ProductStockScreen extends ConsumerStatefulWidget {
   const ProductStockScreen({super.key});
@@ -104,6 +109,7 @@ class _ProductStockScreenState extends ConsumerState<ProductStockScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _BilanHeader(),
           StockSummaryRow(
             totalCount: itemsAsync.valueOrNull?.length ?? 0,
             lowStockCount: lowStockCount,
@@ -293,5 +299,100 @@ class _ProductStockScreenState extends ConsumerState<ProductStockScreen> {
         );
       }
     }
+  }
+}
+
+// ── Bilan du Jour KPI header ──────────────────────────────────────────────────
+
+class _BilanHeader extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(salesStatsProvider);
+    final alertsAsync = ref.watch(stockAlertsProvider);
+    final totalCount =
+        ref.watch(catalogProvider).valueOrNull?.length ?? 0;
+
+    final caAujourdhui = statsAsync.when(
+      data: (stats) => stats.isNotEmpty ? stats.last.revenue : 0.0,
+      loading: () => null,
+      error: (_, _) => null,
+    );
+
+    final criticalCount = alertsAsync.when(
+      data: (alerts) => alerts
+          .where((a) => StockAlertsScreen.severity(a) == 2)
+          .length,
+      loading: () => null,
+      error: (_, _) => null,
+    );
+
+    final fmt = NumberFormat.currency(
+        locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0);
+
+    final items = [
+      (
+        icon: Icons.trending_up,
+        label: "CA aujourd'hui",
+        value: caAujourdhui != null ? fmt.format(caAujourdhui) : '—',
+        color: (caAujourdhui ?? 0) > 0 ? AppColors.success : null,
+      ),
+      (
+        icon: Icons.inventory_2_outlined,
+        label: 'Articles',
+        value: '$totalCount',
+        color: null,
+      ),
+      (
+        icon: Icons.warning_amber_rounded,
+        label: 'Stock critique',
+        value: criticalCount != null ? '$criticalCount' : '—',
+        color: (criticalCount ?? 0) > 0 ? AppColors.error : AppColors.success,
+      ),
+    ];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: Row(
+        children: items.map((kpi) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(kpi.icon,
+                        size: 14, color: AppColors.textSecondary),
+                    const SizedBox(height: 4),
+                    Text(
+                      kpi.value,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: kpi.color,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      kpi.label,
+                      style: const TextStyle(
+                          fontSize: 9, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }

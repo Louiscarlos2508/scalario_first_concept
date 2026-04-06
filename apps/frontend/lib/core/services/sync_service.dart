@@ -168,6 +168,9 @@ class SyncService {
     // Reprend uniquement quand un _TokenUpdate est reçu.
     bool authSuspended = false;
 
+    // Fix 6 — empêche deux passes concurrentes (ex: sync_now pendant un full pull).
+    bool isSyncing = false;
+
     Timer? periodicTimer;
 
     void notifyStatus(SyncUiStatus status) {
@@ -176,8 +179,11 @@ class SyncService {
 
     void runSyncPass() async {
       // Fix 4 — ne pas relancer de pass si l'auth est suspendue.
-      if (authSuspended) return;
+      // Fix 6 — ignorer si une passe est déjà en cours (évite la double-écriture).
+      if (authSuspended || isSyncing) return;
+      isSyncing = true;
 
+      bool authExpiredDuringRun = false;
       try {
         notifyStatus(SyncUiStatus.syncing);
         print('[SyncIsolate] Starting sync pass...');
@@ -207,12 +213,16 @@ class SyncService {
         periodicTimer = null;
         sendPort.send(_AuthExpiredEvent(e.statusCode));
         print('[SyncIsolate] Auth expired (${e.statusCode}) — sync suspended');
-        return; // Ne pas planifier le prochain pass.
+        authExpiredDuringRun = true;
       } catch (e) {
         retryCount++;
         notifyStatus(SyncUiStatus.error);
         print('[SyncIsolate] Sync failed (retry $retryCount): $e');
+      } finally {
+        isSyncing = false;
       }
+
+      if (authExpiredDuringRun) return;
 
       final delaySeconds =
           baseDelay.inSeconds * (1 << (retryCount > 6 ? 6 : retryCount));

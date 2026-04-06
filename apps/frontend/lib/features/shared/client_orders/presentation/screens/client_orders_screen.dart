@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_detail_screen.dart';
 import 'package:frontend/features/shared/client_orders/presentation/screens/client_order_form_screen.dart';
@@ -51,8 +52,8 @@ class _ClientOrdersScreenState extends ConsumerState<ClientOrdersScreen> {
     final ordersAsync = ref.watch(clientOrdersProvider(_filter));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Commandes'),
+      appBar: ScalarioAppBar(
+        title: 'Commandes',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

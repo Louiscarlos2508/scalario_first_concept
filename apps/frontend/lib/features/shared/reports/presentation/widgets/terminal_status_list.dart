@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/theme/app_theme.dart';
-import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
+import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart'
+    show activeSessionsProvider;
 import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
     show dashboardNavigationProvider;
 
@@ -71,13 +72,12 @@ class TerminalStatusList extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  key: const Key('terminal_history_link'),
+                  key: const Key('terminal_sessions_link'),
                   onPressed: () {
-                    ref.read(showSessionHistoryProvider.notifier).state = true;
-                    ref.read(dashboardNavigationProvider.notifier).state = 'reports';
+                    ref.read(dashboardNavigationProvider.notifier).state = 'sessions';
                   },
-                  icon: const Icon(Icons.history, size: 16),
-                  label: const Text('Historique des sessions'),
+                  icon: const Icon(Icons.point_of_sale_outlined, size: 16),
+                  label: const Text('Voir toutes les sessions'),
                 ),
               ),
             ],

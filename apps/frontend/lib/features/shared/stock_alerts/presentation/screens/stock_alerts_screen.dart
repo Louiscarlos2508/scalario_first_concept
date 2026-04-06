@@ -5,17 +5,52 @@ import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/widgets/create_purchase_order_sheet.dart';
 
-class StockAlertsScreen extends ConsumerWidget {
+// ── Filter enum ───────────────────────────────────────────────────────────────
+
+enum _AlertFilter { all, stock, caisse }
+
+extension _AlertFilterLabel on _AlertFilter {
+  String get label {
+    switch (this) {
+      case _AlertFilter.all:
+        return 'Toutes';
+      case _AlertFilter.stock:
+        return 'Stock';
+      case _AlertFilter.caisse:
+        return 'Caisse';
+    }
+  }
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
+class StockAlertsScreen extends ConsumerStatefulWidget {
   const StockAlertsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StockAlertsScreen> createState() => _StockAlertsScreenState();
+
+  /// Returns 2 = critical, 1 = warning.
+  static int severity(Map<String, dynamic> alert) {
+    final stock = (alert['stockQuantity'] as num?)?.toDouble() ?? 0;
+    if (stock <= 0) return 2;
+    final threshold = (alert['minStockLevel'] as num?)?.toDouble() ?? 0;
+    if (threshold > 0 && stock <= threshold * 0.4) return 2;
+    return 1;
+  }
+}
+
+class _StockAlertsScreenState extends ConsumerState<StockAlertsScreen> {
+  _AlertFilter _filter = _AlertFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final alertsAsync = ref.watch(stockAlertsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: ScalarioAppBar(
-        title: 'Alertes stock',
+        title: 'Centre d\'alertes',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -31,41 +66,59 @@ class StockAlertsScreen extends ConsumerWidget {
               style: const TextStyle(color: AppColors.error)),
         ),
         data: (alerts) {
-          if (alerts.isEmpty) {
-            return const _EmptyState();
-          }
-
           // Sort: critical first
           final sorted = [...alerts]..sort((a, b) {
-              final aScore = _severity(a);
-              final bScore = _severity(b);
-              return bScore.compareTo(aScore);
+              return StockAlertsScreen.severity(b)
+                  .compareTo(StockAlertsScreen.severity(a));
             });
 
+          // Apply filter — "caisse" has no data yet, shows empty state
+          final filtered = _filter == _AlertFilter.caisse
+              ? <Map<String, dynamic>>[]
+              : sorted; // "stock" and "all" show the same stock alerts for now
+
           final criticalCount =
-              sorted.where((a) => _severity(a) == 2).length;
+              sorted.where((a) => StockAlertsScreen.severity(a) == 2).length;
           final warningCount = sorted.length - criticalCount;
 
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(stockAlertsProvider),
             child: CustomScrollView(
               slivers: [
-                // Summary bar
+                // Filter chips
                 SliverToBoxAdapter(
-                  child: _SummaryBar(
-                      criticalCount: criticalCount,
-                      warningCount: warningCount),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  sliver: SliverList.builder(
-                    itemCount: sorted.length,
-                    itemBuilder: (context, index) => _AlertCard(
-                      alert: sorted[index],
-                      key: Key('alert_${sorted[index]['catalogItemId']}'),
-                    ),
+                  child: _FilterBar(
+                    selected: _filter,
+                    onChanged: (f) => setState(() => _filter = f),
+                    alertCount: sorted.length,
                   ),
                 ),
+
+                // Summary bar
+                if (filtered.isNotEmpty)
+                  SliverToBoxAdapter(
+                    child: _SummaryBar(
+                      criticalCount: criticalCount,
+                      warningCount: warningCount,
+                    ),
+                  ),
+
+                // Alert list or empty state
+                if (filtered.isEmpty)
+                  SliverFillRemaining(
+                    child: _EmptyState(filter: _filter),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    sliver: SliverList.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) => _AlertCard(
+                        alert: filtered[index],
+                        key: Key('alert_${filtered[index]['catalogItemId']}'),
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -73,14 +126,54 @@ class StockAlertsScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  /// Returns 2 = critical, 1 = warning.
-  static int _severity(Map<String, dynamic> alert) {
-    final stock = (alert['stockQuantity'] as num?)?.toDouble() ?? 0;
-    if (stock <= 0) return 2;
-    final threshold = (alert['minStockLevel'] as num?)?.toDouble() ?? 0;
-    if (threshold > 0 && stock <= threshold * 0.4) return 2;
-    return 1;
+// ── Filter bar ────────────────────────────────────────────────────────────────
+
+class _FilterBar extends StatelessWidget {
+  final _AlertFilter selected;
+  final ValueChanged<_AlertFilter> onChanged;
+  final int alertCount;
+
+  const _FilterBar({
+    required this.selected,
+    required this.onChanged,
+    required this.alertCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: _AlertFilter.values.map((f) {
+          final isSelected = f == selected;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(f.label),
+              selected: isSelected,
+              onSelected: (_) => onChanged(f),
+              selectedColor: AppColors.primary.withValues(alpha: 0.15),
+              labelStyle: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color:
+                    isSelected ? AppColors.primary : AppColors.textSecondary,
+              ),
+              backgroundColor: Colors.white,
+              side: BorderSide(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.5)
+                    : AppColors.border,
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }
 
@@ -178,19 +271,27 @@ class _AlertCard extends StatelessWidget {
     final stock = (alert['stockQuantity'] as num?)?.toDouble() ?? 0;
     final threshold = (alert['minStockLevel'] as num?)?.toDouble() ?? 0;
     final deficit = (alert['deficit'] as num?)?.toDouble() ?? 0;
+    final normalLevel = (alert['normalStockLevel'] as num?)?.toDouble() ??
+        (threshold > 0 ? threshold * 4 : (stock + deficit) * 2);
     final catalogItemId = alert['catalogItemId']?.toString();
-    final isCritical = StockAlertsScreen._severity(alert) == 2;
+    final isCritical = StockAlertsScreen.severity(alert) == 2;
 
-    final severityColor = isCritical ? AppColors.error : Colors.orange.shade700;
+    final severityColor =
+        isCritical ? AppColors.error : Colors.orange.shade700;
     final severityLabel = isCritical ? 'Critique' : 'Attention';
 
+    // Stock level as fraction of normal level (clamped 0–1)
+    final stockPct =
+        normalLevel > 0 ? (stock / normalLevel).clamp(0.0, 1.0) : 0.0;
+    final thresholdPct =
+        normalLevel > 0 ? (threshold / normalLevel).clamp(0.0, 1.0) : 0.0;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
-        // Left accent border via BoxDecoration trick
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -204,37 +305,32 @@ class _AlertCard extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Icon
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: severityColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.inventory_2_outlined,
-                          size: 18,
-                          color: severityColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Text
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      // Header row
+                      Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: severityColor.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.inventory_2_outlined,
+                                size: 16, color: severityColor),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 2),
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color:
-                                        severityColor.withValues(alpha: 0.1),
+                                    color: severityColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -247,62 +343,130 @@ class _AlertCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
+                          ),
+                          // Reappro action
+                          TextButton(
+                            key: Key('reappro_$catalogItemId'),
+                            onPressed: () => showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => const CreatePurchaseOrderSheet(),
                             ),
-                            const SizedBox(height: 4),
-                            Row(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                _InfoChip(
-                                    label: 'Stock',
-                                    value: _qty(stock),
-                                    valueColor: severityColor),
-                                const SizedBox(width: 8),
-                                _InfoChip(
-                                    label: 'Seuil',
-                                    value: _qty(threshold)),
-                                const SizedBox(width: 8),
-                                _InfoChip(
-                                    label: 'Déficit',
-                                    value: _qty(deficit),
-                                    valueColor: AppColors.error),
+                                Icon(Icons.add_shopping_cart,
+                                    size: 16, color: AppColors.primary),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Réappro.',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.primary),
+                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      // Action
-                      TextButton(
-                        key: Key('reappro_$catalogItemId'),
-                        onPressed: () => showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (_) => const CreatePurchaseOrderSheet(),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.add_shopping_cart,
-                                size: 18, color: AppColors.primary),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Réappro.',
-                              style: TextStyle(
-                                  fontSize: 10, color: AppColors.primary),
-                            ),
-                          ],
-                        ),
+
+                      const SizedBox(height: 12),
+
+                      // Stock info chips
+                      Row(
+                        children: [
+                          _InfoChip(
+                              label: 'En stock',
+                              value: _qty(stock),
+                              valueColor: severityColor),
+                          const SizedBox(width: 8),
+                          _InfoChip(
+                              label: 'Seuil',
+                              value: _qty(threshold)),
+                          const SizedBox(width: 8),
+                          _InfoChip(
+                              label: 'Déficit',
+                              value: _qty(deficit),
+                              valueColor: AppColors.error),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Stock level progress bar
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Niveau actuel',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textSecondary)),
+                              Text(
+                                '${(stockPct * 100).round()}%',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: severityColor),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Stack(
+                            children: [
+                              // Background track
+                              Container(
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: AppColors.border,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                              // Threshold marker
+                              if (thresholdPct > 0)
+                                Positioned(
+                                  left: null,
+                                  child: FractionallySizedBox(
+                                    widthFactor: thresholdPct,
+                                    child: Container(
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade200,
+                                        borderRadius:
+                                            BorderRadius.circular(3),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              // Fill bar
+                              FractionallySizedBox(
+                                widthFactor: stockPct,
+                                child: Container(
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: severityColor,
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -352,29 +516,40 @@ class _InfoChip extends StatelessWidget {
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  final _AlertFilter filter;
+  const _EmptyState({required this.filter});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      key: Key('stock_alerts_empty'),
+    final isCaisse = filter == _AlertFilter.caisse;
+    return Center(
+      key: const Key('stock_alerts_empty'),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle_outline, size: 64, color: AppColors.success),
-          SizedBox(height: 16),
+          Icon(
+            isCaisse
+                ? Icons.point_of_sale_outlined
+                : Icons.check_circle_outline,
+            size: 64,
+            color: isCaisse ? AppColors.textSecondary : AppColors.success,
+          ),
+          const SizedBox(height: 16),
           Text(
-            'Aucun stock critique',
-            style: TextStyle(
+            isCaisse ? 'Aucune alerte caisse' : 'Aucun stock critique',
+            style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textSecondary),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
-            'Tous vos articles sont au-dessus\ndes seuils d\'alerte.',
+            isCaisse
+                ? 'Les alertes de caisse apparaîtront ici.'
+                : 'Tous vos articles sont au-dessus\ndes seuils d\'alerte.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
         ],
       ),

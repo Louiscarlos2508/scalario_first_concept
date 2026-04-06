@@ -79,6 +79,7 @@ class SessionSyncAdapter implements SyncAdapter {
 
         // Step 2 — if session is CLOSED, push close as well
         if (session.status == 'CLOSED' && session.closingBalance != null) {
+          final variance = session.variance ?? 0;
           final closeResponse = await http
               .post(
                 Uri.parse('$baseUrl/retail/sessions/close/${session.uuid}'),
@@ -88,6 +89,13 @@ class SessionSyncAdapter implements SyncAdapter {
                   if (session.theoreticalBalance != null)
                     'theoreticalBalance': session.theoreticalBalance,
                   if (session.variance != null) 'variance': session.variance,
+                  // Backend requires varianceExplanation when variance != 0.
+                  // Use the explanation saved at close time; fall back to a
+                  // generic string only if none was recorded (should not happen).
+                  if (variance != 0)
+                    'varianceExplanation': session.varianceExplanation?.isNotEmpty == true
+                        ? session.varianceExplanation!
+                        : 'Écart constaté en fermeture',
                 }),
               )
               .timeout(const Duration(seconds: 10));

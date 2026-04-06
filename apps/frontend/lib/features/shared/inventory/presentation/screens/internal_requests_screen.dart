@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/inventory/presentation/providers/internal_requests_provider.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/internal_request_card.dart';
 import 'package:frontend/features/shared/inventory/presentation/widgets/internal_request_form.dart';
@@ -38,8 +39,8 @@ class _InternalRequestsScreenState
     final canSeeToProcess = role == 'manager' || role == 'owner';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Réapprovisionnement interne'),
+      appBar: ScalarioAppBar(
+        title: 'Réapprovisionnement interne',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -49,6 +50,9 @@ class _InternalRequestsScreenState
         ],
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Mes demandes'),
             Tab(key: Key('ir_tab_to_process'), text: 'À traiter'),

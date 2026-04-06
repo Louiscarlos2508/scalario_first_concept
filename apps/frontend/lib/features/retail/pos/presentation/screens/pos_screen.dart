@@ -328,10 +328,8 @@ class _PosAppBar extends ConsumerWidget implements PreferredSizeWidget {
     this.onLogout,
   });
 
-  // 2-row toolbar on narrow screens (mobile), 1-row on wide (desktop/tablet)
   @override
-  Size get preferredSize =>
-      Size.fromHeight((isNarrow ? 78 : 56) + statusBarHeight);
+  Size get preferredSize => Size.fromHeight(56 + statusBarHeight);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -467,32 +465,22 @@ class _PosAppBar extends ConsumerWidget implements PreferredSizeWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: isNarrow
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Row 1 — branding
-                      Row(children: [
-                        logo,
+                ? SizedBox(
+                    height: 56,
+                    child: Row(children: [
+                      logo,
+                      const SizedBox(width: 8),
+                      wordmark,
+                      const SizedBox(width: 8),
+                      if (sessionPill != null) ...[
+                        Container(width: 1, height: 14, color: Colors.white12),
                         const SizedBox(width: 8),
-                        wordmark,
-                        const SizedBox(width: 10),
-                        Container(width: 1, height: 16, color: Colors.white12),
-                        const SizedBox(width: 10),
-                        subtitle,
-                      ]),
-                      const SizedBox(height: 2),
-                      // Row 2 — session + actions (height capped to avoid tap-target overflow)
-                      SizedBox(
-                        height: 38,
-                        child: Row(children: [
-                          if (sessionPill != null) ...[sessionPill, const SizedBox(width: 6)],
-                          const Spacer(),
-                          if (sessionOpen) ...[const SyncStatusIndicator(), const SizedBox(width: 2)],
-                          compactMenuBtn,
-                        ]),
-                      ),
-                    ],
+                        sessionPill,
+                      ],
+                      const Spacer(),
+                      if (sessionOpen) ...[const SyncStatusIndicator(), const SizedBox(width: 2)],
+                      compactMenuBtn,
+                    ]),
                   )
                 : SizedBox(
                     height: 56,

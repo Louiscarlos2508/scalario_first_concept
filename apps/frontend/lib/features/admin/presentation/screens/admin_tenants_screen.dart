@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../providers/admin_providers.dart';
 import '../../data/models/tenant_summary.dart';
 import 'new_tenant_form.dart';
@@ -20,15 +21,19 @@ class _AdminTenantsScreenState extends ConsumerState<AdminTenantsScreen> {
     final tenantsAsync = ref.watch(adminTenantsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tenants'),
+      appBar: ScalarioAppBar(
+        title: 'Tenants',
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: DropdownButton<String?>(
               value: _billingFilter,
               underline: const SizedBox.shrink(),
-              hint: const Text('Tous'),
+              dropdownColor: const Color(0xFF1E293B),
+              style: const TextStyle(color: Colors.white),
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+              hint: const Text('Tous',
+                  style: TextStyle(color: Colors.white70)),
               items: const [
                 DropdownMenuItem(value: null, child: Text('Tous')),
                 DropdownMenuItem(value: 'overdue', child: Text('En retard')),

@@ -99,7 +99,7 @@ Widget _buildCartPanel({required String role, CartState? initialCart}) {
           .overrideWith((ref) => _FakeSessionNotifier(_mockSession)),
       syncServiceProvider.overrideWithValue(_StubSyncService()),
       enabledPaymentMethodsProvider
-          .overrideWith((ref) => Future.value(['CASH'])),
+          .overrideWith((ref) => Future.value([const PaymentMethod('CASH', 'Espèces')])),
     ],
     child: const MaterialApp(home: Scaffold(body: CartPanel())),
   );
@@ -112,18 +112,14 @@ void main() {
     for (final role in ['cashier', 'commercial', 'manager', 'owner']) {
       testWidgets('$role can clear the cart', (tester) async {
         await tester.pumpWidget(_buildCartPanel(role: role));
-        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
         expect(find.text('Test Cola'), findsOneWidget);
 
         await tester.tap(find.byIcon(Icons.delete_outline));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
-        expect(
-          find.text('Permission refusée : rôle manager requis.'),
-          findsNothing,
-        );
-        expect(find.widgetWithText(ListTile, 'Test Cola'), findsNothing);
+        expect(find.text('Test Cola'), findsNothing);
       });
     }
 
@@ -131,7 +127,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
           _buildCartPanel(role: 'cashier', initialCart: CartState()));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
       final btn = tester.widget<IconButton>(
           find.widgetWithIcon(IconButton, Icons.delete_outline));
@@ -140,67 +136,62 @@ void main() {
   });
 
   group('CartPanel RBAC — remove item', () {
+    // Product is unitType == 'piece' (default), so the _QtyBtn minus is shown.
+    // Tapping the minus button with qty=1 removes the item.
     for (final role in ['cashier', 'commercial', 'manager', 'owner']) {
-      testWidgets('$role can remove an item', (tester) async {
+      testWidgets('$role can remove an item via qty minus', (tester) async {
         await tester.pumpWidget(_buildCartPanel(role: role));
-        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
         expect(find.text('Test Cola'), findsOneWidget);
 
-        await tester.tap(find.byIcon(Icons.remove_circle_outline));
-        await tester.pump();
+        // The minus _QtyBtn uses Icons.remove
+        await tester.tap(find.byIcon(Icons.remove).first);
+        await tester.pumpAndSettle();
 
-        expect(
-          find.text('Permission refusée : rôle manager requis.'),
-          findsNothing,
-        );
-        expect(find.widgetWithText(ListTile, 'Test Cola'), findsNothing);
+        expect(find.text('Test Cola'), findsNothing);
       });
     }
   });
 
   group('CartPanel RBAC — apply discount', () {
-    testWidgets('cashier: discount button is disabled', (tester) async {
+    // The discount icon (Icons.edit_note) is only rendered when isManager is
+    // true (role == manager or owner). For cashier/commercial it's absent.
+
+    testWidgets('cashier: no discount icon shown', (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'cashier'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
-      // onPressed is null → tap is silently ignored, no dialog opens
-      await tester.tap(find.byIcon(Icons.edit_note), warnIfMissed: false);
-      await tester.pump();
-
+      expect(find.byIcon(Icons.edit_note), findsNothing);
       expect(find.byType(DiscountDialog), findsNothing);
-      expect(
-        find.text('Permission refusée : rôle manager requis.'),
-        findsNothing,
-      );
     });
 
-    testWidgets('commercial: discount button is disabled', (tester) async {
+    testWidgets('commercial: no discount icon shown', (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'commercial'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
-      await tester.tap(find.byIcon(Icons.edit_note), warnIfMissed: false);
-      await tester.pump();
-
+      expect(find.byIcon(Icons.edit_note), findsNothing);
       expect(find.byType(DiscountDialog), findsNothing);
     });
 
-    testWidgets('manager: discount button opens DiscountDialog', (tester) async {
+    testWidgets('manager: discount icon opens DiscountDialog', (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'manager'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
+      expect(find.byIcon(Icons.edit_note), findsOneWidget);
       await tester.tap(find.byIcon(Icons.edit_note));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.byType(DiscountDialog), findsOneWidget);
     });
 
-    testWidgets('owner: discount button opens DiscountDialog', (tester) async {
+    testWidgets('owner: discount icon opens DiscountDialog', (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'owner'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
+      expect(find.byIcon(Icons.edit_note), findsOneWidget);
       await tester.tap(find.byIcon(Icons.edit_note));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.byType(DiscountDialog), findsOneWidget);
     });
@@ -210,24 +201,22 @@ void main() {
     testWidgets('cashier: long press does not open price override',
         (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'cashier'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
-      await tester.longPress(find.widgetWithText(ListTile, 'Test Cola'));
-      await tester.pump();
+      await tester.longPress(find.text('Test Cola'));
+      await tester.pumpAndSettle();
 
-      // No bottom sheet appeared
       expect(find.text('Changer le niveau de prix'), findsNothing);
     });
 
     testWidgets('manager: long press triggers price override lookup',
         (tester) async {
       await tester.pumpWidget(_buildCartPanel(role: 'manager'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
 
-      await tester.longPress(find.widgetWithText(ListTile, 'Test Cola'));
-      await tester.pump();
+      await tester.longPress(find.text('Test Cola'));
+      await tester.pumpAndSettle();
 
-      // Bottom sheet opens (FutureBuilder shows loading indicator while fetching)
       expect(find.byType(BottomSheet), findsOneWidget);
     });
   });

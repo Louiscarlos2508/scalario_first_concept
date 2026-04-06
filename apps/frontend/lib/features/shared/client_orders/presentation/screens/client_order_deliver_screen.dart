@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order_line.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
@@ -93,8 +94,8 @@ class _ClientOrderDeliverScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Livrer ${widget.order.orderNumber}'),
+      appBar: ScalarioAppBar(
+        title: 'Livrer ${widget.order.orderNumber}',
       ),
       body: Column(
         children: [

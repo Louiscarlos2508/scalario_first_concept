@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 130" width="440" height="260">
-  <rect width="220" height="130" fill="#2B2B2B"/>
   <!-- S icon: 4 cubic bezier arcs, translate(28, 16) -->
   <g fill="none" stroke-width="13" stroke-linecap="round">
     <!-- Yellow: top arc -->

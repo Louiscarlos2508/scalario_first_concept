@@ -18,7 +18,8 @@ class PosSession {
   double? closingBalance;
   double? theoreticalBalance;
   double? variance;
-  
+  String? varianceExplanation;
+
   String? deviceId;
 
   // OPEN, CLOSED, SYNCED
@@ -58,6 +59,7 @@ class PosSession {
       ..closingBalance = json['closing_balance'] != null ? ((json['closing_balance'] is num) ? (json['closing_balance'] as num).toDouble() : double.parse(json['closing_balance']?.toString() ?? '0')) : null
       ..theoreticalBalance = json['theoretical_balance'] != null ? ((json['theoretical_balance'] is num) ? (json['theoretical_balance'] as num).toDouble() : double.parse(json['theoretical_balance']?.toString() ?? '0')) : null
       ..variance = json['variance'] != null ? ((json['variance'] is num) ? (json['variance'] as num).toDouble() : double.parse(json['variance']?.toString() ?? '0')) : null
+      ..varianceExplanation = json['variance_explanation']?.toString() ?? json['varianceExplanation']?.toString()
       ..deviceId = json['device_id']?.toString() ?? json['deviceId']?.toString()
       ..status = json['status']?.toString() ?? 'OPEN'
       ..syncStatus = SyncStatus.values.firstWhere((e) => e.name == json['syncStatus'], orElse: () => SyncStatus.synced)

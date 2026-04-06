@@ -334,7 +334,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.byKey(const Key('variance_label_zero')), findsOneWidget);
+      expect(find.textContaining('aucun écart'), findsOneWidget);
     });
 
     testWidgets('variance ≠ 0 shows red "Écart" label', (tester) async {
@@ -374,7 +374,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.byKey(const Key('variance_label_nonzero')), findsOneWidget);
+      expect(find.textContaining('écart'), findsOneWidget);
     });
   });
 

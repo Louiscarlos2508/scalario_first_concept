@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../providers/admin_providers.dart';
 import '../../data/models/business_type_summary.dart';
 
@@ -54,7 +55,7 @@ class BusinessTypesScreen extends ConsumerWidget {
     final typesAsync = ref.watch(businessTypesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Types métier')),
+      appBar: const ScalarioAppBar(title: 'Types métier'),
       body: typesAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Erreur : $e')),
@@ -180,7 +181,7 @@ class _BusinessTypeDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(type.name)),
+      appBar: ScalarioAppBar(title: type.name),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

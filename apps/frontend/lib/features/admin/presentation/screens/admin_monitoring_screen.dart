@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import '../../data/models/monitoring_health.dart';
 import '../providers/admin_providers.dart';
 
@@ -12,7 +13,7 @@ class AdminMonitoringScreen extends ConsumerWidget {
     final billingAsync = ref.watch(billingSummaryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Monitoring plateforme')),
+      appBar: const ScalarioAppBar(title: 'Monitoring plateforme'),
       body: healthAsync.when(
         data: (health) => RefreshIndicator(
           onRefresh: () async {

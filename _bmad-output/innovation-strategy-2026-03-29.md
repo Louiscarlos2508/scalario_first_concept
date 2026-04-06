@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-29
 **Strategist:** Carlos-simpore
-**Strategic Focus:** Devenir la plateforme de gestion universelle pour toute organisation dans le monde — commerce, industrie, éducation, santé, hôtellerie, mines, agriculture, ONG, coopératives, services et tout type d'organisation — via une architecture Core + Modules + Templates Sectoriels + AI Configuration universelle. Offline-first, mobile-first, configurable sans code, accessible à tout intégrateur local via une couche AI qui remplace les consultants SAP/Odoo à 500€/jour. Beachhead : UEMOA Retail (marché le plus difficile = validation universelle). Expansion progressive : tous secteurs, tous continents.
+**Strategic Focus:** Devenir la première plateforme no-code de génération de business apps pour toute organisation dans le monde — commerce, industrie, éducation, santé, hôtellerie, mines, agriculture, ONG, coopératives, services et tout type d'organisation. H1 livre un ERP codé solide (Retail UEMOA). H2–H3 transforme l'ERP en plateforme à engines : UI Engine, Auth Engine, Workflow Engine, Config Engine, Data Engine, AI Engine, Event Engine — permettant à tout intégrateur de créer une business app complète via configuration AI, sans code. Offline-first, mobile-first, accessible à tout intégrateur local via une couche AI qui remplace les consultants SAP/Odoo à 500€/jour. Beachhead : UEMOA Retail (marché le plus difficile = validation universelle). Expansion progressive : tous secteurs, tous continents.
 
 ---
 
@@ -342,7 +342,7 @@ Les deux simultanément avec règles claires. Blandine = client Premium qui fina
 
 Option C — Dual Track séquentiel (pas simultané). Blandine (Premium) = référence de crédibilité. Standard (boissons, cosmétiques) = moteur de volume. Même core produit, features Premium en modules opt-in, jamais en dépendances du Standard.
 
-Stratégie en une phrase : Scalario est le premier système de gestion modulaire multi-département conçu nativement pour les PMEs africaines — offline-first, mobile-first, configurable sans code, tier Standard pour toute structure multi-rôles, tier Premium pour les verticaux complexes — distribué via un réseau d'intégrateurs locaux de confiance en zone UEMOA.
+Stratégie en une phrase : Scalario est une plateforme no-code qui génère des business apps de gestion pour toute organisation — offline-first, mobile-first, pilotée par engines (UI, Auth, Workflow, Data, AI, Config) — distribuée via des intégrateurs locaux qui créent des apps métier en langage naturel, sans code. H1 = ERP Retail solide. H2–H3 = plateforme à engines. Le produit évolue d'un ERP vers une usine à business apps.
 
 Règle de fer : Core Standard (POS + Stock + Rôles + Caisse) jamais pollué par la complexité Premium. Features Premium = extensions opt-in.
 
@@ -809,46 +809,108 @@ CARLOS SIMPORÉ | BUILDER          SCALARIO
 - **Python SDK** : second SDK pour développeurs data/ML qui intègrent avec Scalario.
 - **PostgreSQL self-hosted option** : pour clients enterprise qui exigent la souveraineté des données (réglementation locale, données sensibles).
 
-### Stack Cible H3+
+### Architecture Engine Platform — De l'ERP à l'Usine à Business Apps
 
+> **Vision :** Scalario n'est pas un ERP configurable — c'est une plateforme à engines qui génère des business apps. Un intégrateur ne "configure pas un ERP", il crée une business app pour son client en assemblant des modules, un workflow, un RBAC, et un layout SDUI — via AI. Blandine n'utilise pas "Scalario ERP" — elle utilise une app de gestion de boutique frais générée par la plateforme Scalario.
+
+#### Les Engines de la Plateforme
+
+| Engine | Rôle | Ce qu'il fait concrètement |
+|---|---|---|
+| **Core Engine** | Cerveau central | Orchestre tous les engines, module registry, cycle de vie des apps, routing |
+| **Config Engine** | Source de vérité unique | Charge/livre les configs (JSON/DB), détermine ce que chaque tenant voit et peut faire — le plus critique de tous |
+| **UI Engine** | Rendu dynamique | Lit le layout JSON (SDUI), construit l'UI Flutter dynamiquement selon la config tenant |
+| **Auth Engine** | Sécurité à granularité fine | RBAC → ABAC, évalue les permissions, filtre les capabilities jusqu'au bouton/widget |
+| **Workflow Engine** | Logique métier configurable | Machine à états documents (ticket → facture), transitions, règles de passage, ownership par étape (SOD) |
+| **Data Engine** | Schéma extensible no-code | Champs custom, entités custom, relations — sans ALTER TABLE ni migration Prisma |
+| **AI Engine** | Interface de configuration universelle | Transforme texte naturel → config pour tous les engines. Invoque des actions modules (function calling) |
+| **Event Engine** | Automation inter-modules | Bus d'événements + triggers configurables : "quand vente validée → décrémenter stock + notifier propriétaire + écriture comptable" |
+| **Notification Engine** | Communication règles-based | Qui reçoit quoi, quand, par quel canal (push, WhatsApp, SMS) — configurable par template |
+| **Reporting Engine** | Dashboards configurables | Rapports et indicateurs générés selon le template sectoriel — pas des écrans hardcodés |
+| **Integration Engine** | Connecteurs externes | Payment adapters (Wave, Orange Money), SMS, WhatsApp API, export comptable — pattern adapter |
+| **Sync Engine** | Offline-first | Outbox, delta sync, résolution de conflits — déjà opérationnel ✅ |
+| **Template Engine** | Empaquetage et distribution | Empaquette toutes les configs de tous les engines en un bundle réutilisable = une business app complète |
+
+#### Architecture en Couches
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│                   TEMPLATE LAYER                         │
+│  Template Engine empaquette :                            │
+│  UI + Auth + Workflow + Data + Events + Notifications    │
+│  = une business app complète, distribuable               │
+├─────────────────────────────────────────────────────────┤
+│                   AI LAYER                                │
+│  AI Engine : texte → config pour TOUS les engines        │
+├─────────────────────────────────────────────────────────┤
+│                   ENGINE LAYER                            │
+│  ┌──────┐ ┌──────┐ ┌────────┐ ┌──────┐ ┌─────────┐     │
+│  │  UI  │ │ Auth │ │Workflow│ │ Data │ │  Event  │     │
+│  │Engine│ │Engine│ │ Engine │ │Engine│ │  Engine │     │
+│  └──────┘ └──────┘ └────────┘ └──────┘ └─────────┘     │
+│  ┌────────────┐ ┌───────────┐ ┌──────────────────┐      │
+│  │Notification│ │ Reporting │ │  Integration     │      │
+│  │  Engine    │ │  Engine   │ │  Engine          │      │
+│  └────────────┘ └───────────┘ └──────────────────┘      │
+├─────────────────────────────────────────────────────────┤
+│                   CORE ENGINE                            │
+│  Orchestrateur + Module Registry + Config Engine         │
+├─────────────────────────────────────────────────────────┤
+│                   SYSTEM LAYER                           │
+│  Backend (NestJS) + Sync Engine + Database               │
+│  (PostgreSQL + Isar) + Queue (Redis/BullMQ)              │
+└─────────────────────────────────────────────────────────┘
 ```
-Mobile / Desktop    →  Flutter (offline-first, utilisateurs terrain)
-Web Dashboard       →  Next.js/React (analytics, comptabilité, admin enterprise)
-API Core            →  NestJS (modules Scalario, business logic)
-AI Layer            →  Python/FastAPI (Claude API, Excel parsing, ML)
-Base de données     →  Supabase/PostgreSQL (multi-tenant, RLS, Realtime)
-Queue               →  Redis/BullMQ (jobs async)
-SDK Intégrateurs    →  REST API + TypeScript SDK + Python SDK
+
+#### Construction par Horizon — Chaque Engine
+
+| Engine | H1 (codé) | H2 (configurable) | H3 (no-code) |
+| --- | --- | --- | --- |
+| **Core** | Module registry ✅ | Config Engine centralisé | Orchestrateur complet |
+| **UI** | Écrans Flutter codés | SDUI basique (layouts JSON) | UI Engine complet (tout composant via JSON) |
+| **Auth** | RBAC hardcodé → dynamique | Capabilities + filtering SDUI | ABAC complet (conditions contextuelles) |
+| **Workflow** | États ad-hoc par module | Workflow Engine configurable | Configurable par template, tout document |
+| **Data** | Schema Prisma fixe | Champs custom via JSON extensible | Data Engine no-code (entités custom) |
+| **AI** | — | AI Config + function calling | AI Engine complet (texte → business app) |
+| **Event** | Logique inline dans services | Event bus NestJS | Triggers configurables par template |
+| **Notification** | WhatsApp/push codés | Règles par template | Notification Engine configurable |
+| **Reporting** | Rapports Flutter codés | Dashboard configurable par type | Reporting Engine (widgets composables) |
+| **Integration** | Adapters codés (Cash) | Adapter registry (Wave, OrangeMoney) | Connecteurs configurables par template |
+| **Sync** | ✅ Opérationnel | ✅ | ✅ |
+| **Template** | — | Template Builder basique (AI-driven) | Template Engine complet (marketplace) |
+
+> **Règle fondamentale :** en H1 on code. En H2 on rend configurable ce qui était codé. En H3 tout est no-code. Le produit n'est jamais cassé entre les horizons — c'est une progression additive.
+
+#### Engine Critique : Data Engine (le différenciateur no-code)
+
+Le Data Engine est ce qui sépare un "ERP configurable" d'une "plateforme no-code". Sans lui, chaque champ custom (taux de frotte, numéro d'ordonnance, taille/couleur) reste un `ALTER TABLE` + migration Prisma. Avec lui, c'est une configuration stockée en base.
+
+Principe : les entités métier (produit, client, commande, employé) ont un schema de base fixe + un `extension_fields JSONB` configurable par template. Le UI Engine sait rendre ces champs dynamiquement. Le Workflow Engine sait les utiliser dans les transitions. Le Reporting Engine sait les inclure dans les rapports.
+
+Exemple : Template "Boutique Frais" configure `extension_fields: [{ key: "taux_frotte", type: "percentage", label: "Taux de Frotte", formula: "prix_revient / (1 - taux_frotte)" }]` sur l'entité CatalogItem. Aucune migration Prisma. Le Data Engine livre ce champ au UI Engine → Flutter le rend. Le Workflow Engine peut conditionner une transition sur ce champ ("si taux_frotte > 20% → alerte").
+
+#### Trajectoire Microservices (inchangée)
+
+**Principe :** commencer avec un monolithe modulaire, extraire uniquement quand la douleur est prouvée.
+
+- **H1** — Monolithe modulaire NestJS. Les engines sont des modules NestJS internes avec frontières propres.
+- **H2** — Premier microservice naturel : Python/FastAPI pour l'AI Engine. NestJS appelle Python via HTTP ou queue Redis.
+- **H3** — Extraction conditionnelle si bottleneck prouvé (Reporting, Notifications, Sync à l'échelle). Condition : équipe 3+ devs backend.
+- **H4+** — Microservices complets si équipe 5+ devs ET scaling prouvé par les données.
+
+### Stack Cible H3+ (Platform)
+
+```text
+Mobile / Desktop    →  Flutter + UI Engine (offline-first, business apps terrain)
+Web Dashboard       →  Next.js/React (Super Admin, Template Builder, analytics enterprise)
+Core Engines        →  NestJS (Auth, Workflow, Data, Config, Event, Core, Notification, Reporting)
+AI Engine           →  Python/FastAPI (Claude API, NL→Config, Excel parsing, ML)
+Integration Engine  →  NestJS adapters (Wave, OrangeMoney, WhatsApp, SMS, compta export)
+Sync Engine         →  Isar (local) + Supabase Realtime (server)
+Database            →  Supabase/PostgreSQL (multi-tenant, RLS) + Redis/BullMQ (jobs async)
+Template Engine     →  Config bundles (JSON/DB) distribuables via marketplace
+SDK (H4)            →  REST API + TypeScript SDK + Python SDK (custom modules)
 ```
-
-### Trajectoire Microservices
-
-**Principe de base :** ne pas commencer avec des microservices. Commencer avec un monolithe modulaire, extraire uniquement quand la douleur est prouvée par des signaux concrets (lenteur, scaling bottleneck, équipe qui grandit).
-
-**H1 — Monolithe modulaire (maintenant)**
-NestJS est modulaire par nature — les modules NestJS créent des frontières internes propres sans complexité opérationnelle de microservices. Déploiement unique. Maintenance simple pour un fondateur solo.
-
-**H2 — Premier microservice naturel (déjà planifié)**
-Le service Python/FastAPI pour l'AI est le premier microservice de facto. NestJS appelle Python via HTTP ou queue Redis. La séparation est naturelle (deux langages, deux responsabilités distinctes). C'est le bon premier pas.
-
-```
-H2 : NestJS (core business) + Python/FastAPI (AI) + Redis/BullMQ (jobs async)
-```
-
-**H3 — Extraction conditionnelle (18–36 mois, si signaux prouvés)**
-Extraire uniquement si un service spécifique crée un bottleneck réel :
-
-| Service à extraire | Signal déclencheur |
-|---|---|
-| Reporting / Analytics | Requêtes lourdes pénalisent le POS temps réel |
-| Notifications / WhatsApp | Volume élevé ralentit le core API |
-| Sync Engine offline | Charge sync de 100+ clients simultanés |
-| Search / Indexing | Recherche full-text lente à l'échelle |
-
-Condition préalable : équipe backend 3+ développeurs. Un fondateur solo ne peut pas gérer 5 microservices en production.
-
-**H4+ — Architecture microservices complète**
-Justifiée uniquement si équipe 5+ devs backend ET besoins de scaling prouvés par les données. À ce stade le monolithe NestJS a été progressivement découpé en services indépendants le long des frontières naturelles des modules Scalario.
 
 ### Multi-Boutique : Modèles de Stock Supportés
 

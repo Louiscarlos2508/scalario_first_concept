@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 
 String _fcfa(double amount) => NumberFormat.currency(
@@ -36,10 +37,13 @@ class _ReservationsScreenState extends ConsumerState<ReservationsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Réservations'),
+      appBar: ScalarioAppBar(
+        title: 'Réservations',
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'En cours'),
             Tab(text: 'Complétées'),

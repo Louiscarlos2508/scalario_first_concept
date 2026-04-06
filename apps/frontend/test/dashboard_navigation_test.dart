@@ -46,8 +46,6 @@ final _items = [
 ];
 
 /// Build DashboardShell constrained to [width] inside a Scaffold body.
-/// SizedBox(width) ensures LayoutBuilder inside DashboardShell receives
-/// accurate maxWidth constraints regardless of the test surface size.
 Widget _buildShellAt(double width) {
   return ProviderScope(
     overrides: [
@@ -75,42 +73,43 @@ Widget _buildShellAt(double width) {
 
 void main() {
   group('DashboardShell — responsive navigation (AC1, AC3, AC4)', () {
-    // AC1 + AC3: phone breakpoint → BottomNavigationBar
+    // AC1 + AC3: phone breakpoint → NavigationBar (Material 3)
     testWidgets(
-        'At 400dp: BottomNavigationBar present, NavigationRail absent',
+        'At 400dp: NavigationBar present, no sidebar',
         (tester) async {
       await tester.pumpWidget(_buildShellAt(400));
-      await tester.pump();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
-      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsOneWidget);
+      // No sidebar (tablet layout uses a 220dp-wide dark container)
+      expect(find.text('Déconnexion'), findsNothing);
     });
 
-    // AC1 + AC4: tablet breakpoint → NavigationRail
+    // AC1 + AC4: tablet breakpoint → custom dark sidebar
     testWidgets(
-        'At 800dp: NavigationRail present, BottomNavigationBar absent',
+        'At 800dp: sidebar present, NavigationBar absent',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 960));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_buildShellAt(800));
-      await tester.pump(); // resolve FutureProvider
-      await tester.pump(const Duration(milliseconds: 50)); // settle layout
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-      expect(find.byType(NavigationRail), findsOneWidget);
-      expect(find.byType(BottomNavigationBar), findsNothing);
+      // Sidebar shows sign-out button
+      expect(find.text('Déconnexion'), findsOneWidget);
+      // No bottom NavigationBar
+      expect(find.byType(NavigationBar), findsNothing);
     });
 
-    // Story 17-3: "Dépenses" nav destination present in rail
+    // Story 17-3: "Dépenses" nav destination present in sidebar
     testWidgets(
-        'At 800dp: NavigationRail includes "Dépenses" destination',
+        'At 800dp: sidebar includes "Dépenses" destination',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 960));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_buildShellAt(800));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
       expect(find.text('Dépenses'), findsOneWidget);
     });

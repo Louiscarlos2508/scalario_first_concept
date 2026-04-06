@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -18,9 +16,12 @@ import 'package:frontend/features/retail/pos/presentation/providers/pos_provider
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/business_type/utils/role_label_utils.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
-import 'package:frontend/features/shared/inventory/presentation/providers/loss_locations_provider.dart';
 import 'package:frontend/features/retail/pos/presentation/screens/team_pin_screen.dart';
 import 'package:frontend/core/printing/printer_setup_sheet.dart';
+import 'package:frontend/features/shared/team/presentation/screens/team_screen.dart';
+import 'package:frontend/features/shared/billing/presentation/screens/subscription_screen.dart';
+import 'package:frontend/features/shared/settings/presentation/screens/general_settings_screen.dart';
+import 'package:frontend/features/shared/settings/presentation/screens/integrations_settings_screen.dart';
 
 // ── SharedPreferences keys ────────────────────────────────────────────────────
 const _kReceiptHeader = 'settings_receipt_header';
@@ -117,12 +118,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // Boutique section controllers (pre-filled from API)
-  final _shopNameCtrl = TextEditingController();
-  final _shopPhoneCtrl = TextEditingController();
-  final _shopAddressCtrl = TextEditingController();
   bool _tenantInfoLoaded = false;
-  bool _savingInfo = false;
 
   // Receipt section controllers (local prefs only)
   final _receiptHeaderCtrl = TextEditingController();
@@ -157,9 +153,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   void dispose() {
-    _shopNameCtrl.dispose();
-    _shopPhoneCtrl.dispose();
-    _shopAddressCtrl.dispose();
     _receiptHeaderCtrl.dispose();
     _receiptFooterCtrl.dispose();
     _greenThresholdCtrl.dispose();
@@ -174,9 +167,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _fillTenantInfoOnce(Map<String, dynamic> info) {
     if (_tenantInfoLoaded) return;
     _tenantInfoLoaded = true;
-    _shopNameCtrl.text = info['name'] as String? ?? '';
-    _shopAddressCtrl.text = info['address'] as String? ?? '';
-    _shopPhoneCtrl.text = info['phone'] as String? ?? '';
     // Freshness thresholds (FR84)
     _greenThresholdCtrl.text = (info['freshnessGreenThreshold'] ?? 50).toString();
     _orangeThresholdCtrl.text = (info['freshnessOrangeThreshold'] ?? 20).toString();
@@ -212,49 +202,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   // ── Save actions ────────────────────────────────────────────────────────────
-
-  Future<void> _saveTenantInfo() async {
-    final tenantId = ref.read(activeTenantProvider);
-    if (tenantId == null) return;
-    setState(() => _savingInfo = true);
-    try {
-      final token = _token();
-      final response = await http.patch(
-        Uri.parse('${ApiConstants.baseUrl}/tenant/my-info'),
-        headers: ApiConstants.headers(tenantId: tenantId, token: token),
-        body: jsonEncode({
-          'name': _shopNameCtrl.text.trim(),
-          'address': _shopAddressCtrl.text.trim(),
-          'phone': _shopPhoneCtrl.text.trim(),
-        }),
-      );
-      if (!mounted) return;
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        ref.invalidate(tenantInfoProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Informations boutique enregistrées')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur : ${response.statusCode}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur : $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _savingInfo = false);
-    }
-  }
 
   Future<void> _saveReceiptPrefs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -433,185 +380,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _showInviteDialog(String tenantId) async {
-    final emailCtrl = TextEditingController();
-    final nameCtrl = TextEditingController();
-    String selectedRole = 'commercial';
-    bool sending = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Inviter un membre'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email *'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Nom complet (optionnel)'),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                decoration: const InputDecoration(labelText: 'Rôle'),
-                items: const [
-                  DropdownMenuItem(value: 'manager', child: Text('Manager')),
-                  DropdownMenuItem(
-                      value: 'commercial', child: Text('Commercial')),
-                ],
-                onChanged: (v) =>
-                    setDialogState(() => selectedRole = v ?? selectedRole),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Annuler'),
-            ),
-            FilledButton(
-              onPressed: sending
-                  ? null
-                  : () async {
-                      final email = emailCtrl.text.trim();
-                      if (email.isEmpty) return;
-                      setDialogState(() => sending = true);
-                      try {
-                        final body = <String, dynamic>{
-                          'email': email,
-                          'role': selectedRole,
-                        };
-                        if (nameCtrl.text.trim().isNotEmpty) {
-                          body['fullName'] = nameCtrl.text.trim();
-                        }
-                        final response = await http.post(
-                          Uri.parse(
-                              '${ApiConstants.baseUrl}/organizations/$tenantId/invite'),
-                          headers: ApiConstants.headers(
-                              tenantId: tenantId, token: _token()),
-                          body: jsonEncode(body),
-                        );
-                        if (!ctx.mounted) return;
-                        Navigator.of(ctx).pop();
-                        if (response.statusCode == 200 ||
-                            response.statusCode == 201) {
-                          ref.invalidate(tenantUsersProvider);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Invitation envoyée')),
-                            );
-                          }
-                        } else {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Erreur : ${response.statusCode}'),
-                              backgroundColor: AppColors.error,
-                            ));
-                          }
-                        }
-                      } catch (e) {
-                        if (ctx.mounted) Navigator.of(ctx).pop();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('Erreur : $e'),
-                            backgroundColor: AppColors.error,
-                          ));
-                        }
-                      }
-                    },
-              child: const Text('Inviter'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showChangeRoleDialog(
-      String tenantId, String userId, String currentRole) async {
-    String selectedRole =
-        currentRole == 'owner' ? 'manager' : currentRole;
-    bool saving = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Changer le rôle'),
-          content: DropdownButtonFormField<String>(
-            value: selectedRole,
-            decoration: const InputDecoration(labelText: 'Nouveau rôle'),
-            items: const [
-              DropdownMenuItem(value: 'manager', child: Text('Manager')),
-              DropdownMenuItem(
-                  value: 'commercial', child: Text('Commercial')),
-            ],
-            onChanged: (v) =>
-                setDialogState(() => selectedRole = v ?? selectedRole),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Annuler'),
-            ),
-            FilledButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      setDialogState(() => saving = true);
-                      try {
-                        final response = await http.patch(
-                          Uri.parse(
-                              '${ApiConstants.baseUrl}/organizations/$tenantId/members/$userId'),
-                          headers: ApiConstants.headers(
-                              tenantId: tenantId, token: _token()),
-                          body: jsonEncode({'role': selectedRole}),
-                        );
-                        if (!ctx.mounted) return;
-                        Navigator.of(ctx).pop();
-                        if (response.statusCode == 200 ||
-                            response.statusCode == 204) {
-                          ref.invalidate(tenantUsersProvider);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Rôle mis à jour')),
-                            );
-                          }
-                        } else {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Erreur : ${response.statusCode}'),
-                              backgroundColor: AppColors.error,
-                            ));
-                          }
-                        }
-                      } catch (e) {
-                        if (ctx.mounted) Navigator.of(ctx).pop();
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('Erreur : $e'),
-                            backgroundColor: AppColors.error,
-                          ));
-                        }
-                      }
-                    },
-              child: const Text('Enregistrer'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ── Build ───────────────────────────────────────────────────────────────────
 
   @override
@@ -653,7 +421,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── 1. Compte (tous les rôles) ───────────────────────────────────
+            // ── 1. Compte ────────────────────────────────────────────────────
             _section('Compte', [
               _infoRow(
                 'Email',
@@ -680,93 +448,114 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ]),
 
-            // ── 2. Mon abonnement (owner seulement) ──────────────────────────
+            // ── 2. Liens vers écrans dédiés (owner) ──────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
-              _buildBillingSection(),
+              _section('Boutique & Configuration', [
+                _navTile(
+                  context,
+                  icon: Icons.store_outlined,
+                  title: 'Paramètres généraux',
+                  subtitle: 'Nom, adresse, devise, zone dangereuse',
+                  screen: const GeneralSettingsScreen(),
+                ),
+                const Divider(height: 20),
+                _navTile(
+                  context,
+                  icon: Icons.people_outline,
+                  title: 'Équipe & Utilisateurs',
+                  subtitle: 'Rôles, accès, invitations',
+                  screen: const TeamScreen(),
+                ),
+                const Divider(height: 20),
+                _navTile(
+                  context,
+                  icon: Icons.credit_card_outlined,
+                  title: 'Mon abonnement',
+                  subtitle: 'Plan, facturation, historique',
+                  screen: const SubscriptionScreen(),
+                ),
+                const Divider(height: 20),
+                _navTile(
+                  context,
+                  icon: Icons.link_outlined,
+                  title: 'Intégrations',
+                  subtitle: 'Orange Money, Moov Money, API',
+                  screen: const IntegrationsSettingsScreen(),
+                ),
+              ]),
             ],
 
-            // ── 3. Boutique ──────────────────────────────────────────────────
-            if (isOwner || isManager) ...[
-              const SizedBox(height: 16),
-              _buildBoutiqueSection(isOwner, tenantInfo),
-            ],
-
-            // ── 3b. Type de commerce (owner : lecture seule) ─────────────────
-            if (isOwner) ...[
-              const SizedBox(height: 16),
-              _buildBusinessTypeSection(tenantInfo),
-            ],
-
-            // ── 3c. Équipe (manager : lecture seule) ─────────────────────────
             if (isManager) ...[
               const SizedBox(height: 16),
-              _buildTeamSection(roleLabels),
+              _section('Boutique', [
+                _navTile(
+                  context,
+                  icon: Icons.people_outline,
+                  title: 'Équipe',
+                  subtitle: 'Voir les membres de l\'équipe',
+                  screen: const TeamScreen(),
+                ),
+              ]),
             ],
 
-            // ── 4. Utilisateurs (owner seulement) ────────────────────────────
-            if (isOwner) ...[
-              const SizedBox(height: 16),
-              _buildUsersSection(roleLabels),
-            ],
-
-            // ── 4e. Caissiers & PINs (owner seulement) ───────────────────────
+            // ── 3. Caissiers & PINs ───────────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildTeamPinSection(context),
             ],
 
-            // ── 4f. Sécurité (owner seulement) ───────────────────────────────
+            // ── 4. Sécurité ───────────────────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildSecuritySection(),
             ],
 
-            // ── 4b. Fraîcheur (owner seulement) ──────────────────────────────
+            // ── 5. Fraîcheur ──────────────────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildFreshnessSection(),
             ],
 
-            // ── 4c. Récapitulatif journalier (owner seulement) ────────────────
+            // ── 6. Récapitulatif journalier ───────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildNotificationSection(),
             ],
 
-            // ── 4d. Politique de retours (owner seulement) ───────────────────
+            // ── 7. Politique de retours ───────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildReturnPolicySection(),
             ],
 
-            // ── 5. Modules actifs (owner + manager) ──────────────────────────
+            // ── 8. Modules actifs ─────────────────────────────────────────────
             if (isOwner || isManager) ...[
               const SizedBox(height: 16),
               _buildModulesSection(activeModules),
             ],
 
-            // ── 6. Méthodes de paiement (owner seulement) ───────────────────
+            // ── 9. Méthodes de paiement ───────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildPaymentMethodsSection(),
             ],
 
-            // ── 7. Reçu (owner seulement) ────────────────────────────────────
+            // ── 10. Reçu ─────────────────────────────────────────────────────
             if (isOwner) ...[
               const SizedBox(height: 16),
               _buildReceiptSection(),
             ],
 
-            // ── 7b. Imprimante (tous les rôles — config locale à l'appareil) ──
+            // ── 11. Imprimante ────────────────────────────────────────────────
             const SizedBox(height: 16),
             _buildPrinterSection(),
 
-            // ── 7. Synchronisation (tous les rôles) ──────────────────────────
+            // ── 12. Synchronisation ───────────────────────────────────────────
             const SizedBox(height: 16),
             _buildSyncSection(syncStatus, outboxCount, lastSync),
 
-            // ── 8. Application (tous les rôles) ──────────────────────────────
+            // ── 13. Application ───────────────────────────────────────────────
             const SizedBox(height: 16),
             _buildAppSection(),
 
@@ -778,207 +567,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   // ── Section builders ───────────────────────────────────────────────────────
-
-  Widget _buildBillingSection() {
-    final billingAsync = ref.watch(tenantBillingProvider);
-    return _section('Mon abonnement', [
-      billingAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Text('Données indisponibles'),
-        data: (billing) {
-          final plan = billing['plan'] as Map<String, dynamic>? ?? {};
-          final planName = plan['name'] as String? ?? billing['plan'] as String? ?? '—';
-          final rawPrice = plan['monthlyPrice'];
-          final priceNum = rawPrice is num
-              ? rawPrice.toInt()
-              : int.tryParse(rawPrice?.toString() ?? '') ?? 0;
-          final priceStr =
-              priceNum > 0 ? '${_formatNumber(priceNum)} FCFA/mois' : '';
-          final billingStatus = billing['billingStatus'] as String? ?? 'trial';
-          final trialEndsAt = _parseDate(billing['trialEndsAt']);
-          final paidUntil = _parseDate(billing['paidUntil']);
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _infoRow(
-                'Plan',
-                priceStr.isNotEmpty ? '$planName ($priceStr)' : planName,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text('Statut : ', style: AppTextStyles.bodySmall),
-                  const SizedBox(width: 4),
-                  _billingBadge(billingStatus),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _billingDateRow(billingStatus, trialEndsAt, paidUntil),
-            ],
-          );
-        },
-      ),
-    ]);
-  }
-
-  Widget _buildBoutiqueSection(
-    bool isOwner,
-    AsyncValue<Map<String, dynamic>> tenantInfo,
-  ) {
-    final info = tenantInfo.valueOrNull ?? {};
-    final businessTypeName = info['businessTypeName'] as String? ?? '—';
-    final currency = info['currency'] as String? ?? 'XOF';
-
-    if (isOwner) {
-      return _section('Boutique', [
-        _field(
-          controller: _shopNameCtrl,
-          label: 'Nom de la boutique',
-          hint: 'Ma Boutique',
-        ),
-        const SizedBox(height: 12),
-        _field(
-          controller: _shopAddressCtrl,
-          label: 'Adresse',
-          hint: 'Ouaga, Secteur 30',
-          maxLines: 2,
-        ),
-        const SizedBox(height: 12),
-        _field(
-          controller: _shopPhoneCtrl,
-          label: 'Téléphone',
-          hint: '+226 70 00 00 00',
-          keyboardType: TextInputType.phone,
-        ),
-        const SizedBox(height: 12),
-        _infoRow('Type', businessTypeName),
-        _infoRow('Devise', 'FCFA ($currency)'),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _savingInfo ? null : _saveTenantInfo,
-            child: _savingInfo
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Enregistrer les modifications'),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Divider(),
-        const SizedBox(height: 4),
-        _LossLocationsEditor(),
-      ]);
-    }
-
-    // Manager : lecture seule
-    return _section('Boutique', [
-      _infoRow('Nom', info['name'] as String? ?? '—'),
-      _infoRow('Adresse', info['address'] as String? ?? '—'),
-      _infoRow('Type', businessTypeName),
-    ]);
-  }
-
-  Widget _buildUsersSection(Map<String, dynamic> roleLabels) {
-    final tenantId = ref.read(activeTenantProvider) ?? '';
-    final usersAsync = ref.watch(tenantUsersProvider);
-    return _section('Utilisateurs', [
-      usersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Text(
-          'Données indisponibles',
-          style: AppTextStyles.bodySmall
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        data: (users) {
-          return Column(
-            children: [
-              if (users.isEmpty)
-                Text(
-                  'Aucun utilisateur trouvé.',
-                  style: AppTextStyles.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-              ...users.map((u) {
-                final email = u['email'] as String? ?? '—';
-                final fullName = u['fullName'] as String?;
-                final userId = u['userId'] as String? ?? '';
-                final userRole = u['role'] as String? ?? '';
-                final label = getRoleLabel(userRole, roleLabels);
-                final displayName = (fullName != null && fullName.isNotEmpty)
-                    ? fullName
-                    : email;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: Icon(Icons.person_outline,
-                            size: 16, color: AppColors.textSecondary),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(displayName, style: AppTextStyles.bodySmall),
-                            if (fullName != null && fullName.isNotEmpty)
-                              Text(
-                                email,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 11),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        label,
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.primary),
-                      ),
-                      if (userRole != 'owner')
-                        PopupMenuButton<String>(
-                          iconSize: 18,
-                          padding: EdgeInsets.zero,
-                          tooltip: 'Actions',
-                          onSelected: (action) {
-                            if (action == 'change_role') {
-                              _showChangeRoleDialog(tenantId, userId, userRole);
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: 'change_role',
-                              child: Text('Changer le rôle'),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.person_add_outlined),
-                  label: const Text('Inviter un membre'),
-                  onPressed: () => _showInviteDialog(tenantId),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    ]);
-  }
 
   Widget _buildFreshnessSection() {
     return _section('Seuils de fraîcheur (Lots)', [
@@ -1087,74 +675,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ]);
   }
 
-  Widget _buildTeamSection(Map<String, dynamic> roleLabels) {
-    final usersAsync = ref.watch(tenantUsersProvider);
-    return _section('Équipe', [
-      usersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => Text(
-          'Données indisponibles',
-          style: AppTextStyles.bodySmall
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        data: (users) {
-          if (users.isEmpty) {
-            return Text(
-              'Aucun membre.',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: AppColors.textSecondary),
-            );
-          }
-          return Column(
-            children: users.map((u) {
-              final email = u['email'] as String? ?? '—';
-              final fullName = u['fullName'] as String?;
-              final userRole = u['role'] as String? ?? '';
-              final label = getRoleLabel(userRole, roleLabels);
-              final displayName = (fullName != null && fullName.isNotEmpty)
-                  ? fullName
-                  : email;
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 2),
-                      child: Icon(Icons.person_outline,
-                          size: 16, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(displayName, style: AppTextStyles.bodySmall),
-                          if (fullName != null && fullName.isNotEmpty)
-                            Text(
-                              email,
-                              style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      label,
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.primary),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          );
-        },
-      ),
-    ]);
-  }
-
   Widget _buildTeamPinSection(BuildContext context) {
     return _section('Caissiers & PINs', [
       const Text(
@@ -1204,30 +724,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onChanged: (v) { if (v != null) _saveLockTimeout(v); },
         );
       }),
-    ]);
-  }
-
-  Widget _buildBusinessTypeSection(
-      AsyncValue<Map<String, dynamic>> tenantInfo) {
-    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
-    final info = tenantInfo.valueOrNull ?? {};
-    final btName = config?.name ??
-        info['businessTypeName'] as String? ??
-        '—';
-    final btCode =
-        config?.code ?? info['businessType'] as String? ?? '—';
-
-    return _section('Type de commerce', [
-      _infoRow('Type', btName),
-      _infoRow('Code', btCode),
-      const SizedBox(height: 8),
-      Text(
-        'Pour changer le type de commerce, contactez votre administrateur.',
-        style: AppTextStyles.bodySmall.copyWith(
-          fontStyle: FontStyle.italic,
-          color: AppColors.textSecondary,
-        ),
-      ),
     ]);
   }
 
@@ -1524,6 +1020,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // ── Shared builders ────────────────────────────────────────────────────────
 
+  Widget _navTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget screen,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        radius: 18,
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        child: Icon(icon, size: 18, color: AppColors.primary),
+      ),
+      title: Text(title,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle,
+          style: const TextStyle(
+              fontSize: 12, color: AppColors.textSecondary)),
+      trailing: const Icon(Icons.chevron_right,
+          color: AppColors.textSecondary),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => screen),
+      ),
+    );
+  }
+
   Widget _section(String title, List<Widget> children) {
     return Card(
       child: Padding(
@@ -1566,70 +1089,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       keyboardType: keyboardType,
       maxLines: maxLines,
       decoration: InputDecoration(labelText: label, hintText: hint),
-    );
-  }
-
-  Widget _billingBadge(String status) {
-    final (label, color) = switch (status) {
-      'trial' => ('Essai', Colors.blue),
-      'active' => ('Actif', Colors.green),
-      'overdue' => ('Impayé', Colors.orange),
-      'suspended' => ('Suspendu', Colors.red),
-      _ => (status, Colors.grey),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodySmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _billingDateRow(
-    String status,
-    DateTime? trialEndsAt,
-    DateTime? paidUntil,
-  ) {
-    final now = DateTime.now();
-    String text;
-    Color? color;
-
-    if (status == 'trial' && trialEndsAt != null) {
-      final days = trialEndsAt.difference(now).inDays;
-      final dateStr = DateFormat('dd/MM/yyyy').format(trialEndsAt);
-      if (days >= 0) {
-        text = 'Essai jusqu\'au $dateStr ($days jours restants)';
-      } else {
-        text = 'Essai expiré — contactez votre administrateur';
-        color = AppColors.error;
-      }
-    } else if (status == 'active' && paidUntil != null) {
-      final days = paidUntil.difference(now).inDays;
-      final dateStr = DateFormat('dd/MM/yyyy').format(paidUntil);
-      text = 'Payé jusqu\'au $dateStr ($days jours restants)';
-    } else if (status == 'overdue') {
-      final expiredDays =
-          paidUntil != null ? now.difference(paidUntil).inDays : null;
-      text = expiredDays != null
-          ? 'Expiré depuis $expiredDays jours — contactez votre administrateur'
-          : 'Expiré — contactez votre administrateur';
-      color = AppColors.error;
-    } else {
-      return const SizedBox.shrink();
-    }
-
-    return Text(
-      text,
-      style: AppTextStyles.bodySmall.copyWith(color: color),
     );
   }
 
@@ -1712,141 +1171,5 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  DateTime? _parseDate(dynamic raw) {
-    if (raw == null) return null;
-    return DateTime.tryParse(raw as String);
-  }
-
-  String _formatNumber(int n) {
-    return NumberFormat('#,###', 'fr_FR').format(n).replaceAll(',', ' ');
-  }
 }
 
-// ── FR87 — Éditeur d'emplacements de perte (owner seulement) ─────────────────
-
-class _LossLocationsEditor extends ConsumerStatefulWidget {
-  // ignore: prefer_const_constructors_in_immutables
-  _LossLocationsEditor();
-
-  @override
-  ConsumerState<_LossLocationsEditor> createState() =>
-      _LossLocationsEditorState();
-}
-
-class _LossLocationsEditorState extends ConsumerState<_LossLocationsEditor> {
-  final _newLocCtrl = TextEditingController();
-  bool _saving = false;
-
-  static const _suggestedDefaults = ['Magasin', 'Rayon', 'Transit', 'Stockroom'];
-
-  @override
-  void dispose() {
-    _newLocCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _patch(List<String> locations) async {
-    setState(() => _saving = true);
-    try {
-      final tenantId = ref.read(activeTenantProvider);
-      final response = await http.patch(
-        Uri.parse('${ApiConstants.baseUrl}/tenant/loss-locations'),
-        headers: ApiConstants.headers(tenantId: tenantId, token: _token()),
-        body: jsonEncode({'locations': locations}),
-      );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        ref.invalidate(lossLocationsProvider);
-      }
-    } catch (_) {} finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  void _add(List<String> current) {
-    final val = _newLocCtrl.text.trim();
-    if (val.isEmpty || current.contains(val)) return;
-    _newLocCtrl.clear();
-    _patch([...current, val]);
-  }
-
-  void _remove(List<String> current, String loc) {
-    _patch(current.where((l) => l != loc).toList());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final locations = ref.watch(lossLocationsProvider).valueOrNull ?? [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Emplacements de perte', style: AppTextStyles.labelSmall),
-        const SizedBox(height: 4),
-        const Text(
-          'Optionnel. Si configurés, le champ devient obligatoire lors d\'une déclaration de perte.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        if (locations.isEmpty) ...[
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: _suggestedDefaults
-                .map((d) => ActionChip(
-                      label: Text(d),
-                      avatar: const Icon(Icons.add, size: 16),
-                      onPressed: _saving ? null : () => _patch(_suggestedDefaults),
-                    ))
-                .toList(),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Appuyez sur une suggestion pour charger tous les défauts.',
-            style: TextStyle(fontSize: 11, color: Colors.grey),
-          ),
-        ] else
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: locations
-                .map((loc) => Chip(
-                      label: Text(loc),
-                      deleteIcon: const Icon(Icons.close, size: 16),
-                      onDeleted: _saving ? null : () => _remove(locations, loc),
-                    ))
-                .toList(),
-          ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _newLocCtrl,
-                decoration: const InputDecoration(
-                  hintText: 'Nouvel emplacement...',
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => _add(locations),
-              ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: _saving
-                  ? const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () => _add(locations),
-                    ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}

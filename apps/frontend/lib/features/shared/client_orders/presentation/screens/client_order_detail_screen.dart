@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
 import 'package:frontend/features/shared/client_orders/domain/models/client_order_line.dart';
@@ -36,8 +37,8 @@ class ClientOrderDetailScreen extends ConsumerWidget {
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Détail commande'),
+      appBar: ScalarioAppBar(
+        title: 'Détail commande',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

@@ -45,6 +45,16 @@ class AuthRepository {
     );
   }
 
+  /// Verifies [currentPassword] by re-authenticating. Throws if wrong.
+  Future<void> verifyPassword(String currentPassword) async {
+    final email = currentUser?.email;
+    if (email == null) throw Exception('Utilisateur non connecté');
+    await _supabase.auth.signInWithPassword(
+      email: email,
+      password: currentPassword,
+    );
+  }
+
   Future<void> changePassword(String newPassword) async {
     await _supabase.auth.updateUser(
       UserAttributes(password: newPassword),

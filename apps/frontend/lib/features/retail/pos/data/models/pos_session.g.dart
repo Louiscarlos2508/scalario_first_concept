@@ -82,6 +82,11 @@ const PosSessionSchema = CollectionSchema(
       id: 12,
       name: r'variance',
       type: IsarType.double,
+    ),
+    r'varianceExplanation': PropertySchema(
+      id: 13,
+      name: r'varianceExplanation',
+      type: IsarType.string,
     )
   },
   estimateSize: _posSessionEstimateSize,
@@ -130,6 +135,12 @@ int _posSessionEstimateSize(
   bytesCount += 3 + object.tenantId.length * 3;
   bytesCount += 3 + object.userId.length * 3;
   bytesCount += 3 + object.uuid.length * 3;
+  {
+    final value = object.varianceExplanation;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -152,6 +163,7 @@ void _posSessionSerialize(
   writer.writeString(offsets[10], object.userId);
   writer.writeString(offsets[11], object.uuid);
   writer.writeDouble(offsets[12], object.variance);
+  writer.writeString(offsets[13], object.varianceExplanation);
 }
 
 PosSession _posSessionDeserialize(
@@ -176,6 +188,7 @@ PosSession _posSessionDeserialize(
   object.userId = reader.readString(offsets[10]);
   object.uuid = reader.readString(offsets[11]);
   object.variance = reader.readDoubleOrNull(offsets[12]);
+  object.varianceExplanation = reader.readStringOrNull(offsets[13]);
   return object;
 }
 
@@ -214,6 +227,8 @@ P _posSessionDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 12:
       return (reader.readDoubleOrNull(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -223,13 +238,13 @@ const _PosSessionsyncStatusEnumValueMap = {
   r'pending': r'pending',
   r'synced': r'synced',
   r'error': r'error',
-  r'failed': r'failed', // Fix 3 — additive
+  r'failed': r'failed',
 };
 const _PosSessionsyncStatusValueEnumMap = {
   r'pending': SyncStatus.pending,
   r'synced': SyncStatus.synced,
   r'error': SyncStatus.error,
-  r'failed': SyncStatus.failed, // Fix 3 — additive
+  r'failed': SyncStatus.failed,
 };
 
 Id _posSessionGetId(PosSession object) {
@@ -1859,6 +1874,160 @@ extension PosSessionQueryFilter
       ));
     });
   }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'varianceExplanation',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'varianceExplanation',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'varianceExplanation',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'varianceExplanation',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'varianceExplanation',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'varianceExplanation',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterFilterCondition>
+      varianceExplanationIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'varianceExplanation',
+        value: '',
+      ));
+    });
+  }
 }
 
 extension PosSessionQueryObject
@@ -2026,6 +2195,20 @@ extension PosSessionQuerySortBy
   QueryBuilder<PosSession, PosSession, QAfterSortBy> sortByVarianceDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'variance', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy>
+      sortByVarianceExplanation() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'varianceExplanation', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy>
+      sortByVarianceExplanationDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'varianceExplanation', Sort.desc);
     });
   }
 }
@@ -2203,6 +2386,20 @@ extension PosSessionQuerySortThenBy
       return query.addSortBy(r'variance', Sort.desc);
     });
   }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy>
+      thenByVarianceExplanation() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'varianceExplanation', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PosSession, PosSession, QAfterSortBy>
+      thenByVarianceExplanationDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'varianceExplanation', Sort.desc);
+    });
+  }
 }
 
 extension PosSessionQueryWhereDistinct
@@ -2292,6 +2489,14 @@ extension PosSessionQueryWhereDistinct
       return query.addDistinctBy(r'variance');
     });
   }
+
+  QueryBuilder<PosSession, PosSession, QDistinct> distinctByVarianceExplanation(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'varianceExplanation',
+          caseSensitive: caseSensitive);
+    });
+  }
 }
 
 extension PosSessionQueryProperty
@@ -2378,6 +2583,13 @@ extension PosSessionQueryProperty
   QueryBuilder<PosSession, double?, QQueryOperations> varianceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'variance');
+    });
+  }
+
+  QueryBuilder<PosSession, String?, QQueryOperations>
+      varianceExplanationProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'varianceExplanation');
     });
   }
 }

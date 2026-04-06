@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/constants/api_constants.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/return_search_sheet.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
@@ -272,8 +273,8 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     final byMethod = _computeByMethod(items);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historique des ventes'),
+      appBar: ScalarioAppBar(
+        title: 'Historique des ventes',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

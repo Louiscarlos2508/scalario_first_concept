@@ -44,23 +44,29 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
   bool _editingName = false;
 
   // password (Supabase user only)
+  final _pwCurrentCtrl = TextEditingController();
   final _pwCtrl = TextEditingController();
   final _pwConfirmCtrl = TextEditingController();
   bool _pwObscure = true;
   bool _editingPw = false;
+  bool _pwCurrentError = false;
 
   // PIN (all users — employee local OR Supabase user)
+  final _pinCurrentCtrl = TextEditingController();
   final _pinCtrl = TextEditingController();
   final _pinConfirmCtrl = TextEditingController();
   bool _editingPin = false;
+  bool _pinCurrentError = false;
   String? _existingPin; // loaded async for Supabase users
   bool _pinLoaded = false;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _pwCurrentCtrl.dispose();
     _pwCtrl.dispose();
     _pwConfirmCtrl.dispose();
+    _pinCurrentCtrl.dispose();
     _pinCtrl.dispose();
     _pinConfirmCtrl.dispose();
     super.dispose();
@@ -116,17 +122,20 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
   // ── save password ────────────────────────────────────────────────────────────
 
   Future<void> _savePassword() async {
+    final current = _pwCurrentCtrl.text;
+    if (current.isEmpty) { _snack('Entrez votre mot de passe actuel'); return; }
     final pw = _pwCtrl.text;
-    if (pw.length < 6) { _snack('Minimum 6 caractères'); return; }
+    if (pw.length < 6) { _snack('Nouveau mot de passe : minimum 6 caractères'); return; }
     if (pw != _pwConfirmCtrl.text) { _snack('Les mots de passe ne correspondent pas'); return; }
-    setState(() => _saving = true);
+    setState(() { _saving = true; _pwCurrentError = false; });
     try {
+      await ref.read(authRepositoryProvider).verifyPassword(current);
       await ref.read(authRepositoryProvider).changePassword(pw);
-      _pwCtrl.clear(); _pwConfirmCtrl.clear();
+      _pwCurrentCtrl.clear(); _pwCtrl.clear(); _pwConfirmCtrl.clear();
       if (mounted) setState(() => _editingPw = false);
       _snack('Mot de passe mis à jour', success: true);
     } catch (e) {
-      _snack('Erreur : $e');
+      if (mounted) setState(() => _pwCurrentError = true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -134,15 +143,24 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
 
   // ── save PIN ─────────────────────────────────────────────────────────────────
 
-  Future<void> _savePin({EmployeeProfile? employee, String? userId}) async {
+  Future<void> _savePin({EmployeeProfile? employee, String? userId, required bool hasPinSet}) async {
+    // Verify old PIN when one is already set
+    if (hasPinSet) {
+      final current = _pinCurrentCtrl.text;
+      if (current.isEmpty) { _snack('Entrez votre PIN actuel'); return; }
+      final expectedPin = employee?.pin ?? _existingPin;
+      if (current != expectedPin) {
+        setState(() => _pinCurrentError = true);
+        return;
+      }
+    }
     final pin = _pinCtrl.text;
     if (pin.length != 4) { _snack('PIN doit contenir 4 chiffres'); return; }
     if (pin != _pinConfirmCtrl.text) { _snack('Les PIN ne correspondent pas'); return; }
-    setState(() => _saving = true);
+    setState(() { _saving = true; _pinCurrentError = false; });
     try {
       final service = ref.read(employeePinServiceProvider);
       if (employee != null) {
-        // Local employee profile
         final all = await service.getEmployees();
         final updated = all.map((e) => e.id == employee.id
             ? EmployeeProfile(id: e.id, name: e.name, pin: pin, color: e.color)
@@ -152,11 +170,10 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
           id: employee.id, name: employee.name, pin: pin, color: employee.color,
         );
       } else if (userId != null) {
-        // Supabase-authenticated user
         await service.saveUserPin(userId, pin);
         if (mounted) setState(() => _existingPin = pin);
       }
-      _pinCtrl.clear(); _pinConfirmCtrl.clear();
+      _pinCurrentCtrl.clear(); _pinCtrl.clear(); _pinConfirmCtrl.clear();
       if (mounted) setState(() => _editingPin = false);
       _snack('PIN mis à jour', success: true);
     } catch (e) {
@@ -281,27 +298,37 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
           ),
           const SizedBox(height: 8),
           if (_editingPw) ...[
+            // Current password — required for security
             TextFormField(
-              controller: _pwCtrl,
+              controller: _pwCurrentCtrl,
+              autofocus: true,
               obscureText: _pwObscure,
-              decoration: sheetInputDecoration(label: 'Nouveau mot de passe').copyWith(
+              onChanged: (_) { if (_pwCurrentError) setState(() => _pwCurrentError = false); },
+              decoration: sheetInputDecoration(label: 'Mot de passe actuel').copyWith(
                 suffixIcon: IconButton(
                   icon: Icon(_pwObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                   onPressed: () => setState(() => _pwObscure = !_pwObscure),
                 ),
+                errorText: _pwCurrentError ? 'Mot de passe incorrect' : null,
               ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _pwCtrl,
+              obscureText: _pwObscure,
+              decoration: sheetInputDecoration(label: 'Nouveau mot de passe'),
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _pwConfirmCtrl,
               obscureText: _pwObscure,
-              decoration: sheetInputDecoration(label: 'Confirmer le mot de passe'),
+              decoration: sheetInputDecoration(label: 'Confirmer le nouveau mot de passe'),
             ),
             const SizedBox(height: 10),
             _Buttons(
               saving: _saving,
               onCancel: () {
-                _pwCtrl.clear(); _pwConfirmCtrl.clear();
+                _pwCurrentCtrl.clear(); _pwCtrl.clear(); _pwConfirmCtrl.clear();
                 setState(() => _editingPw = false);
               },
               onSave: _saving ? null : _savePassword,
@@ -333,9 +360,27 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
           }(),
           const SizedBox(height: 8),
           if (_editingPin) ...[
+            // Current PIN — only required when one already exists
+            if (isEmployee || _existingPin != null) ...[
+              TextFormField(
+                controller: _pinCurrentCtrl,
+                autofocus: true,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(4),
+                ],
+                onChanged: (_) { if (_pinCurrentError) setState(() => _pinCurrentError = false); },
+                decoration: sheetInputDecoration(label: 'PIN actuel').copyWith(
+                  errorText: _pinCurrentError ? 'PIN incorrect' : null,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
             TextFormField(
               controller: _pinCtrl,
-              autofocus: true,
+              autofocus: !(isEmployee || _existingPin != null),
               obscureText: true,
               keyboardType: TextInputType.number,
               inputFormatters: [
@@ -353,18 +398,19 @@ class _ProfileSheetContentState extends ConsumerState<_ProfileSheetContent> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(4),
               ],
-              decoration: sheetInputDecoration(label: 'Confirmer le PIN'),
+              decoration: sheetInputDecoration(label: 'Confirmer le nouveau PIN'),
             ),
             const SizedBox(height: 10),
             _Buttons(
               saving: _saving,
               onCancel: () {
-                _pinCtrl.clear(); _pinConfirmCtrl.clear();
+                _pinCurrentCtrl.clear(); _pinCtrl.clear(); _pinConfirmCtrl.clear();
                 setState(() => _editingPin = false);
               },
               onSave: _saving ? null : () => _savePin(
                 employee: employee,
                 userId: isEmployee ? null : user?.id,
+                hasPinSet: isEmployee || _existingPin != null,
               ),
             ),
           ] else if (isEmployee || _existingPin != null)

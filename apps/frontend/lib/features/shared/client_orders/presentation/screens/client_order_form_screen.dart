@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/auth/auth_state.dart';
 import 'package:frontend/core/theme/sheet_style.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/pos/data/models/customer.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_orders_provider.dart';
@@ -390,7 +391,7 @@ class _ClientOrderFormScreenState
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle commande')),
+      appBar: const ScalarioAppBar(title: 'Nouvelle commande'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(

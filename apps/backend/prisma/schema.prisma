@@ -545,7 +545,8 @@ model PosSession {
   id                  String       @id @default(uuid()) @db.Uuid
   openingBalance      Decimal      @map("opening_balance") @db.Decimal(10, 2)
   closingBalance      Decimal?     @map("closing_balance") @db.Decimal(10, 2)
-  status              String       @default("OPEN") // OPEN | CLOSED
+  // OPEN | PENDING_MANAGER | PENDING_OWNER | CLOSED | REJECTED
+  status              String       @default("OPEN")
   userId              String       @map("user_id") @db.Uuid
   tenantId            String       @map("tenant_id") @db.Uuid
   deviceId            String?      @map("device_id")
@@ -553,12 +554,40 @@ model PosSession {
   closedAt            DateTime?    @map("closed_at") @db.Timestamptz(6)
   theoreticalBalance  Decimal?     @map("theoretical_balance") @db.Decimal(10, 2)
   variance            Decimal?     @db.Decimal(10, 2)
-  varianceExplanation String?      @map("variance_explanation")
+  varianceExplanation String?      @map("variance_explanation") // cashier note (step 1)
+  // Step 2 — manager validation
+  managerId           String?      @map("manager_id") @db.Uuid
+  managerNote         String?      @map("manager_note")
+  managerValidatedAt  DateTime?    @map("manager_validated_at") @db.Timestamptz(6)
+  // Step 3 — owner signature
+  ownerNote           String?      @map("owner_note")
+  ownerSignedAt       DateTime?    @map("owner_signed_at") @db.Timestamptz(6)
   tenant              Tenant       @relation(fields: [tenantId], references: [id])
   retailSales         RetailSale[]
+  cashMovements       CashMovement[]
 
   @@index([tenantId, userId, status])
   @@map("pos_sessions")
+  @@schema("retail")
+}
+
+model CashMovement {
+  id        String    @id @default(uuid()) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  // IN = entrée caisse (apport de monnaie, avance reçue)
+  // OUT = sortie caisse (dépense, remise à la caisse centrale)
+  type      String    // 'IN' | 'OUT'
+  amount    Decimal   @db.Decimal(10, 2)
+  reason    String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session   PosSession @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([tenantId])
+  @@map("cash_movements")
   @@schema("retail")
 }
 

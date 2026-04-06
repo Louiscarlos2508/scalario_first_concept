@@ -48,6 +48,15 @@ class IsarService {
     });
   }
 
+  /// Atomic clear + insert — prevents duplication when two sync passes overlap.
+  Future<void> replaceProducts(List<Product> products) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.products.clear();
+      await isar.products.putAll(products);
+    });
+  }
+
   Future<void> cleanProducts() async {
     final isar = await db;
     await isar.writeTxn(() async {

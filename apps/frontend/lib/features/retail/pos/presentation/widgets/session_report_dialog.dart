@@ -244,7 +244,7 @@ class SessionReportDialog extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () async {
-                        await ZReportService.generateAndPrintZReport(
+                        await ZReportService.savePdf(
                           summary: summary,
                           physicalCount: physicalCount,
                           userName: userProfile?.fullName ??

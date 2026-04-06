@@ -55,6 +55,23 @@ class _StubAuthRepo implements AuthRepository {
 
   @override
   Future<UserProfile?> getUserProfile() async => null;
+
+  @override
+  Future<AuthResponse> signUp({
+    required String email,
+    required String password,
+    String? fullName,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> updateFullName(String fullName) async {}
+
+  @override
+  Future<void> changePassword(String newPassword) async {}
+
+  @override
+  Future<void> verifyPassword(String currentPassword) async {}
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

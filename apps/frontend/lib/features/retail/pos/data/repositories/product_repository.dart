@@ -47,6 +47,10 @@ class ProductRepository {
     await _isarService.saveProducts(products);
   }
 
+  Future<void> replaceProducts(List<Product> products) async {
+    await _isarService.replaceProducts(products);
+  }
+
   Future<void> clearProducts() async {
     await _isarService.cleanProducts();
   }
