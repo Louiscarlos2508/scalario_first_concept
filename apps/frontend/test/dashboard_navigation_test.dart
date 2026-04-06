@@ -9,6 +9,7 @@ import 'package:frontend/core/models/sync_ui_status.dart';
 import 'package:frontend/core/services/sync_service.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
 
 // ── Test doubles ─────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ Widget _buildShellAt(double width) {
       userProfileProvider.overrideWith((ref) => Future.value(_mockProfile)),
       activeTenantProvider.overrideWith((ref) => 'tenant-nav'),
       syncServiceProvider.overrideWithValue(_StubSyncService()),
+      unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
     child: MaterialApp(
       home: Scaffold(
@@ -93,7 +95,8 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_buildShellAt(800));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       // Sidebar shows sign-out button
       expect(find.text('Déconnexion'), findsOneWidget);
@@ -109,7 +112,8 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_buildShellAt(800));
-      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Dépenses'), findsOneWidget);
     });

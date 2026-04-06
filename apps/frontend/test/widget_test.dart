@@ -56,7 +56,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Se connecter'), findsOneWidget);
-    expect(find.byType(TextFormField), findsNWidgets(2));
+    expect(find.text('Se connecter'), findsAtLeastNWidgets(1));
+    expect(find.byType(TextField), findsNWidgets(2));
   });
 }

@@ -21,6 +21,9 @@ import 'package:frontend/core/sdui/sdui_widget_registry.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/product_grid.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/cart_panel.dart';
 import 'package:frontend/core/providers/payment_methods_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:frontend/features/shared/business_type/data/business_type_config_repository.dart';
+import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 
 class _StubIsarService extends IsarService {
   @override
@@ -85,6 +88,7 @@ final _mockSession = PosSession()
 
 void main() {
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     SduiWidgetRegistry.reset();
     SduiWidgetRegistry.register('product_grid', (_) => const ProductGrid());
     SduiWidgetRegistry.register('cart_panel', (_) => const CartPanel());
@@ -113,6 +117,8 @@ void main() {
           ),
           enabledPaymentMethodsProvider
               .overrideWith((ref) => Future.value([const PaymentMethod('CASH', 'Espèces')])),
+          businessTypeConfigProvider
+              .overrideWith((ref) => Future.value(BusinessTypeConfig.fallback)),
         ],
         child: const MaterialApp(
           home: PosScreen(),
@@ -120,8 +126,13 @@ void main() {
       ),
     );
 
+    // Multiple pumps needed: SessionGuard resolves profile/session,
+    // then SessionLockWrapper loads SharedPreferences async.
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Verify Product Grid
     expect(find.text('Test Cola'), findsOneWidget);

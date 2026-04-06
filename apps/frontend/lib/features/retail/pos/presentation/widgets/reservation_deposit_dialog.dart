@@ -605,8 +605,10 @@ class _SummaryRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 13, color: kSheetSlate500)),
+        Flexible(
+          child: Text(label,
+              style: const TextStyle(fontSize: 13, color: kSheetSlate500)),
+        ),
         Text(value,
             style: TextStyle(
                 fontSize: 14, fontWeight: FontWeight.w700, color: color)),

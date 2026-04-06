@@ -217,6 +217,11 @@ void main() {
   group('ReservationDepositDialog', () {
     testWidgets('champs Client et Acompte présents dans le dialog',
         (tester) async {
+      tester.view.physicalSize = const Size(600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -228,6 +233,11 @@ void main() {
 
     testWidgets('acompte 5% → erreur visible et bouton désactivé',
         (tester) async {
+      tester.view.physicalSize = const Size(600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -249,6 +259,11 @@ void main() {
 
     testWidgets('acompte 30% → aucune erreur et solde restant affiché',
         (tester) async {
+      tester.view.physicalSize = const Size(600, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(_buildDepositDialog(_cartWith10k()));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));

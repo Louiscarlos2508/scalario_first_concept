@@ -196,13 +196,17 @@ void main() {
 
     // Section headers
     expect(find.text('Compte'), findsOneWidget);
-    expect(find.text('Mon abonnement'), findsOneWidget);
-    expect(find.text('Boutique'), findsOneWidget);
-    expect(find.text('Utilisateurs'), findsOneWidget);
+    expect(find.text('Boutique & Configuration'), findsOneWidget);
     expect(find.text('Modules actifs'), findsOneWidget);
     expect(find.text('Reçu'), findsOneWidget);
     expect(find.text('Synchronisation'), findsOneWidget);
     expect(find.text('Application'), findsOneWidget);
+
+    // Nav tiles inside "Boutique & Configuration"
+    expect(find.text('Paramètres généraux'), findsOneWidget);
+    expect(find.text('Équipe & Utilisateurs'), findsOneWidget);
+    expect(find.text('Mon abonnement'), findsOneWidget);
+    expect(find.text('Intégrations'), findsOneWidget);
 
     // Compte section (email/role may also appear in Utilisateurs section)
     expect(find.text('owner@settings.test'), findsAtLeastNWidgets(1));
@@ -236,8 +240,8 @@ void main() {
     expect(find.text('Application'), findsOneWidget);
 
     // Absentes pour manager
+    expect(find.text('Boutique & Configuration'), findsNothing);
     expect(find.text('Mon abonnement'), findsNothing);
-    expect(find.text('Utilisateurs'), findsNothing);
     expect(find.text('Méthodes de paiement'), findsNothing);
     expect(find.text('Reçu'), findsNothing);
   });
@@ -313,8 +317,8 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  // ── T6 : boutique owner — champs éditables ────────────────────────────────
-  testWidgets('Owner : section boutique montre les champs éditables',
+  // ── T6 : boutique owner — nav tiles vers écrans dédiés ─────────────────────
+  testWidgets('Owner : section Boutique & Configuration avec nav tiles',
       (tester) async {
     final syncService = _StubSyncService();
 
@@ -322,10 +326,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(
-      find.widgetWithText(FilledButton, 'Enregistrer les modifications'),
-      findsOneWidget,
-    );
+    expect(find.text('Paramètres généraux'), findsOneWidget);
+    expect(find.text('Équipe & Utilisateurs'), findsOneWidget);
+    expect(find.text('Mon abonnement'), findsOneWidget);
   });
 
   // ── T7 : rôle affiché en label lisible ───────────────────────────────────
@@ -354,11 +357,10 @@ void main() {
     expect(find.text('Application'), findsOneWidget);
 
     // Sections owner-only absentes
+    expect(find.text('Boutique & Configuration'), findsNothing);
     expect(find.text('Mon abonnement'), findsNothing);
-    expect(find.text('Utilisateurs'), findsNothing);
     expect(find.text('Méthodes de paiement'), findsNothing);
     expect(find.text('Reçu'), findsNothing);
-    expect(find.text('Type de commerce'), findsNothing);
   });
 
   // ── T9 : manager boutique en lecture seule ────────────────────────────────
@@ -392,20 +394,20 @@ void main() {
 
     // Sections non visibles pour commercial
     expect(find.text('Boutique'), findsNothing);
+    expect(find.text('Boutique & Configuration'), findsNothing);
     expect(find.text('Équipe'), findsNothing);
     expect(find.text('Mon abonnement'), findsNothing);
     expect(find.text('Modules actifs'), findsNothing);
-    expect(find.text('Type de commerce'), findsNothing);
   });
 
-  // ── T11 : owner voit Type de commerce ────────────────────────────────────
-  testWidgets('Owner : section Type de commerce présente', (tester) async {
+  // ── T11 : owner voit Intégrations dans Boutique & Configuration ──────────
+  testWidgets('Owner : section Intégrations présente', (tester) async {
     final syncService = _StubSyncService();
     await tester.pumpWidget(_buildScreen(syncService));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Type de commerce'), findsOneWidget);
-    expect(find.text('Épicerie & Alimentation'), findsAtLeastNWidgets(1));
+    expect(find.text('Intégrations'), findsOneWidget);
+    expect(find.textContaining('Orange Money'), findsAtLeastNWidgets(1));
   });
 }
