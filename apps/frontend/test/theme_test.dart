@@ -20,17 +20,56 @@ void main() {
     test('surface is white #FFFFFF', () {
       expect(AppColors.surface, const Color(0xFFFFFFFF));
     });
-    test('background is Fond app #F5F5F5', () {
-      expect(AppColors.background, const Color(0xFFF5F5F5));
+    test('background is slate-100 #F1F5F9', () {
+      expect(AppColors.background, const Color(0xFFF1F5F9));
     });
-    test('textPrimary is #212121', () {
-      expect(AppColors.textPrimary, const Color(0xFF212121));
+    test('textPrimary is slate-900 #0F172A', () {
+      expect(AppColors.textPrimary, const Color(0xFF0F172A));
     });
-    test('textSecondary is #757575', () {
-      expect(AppColors.textSecondary, const Color(0xFF757575));
+    test('textSecondary is slate-500 #64748B', () {
+      expect(AppColors.textSecondary, const Color(0xFF64748B));
     });
-    test('border is #E0E0E0', () {
-      expect(AppColors.border, const Color(0xFFE0E0E0));
+    test('border is slate-200 #E2E8F0', () {
+      expect(AppColors.border, const Color(0xFFE2E8F0));
+    });
+    test('appbar is slate-900 #0F172A', () {
+      expect(AppColors.appbar, const Color(0xFF0F172A));
+    });
+    test('role colors are defined', () {
+      expect(AppColors.rolePatron, const Color(0xFF92400E));
+      expect(AppColors.roleGerant, const Color(0xFF1E40AF));
+      expect(AppColors.roleVendeur, const Color(0xFF166534));
+      expect(AppColors.roleCommercial, const Color(0xFF6B21A8));
+    });
+    test('brand colors match logo monogramme', () {
+      expect(AppColors.brandYellow, const Color(0xFFFFCC00));
+      expect(AppColors.brandBlue, const Color(0xFF1A73E8));
+      expect(AppColors.brandGreen, const Color(0xFF34A853));
+      expect(AppColors.brandRed, const Color(0xFFEA4335));
+    });
+    test('payment channels are defined', () {
+      expect(AppColors.payCash, const Color(0xFF34A853));
+      expect(AppColors.payWave, const Color(0xFF1DC8DB));
+      expect(AppColors.payOrangeMoney, const Color(0xFFFF6F00));
+      expect(AppColors.payWhatsapp, const Color(0xFF25D366));
+    });
+  });
+
+  group('AppSpacing', () {
+    test('scale is 4-based', () {
+      expect(AppSpacing.xxs, 4);
+      expect(AppSpacing.xs, 8);
+      expect(AppSpacing.md, 16);
+      expect(AppSpacing.xxl, 48);
+    });
+  });
+
+  group('AppRadii', () {
+    test('scale covers badges to frames', () {
+      expect(AppRadii.xs, 6);
+      expect(AppRadii.lg, 12);
+      expect(AppRadii.sheet, 24);
+      expect(AppRadii.frame, 32);
     });
   });
 

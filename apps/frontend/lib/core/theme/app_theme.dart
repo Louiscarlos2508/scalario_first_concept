@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Scalario design system color tokens (60-30-10 palette).
-/// Source: docs/design-system.md — Color System section.
+/// Scalario design system color tokens.
+/// Source: maquettes UX scénarios 04-11 (palette Slate Tailwind + accents).
 class AppColors {
   AppColors._();
 
-  // 10% Accent — actions, CTAs, links, active states
+  // Accent — actions, CTAs, links, active states
   static const Color primary = Color(0xFF1565C0); // Bleu confiance
 
   // Semantic states
@@ -13,14 +13,63 @@ class AppColors {
   static const Color error = Color(0xFFC62828); // Rouge — erreurs, alertes
   static const Color warning = Color(0xFFF9A825); // Jaune — en attente
 
-  // 60% Dominant — neutral backgrounds
-  static const Color background = Color(0xFFF5F5F5); // Fond app
+  // Neutrals — slate scale (--bg/--ink/--mut/--bd dans les maquettes)
+  static const Color background = Color(0xFFF1F5F9); // slate-100 — fond app
   static const Color surface = Color(0xFFFFFFFF); // Cartes, modales
+  static const Color textPrimary = Color(0xFF0F172A); // slate-900 — --ink
+  static const Color textSecondary = Color(0xFF64748B); // slate-500 — --mut
+  static const Color border = Color(0xFFE2E8F0); // slate-200 — --bd
 
-  // 30% Secondary — structure, text, borders
-  static const Color textPrimary = Color(0xFF212121); // Texte principal
-  static const Color textSecondary = Color(0xFF757575); // Texte secondaire
-  static const Color border = Color(0xFFE0E0E0); // Bordures subtiles
+  // AppBar dark — utilisé dans toutes les m-appbar et d-appbar
+  static const Color appbar = Color(0xFF0F172A); // slate-900
+
+  // Couleurs rôles — pour avatars, borders, pills d'identification persona
+  static const Color rolePatron = Color(0xFF92400E); // amber-800
+  static const Color roleGerant = Color(0xFF1E40AF); // blue-800
+  static const Color roleVendeur = Color(0xFF166534); // green-800
+  static const Color roleCommercial = Color(0xFF6B21A8); // purple-800
+
+  // Couleurs marque (logo Scalario monogramme)
+  static const Color brandYellow = Color(0xFFFFCC00);
+  static const Color brandBlue = Color(0xFF1A73E8);
+  static const Color brandGreen = Color(0xFF34A853);
+  static const Color brandRed = Color(0xFFEA4335);
+
+  // Canaux de paiement
+  static const Color payCash = Color(0xFF34A853);
+  static const Color payWave = Color(0xFF1DC8DB);
+  static const Color payOrangeMoney = Color(0xFFFF6F00);
+  static const Color payWhatsapp = Color(0xFF25D366);
+
+  // Échelle fraîcheur produit (sc06 — fresh produce)
+  static const Color freshGreen = Color(0xFF16A34A); // frais OK
+  static const Color freshOrange = Color(0xFFF59E0B); // bientôt
+  static const Color freshRed = Color(0xFFDC2626); // périmé / urgent
+}
+
+/// Espacement (multiples de 4) — utilisé dans paddings, gaps, margins.
+class AppSpacing {
+  AppSpacing._();
+  static const double xxs = 4;
+  static const double xs = 8;
+  static const double sm = 12;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double xxl = 48;
+}
+
+/// Border radii — du plus petit (badges) au plus grand (cards).
+class AppRadii {
+  AppRadii._();
+  static const double xs = 6;
+  static const double sm = 8;
+  static const double md = 10;
+  static const double lg = 12;
+  static const double xl = 14;
+  static const double xxl = 16;
+  static const double sheet = 24;
+  static const double frame = 32;
 }
 
 /// Scalario typography tokens.

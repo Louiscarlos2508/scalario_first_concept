@@ -22,10 +22,10 @@ L'app Scalario a été codée sans maquettes (~56 écrans Flutter existants). Ce
 
 ## Vue d'ensemble — couverture
 
-- **40 pages cibles** organisées en 10 scénarios
+- **41 pages cibles** organisées en 10 scénarios
 - **56 écrans Flutter existants** dont **38 mappés et validés "garder"**, **15 hors-scope Phase 1**, **1 doublon à supprimer**, **2 à fusionner**
 - **14 écrans à toucher (delta)** : 6 créations + 8 refontes UX
-- **18 page specs détaillés** dans ce dossier (les delta + Scénario 01 entier)
+- **14 page specs delta détaillés** dans ce dossier
 
 ---
 
@@ -33,8 +33,8 @@ L'app Scalario a été codée sans maquettes (~56 écrans Flutter existants). Ce
 
 | # | Scénario | Persona | Priorité | Pages | Delta |
 |---|---------|---------|----------|-------|-------|
-| 01 | [Blandine pilote depuis Dakar](01-blandine-pilote-depuis-dakar/01-blandine-pilote-depuis-dakar.md) | Blandine ⭐ | P1 | 8 | 1 (Rapport pertes) |
-| 02 | [Vivien encaisse une vente](02-vivien-encaisse-une-vente/02-vivien-encaisse-une-vente.md) | Vivien | P1 | 4 | 0 |
+| 01 | [Blandine pilote depuis Dakar](01-blandine-pilote-depuis-dakar/01-blandine-pilote-depuis-dakar.md) | Blandine ⭐ | P1 | 9 | 2 (Centre notif + Rapport pertes) |
+| 02 | [Vivien encaisse une vente](02-vivien-encaisse-une-vente/02-vivien-encaisse-une-vente.md) | Vivien | P1 | 3 | 0 |
 | 03 | [Blandine valide une commande interne](03-blandine-valide-une-commande-interne/03-blandine-valide-une-commande-interne.md) | Blandine ⭐ | P1 | 3 | 0 |
 | 04 | [Yempabou démasque les pertes](04-yempabou-demasque-les-pertes/04-yempabou-demasque-les-pertes.md) | Yempabou | P1 | 3 | 2 |
 | 05 | [Yempabou clôture sa caisse](05-yempabou-cloture-sa-caisse/05-yempabou-cloture-sa-caisse.md) | Yempabou | P1 | 3 | 1 |
@@ -43,8 +43,9 @@ L'app Scalario a été codée sans maquettes (~56 écrans Flutter existants). Ce
 | 08 | [Yempabou réceptionne une livraison](08-yempabou-receptionne-livraison/08-yempabou-receptionne-livraison.md) | Yempabou | P2 | 3 | 3 |
 | 09 | [Blandine surveille les dépenses](09-blandine-surveille-les-depenses/09-blandine-surveille-les-depenses.md) | Blandine ⭐ | P2 | 2 | 0 |
 | 10 | [Yempabou met sa boutique en route](10-yempabou-met-sa-boutique-en-route/10-yempabou-met-sa-boutique-en-route.md) | Tous | P3 | 7 | 1 |
+| 11 | [Blandine pilote multi-boutique](11-blandine-pilote-multi-boutique/11-blandine-pilote-multi-boutique.md) | Blandine ⭐ | P1 | 6 | 5 créations + 1 retouche |
 
-**Total pages : 41 (40 cibles + Centre notif)** — **Delta : 13 page specs détaillés**
+**Total pages : 41** — **Delta : 14 page specs détaillés** (6 créations + 8 refontes)
 
 ---
 
