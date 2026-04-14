@@ -1,48 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:frontend/core/auth/auth_state.dart';
-import 'package:frontend/core/widgets/scalario_app_bar.dart';
-import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
-import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
-import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
-import 'package:frontend/features/shared/reports/presentation/screens/session_history_screen.dart';
-import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
-import 'package:frontend/features/shared/reports/presentation/screens/stock_reports_screen.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
 
-String _fcfa(double amount) =>
-    NumberFormat.currency(locale: 'fr_FR', symbol: 'FCFA', decimalDigits: 0)
-        .format(amount);
-
-// ── Period tab ────────────────────────────────────────────────────────────────
-
-enum _Period { today, week, month, custom }
-
-extension _PeriodLabel on _Period {
-  String get label => switch (this) {
-        _Period.today => "Aujourd'hui",
-        _Period.week => 'Cette semaine',
-        _Period.month => 'Ce mois',
-        _Period.custom => 'Personnalisé',
-      };
-
-  DateTimeRange toRange() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return switch (this) {
-      _Period.today => DateTimeRange(start: today, end: today),
-      _Period.week => DateTimeRange(
-          start: today.subtract(const Duration(days: 6)), end: today),
-      _Period.month => DateTimeRange(
-          start: DateTime(now.year, now.month, 1), end: today),
-      _Period.custom => DateTimeRange(
-          start: today.subtract(const Duration(days: 6)), end: today),
-    };
-  }
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Hub rapports — Figma 19:2 "01.3 Hub rapports"
+// Mock data — backend débranché
+// ══════════════════════════════════════════════════════════════════════════════
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -51,1017 +16,1182 @@ class ReportsScreen extends ConsumerStatefulWidget {
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  _Period _period = _Period.week;
+class _ReportsScreenState extends ConsumerState<ReportsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  String _searchQuery = '';
+  int _periodIndex = 2; // Default: "7 derniers jours"
 
-  // GenUI state
-  final _genUiCtrl = TextEditingController();
-  bool _genUiAsked = false;
-  bool _genUiLoading = false;
+  static const _tabsMobile = [
+    'Aperçu',
+    'CA',
+    'Stock',
+    'Pertes',
+    'Vendeurs',
+    'Paiements',
+  ];
+
+  static const _tabsDesktop = [
+    'Aperçu',
+    "Chiffre d'affaires",
+    'Stock',
+    'Pertes',
+    'Vendeurs',
+    'Paiements',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _tabsMobile.length, vsync: this);
+  }
 
   @override
   void dispose() {
-    _genUiCtrl.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _applyPeriod(_Period p, [DateTimeRange? custom]) {
-    setState(() => _period = p);
-    final range = custom ?? p.toRange();
-    ref.read(salesReportDateRangeProvider.notifier).state = range;
-    ref.read(salesStatsDateRangeProvider.notifier).state = range;
-  }
+  String get _periodLabel => _periodLabels[_periodIndex];
 
-  Future<void> _pickCustomRange() async {
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _period.toRange(),
-    );
-    if (range != null && mounted) _applyPeriod(_Period.custom, range);
-  }
-
-  void _fakeGenUiQuery() async {
-    if (_genUiCtrl.text.trim().isEmpty) return;
-    setState(() {
-      _genUiAsked = false;
-      _genUiLoading = true;
-    });
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    setState(() {
-      _genUiLoading = false;
-      _genUiAsked = true;
-    });
+  String get _periodDateRange {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    switch (_periodIndex) {
+      case 0:
+        return DateFormat("d MMMM yyyy", "fr_FR").format(today);
+      case 1:
+        return DateFormat("d MMMM yyyy", "fr_FR")
+            .format(today.subtract(const Duration(days: 1)));
+      case 2:
+        final start = today.subtract(const Duration(days: 6));
+        return '${DateFormat("d MMM", "fr_FR").format(start)} \u2192 ${DateFormat("d MMM yyyy", "fr_FR").format(today)}';
+      case 3:
+        return '1er ${DateFormat("MMMM yyyy", "fr_FR").format(today)}  \u2192 ${DateFormat("d MMM yyyy", "fr_FR").format(today)}';
+      case 4:
+        final prev = DateTime(now.year, now.month - 1, 1);
+        return DateFormat("MMMM yyyy", "fr_FR").format(prev);
+      default:
+        return '';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final role = ref.watch(userProfileProvider).valueOrNull?.role ?? '';
-    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
-    final canSeeFullHistory = canAccessScreen(role, 'daily_sales', config) ||
-        canAccessScreen(role, 'backoffice', config);
-    final canSeeSessionHistory = canAccessScreen(role, 'pos', config);
-    final canSeeAnalytics = canAccessScreen(role, 'backoffice', config);
-
-    final reportAsync = ref.watch(salesReportProvider);
-    final statsAsync = ref.watch(salesStatsProvider);
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1024;
+    final tabs = isDesktop ? _tabsDesktop : _tabsMobile;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: ScalarioAppBar(
-        title: 'Rapports — Ventes',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.inventory_2_outlined),
-            tooltip: 'Rapports Stock',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                  builder: (_) => const StockReportsScreen()),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(salesReportProvider);
-              ref.invalidate(salesStatsProvider);
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          // Period tabs
-          SliverToBoxAdapter(
-            child: _PeriodTabsBar(
-              selected: _period,
-              onSelect: _applyPeriod,
-              onCustomTap: _pickCustomRange,
-            ),
-          ),
-
-          // KPI row (from daily stats)
-          SliverToBoxAdapter(
-            child: statsAsync.when(
-              loading: () => const SizedBox(height: 8),
-              error: (_, _) => const SizedBox.shrink(),
-              data: (stats) => _KpiRow(
-                stats: stats,
-                period: _period,
-              ),
-            ),
-          ),
-
-          // Main report body
-          SliverToBoxAdapter(
-            child: reportAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text('Erreur : $err',
-                    style: const TextStyle(color: AppColors.error)),
-              ),
-              data: (data) => _buildBody(
-                data,
-                canSeeFullHistory: canSeeFullHistory,
-                canSeeSessionHistory: canSeeSessionHistory,
-                canSeeAnalytics: canSeeAnalytics,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody(
-    Map<String, dynamic> data, {
-    required bool canSeeFullHistory,
-    required bool canSeeSessionHistory,
-    required bool canSeeAnalytics,
-  }) {
-    final productSales = (data['productSales'] as List<dynamic>?) ?? [];
-    final employeeSales =
-        (data['employeeSales'] as List<dynamic>?) ?? [];
-    final paymentMethodStats =
-        (data['paymentMethodStats'] as List<dynamic>?) ?? [];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: isDesktop ? null : const ScalarioAppBar(title: 'Rapports'),
+      body: Column(
         children: [
-          // 7-day chart
-          if (canSeeAnalytics) ...[
-            _SectionCard(
-              title: "CA — ${_period == _Period.today ? "Aujourd'hui" : "7 derniers jours"}",
-              child: _BarChartWidget(),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Employee sales
-          if (canSeeAnalytics && employeeSales.isNotEmpty) ...[
-            _SectionCard(
-              title: 'Ventes par employé',
-              child: _EmployeeSalesSection(employees: employeeSales),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Payment methods
-          if (canSeeAnalytics && paymentMethodStats.isNotEmpty) ...[
-            _SectionCard(
-              title: 'Répartition paiements',
-              child: _PaymentMethodsSection(stats: paymentMethodStats),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // GenUI AI section (owner only)
-          if (canSeeAnalytics) ...[
-            _GenUiCard(
-              ctrl: _genUiCtrl,
-              loading: _genUiLoading,
-              asked: _genUiAsked,
-              productSales: productSales,
-              onSubmit: _fakeGenUiQuery,
-              onSuggestion: (q) {
-                _genUiCtrl.text = q;
-                _fakeGenUiQuery();
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Quick links
-          if (canSeeFullHistory) ...[
-            _NavCard(
-              icon: Icons.receipt_long,
-              title: 'Historique des ventes',
-              subtitle: 'Toutes les transactions par période',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-          if (canSeeSessionHistory)
-            _NavCard(
-              key: const Key('session_history_card'),
-              icon: Icons.point_of_sale,
-              title: 'Sessions de caisse',
-              subtitle: 'Sessions en cours et historique',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const SessionHistoryScreen()),
-              ),
-            ),
-
-          // Product sales table
-          if (canSeeAnalytics && productSales.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Ventes par produit',
-              child: _ProductSalesTable(productSales: productSales),
+          // ── Header + search + period (desktop only) ─────
+          if (isDesktop) ...[
+            _DesktopHeader(
+              periodLabel: _periodLabel,
+              periodDateRange: _periodDateRange,
+              searchQuery: _searchQuery,
+              onSearchChanged: (q) => setState(() => _searchQuery = q),
+              onPeriodTap: () => _showPeriodSelector(context, true),
+              onExportTap: () {},
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
 
-// ── Period tabs ───────────────────────────────────────────────────────────────
+          // ── Tab bar ──────────────────────────────────────
+          Container(
+            color: AppColors.surface,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: AppColors.textPrimary,
+              unselectedLabelColor: AppColors.textSecondary,
+              labelStyle: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600),
+              unselectedLabelStyle: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w500),
+              indicatorColor: AppColors.textPrimary,
+              indicatorWeight: 2.5,
+              dividerColor: AppColors.border,
+              padding: EdgeInsets.symmetric(
+                  horizontal: isDesktop ? AppSpacing.xl : AppSpacing.md),
+              tabs: tabs.map((t) => Tab(text: t)).toList(),
+            ),
+          ),
 
-class _PeriodTabsBar extends StatelessWidget {
-  final _Period selected;
-  final void Function(_Period) onSelect;
-  final VoidCallback onCustomTap;
-
-  const _PeriodTabsBar({
-    required this.selected,
-    required this.onSelect,
-    required this.onCustomTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _Period.values.map((p) {
-              final isSelected = p == selected;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () =>
-                      p == _Period.custom ? onCustomTap() : onSelect(p),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.border,
-                      ),
-                    ),
-                    child: Text(
-                      p.label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
+          // ── Tab content ─────────────────────────────────
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _OverviewTab(
+                  isDesktop: isDesktop,
+                  searchQuery: _searchQuery,
+                  periodIndex: _periodIndex,
+                  onSearchChanged: (q) => setState(() => _searchQuery = q),
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                  onExportTap: () {},
+                  onCardTap: (tabIndex) =>
+                      _tabController.animateTo(tabIndex),
                 ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── KPI row ───────────────────────────────────────────────────────────────────
-
-class _KpiRow extends StatelessWidget {
-  final List<dynamic> stats;
-  final _Period period;
-
-  const _KpiRow({required this.stats, required this.period});
-
-  @override
-  Widget build(BuildContext context) {
-    double totalRevenue = 0;
-    int saleCount = 0;
-    String bestDay = '—';
-    double bestRevenue = 0;
-
-    for (final s in stats) {
-      final rev = (s.revenue as double?) ?? 0.0;
-      final cnt = (s.orderCount as int?) ?? 0;
-      totalRevenue += rev;
-      saleCount += cnt;
-      if (rev > bestRevenue) {
-        bestRevenue = rev;
-        bestDay = DateFormat('EEEE', 'fr_FR').format(s.day as DateTime);
-        bestDay = '${bestDay[0].toUpperCase()}${bestDay.substring(1)}';
-      }
-    }
-
-    final avgTicket = saleCount > 0 ? totalRevenue / saleCount : 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: _KpiCard(
-              label: 'CA ${period.label.toLowerCase()}',
-              value: _fcfa(totalRevenue),
-              valueColor: totalRevenue > 0 ? AppColors.success : null,
-              icon: Icons.trending_up,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _KpiCard(
-              label: 'Transactions',
-              value: '$saleCount',
-              icon: Icons.receipt_outlined,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _KpiCard(
-              label: 'Ticket moyen',
-              value: _fcfa(avgTicket),
-              icon: Icons.confirmation_number_outlined,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _KpiCard(
-              label: 'Meilleur jour',
-              value: bestDay,
-              icon: Icons.star_outline,
-              valueColor: bestDay != '—' ? Colors.amber.shade700 : null,
+                _PlaceholderTab(
+                    title: "Chiffre d'affaires", emoji: '\u{20A3}'),
+                const _PlaceholderTab(
+                    title: 'Stock', emoji: '\u{1F4E6}'),
+                const _PlaceholderTab(
+                    title: 'Pertes', emoji: '\u26A0'),
+                const _PlaceholderTab(
+                    title: 'Vendeurs', emoji: '\u{1F465}'),
+                const _PlaceholderTab(
+                    title: 'Paiements', emoji: '\u{1F4B3}'),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _KpiCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color? valueColor;
-
-  const _KpiCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: AppColors.textSecondary),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: valueColor,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-                fontSize: 9, color: AppColors.textSecondary),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Bar chart (inline div-style) ──────────────────────────────────────────────
-
-class _BarChartWidget extends ConsumerWidget {
-  const _BarChartWidget();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final statsAsync = ref.watch(salesStatsProvider);
-    return statsAsync.when(
-      loading: () => const SizedBox(
-          height: 100,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (stats) {
-        if (stats.isEmpty) return const SizedBox.shrink();
-        final maxRev =
-            stats.map((s) => s.revenue).reduce((a, b) => a > b ? a : b);
-        return SizedBox(
-          height: 100,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: stats.map((s) {
-              final pct = maxRev > 0 ? s.revenue / maxRev : 0.0;
-              final isBest = maxRev > 0 && s.revenue == maxRev;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: FractionallySizedBox(
-                          heightFactor: pct.clamp(0.05, 1.0),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: isBest
-                                  ? Colors.amber.shade600
-                                  : AppColors.primary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        DateFormat('E', 'fr_FR').format(s.day),
-                        style: const TextStyle(
-                            fontSize: 9,
-                            color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        );
+  void _showPeriodSelector(BuildContext context, bool isDesktop) {
+    final content = _ReportPeriodSheet(
+      selectedIndex: _periodIndex,
+      onSelect: (index) {
+        setState(() => _periodIndex = index);
+        Navigator.pop(context);
       },
     );
-  }
-}
 
-// ── Employee sales ────────────────────────────────────────────────────────────
-
-class _EmployeeSalesSection extends StatelessWidget {
-  final List<dynamic> employees;
-  const _EmployeeSalesSection({required this.employees});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxRev = employees
-        .map((e) => (e['revenue'] as num?)?.toDouble() ?? 0)
-        .fold(0.0, (a, b) => a > b ? a : b);
-
-    return Column(
-      children: employees.take(5).map((e) {
-        final name = e['name'] as String? ?? '—';
-        final revenue = (e['revenue'] as num?)?.toDouble() ?? 0;
-        final count = (e['count'] as num?)?.toInt() ?? 0;
-        final pct = maxRev > 0 ? revenue / maxRev : 0.0;
-        final initials = name.length >= 2
-            ? name.substring(0, 2).toUpperCase()
-            : name.toUpperCase();
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(name,
-                            style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600)),
-                        Text(
-                          '$count vente${count > 1 ? 's' : ''} · ${_fcfa(revenue)}',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        backgroundColor: AppColors.border,
-                        color: AppColors.primary,
-                        minHeight: 4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    if (isDesktop) {
+      showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.lg),
           ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-// ── Payment methods ───────────────────────────────────────────────────────────
-
-class _PaymentMethodsSection extends StatelessWidget {
-  final List<dynamic> stats;
-  const _PaymentMethodsSection({required this.stats});
-
-  @override
-  Widget build(BuildContext context) {
-    final total = stats
-        .map((s) => (s['value'] as num?)?.toDouble() ?? 0)
-        .fold(0.0, (a, b) => a + b);
-
-    const methodColors = {
-      'Espèces': Color(0xFF10B981),
-      'Orange Money': Color(0xFFF97316),
-      'Moov Money': Color(0xFF3B82F6),
-    };
-
-    return Column(
-      children: stats.map((s) {
-        final name = s['name'] as String? ?? '—';
-        final value = (s['value'] as num?)?.toDouble() ?? 0;
-        final pct = total > 0 ? value / total : 0.0;
-        final color = methodColors[name] ??
-            AppColors.primary;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration:
-                    BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(name,
-                            style: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.w600)),
-                        Text(
-                          '${(pct * 100).round()}% · ${_fcfa(value)}',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: pct,
-                        backgroundColor: AppColors.border,
-                        color: color,
-                        minHeight: 4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480, maxHeight: 520),
+            child: content,
           ),
-        );
-      }).toList(),
-    );
+        ),
+      );
+    } else {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.85,
+          builder: (_, controller) => content,
+        ),
+      );
+    }
   }
 }
 
-// ── GenUI card ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Desktop header — Figma 19:560
+// ══════════════════════════════════════════════════════════════════════════════
 
-const _kSuggestedQuestions = [
-  'Quel est mon produit le plus vendu ?',
-  'Quelle heure est la plus rentable ?',
-  'Quel employé a le meilleur CA ?',
-];
+class _DesktopHeader extends StatelessWidget {
+  final String periodLabel;
+  final String periodDateRange;
+  final String searchQuery;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onPeriodTap;
+  final VoidCallback onExportTap;
 
-class _GenUiCard extends StatelessWidget {
-  final TextEditingController ctrl;
-  final bool loading;
-  final bool asked;
-  final List<dynamic> productSales;
-  final VoidCallback onSubmit;
-  final ValueChanged<String> onSuggestion;
-
-  const _GenUiCard({
-    required this.ctrl,
-    required this.loading,
-    required this.asked,
-    required this.productSales,
-    required this.onSubmit,
-    required this.onSuggestion,
+  const _DesktopHeader({
+    required this.periodLabel,
+    required this.periodDateRange,
+    required this.searchQuery,
+    required this.onSearchChanged,
+    required this.onPeriodTap,
+    required this.onExportTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF334155)),
-      ),
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(32, 16, 32, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // Breadcrumb
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade700,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Premium',
+              Text('Boutique Ouaga',
                   style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '✨ Analyse IA',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
+                      fontSize: 13,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w500)),
+              const SizedBox(width: 6),
+              const Text('Rapports',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary)),
             ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Posez une question sur vos ventes en langage naturel.',
-            style:
-                TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-          ),
-          const SizedBox(height: 12),
-
-          // Input
+          const SizedBox(height: 16),
+          // Title row + search + period + export
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title + subtitle
               Expanded(
-                child: TextField(
-                  controller: ctrl,
-                  style: const TextStyle(
-                      color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText:
-                        'Ex : Quel est mon produit le plus vendu ?',
-                    hintStyle: const TextStyle(
-                        color: Color(0xFF64748B), fontSize: 13),
-                    filled: true,
-                    fillColor: const Color(0xFF1E293B),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: Color(0xFF334155)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: Color(0xFF334155)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                          color: Color(0xFF1A73E8), width: 1.5),
-                    ),
-                  ),
-                  onSubmitted: (_) => onSubmit(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rapports',
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text(
+                        'Vue d\'ensemble \u00B7 Période : $periodDateRange',
+                        style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.textSecondary)),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onSubmit,
+              const SizedBox(width: 16),
+              // Search
+              SizedBox(
+                width: 240,
+                height: 40,
                 child: Container(
-                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                    border: Border.all(color: AppColors.border, width: 0.8),
                   ),
-                  child: loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.send,
-                          size: 18, color: Colors.white),
+                  child: TextField(
+                    onChanged: onSearchChanged,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: 'Rechercher un rapport...',
+                      hintStyle: TextStyle(
+                          fontSize: 13, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search,
+                          size: 18, color: AppColors.textSecondary),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Period button
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: onPeriodTap,
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                      border: Border.all(color: AppColors.border, width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('\u{1F4C5}',
+                            style: TextStyle(fontSize: 13)),
+                        const SizedBox(width: 8),
+                        Text('$periodLabel \u2022',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Export button
+              MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: onExportTap,
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('\u2197',
+                            style:
+                                TextStyle(fontSize: 14, color: Colors.white)),
+                        SizedBox(width: 6),
+                        Text('Exporter & partager',
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-
-          // Suggested questions
-          if (!asked)
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: _kSuggestedQuestions.map((q) {
-                return GestureDetector(
-                  onTap: () => onSuggestion(q),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: const Color(0xFF334155)),
-                    ),
-                    child: Text(
-                      q,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF94A3B8)),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-          // AI response
-          if (asked && !loading) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF1E293B)),
-              ),
-              child: _GenUiResponse(productSales: productSales),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _GenUiResponse extends StatelessWidget {
-  final List<dynamic> productSales;
-  const _GenUiResponse({required this.productSales});
+// ══════════════════════════════════════════════════════════════════════════════
+// Aperçu tab — Figma 19:2 hub view
+// ══════════════════════════════════════════════════════════════════════════════
+
+const _periodLabels = [
+  "Aujourd'hui",
+  'Hier',
+  '7 derniers jours',
+  'Ce mois',
+  'Mois dernier',
+];
+
+class _OverviewTab extends StatelessWidget {
+  final bool isDesktop;
+  final String searchQuery;
+  final int periodIndex;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onPeriodTap;
+  final VoidCallback onExportTap;
+  final ValueChanged<int> onCardTap;
+
+  const _OverviewTab({
+    required this.isDesktop,
+    required this.searchQuery,
+    required this.periodIndex,
+    required this.onSearchChanged,
+    required this.onPeriodTap,
+    required this.onExportTap,
+    required this.onCardTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (productSales.isEmpty) {
-      return const Text(
-        'Aucune donnée de vente disponible pour cette période.',
-        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+    final pad = EdgeInsets.symmetric(
+      horizontal: isDesktop ? AppSpacing.xl : AppSpacing.md,
+    );
+
+    // Mock report cards — Figma 19:2
+    final cards = [
+      _ReportCardData(
+        emoji: 'F',
+        emojiBg: AppColors.chipActionBg,
+        emojiColor: AppColors.primary,
+        title: "Chiffre d'affaires",
+        subtitle: 'Total période',
+        value: '2 450 000 F',
+        trend: '\u25B2 +12% vs sem. dernière',
+        trendColor: AppColors.success,
+        tabIndex: 1,
+      ),
+      _ReportCardData(
+        emoji: '\u{1F4E6}',
+        emojiBg: AppColors.chipWarningBg,
+        emojiColor: AppColors.chipWarningText,
+        title: 'Stock',
+        subtitle: 'Réfs en stock bas',
+        value: '42',
+        trend: '\u25BC -3 vs hier',
+        trendColor: AppColors.error,
+        tabIndex: 2,
+      ),
+      _ReportCardData(
+        emoji: '\u26A0',
+        emojiBg: AppColors.chipErrorBg,
+        emojiColor: AppColors.error,
+        title: 'Pertes',
+        subtitle: 'Coût période',
+        value: '85 000 F',
+        trend: '\u25B2 +5%',
+        trendColor: AppColors.error,
+        tabIndex: 3,
+      ),
+      _ReportCardData(
+        emoji: '\u{1F465}',
+        emojiBg: AppColors.chipActionBg,
+        emojiColor: AppColors.primary,
+        title: 'Vendeurs',
+        subtitle: 'Top : Awa \u00B7 612 000 F',
+        value: '5 actifs',
+        trend: '\u25B2 +1',
+        trendColor: AppColors.success,
+        tabIndex: 4,
+      ),
+      _ReportCardData(
+        emoji: '\u{1F4B3}',
+        emojiBg: AppColors.chipActionBg,
+        emojiColor: AppColors.primary,
+        title: 'Modes de paiement',
+        subtitle: 'Cash 62% \u00B7 OM 31% \u00B7 Crédit 7%',
+        value: '3 actifs',
+        trend: '\u2014',
+        trendColor: AppColors.textSecondary,
+        tabIndex: 5,
+      ),
+    ];
+
+    // Desktop has a 6th card: Tendances
+    if (isDesktop) {
+      cards.add(_ReportCardData(
+        emoji: '\u{1F4C8}',
+        emojiBg: const Color(0xFFF3E8FF),
+        emojiColor: const Color(0xFF7C3AED),
+        title: 'Tendances',
+        subtitle: 'Comparaisons multi-périodes',
+        value: '7 vues',
+        trend: 'Nouveau',
+        trendColor: AppColors.primary,
+        tabIndex: 0,
+      ));
+    }
+
+    // Filter by search
+    final filtered = searchQuery.isEmpty
+        ? cards
+        : cards
+            .where((c) =>
+                c.title.toLowerCase().contains(searchQuery.toLowerCase()))
+            .toList();
+
+    if (isDesktop) return _buildDesktop(context, pad, filtered);
+    return _buildMobile(context, pad, filtered);
+  }
+
+  // ── Mobile layout — Figma 19:11 ──────────────────────────────────────
+  Widget _buildMobile(
+      BuildContext context, EdgeInsets pad, List<_ReportCardData> filtered) {
+    return ListView(
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      children: [
+        // Header
+        Padding(
+          padding: pad,
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Rapports',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary)),
+              SizedBox(height: 4),
+              Text('Vue d\'ensemble \u00B7 Boutique Ouaga',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Search
+        Padding(
+          padding: pad,
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              border: Border.all(color: AppColors.border, width: 0.8),
+            ),
+            child: TextField(
+              onChanged: onSearchChanged,
+              style: const TextStyle(fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Rechercher un rapport...',
+                hintStyle:
+                    TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                prefixIcon: Icon(Icons.search,
+                    size: 18, color: AppColors.textSecondary),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Period selector
+        Padding(
+          padding: pad,
+          child: GestureDetector(
+            onTap: onPeriodTap,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadii.md),
+                border: Border.all(color: AppColors.border, width: 0.8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('PÉRIODE',
+                            style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                                color: AppColors.textSecondary)),
+                        const SizedBox(height: 2),
+                        Text(_periodLabels[periodIndex],
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                  const Text('\u25BE',
+                      style: TextStyle(
+                          fontSize: 14, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // "RAPPORTS DISPONIBLES" label
+        Padding(
+          padding: pad,
+          child: const Text('RAPPORTS DISPONIBLES',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: AppColors.textSecondary)),
+        ),
+        const SizedBox(height: 10),
+
+        // Report cards — mobile style (horizontal row)
+        if (filtered.isEmpty)
+          Padding(padding: pad, child: const _EmptyState())
+        else
+          ...filtered.map((c) => Padding(
+                padding: pad.copyWith(bottom: 10),
+                child: _MobileReportCard(
+                    data: c, onTap: () => onCardTap(c.tabIndex)),
+              )),
+        const SizedBox(height: 20),
+
+        // Export button
+        Padding(
+          padding: pad,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: onExportTap,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('\u2197',
+                        style: TextStyle(fontSize: 16, color: Colors.white)),
+                    SizedBox(width: 8),
+                    Text('Exporter & partager',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Desktop layout — Figma 19:560 (grid 3x2) ────────────────────────
+  Widget _buildDesktop(
+      BuildContext context, EdgeInsets pad, List<_ReportCardData> filtered) {
+    if (filtered.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: pad,
+          child: const _EmptyState(),
+        ),
       );
     }
 
-    final sorted = [...productSales]..sort(
-        (a, b) => (b['revenue'] as num).compareTo(a['revenue'] as num));
-    final top = sorted.take(5).toList();
-    final maxRev = (top.first['revenue'] as num).toDouble();
+    // Build rows of 3 cards each
+    final rows = <List<_ReportCardData>>[];
+    for (var i = 0; i < filtered.length; i += 3) {
+      rows.add(filtered.sublist(
+          i, i + 3 > filtered.length ? filtered.length : i + 3));
+    }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.lg,
+        bottom: 32,
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+      ),
       children: [
-        const Text(
-          'Top 5 produits les plus vendus (par CA)',
-          style: TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 11,
-              fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 10),
-        ...top.map((p) {
-          final name = p['name'] as String? ?? '—';
-          final rev = (p['revenue'] as num).toDouble();
-          final pct = maxRev > 0 ? rev / maxRev : 0.0;
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
+        for (var r = 0; r < rows.length; r++) ...[
+          if (r > 0) const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var c = 0; c < rows[r].length; c++) ...[
+                if (c > 0) const SizedBox(width: 16),
                 Expanded(
-                  flex: 3,
-                  child: Text(
-                    name,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
+                  child: _DesktopReportCard(
+                    data: rows[r][c],
+                    onTap: () => onCardTap(rows[r][c].tabIndex),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 4,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: pct,
-                      backgroundColor: const Color(0xFF1E293B),
-                      color: AppColors.primary,
-                      minHeight: 6,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _fcfa(rev),
-                  style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 10),
                 ),
               ],
-            ),
-          );
-        }),
+              // Fill remaining slots with empty Expanded to keep equal widths
+              for (var e = rows[r].length; e < 3; e++) ...[
+                const SizedBox(width: 16),
+                const Expanded(child: SizedBox.shrink()),
+              ],
+            ],
+          ),
+        ],
       ],
     );
   }
 }
 
-// ── Product sales table ───────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Report card data
+// ══════════════════════════════════════════════════════════════════════════════
 
-class _ProductSalesTable extends StatelessWidget {
-  final List<dynamic> productSales;
-  const _ProductSalesTable({required this.productSales});
+class _ReportCardData {
+  final String emoji;
+  final Color emojiBg;
+  final Color emojiColor;
+  final String title;
+  final String subtitle;
+  final String value;
+  final String trend;
+  final Color trendColor;
+  final int tabIndex;
+
+  const _ReportCardData({
+    required this.emoji,
+    required this.emojiBg,
+    required this.emojiColor,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.trend,
+    required this.trendColor,
+    required this.tabIndex,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Mobile report card — Figma 19:11 (horizontal: icon | title+value+trend | ›)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _MobileReportCard extends StatelessWidget {
+  final _ReportCardData data;
+  final VoidCallback onTap;
+
+  const _MobileReportCard({required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final sorted = [...productSales]
-      ..sort((a, b) =>
-          (b['revenue'] as num).compareTo(a['revenue'] as num));
-
-    return Column(
-      children: sorted.map((item) {
-        final qty = (item['quantity'] as num).toInt();
-        final rev = (item['revenue'] as num).toDouble();
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border, width: 0.8),
+          ),
           child: Row(
             children: [
-              Expanded(
-                child: Text(item['name'] as String? ?? '—',
-                    style: const TextStyle(fontSize: 13)),
+              // Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: data.emojiBg,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                alignment: Alignment.center,
+                child: Text(data.emoji,
+                    style: TextStyle(fontSize: 22, color: data.emojiColor)),
               ),
-              Text('$qty',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(width: 16),
-              Text(_fcfa(rev),
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 12)),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(data.title,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(data.value,
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Cousine',
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text(data.trend,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: data.trendColor)),
+                  ],
+                ),
+              ),
+              // Chevron
+              const Text('\u203A',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary)),
             ],
           ),
-        );
-      }).toList(),
+        ),
+      ),
     );
   }
 }
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Desktop report card — Figma 19:560 (vertical: icon+title+sub top, value bottom, trend+Voir)
+// ══════════════════════════════════════════════════════════════════════════════
 
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-  const _SectionCard({required this.title, required this.child});
+class _DesktopReportCard extends StatelessWidget {
+  final _ReportCardData data;
+  final VoidCallback onTap;
+
+  const _DesktopReportCard({required this.data, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: AppColors.border, width: 0.8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: icon + title + subtitle
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: data.emojiBg,
+                      borderRadius: BorderRadius.circular(AppRadii.md),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(data.emoji,
+                        style:
+                            TextStyle(fontSize: 20, color: data.emojiColor)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(data.title,
+                            style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary)),
+                        const SizedBox(height: 2),
+                        Text(data.subtitle,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Value — large mono
+              Text(data.value,
+                  style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Cousine',
+                      color: AppColors.textPrimary)),
+              const SizedBox(height: 12),
+              // Bottom row: trend left, "Voir →" right
+              Row(
+                children: [
+                  Text(data.trend,
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: data.trendColor)),
+                  const Spacer(),
+                  Text('Voir \u2192',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Empty state — Figma 19:783
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 56),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.xxl),
+        border: Border.all(color: AppColors.border, width: 1.2),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title,
-              style: const TextStyle(
+          const Text('\u{1F4CA}', style: TextStyle(fontSize: 48)),
+          const SizedBox(height: 20),
+          const Text('Pas encore de rapports',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          const SizedBox(
+            width: 340,
+            child: Text(
+              'Les rapports CA, stock, pertes, vendeurs et paiements s\'activent dès tes premières ventes ou réceptions stock.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 12),
-          child,
+                  color: AppColors.textSecondary,
+                  height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () {},
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: const Text('+ Enregistrer une vente',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _NavCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+// ══════════════════════════════════════════════════════════════════════════════
+// Period selector sheet — same style as dashboard (Figma 11:710)
+// ══════════════════════════════════════════════════════════════════════════════
 
-  const _NavCard({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+class _ReportPeriodSheet extends StatefulWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+
+  const _ReportPeriodSheet({
+    required this.selectedIndex,
+    required this.onSelect,
   });
 
   @override
+  State<_ReportPeriodSheet> createState() => _ReportPeriodSheetState();
+}
+
+class _ReportPeriodSheetState extends State<_ReportPeriodSheet> {
+  late int _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.selectedIndex;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.primary,
-              child: Icon(icon, color: Colors.white, size: 18),
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    final options = [
+      (
+        label: "Aujourd'hui",
+        sub: '${DateFormat("d MMMM", "fr_FR").format(today)} \u00B7 en cours',
+      ),
+      (
+        label: 'Hier',
+        sub: '${DateFormat("d MMMM", "fr_FR").format(yesterday)} \u00B7 journée complète',
+      ),
+      (
+        label: '7 derniers jours',
+        sub: '${DateFormat("d MMM", "fr_FR").format(today.subtract(const Duration(days: 6)))} \u2192 ${DateFormat("d MMM", "fr_FR").format(today)}',
+      ),
+      (
+        label: 'Ce mois',
+        sub: '1er \u2192 ${DateFormat("d MMMM", "fr_FR").format(today)}',
+      ),
+      (
+        label: 'Mois dernier',
+        sub: DateFormat("MMMM yyyy", "fr_FR")
+            .format(DateTime(now.year, now.month - 1, 1)),
+      ),
+    ];
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 24),
+          Container(
+            width: 48,
+            height: 5,
+            decoration: BoxDecoration(
+              color: AppColors.border,
+              borderRadius: BorderRadius.circular(3),
             ),
-            const SizedBox(width: 14),
-            Expanded(
+          ),
+          const SizedBox(height: 20),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Choisir la période',
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Quels chiffres veux-tu voir ?',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12)),
-                ],
+                mainAxisSize: MainAxisSize.min,
+                children: options.asMap().entries.map((e) {
+                  final i = e.key;
+                  final opt = e.value;
+                  final isSelected = i == _selected;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selected = i),
+                      child: Container(
+                        height: 62,
+                        padding: const EdgeInsets.symmetric(horizontal: 17),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.chipActionBg
+                              : AppColors.sheetBg,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.border,
+                            width: isSelected ? 1.6 : 0.8,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(opt.label,
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 2),
+                                  Text(opt.sub,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                  width: 1.6,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-            const Icon(Icons.chevron_right,
-                color: AppColors.textSecondary),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: AppColors.border, width: 0.8),
+                      ),
+                      child: const Text('Annuler',
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => widget.onSelect(_selected),
+                    child: Container(
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text('Appliquer',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Placeholder tab — sub-reports (bientôt disponible)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _PlaceholderTab extends StatelessWidget {
+  final String title;
+  final String emoji;
+
+  const _PlaceholderTab({required this.title, required this.emoji});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 48)),
+          const SizedBox(height: 16),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary)),
+          const SizedBox(height: 8),
+          const Text('Bientôt disponible',
+              style: TextStyle(
+                  fontSize: 14, color: AppColors.textSecondary)),
+        ],
       ),
     );
   }

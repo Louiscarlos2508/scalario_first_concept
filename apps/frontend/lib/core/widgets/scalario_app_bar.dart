@@ -8,6 +8,11 @@ import '../theme/app_logos.dart';
 const _kBg = Color(0xFF0F172A);
 const _kFg = Colors.white;
 
+/// Set by [DashboardShell] when the desktop top nav is active.
+/// When true, [ScalarioAppBar] hides itself (height 0, no content)
+/// to avoid a double header — the shell already provides the nav bar.
+bool scalarioDesktopNavActive = false;
+
 /// App bar Scalario — fond sombre `#0F172A`, texte et icônes blancs.
 /// Cohérent avec le POS AppBar sur toute l'application.
 ///
@@ -43,11 +48,15 @@ class ScalarioAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => Size.fromHeight(
-        56 + (bottom?.preferredSize.height ?? 0),
+        scalarioDesktopNavActive
+            ? 0
+            : 56 + (bottom?.preferredSize.height ?? 0),
       );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (scalarioDesktopNavActive) return const SizedBox.shrink();
+
     final role = ref.watch(userProfileProvider).valueOrNull?.role;
     final showBell = role == 'owner' || role == 'manager';
 

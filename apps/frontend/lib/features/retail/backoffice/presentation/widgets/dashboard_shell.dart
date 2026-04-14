@@ -5,6 +5,13 @@ import 'package:frontend/core/theme/app_breakpoints.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/theme/app_logos.dart';
 import 'package:frontend/core/auth/auth_state.dart';
+import 'package:frontend/core/widgets/scalario_app_bar.dart';
+import 'package:frontend/features/shared/notifications/data/models/notification_model.dart'
+    show mockNotifications;
+import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart'
+    show unreadNotificationCountProvider;
+import 'package:frontend/features/shared/notifications/presentation/widgets/notification_bell.dart'
+    show NotificationBell;
 import 'package:frontend/features/retail/pos/presentation/providers/pos_providers.dart';
 import 'package:frontend/features/retail/pos/presentation/widgets/sync_status_indicator.dart';
 import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
@@ -72,11 +79,54 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= kCompact;
-        return isWide
-            ? _buildTabletLayout(context)
-            : _buildPhoneLayout(context);
+        final isDesktop = constraints.maxWidth >= kMedium;
+        scalarioDesktopNavActive = isDesktop;
+
+        if (isDesktop) return _buildDesktopLayout(context);
+        if (constraints.maxWidth >= kCompact) return _buildTabletLayout(context);
+        return _buildPhoneLayout(context);
       },
+    );
+  }
+
+  // ── Desktop layout (≥ 1024dp) — top nav bar + breadcrumb ───────────────────
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final activeTenantId = ref.watch(activeTenantProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final profile = userProfileAsync.valueOrNull;
+    final role = profile?.role ?? '';
+    final config = ref.watch(businessTypeConfigProvider).valueOrNull;
+    final canOpenPos = canAccessScreen(role, 'pos', config);
+    final activeMembership = profile?.memberships.firstWhere(
+      (m) => m.tenantId == activeTenantId,
+      orElse: () => profile.memberships.first,
+    );
+    final tenantName = activeMembership?.tenantName ?? 'Scalario';
+    final clampedIndex =
+        widget.selectedIndex.clamp(0, widget.items.length - 1);
+
+    return Scaffold(
+      body: Column(
+        children: [
+          _DesktopTopNav(
+            items: widget.items,
+            selectedIndex: clampedIndex,
+            onDestinationSelected: widget.onDestinationSelected,
+            canOpenPos: canOpenPos,
+            onOpenPos: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PosScreen()),
+            ),
+            onSignOut: () => ref.read(authRepositoryProvider).signOut(),
+          ),
+          _DesktopBreadcrumb(
+            tenantName: tenantName,
+            currentLabel: widget.items[clampedIndex].label,
+            onTenantTap: () => widget.onDestinationSelected(0),
+          ),
+          Expanded(child: widget.child),
+        ],
+      ),
     );
   }
 
@@ -255,7 +305,322 @@ class _DashboardShellState extends ConsumerState<DashboardShell> {
   }
 }
 
-// ── Dark sidebar ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// Desktop top nav bar — Figma node 31:720
+// ══════════════════════════════════════════════════════════════════════════════
+
+const _kNavInactive = Color(0xFFCBD5E1); // slate-300
+
+class _DesktopTopNav extends ConsumerWidget {
+  final List<NavItem> items;
+  final int selectedIndex;
+  final void Function(int) onDestinationSelected;
+  final bool canOpenPos;
+  final VoidCallback onOpenPos;
+  final VoidCallback onSignOut;
+
+  const _DesktopTopNav({
+    required this.items,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.canOpenPos,
+    required this.onOpenPos,
+    required this.onSignOut,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(userProfileProvider).valueOrNull?.role;
+    final showBell = role == 'owner' || role == 'manager';
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+
+    // Separate Paramètres from nav links — shown as gear icon on the right.
+    final navItems = <(int, NavItem)>[];
+    int? settingsIndex;
+    for (int i = 0; i < items.length; i++) {
+      if (items[i].label == 'Paramètres') {
+        settingsIndex = i;
+      } else {
+        navItems.add((i, items[i]));
+      }
+    }
+
+    return Container(
+      height: 56,
+      color: AppColors.appbar,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Row(
+        children: [
+          // ── Logo ──────────────────────────────────────────────────────
+          SvgPicture.asset(
+            AppLogos.wordmarkDark,
+            height: 28,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 40),
+
+          // ── Nav links ─────────────────────────────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: navItems.map((entry) {
+                  final (index, item) = entry;
+                  final isSelected = index == selectedIndex;
+                  return _DesktopNavLink(
+                    label: item.shortLabel ?? item.label,
+                    isSelected: isSelected,
+                    onTap: () => onDestinationSelected(index),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+
+          // ── Right actions (Figma node 31:751 → 31:761) ────────────────
+          const SizedBox(width: 16),
+          if (showBell)
+            _DesktopNotificationButton(
+              onTap: () => NotificationBell.openNotificationPanel(context),
+            ),
+          if (settingsIndex != null)
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                tooltip: 'Paramètres',
+                onPressed: () => onDestinationSelected(settingsIndex!),
+                padding: EdgeInsets.zero,
+                icon: const Icon(Icons.settings_outlined,
+                    color: Colors.white, size: 20),
+              ),
+            ),
+          _DesktopUserMenu(
+            profile: profile,
+            canOpenPos: canOpenPos,
+            onOpenPos: onOpenPos,
+            onSignOut: onSignOut,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Desktop nav link ─────────────────────────────────────────────────────────
+
+class _DesktopNavLink extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DesktopNavLink({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? Colors.white : _kNavInactive,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Desktop notification button (🔔 + red badge) ────────────────────────────
+
+class _DesktopNotificationButton extends ConsumerWidget {
+  final VoidCallback onTap;
+
+  const _DesktopNotificationButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countAsync = ref.watch(unreadNotificationCountProvider);
+    final backendCount = countAsync.when(
+      data: (n) => n,
+      loading: () => 0,
+      error: (_, _) => 0,
+    );
+    final count = backendCount > 0
+        ? backendCount
+        : mockNotifications.where((n) => !n.isRead).length;
+
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: IconButton(
+        tooltip: 'Notifications',
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        icon: count > 0
+            ? Badge(
+                label: Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                backgroundColor: AppColors.error,
+                child: const Text('\u{1F514}',
+                    style: TextStyle(fontSize: 20)),
+              )
+            : const Text('\u{1F514}',
+                style: TextStyle(fontSize: 20)),
+      ),
+    );
+  }
+}
+
+// ── Desktop user menu (👤 + popup) ───────────────────────────────────────────
+
+class _DesktopUserMenu extends StatelessWidget {
+  final dynamic profile;
+  final bool canOpenPos;
+  final VoidCallback onOpenPos;
+  final VoidCallback onSignOut;
+
+  const _DesktopUserMenu({
+    required this.profile,
+    required this.canOpenPos,
+    required this.onOpenPos,
+    required this.onSignOut,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final name = profile?.fullName ?? profile?.email ?? '';
+
+    return PopupMenuButton<String>(
+      tooltip: 'Profil',
+      offset: const Offset(0, 48),
+      onSelected: (value) {
+        if (value == 'signout') onSignOut();
+        if (value == 'pos') onOpenPos();
+      },
+      itemBuilder: (_) => [
+        if (name.isNotEmpty)
+          PopupMenuItem<String>(
+            enabled: false,
+            child: Text(name,
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        if (canOpenPos)
+          const PopupMenuItem<String>(
+            value: 'pos',
+            child: Row(
+              children: [
+                Icon(Icons.point_of_sale_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('Ouvrir la caisse'),
+              ],
+            ),
+          ),
+        const PopupMenuItem<String>(
+          value: 'signout',
+          child: Row(
+            children: [
+              Icon(Icons.logout, size: 18),
+              SizedBox(width: 8),
+              Text('Déconnexion'),
+            ],
+          ),
+        ),
+      ],
+      child: const SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Text('\u{1F464}', style: TextStyle(fontSize: 20)),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Desktop breadcrumb — Figma node 31:763
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _DesktopBreadcrumb extends StatelessWidget {
+  final String tenantName;
+  final String currentLabel;
+  final VoidCallback? onTenantTap;
+
+  const _DesktopBreadcrumb({
+    required this.tenantName,
+    required this.currentLabel,
+    this.onTenantTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.border, width: 0.8),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      alignment: Alignment.centerLeft,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+        onTap: onTenantTap,
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: tenantName,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.primary,
+                ),
+              ),
+              const TextSpan(
+                text: ' › ',
+                style: TextStyle(fontSize: 13, color: AppColors.border),
+              ),
+              TextSpan(
+                text: currentLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      )),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Dark sidebar (tablet ≥ 600dp, < 1024dp)
+// ══════════════════════════════════════════════════════════════════════════════
 
 const _kSidebarBg = Color(0xFF0F172A);      // slate-900
 const _kSidebarWidth = 220.0;
