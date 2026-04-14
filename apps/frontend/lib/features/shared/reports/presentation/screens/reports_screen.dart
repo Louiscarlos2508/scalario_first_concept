@@ -8,6 +8,9 @@ import 'package:frontend/features/retail/backoffice/presentation/screens/dashboa
 import 'package:frontend/features/shared/reports/presentation/screens/ca_report_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/stock_report_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/pertes_report_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/export_share_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/vendeurs_report_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/paiements_report_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Hub rapports — Figma 19:2 "01.3 Hub rapports"
@@ -27,6 +30,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
   String _searchQuery = '';
   int _periodIndex = 2; // Default: "7 derniers jours"
   int _currentTabIndex = 0;
+  bool _showExport = false;
 
   static const _tabsMobile = [
     'Aperçu',
@@ -92,10 +96,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
     }
   }
 
+  void _openExport(BuildContext context) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1024;
+    if (isDesktop) {
+      setState(() => _showExport = true);
+      ref.read(activeBreadcrumbSubLabel.notifier).state =
+          'Exporter & partager';
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ExportShareScreen()),
+      );
+    }
+  }
+
+  void _closeExport() {
+    setState(() => _showExport = false);
+    // Restore breadcrumb to current tab
+    ref.read(activeBreadcrumbSubLabel.notifier).state =
+        _currentTabIndex == 0 ? null : _tabsDesktop[_currentTabIndex];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 1024;
     final tabs = isDesktop ? _tabsDesktop : _tabsMobile;
+
+    // ── Desktop: show export content inline ──────────────
+    if (isDesktop && _showExport) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: ExportShareContent(onClose: _closeExport),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -113,7 +146,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                   : _tabsDesktop[_currentTabIndex],
               onSearchChanged: (q) => setState(() => _searchQuery = q),
               onPeriodTap: () => _showPeriodSelector(context, true),
-              onExportTap: () {},
+              onExportTap: () => _openExport(context),
             ),
           ],
 
@@ -150,7 +183,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                   periodIndex: _periodIndex,
                   onSearchChanged: (q) => setState(() => _searchQuery = q),
                   onPeriodTap: () => _showPeriodSelector(context, isDesktop),
-                  onExportTap: () {},
+                  onExportTap: () => _openExport(context),
                   onCardTap: (tabIndex) =>
                       _tabController.animateTo(tabIndex),
                 ),
@@ -169,10 +202,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                   periodDateRange: _periodDateRange,
                   onPeriodTap: () => _showPeriodSelector(context, isDesktop),
                 ),
-                const _PlaceholderTab(
-                    title: 'Vendeurs', emoji: '\u{1F465}'),
-                const _PlaceholderTab(
-                    title: 'Paiements', emoji: '\u{1F4B3}'),
+                VendeursReportScreen(
+                  periodLabel: _periodLabel,
+                  periodDateRange: _periodDateRange,
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                ),
+                PaiementsReportScreen(
+                  periodLabel: _periodLabel,
+                  periodDateRange: _periodDateRange,
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                ),
               ],
             ),
           ),
@@ -1184,31 +1223,3 @@ class _ReportPeriodSheetState extends State<_ReportPeriodSheet> {
 // Placeholder tab — sub-reports (bientôt disponible)
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _PlaceholderTab extends StatelessWidget {
-  final String title;
-  final String emoji;
-
-  const _PlaceholderTab({required this.title, required this.emoji});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 48)),
-          const SizedBox(height: 16),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          const Text('Bientôt disponible',
-              style: TextStyle(
-                  fontSize: 14, color: AppColors.textSecondary)),
-        ],
-      ),
-    );
-  }
-}

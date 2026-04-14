@@ -577,7 +577,8 @@ class _DesktopBreadcrumb extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final rawSubLabel = ref.watch(activeBreadcrumbSubLabel);
     // Only show sub-label when we're actually on the page that set it
-    final subLabel = currentLabel == 'Rapports' ? rawSubLabel : null;
+    const pagesWithSubLabel = {'Rapports', 'Stock', 'Commandes'};
+    final subLabel = pagesWithSubLabel.contains(currentLabel) ? rawSubLabel : null;
 
     return Container(
       height: 44,
@@ -607,13 +608,28 @@ class _DesktopBreadcrumb extends ConsumerWidget {
           ),
           const Text(' › ',
               style: TextStyle(fontSize: 13, color: AppColors.border)),
-          // Current section label — not clickable (already here)
-          Text(currentLabel,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: subLabel != null ? FontWeight.w500 : FontWeight.w600,
-                color: subLabel != null ? AppColors.textSecondary : AppColors.textPrimary,
-              )),
+          // Current section label — clickable when sub-label is set (clears it)
+          if (subLabel != null)
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () =>
+                    ref.read(activeBreadcrumbSubLabel.notifier).state = null,
+                child: Text(currentLabel,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.primary,
+                    )),
+              ),
+            )
+          else
+            Text(currentLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                )),
           if (subLabel != null) ...[
             const Text(' › ',
                 style: TextStyle(fontSize: 13, color: AppColors.border)),

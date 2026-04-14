@@ -8,6 +8,8 @@ import 'package:frontend/features/shared/internal_orders/presentation/widgets/in
 import 'package:frontend/features/shared/internal_orders/presentation/widgets/internal_order_kpi_row.dart';
 import 'package:frontend/features/shared/internal_orders/presentation/widgets/workflow_stepper.dart';
 import 'package:frontend/features/shared/internal_orders/presentation/screens/internal_order_detail_screen.dart';
+import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
+    show activeBreadcrumbSubLabel;
 
 /// Set to an order ID to programmatically open its detail on desktop.
 /// Automatically reset after navigation.
@@ -122,12 +124,29 @@ class _InternalOrdersScreenState extends ConsumerState<InternalOrdersScreen>
       ref.read(pendingOrderNavigationProvider.notifier).state = null;
     });
 
+    // Breadcrumb: clicking "Commandes" clears sub-label → go back to list
+    ref.listen(activeBreadcrumbSubLabel, (prev, next) {
+      if (prev != null && next == null && _selectedOrder != null && mounted) {
+        setState(() => _selectedOrder = null);
+      }
+    });
+
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
     if (isWide && _selectedOrder != null) {
-      return InternalOrderDetailScreen(
-        order: _selectedOrder!,
-        onBack: () => setState(() => _selectedOrder = null),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(activeBreadcrumbSubLabel.notifier).state =
+              _selectedOrder!.id;
+        }
+      });
+      return InternalOrderDetailScreen(order: _selectedOrder!);
+    }
+    if (isWide) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(activeBreadcrumbSubLabel.notifier).state = null;
+        }
+      });
     }
     return isWide ? _buildDesktop() : _buildMobile();
   }

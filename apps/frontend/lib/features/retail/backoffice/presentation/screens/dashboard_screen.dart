@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/product_stock_screen.dart';
+import 'package:frontend/features/shared/catalog/presentation/screens/products_screen.dart';
 import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
@@ -46,10 +46,9 @@ final _allNavScreens = <_NavScreenPair>[
     navItem: const NavItem(
         icon: Icons.inventory_2_outlined,
         selectedIcon: Icons.inventory_2,
-        label: 'Produits & Stock',
-        shortLabel: 'Stock',
+        label: 'Stock',
         moduleCode: 'inventory'),
-    screen: const ProductStockScreen(),
+    screen: const ProductsScreen(),
   ),
   (
     navItem: const NavItem(

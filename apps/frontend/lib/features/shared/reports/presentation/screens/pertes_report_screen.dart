@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/export_share_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Rapport Pertes — Figma 18:2 "01.6 Rapport pertes"
@@ -1019,7 +1020,7 @@ class _ExportButton extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {},
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExportShareScreen())),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),

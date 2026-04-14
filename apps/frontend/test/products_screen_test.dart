@@ -11,7 +11,7 @@ import 'package:frontend/features/shared/business_type/data/business_type_config
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/catalog/presentation/providers/catalog_providers.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
-import 'package:frontend/features/shared/inventory/presentation/screens/product_stock_screen.dart';
+import 'package:frontend/features/shared/catalog/presentation/screens/products_screen.dart';
 import 'package:frontend/features/shared/reports/data/models/sales_stat.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
@@ -70,12 +70,12 @@ Widget _buildScreen() {
           .overrideWith((ref) => Future.value(0)),
       unreadNotificationCountProvider.overrideWith((ref) => const Stream<int>.empty()),
     ],
-    child: const MaterialApp(home: ProductStockScreen()),
+    child: const MaterialApp(home: ProductsScreen()),
   );
 }
 
 void main() {
-  group('ProductStockScreen — action chips (pas de TabBar)', () {
+  group('ProductsScreen — action chips (pas de TabBar)', () {
     testWidgets('pas de TabBar — les 4 action chips sont présents', (
       tester,
     ) async {

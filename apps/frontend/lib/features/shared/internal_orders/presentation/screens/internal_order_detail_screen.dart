@@ -7,18 +7,17 @@ import 'package:frontend/features/shared/internal_orders/presentation/screens/ph
 import 'package:frontend/features/shared/internal_orders/presentation/widgets/internal_order_confirm_sheet.dart';
 
 /// Écran détail d'une commande interne — mobile + desktop.
-/// [onBack] est utilisé en mode inline (desktop dans le shell) pour revenir à la liste
-/// sans Navigator.pop (qui sortirait du shell).
+/// Écran détail d'une commande interne — mobile + desktop.
+/// En desktop inline, le retour se fait via le breadcrumb du shell.
 class InternalOrderDetailScreen extends StatelessWidget {
   final InternalOrder order;
-  final VoidCallback? onBack;
-  const InternalOrderDetailScreen({super.key, required this.order, this.onBack});
+  const InternalOrderDetailScreen({super.key, required this.order});
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 1024;
     return isDesktop
-        ? _DesktopDetail(order: order, onBack: onBack)
+        ? _DesktopDetail(order: order)
         : _MobileDetail(order: order);
   }
 }
@@ -736,16 +735,7 @@ class _MobileActionBar extends StatelessWidget {
 
 class _DesktopDetail extends StatelessWidget {
   final InternalOrder order;
-  final VoidCallback? onBack;
-  const _DesktopDetail({required this.order, this.onBack});
-
-  void _goBack(BuildContext context) {
-    if (onBack != null) {
-      onBack!();
-    } else {
-      Navigator.pop(context);
-    }
-  }
+  const _DesktopDetail({required this.order});
 
   @override
   Widget build(BuildContext context) {
@@ -754,49 +744,6 @@ class _DesktopDetail extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Back bar (breadcrumb is already in the shell)
-          Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(
-                  bottom: BorderSide(color: AppColors.border, width: 0.8)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-            child: Row(
-              children: [
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => _goBack(context),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('\u2190',
-                            style: TextStyle(
-                                fontSize: 16, color: AppColors.primary)),
-                        SizedBox(width: 8),
-                        Text('Retour aux commandes',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.primary)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text('\u2022',
-                    style: TextStyle(
-                        fontSize: 10, color: AppColors.textSecondary)),
-                const SizedBox(width: 16),
-                Text(order.id,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary)),
-              ],
-            ),
-          ),
           // Header
           Container(
             decoration: const BoxDecoration(

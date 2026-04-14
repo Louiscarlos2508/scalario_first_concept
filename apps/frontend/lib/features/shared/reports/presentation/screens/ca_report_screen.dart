@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/export_share_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Rapport CA — Figma 20:2 "01.4 Rapport CA"
@@ -932,7 +933,7 @@ class _ExportButton extends StatelessWidget {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {},
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExportShareScreen())),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
