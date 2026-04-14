@@ -5,7 +5,6 @@ const _moduleCodeToLabel = {
   'inventory': 'Inventaire',
   'retail': 'Point de vente',
   'reporting': 'Rapports',
-  'purchase_orders': 'Achats',
   'variants': 'Variantes',
   'pricing': 'Multi-tarifs',
   'promotions': 'Promotions',

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/features/retail/backoffice/presentation/widgets/dashboard_shell.dart';
 import 'package:frontend/features/shared/catalog/presentation/screens/products_screen.dart';
-import 'package:frontend/features/shared/purchase_orders/presentation/screens/purchase_orders_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/reports_screen.dart';
 import 'package:frontend/features/shared/reports/presentation/screens/sales_history_screen.dart';
 import 'package:frontend/features/shared/contacts/presentation/screens/contacts_screen.dart';
@@ -49,14 +48,6 @@ final _allNavScreens = <_NavScreenPair>[
         label: 'Stock',
         moduleCode: 'inventory'),
     screen: const ProductsScreen(),
-  ),
-  (
-    navItem: const NavItem(
-        icon: Icons.call_received_outlined,
-        selectedIcon: Icons.call_received,
-        label: 'Achats',
-        moduleCode: 'purchase_orders'),
-    screen: const PurchaseOrdersScreen(),
   ),
   (
     navItem: const NavItem(
@@ -144,10 +135,9 @@ final _allNavScreens = <_NavScreenPair>[
 /// Base modules visible per role. Dynamic additions via roleScreenAccess:
 /// - 'clients' if canAccess(role, 'clients_view')
 /// - 'expenses' if canAccess(role, 'expenses')
-/// - 'purchase_orders' always included for manager (if module is active)
 const _roleAllowedModules = <String, Set<String>?>{
   'owner': null,
-  'manager': {'inventory', 'reports', 'transactions', 'purchase_orders', 'reservations', 'sessions'},
+  'manager': {'inventory', 'reports', 'transactions', 'reservations', 'sessions'},
 };
 
 List<_NavScreenPair> _visiblePairs(

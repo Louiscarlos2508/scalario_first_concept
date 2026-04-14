@@ -7,7 +7,6 @@ import 'package:frontend/features/retail/backoffice/presentation/screens/dashboa
     show dashboardNavigationProvider;
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
-import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
@@ -34,7 +33,6 @@ class KpiCardGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(salesStatsProvider);
     final expensesAsync = ref.watch(expensesProvider);
-    final poStatsAsync = ref.watch(purchaseOrderStatsProvider);
     final stockAlertCountAsync = ref.watch(stockAlertCountProvider);
     final urgentBatchAsync = ref.watch(urgentBatchCountProvider);
     final reservationsKpiAsync = ref.watch(reservationsKpiProvider);
@@ -69,7 +67,6 @@ class KpiCardGrid extends ConsumerWidget {
         final totalExpenses = expenses.fold<double>(0, (s, e) => s + e.amount);
         final netProfit = totalRevenue - totalExpenses;
 
-        final pendingPurchaseOrders = poStatsAsync.valueOrNull?['total'] ?? 0;
         final lowStockCount = lowStockCountAsync.valueOrNull ?? 0;
         final stockAlertCount = stockAlertCountAsync.valueOrNull ?? 0;
         final urgentBatchCount = urgentBatchAsync.valueOrNull ?? 0;
@@ -122,7 +119,6 @@ class KpiCardGrid extends ConsumerWidget {
                     lowStockCount: lowStockCount,
                     urgentBatchCount: urgentBatchCount,
                     freshnessRelevant: freshnessRelevant,
-                    pendingPurchaseOrders: pendingPurchaseOrders,
                     reservationsPending: reservationsPending,
                     clientOrdersInProgress: clientOrdersInProgress,
                     isDistribution: isDistribution,
@@ -300,7 +296,6 @@ class _AlertsSection extends StatelessWidget {
   final int lowStockCount;
   final int urgentBatchCount;
   final bool freshnessRelevant;
-  final int pendingPurchaseOrders;
   final int reservationsPending;
   final int clientOrdersInProgress;
   final bool isDistribution;
@@ -313,7 +308,6 @@ class _AlertsSection extends StatelessWidget {
     required this.lowStockCount,
     required this.urgentBatchCount,
     required this.freshnessRelevant,
-    required this.pendingPurchaseOrders,
     required this.reservationsPending,
     required this.clientOrdersInProgress,
     required this.isDistribution,
@@ -351,17 +345,6 @@ class _AlertsSection extends StatelessWidget {
         color: AppColors.warning,
         label: '$n lot${n > 1 ? 's' : ''} expirent bientôt',
         moduleCode: 'inventory',
-      ));
-    }
-
-    if (canSeeAdminAlerts && pendingPurchaseOrders > 0) {
-      final n = pendingPurchaseOrders;
-      alerts.add(_AlertBannerData(
-        icon: Icons.call_received_outlined,
-        color: AppColors.primary,
-        label:
-            '$n commande${n > 1 ? 's' : ''} fournisseur${n > 1 ? 's' : ''} en attente',
-        moduleCode: 'purchase_orders',
       ));
     }
 

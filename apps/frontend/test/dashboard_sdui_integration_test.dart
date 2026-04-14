@@ -26,7 +26,6 @@ import 'package:frontend/features/shared/client_orders/domain/models/client_orde
     show ClientOrderKpis;
 import 'package:frontend/features/shared/client_orders/presentation/providers/client_order_kpis_provider.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
-import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/reservations/presentation/providers/reservations_provider.dart';
 import 'package:frontend/features/shared/stock_alerts/presentation/providers/stock_alerts_provider.dart';
 import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart'
@@ -62,9 +61,6 @@ Widget _buildOverviewScreen({Future<SduiLayout>? layoutResult}) {
         (ref) => layoutResult ?? Future.value(SduiLayout.dashboardDefault()),
       ),
       unreadNotificationCountProvider.overrideWith((ref) => Stream.value(0)),
-      purchaseOrderStatsProvider.overrideWith(
-        (ref) => Future.value({'pendingCount': 0}),
-      ),
       stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
       urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
       reservationsKpiProvider.overrideWith(
@@ -99,9 +95,6 @@ Widget _buildRendererAt(double width, SduiLayout layout) {
       terminalStatusProvider
           .overrideWith((ref) => Future.value(_mockTerminals)),
       activeSessionsProvider.overrideWith((ref) => Future.value([])),
-      purchaseOrderStatsProvider.overrideWith(
-        (ref) => Future.value({'pendingCount': 0}),
-      ),
       stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
       urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
       reservationsKpiProvider.overrideWith(
@@ -272,9 +265,6 @@ void main() {
           activeTenantProvider.overrideWith((ref) => 'tenant-1'),
           salesStatsProvider.overrideWith((ref) => Future.value(stats)),
           expensesProvider.overrideWith((ref) => Future.value(expenses)),
-          purchaseOrderStatsProvider.overrideWith(
-            (ref) => Future.value({'pendingCount': 0}),
-          ),
           stockAlertCountProvider.overrideWith((ref) => Future.value(0)),
           urgentBatchCountProvider.overrideWith((ref) => Future.value(0)),
           reservationsKpiProvider.overrideWith(

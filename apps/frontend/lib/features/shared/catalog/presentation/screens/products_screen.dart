@@ -4,7 +4,10 @@ import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
 import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
     show activeBreadcrumbSubLabel;
+import 'package:frontend/features/shared/catalog/presentation/screens/product_create_screen.dart';
 import 'package:frontend/features/shared/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/stock_movements_screen.dart';
+import 'package:frontend/features/shared/stock_alerts/presentation/screens/stock_alerts_screen.dart';
 import 'package:intl/intl.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -190,6 +193,15 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   final bool _hasProducts = true;
   // Desktop: selected product for inline detail view (stays in shell)
   Map<String, dynamic>? _selectedProduct;
+  // Desktop: inline creation mode
+  bool _creatingProduct = false;
+  // Desktop: inline edit mode (product to edit)
+  Map<String, dynamic>? _editingProduct;
+  // Desktop: inline alerts view
+  bool _showingAlerts = false;
+  // Desktop: inline movements view (null = general, non-null = filtered by product)
+  bool _showingMovements = false;
+  String? _movementsProductName;
 
   @override
   void dispose() {
@@ -260,12 +272,41 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     // Listen for breadcrumb clicks: when sub-label is cleared externally
     // (e.g. clicking "Stock" in breadcrumb), go back to product list.
     ref.listen(activeBreadcrumbSubLabel, (prev, next) {
-      if (prev != null && next == null && _selectedProduct != null && mounted) {
-        setState(() => _selectedProduct = null);
+      if (prev != null && next == null && mounted) {
+        setState(() {
+          _selectedProduct = null;
+          _creatingProduct = false;
+          _editingProduct = null;
+          _showingAlerts = false;
+          _showingMovements = false;
+          _movementsProductName = null;
+        });
       }
     });
 
     if (isDesktop) {
+      // Desktop: inline alerts view
+      if (_showingAlerts) {
+        return const StockAlertsScreen();
+      }
+
+      // Desktop: inline movements view
+      if (_showingMovements) {
+        return StockMovementsScreen(productName: _movementsProductName);
+      }
+
+      // Desktop: inline creation form
+      if (_creatingProduct || _editingProduct != null) {
+        final label =
+            _editingProduct != null ? _editingProduct!['name']?.toString() : 'Nouveau produit';
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && (_creatingProduct || _editingProduct != null)) {
+            ref.read(activeBreadcrumbSubLabel.notifier).state = label;
+          }
+        });
+        return _buildDesktopCreate();
+      }
+
       if (_selectedProduct != null) {
         final product = _selectedProduct!;
         // Set breadcrumb sub-label to product name
@@ -301,6 +342,41 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: ScalarioAppBar(
         title: 'Produits',
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const StockAlertsScreen()),
+                ),
+                icon: const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 22),
+              ),
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: const Color(0xFF0F172A), width: 1.5),
+                  ),
+                  child: const Center(
+                    child: Text('8',
+                        style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -837,6 +913,27 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   ),
                 ),
                 // Actions
+                _desktopAction('⚠ Alertes (${_mockQuickFilterCounts['rupture']! + _mockQuickFilterCounts['stock_bas']!})', () {
+                  setState(() {
+                    _showingAlerts = true;
+                    _selectedProduct = null;
+                    _creatingProduct = false;
+                    _editingProduct = null;
+                    _showingMovements = false;
+                  });
+                }),
+                const SizedBox(width: 10),
+                _desktopAction('📊 Mouvements', () {
+                  setState(() {
+                    _movementsProductName = null;
+                    _showingMovements = true;
+                    _selectedProduct = null;
+                    _creatingProduct = false;
+                    _editingProduct = null;
+                    _showingAlerts = false;
+                  });
+                }),
+                const SizedBox(width: 10),
                 _desktopAction('\u2913 Exporter', null),
                 const SizedBox(width: 10),
                 _desktopAction('\uD83D\uDCF7 Scan', null),
@@ -1042,7 +1139,16 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                   children: [
                     _dtOutlinedBtn('🖨 Imprimer étiquette'),
                     const SizedBox(width: 10),
-                    _dtOutlinedBtn('📊 Mouvements'),
+                    _dtOutlinedBtn('📊 Mouvements', onTap: () {
+                      setState(() {
+                        _movementsProductName = product['name']?.toString();
+                        _showingMovements = true;
+                        _selectedProduct = null;
+                        _creatingProduct = false;
+                        _editingProduct = null;
+                        _showingAlerts = false;
+                      });
+                    }),
                     const SizedBox(width: 10),
                     // Réapprovisionner — yellow if stock bas
                     if (minStock > 0 && stock < minStock) ...[
@@ -1051,7 +1157,14 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                       const SizedBox(width: 10),
                     ],
                     _dtFilledBtn(
-                        '✎ Éditer', AppColors.primary, Colors.white),
+                        '✎ Éditer', AppColors.primary, Colors.white,
+                        onTap: () {
+                      setState(() {
+                        _editingProduct = product;
+                        _selectedProduct = null;
+                        _creatingProduct = false;
+                      });
+                    }),
                   ],
                 ),
               ],
@@ -1311,9 +1424,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
 
   // ── Desktop detail helpers ────────────────────────────────────────────────
 
-  Widget _dtOutlinedBtn(String label) {
+  Widget _dtOutlinedBtn(String label, {VoidCallback? onTap}) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Container(
         height: 43.2,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1332,9 +1445,9 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
-  Widget _dtFilledBtn(String label, Color bg, Color fg) {
+  Widget _dtFilledBtn(String label, Color bg, Color fg, {VoidCallback? onTap}) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Container(
         height: 43.2,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2094,13 +2207,16 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
                     style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A))),
+                        color: Color(0xFF0F172A)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1),
                 if (ean.isNotEmpty)
                   Text('EAN $ean',
                       style: const TextStyle(
                           fontSize: 10,
                           fontFamily: 'RobotoMono',
-                          color: Color(0xFF64748B))),
+                          color: Color(0xFF64748B)),
+                      overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -2287,10 +2403,129 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
     );
   }
 
+  // ── Desktop create/edit view (inline in shell) — Figma 46:2 ─────────────
+
+  Widget _buildDesktopCreate() {
+    final isEdit = _editingProduct != null;
+    final title = isEdit ? 'Modifier produit existant' : 'Nouveau produit';
+    final subtitle = isEdit
+        ? 'Modifier les informations du produit'
+        : 'Renseigner les infos essentielles… les options, catégories et tarifs se gèrent ici.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Title bar ──
+        Container(
+          height: 102.8,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                            height: 1.1)),
+                    const SizedBox(height: 6),
+                    Text(subtitle,
+                        style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF64748B),
+                            height: 1.3)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Annuler
+              _desktopAction('Annuler', () {
+                setState(() {
+                  _creatingProduct = false;
+                  _editingProduct = null;
+                });
+              }),
+              const SizedBox(width: 10),
+              // Enregistrer & créer un autre
+              if (!isEdit) ...[
+                _desktopAction('Enregistrer & créer un autre', () {
+                  // TODO: save then reset form
+                }),
+                const SizedBox(width: 10),
+              ],
+              // Enregistrer / Mettre à jour
+              GestureDetector(
+                onTap: () {
+                  // TODO: save then go back
+                  setState(() {
+                    _creatingProduct = false;
+                    _editingProduct = null;
+                  });
+                },
+                child: Container(
+                  height: 40.8,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      isEdit ? 'Mettre à jour' : 'Enregistrer',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // ── Form content ──
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 0, 28, 20),
+            child: ProductCreateBody(
+              product: _editingProduct,
+              showDesktopActions: true,
+              onCancel: () => setState(() {
+                _creatingProduct = false;
+                _editingProduct = null;
+              }),
+              onSaved: () => setState(() {
+                _creatingProduct = false;
+                _editingProduct = null;
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── Create product ────────────────────────────────────────────────────────
 
   void _showCreateProduct() {
-    // TODO: navigate to product creation form
+    final isDesktop = MediaQuery.sizeOf(context).width >= 900;
+    if (isDesktop) {
+      setState(() {
+        _creatingProduct = true;
+        _editingProduct = null;
+        _selectedProduct = null;
+      });
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const ProductCreateScreen(),
+        ),
+      );
+    }
   }
 }
 

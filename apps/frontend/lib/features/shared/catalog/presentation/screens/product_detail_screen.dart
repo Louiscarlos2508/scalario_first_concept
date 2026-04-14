@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
+import 'package:frontend/features/shared/inventory/presentation/screens/stock_movements_screen.dart';
 import 'package:intl/intl.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -712,7 +713,15 @@ class ProductDetailBody extends StatelessWidget {
         child: Row(
           children: [
             _actionButton('📊 Mouvements', const Color(0xFFF1F5F9),
-                const Color(0xFF0F172A)),
+                const Color(0xFF0F172A), onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StockMovementsScreen(
+                    productName: product['name']?.toString(),
+                  ),
+                ),
+              );
+            }),
             const SizedBox(width: 8),
             _actionButton('🖨 Imprimer', const Color(0xFFF1F5F9),
                 const Color(0xFF0F172A)),
@@ -725,10 +734,10 @@ class ProductDetailBody extends StatelessWidget {
     );
   }
 
-  Widget _actionButton(String label, Color bg, Color fg) {
+  Widget _actionButton(String label, Color bg, Color fg, {VoidCallback? onTap}) {
     return Expanded(
       child: GestureDetector(
-        onTap: () {},
+        onTap: onTap ?? () {},
         child: Container(
           height: 46,
           decoration: BoxDecoration(

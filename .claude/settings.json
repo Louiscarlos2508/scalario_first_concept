@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c ':*)",
-      "Bash(flutter build:*)"
+      "Bash(flutter build:*)",
+      "Bash(ls /tmp/figma_*)"
     ]
   }
 }

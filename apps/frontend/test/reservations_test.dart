@@ -27,7 +27,6 @@ import 'package:frontend/features/shared/expenses/data/models/expense.dart';
 import 'package:frontend/features/shared/expenses/presentation/providers/expense_providers.dart';
 import 'package:frontend/features/shared/freshness/presentation/providers/freshness_provider.dart';
 import 'package:frontend/features/shared/notifications/presentation/providers/notification_providers.dart';
-import 'package:frontend/features/shared/purchase_orders/presentation/providers/purchase_orders_providers.dart';
 import 'package:frontend/features/shared/reports/data/models/sales_stat.dart';
 import 'package:frontend/features/shared/reports/presentation/providers/report_providers.dart';
 import 'package:frontend/features/shared/reports/presentation/widgets/kpi_card_grid.dart';
@@ -186,9 +185,6 @@ Widget _buildKpiCardGrid({int reservationsPending = 0}) {
         ]),
       ),
       expensesProvider.overrideWith((ref) => Future.value(<Expense>[])),
-      purchaseOrderStatsProvider.overrideWith(
-        (ref) => Future.value(<String, int>{'total': 0}),
-      ),
       stockAlertCountProvider.overrideWith((ref) async => 0),
       urgentBatchCountProvider.overrideWith((ref) async => 0),
       reservationsKpiProvider.overrideWith(
