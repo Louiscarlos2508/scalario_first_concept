@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:frontend/core/theme/app_theme.dart';
 import 'package:frontend/core/widgets/scalario_app_bar.dart';
+import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
+    show activeBreadcrumbSubLabel;
+import 'package:frontend/features/shared/reports/presentation/screens/ca_report_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/stock_report_screen.dart';
+import 'package:frontend/features/shared/reports/presentation/screens/pertes_report_screen.dart';
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Hub rapports — Figma 19:2 "01.3 Hub rapports"
@@ -21,6 +26,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
   late final TabController _tabController;
   String _searchQuery = '';
   int _periodIndex = 2; // Default: "7 derniers jours"
+  int _currentTabIndex = 0;
 
   static const _tabsMobile = [
     'Aperçu',
@@ -44,10 +50,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabsMobile.length, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      setState(() => _currentTabIndex = _tabController.index);
+      ref.read(activeBreadcrumbSubLabel.notifier).state =
+          _currentTabIndex == 0 ? null : _tabsDesktop[_currentTabIndex];
+    }
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
   }
@@ -92,6 +108,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
               periodLabel: _periodLabel,
               periodDateRange: _periodDateRange,
               searchQuery: _searchQuery,
+              activeTabLabel: _currentTabIndex == 0
+                  ? null
+                  : _tabsDesktop[_currentTabIndex],
               onSearchChanged: (q) => setState(() => _searchQuery = q),
               onPeriodTap: () => _showPeriodSelector(context, true),
               onExportTap: () {},
@@ -135,12 +154,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen>
                   onCardTap: (tabIndex) =>
                       _tabController.animateTo(tabIndex),
                 ),
-                _PlaceholderTab(
-                    title: "Chiffre d'affaires", emoji: '\u{20A3}'),
-                const _PlaceholderTab(
-                    title: 'Stock', emoji: '\u{1F4E6}'),
-                const _PlaceholderTab(
-                    title: 'Pertes', emoji: '\u26A0'),
+                CaReportScreen(
+                  periodLabel: _periodLabel,
+                  periodDateRange: _periodDateRange,
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                ),
+                StockReportScreen(
+                  periodLabel: _periodLabel,
+                  periodDateRange: _periodDateRange,
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                ),
+                PertesReportScreen(
+                  periodLabel: _periodLabel,
+                  periodDateRange: _periodDateRange,
+                  onPeriodTap: () => _showPeriodSelector(context, isDesktop),
+                ),
                 const _PlaceholderTab(
                     title: 'Vendeurs', emoji: '\u{1F465}'),
                 const _PlaceholderTab(
@@ -202,6 +230,7 @@ class _DesktopHeader extends StatelessWidget {
   final String periodLabel;
   final String periodDateRange;
   final String searchQuery;
+  final String? activeTabLabel;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onPeriodTap;
   final VoidCallback onExportTap;
@@ -210,6 +239,7 @@ class _DesktopHeader extends StatelessWidget {
     required this.periodLabel,
     required this.periodDateRange,
     required this.searchQuery,
+    this.activeTabLabel,
     required this.onSearchChanged,
     required this.onPeriodTap,
     required this.onExportTap,
@@ -217,29 +247,16 @@ class _DesktopHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = activeTabLabel != null
+        ? '$activeTabLabel \u00B7 Période : $periodDateRange'
+        : 'Vue d\'ensemble \u00B7 Période : $periodDateRange';
+
     return Container(
       color: AppColors.surface,
       padding: const EdgeInsets.fromLTRB(32, 16, 32, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Breadcrumb
-          Row(
-            children: [
-              Text('Boutique Ouaga',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w500)),
-              const SizedBox(width: 6),
-              const Text('Rapports',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary)),
-            ],
-          ),
-          const SizedBox(height: 16),
           // Title row + search + period + export
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,8 +272,7 @@ class _DesktopHeader extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary)),
                     const SizedBox(height: 4),
-                    Text(
-                        'Vue d\'ensemble \u00B7 Période : $periodDateRange',
+                    Text(subtitle,
                         style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.textSecondary)),
@@ -496,7 +512,7 @@ class _OverviewTab extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary)),
               SizedBox(height: 4),
-              Text('Vue d\'ensemble \u00B7 Boutique Ouaga',
+              Text('Vue d\'ensemble \u00B7 7 derniers jours',
                   style: TextStyle(
                       fontSize: 13, color: AppColors.textSecondary)),
             ],

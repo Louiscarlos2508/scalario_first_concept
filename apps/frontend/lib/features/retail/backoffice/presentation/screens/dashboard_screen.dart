@@ -26,6 +26,10 @@ import 'package:frontend/features/retail/backoffice/presentation/screens/owner_o
 /// switch the dashboard to that tab. Automatically reset after navigation.
 final dashboardNavigationProvider = StateProvider<String?>((ref) => null);
 
+/// Active sub-tab label for breadcrumb display (e.g. "Chiffre d'affaires").
+/// Null = default/overview tab, no extra breadcrumb segment.
+final activeBreadcrumbSubLabel = StateProvider<String?>((ref) => null);
+
 // ── Navigation + screen mapping ───────────────────────────────────────────────
 
 typedef _NavScreenPair = ({NavItem navItem, Widget screen});

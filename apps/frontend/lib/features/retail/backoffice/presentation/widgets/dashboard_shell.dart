@@ -17,6 +17,8 @@ import 'package:frontend/features/retail/pos/presentation/widgets/sync_status_in
 import 'package:frontend/features/retail/pos/presentation/screens/pos_screen.dart';
 import 'package:frontend/features/shared/business_type/presentation/providers/business_type_config_provider.dart';
 import 'package:frontend/features/shared/business_type/utils/access_utils.dart';
+import 'package:frontend/features/retail/backoffice/presentation/screens/dashboard_screen.dart'
+    show activeBreadcrumbSubLabel;
 
 /// Navigation destination item.
 /// [moduleCode] null = always visible; non-null = visible only when module is active.
@@ -560,7 +562,7 @@ class _DesktopUserMenu extends StatelessWidget {
 // Desktop breadcrumb — Figma node 31:763
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _DesktopBreadcrumb extends StatelessWidget {
+class _DesktopBreadcrumb extends ConsumerWidget {
   final String tenantName;
   final String currentLabel;
   final VoidCallback? onTenantTap;
@@ -572,7 +574,11 @@ class _DesktopBreadcrumb extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rawSubLabel = ref.watch(activeBreadcrumbSubLabel);
+    // Only show sub-label when we're actually on the page that set it
+    final subLabel = currentLabel == 'Rapports' ? rawSubLabel : null;
+
     return Container(
       height: 44,
       decoration: const BoxDecoration(
@@ -583,37 +589,43 @@ class _DesktopBreadcrumb extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       alignment: Alignment.centerLeft,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-        onTap: onTenantTap,
-        child: Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: tenantName,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
-                ),
-              ),
-              const TextSpan(
-                text: ' › ',
-                style: TextStyle(fontSize: 13, color: AppColors.border),
-              ),
-              TextSpan(
-                text: currentLabel,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Tenant name — clickable → dashboard
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: onTenantTap,
+              child: Text(tenantName,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                  )),
+            ),
+          ),
+          const Text(' › ',
+              style: TextStyle(fontSize: 13, color: AppColors.border)),
+          // Current section label — not clickable (already here)
+          Text(currentLabel,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: subLabel != null ? FontWeight.w500 : FontWeight.w600,
+                color: subLabel != null ? AppColors.textSecondary : AppColors.textPrimary,
+              )),
+          if (subLabel != null) ...[
+            const Text(' › ',
+                style: TextStyle(fontSize: 13, color: AppColors.border)),
+            Text(subLabel,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      )),
+                )),
+          ],
+        ],
+      ),
     );
   }
 }

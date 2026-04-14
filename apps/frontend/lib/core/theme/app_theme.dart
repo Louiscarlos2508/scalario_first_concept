@@ -72,6 +72,10 @@ class AppColors {
   static const Color payOrangeMoney = Color(0xFFFF6F00);
   static const Color payWhatsapp = Color(0xFF25D366);
 
+  // Stock report gradient (Figma 21:705)
+  static const Color stockPrimary = Color(0xFFF9A825); // orange clair
+  static const Color stockDark = Color(0xFFE65100); // orange foncé
+
   // Échelle fraîcheur produit (sc06 — fresh produce)
   static const Color freshGreen = Color(0xFF16A34A); // frais OK
   static const Color freshOrange = Color(0xFFF59E0B); // bientôt
