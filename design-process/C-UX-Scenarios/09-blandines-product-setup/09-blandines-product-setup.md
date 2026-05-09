@@ -18,7 +18,7 @@ template: retail_fresh_produce.json
 ## Transaction (Q1)
 
 **What this scenario covers:**
-Blandine configure un produit dans son catalogue — nom, unité de vente, pos_type, prix, fraîcheur, taux de perte, seuil alerte — pour que le Commercial puisse vendre correctement et que les alertes fonctionnent.
+Blandine configure un produit dans son catalogue — nom, unité de vente, input_type, prix, fraîcheur, taux de perte, seuil alerte — pour que le Commercial puisse vendre correctement et que les alertes fonctionnent.
 
 ---
 
@@ -64,8 +64,8 @@ Catalogue à jour = ventes fiables = template prouvé terrain → O2.1 + intégr
 ## Shortest Path (Q8)
 
 1. **Catalogue Produits** — liste produits depuis Drift, `ActionButton` "Ajouter un produit" visible
-2. **FormWidget Produit** — nom, catégorie, `pos_type` (vrac / unité / service / autre), unité de vente (kg / pièce / botte / sac / caisse), prix unitaire, durée fraîcheur (jours), taux de perte attendu (%), seuil alerte stock minimum
-3. **Confirmation Produit** — récap paramètres, tap "Enregistrer" → produit disponible dans le POS Commercial avec le rendu adapté au `pos_type` ✓
+2. **FormWidget Produit** — nom, catégorie, `input_type` (vrac / unité / service / autre), unité de vente (kg / pièce / botte / sac / caisse), prix unitaire, durée fraîcheur (jours), taux de perte attendu (%), seuil alerte stock minimum
+3. **Confirmation Produit** — récap paramètres, tap "Enregistrer" → produit disponible dans le POS Commercial avec le rendu adapté au `input_type` ✓
 
 ---
 
@@ -83,16 +83,16 @@ Catalogue à jour = ventes fiables = template prouvé terrain → O2.1 + intégr
 
 ## Architecture Note — POS Types
 
-Le `pos_type` est configuré **par produit** dans le JSON — pas globalement par tenant. Le BDUI Engine adapte le rendu du POS selon ce champ :
+Le `input_type` est configuré **par produit** dans le JSON — pas globalement par tenant. Le BDUI Engine adapte le rendu du POS selon ce champ :
 
-| pos_type | Rendu POS Commercial | Calcul prix |
+| input_type | Rendu POS Commercial | Calcul prix |
 |----------|---------------------|-------------|
 | `vrac` | Saisie poids (kg/g) — balance ou manuel | Poids × prix unitaire/kg |
 | `unit` | Saisie quantité entière | Quantité × prix unitaire |
 | `service` | Sélection forfait/durée | Prix forfait fixe |
 | `mixed` | Articles + modifiers | Somme composants |
 
-Un même magasin peut avoir des produits avec des `pos_type` différents (tomates = `vrac`, sachets = `unit`).
+Un même magasin peut avoir des produits avec des `input_type` différents (tomates = `vrac`, sachets = `unit`).
 
 ---
 
@@ -101,5 +101,5 @@ Un même magasin peut avoir des produits avec des `pos_type` différents (tomate
 | Step | Dossier | Purpose | Exit Action |
 |------|---------|---------|-------------|
 | 09.1 | `09.1-catalogue-produits/` | Vue catalogue — liste produits existants | Tap "Ajouter un produit" |
-| 09.2 | `09.2-form-produit/` | Saisie paramètres produit dont pos_type | Tap "Enregistrer" |
+| 09.2 | `09.2-form-produit/` | Saisie paramètres produit dont input_type | Tap "Enregistrer" |
 | 09.3 | `09.3-confirmation-produit/` | Récap + validation → produit actif dans le POS | Produit disponible ✓ |
