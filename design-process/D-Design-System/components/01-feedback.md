@@ -1,7 +1,7 @@
 ---
 type: components
 group: feedback
-components: [AlertBanner, StatusBadge, SyncStatusBar, ProgressBar]
+components: [AlertBanner, StatusBadge, SyncStatusBar, ProgressBar, NotificationBadge]
 ---
 
 # Composants — Feedback
@@ -165,4 +165,49 @@ COMPLET :
   [████████████████████████████████████] 100%
 
   barre: color-success-500
+```
+
+---
+
+## NotificationBadge
+
+**Rôle :** Badge numérique superposé à une icône (typiquement la cloche 🔔 dans l'AppBar) pour signaler des notifications non lues. Rendu via un `Stack` Flutter.
+**Usage :** S01.2 AppBar (🔔 + badge), S04 (alertes critiques), S10 (invitations équipe).
+**Règle :** Disparaît à 0. Affiche "99+" si count > 99. Couleur rouge invariable (toujours `color-danger-500`) — indépendant du thème du rôle.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `count` | int | Nombre de notifications non lues (0 = badge masqué) |
+| `max_display` | int | Seuil "+" — défaut 99 |
+
+### Tokens
+
+| Élément | Token | Valeur |
+|---------|-------|--------|
+| Fond badge | `color-danger-500` | #EF4444 |
+| Texte | `color-white` | Inter 10sp 700 |
+| Diamètre (1 chiffre) | — | 16px |
+| Diamètre (2 chiffres) | — | 20px (pill) |
+| Position | — | top-right offset (-4px, -4px) relative à l'icône |
+
+### Sketch ASCII
+
+```
+1 NOTIFICATION :
+  🔔
+   ●2   ← badge 16px rouge, centré sur coin sup-droit
+         Inter 10sp 700 color-white
+
+10 NOTIFICATIONS :
+  🔔
+   ●10  ← pill 20px
+
+99+ NOTIFICATIONS :
+  🔔
+   ●99+ ← pill 24px
+
+0 NOTIFICATION : badge absent — rendu neutre
+  🔔
 ```

@@ -1,7 +1,7 @@
 ---
 type: components
 group: selection
-components: [ProductGrid, QuantityControl, ChipSelector, FilterChips, PeriodSelector, ProductSelector]
+components: [ProductGrid, QuantityControl, ChipSelector, FilterChips, PeriodSelector, ProductSelector, CartSummary]
 ---
 
 # Composants — Selection
@@ -228,4 +228,55 @@ MAX ATTEINT :
   ┌──────┐  ┌──────────────────┐  ┌──────┐
   │  −   │  │  15 kg (max)     │  │  ░   │  ← + grisé
   └──────┘  └──────────────────┘  └──────┘
+```
+
+---
+
+## CartSummary
+
+**Rôle :** Barre sticky fixe en bas d'écran pendant le POS — affiche le total courant du panier et l'accès au paiement. Toujours visible au-dessus du BottomNav (ou à sa place si BottomNav masqué pendant la vente).
+**Usage :** S02.2 (Sélection Articles), S15.2 (Vente Crédit) — surface POS.
+**Règle :** Caché si panier vide. Apparaît en slide-up (200ms ease-in) au premier ajout. Sticky bottom — ne défile pas.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `item_count` | int | Nombre d'articles dans le panier |
+| `total_fcfa` | int | Total calculé en FCFA |
+| `is_enabled` | bool | false = disabled (panier vide ou stock bloquant) |
+| `on_tap` | callback | → navigation vers 02.3 Confirmation Paiement |
+
+### Tokens
+
+| Élément | Token | Valeur |
+|---------|-------|--------|
+| Fond barre | `color-neutral-900` | #1A1A1A (sombre, contraste fort) |
+| Label articles | `color-neutral-400` | Roboto Mono 12sp |
+| Montant total | `color-primary-400` | Roboto Mono 18sp 700 (#FFCC00 atténué) |
+| CTA "Procéder" | `color-primary-500` bg | #FFCC00, color-neutral-900 |
+| Hauteur | — | 64px + safeAreaBottom |
+| Élévation | `elevation-4` | shadow remontant |
+
+### Sketch ASCII
+
+```
+PANIER VIDE — caché (aucun rendu)
+
+PANIER ACTIF — 2 articles :
+┌──────────────────────────────────────────────┐  ← sticky bottom 64px
+│ 🛒 2 articles              9 750 FCFA        │  bg color-neutral-900
+│              [ Procéder au paiement → ]       │  btn #FFCC00 h=40px radius-md
+└──────────────────────────────────────────────┘
+
+  label      : Inter 12sp 500 color-neutral-400 — "2 articles"
+  montant    : Roboto Mono 18sp 700 color-primary-400
+  CTA label  : Inter 14sp 500 color-neutral-900
+
+PANIER ACTIF — expanded (web, side panel) :
+  → Côté droit de l'écran : liste détaillée + total + bouton pleine largeur
+  → Même tokens, layout vertical
+
+STOCK BLOQUANT (qté > stock) :
+  bg color-neutral-900 · CTA bg color-neutral-400 (disabled) · texte "Stock insuffisant"
 ```
