@@ -39,5 +39,8 @@ supabase/.temp/
 # Claude Code
 .claude/skills/
 
+# BMAD framework & agents
+_bmad/
+
 # Misc
 .gemini/
