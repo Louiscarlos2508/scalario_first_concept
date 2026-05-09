@@ -121,6 +121,72 @@ user-zone          : 🔔 [count] + initiales avatar 32px bg color-primary-100
 
 ---
 
+## Breadcrumb (Flutter Web uniquement)
+
+**Rôle :** Indique la position dans la hiérarchie — permet de revenir à n'importe quel niveau par tap.
+**Position :** Sous le TopBar, dans la zone de contenu — première ligne de la page.
+**Usage :** Pages secondaires uniquement — pas affiché sur les vues racines (Dashboard, Catalogue, etc.)
+**Mobile :** Pas de breadcrumb — le retour se fait via la flèche ← dans l'AppBar.
+
+### Règle d'affichage
+
+```
+Page racine (Dashboard, Catalogue, Équipe...) :
+  → Pas de breadcrumb — le titre de page suffit
+
+Page secondaire (Nouveau produit, Modifier employé, Rapport semaine...) :
+  → Breadcrumb : PARENT › PAGE COURANTE
+
+Page tertiaire (Drill-down dans rapport...) :
+  → Breadcrumb : PARENT › SOUS-PAGE › DÉTAIL
+  Maximum 3 niveaux — au-delà, tronquer le début
+```
+
+### Sketches ASCII
+
+```
+PAGE SECONDAIRE (formulaire, création) :
+┌────────────────────────────────────────────────────────────────────────────────┐
+│  [Sc] MON MAGASIN — Blandine   Dashboard  Catalogue  Historique  Équipe  ⚙️  │  TopBar
+├────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                │
+│  CATALOGUE  ›  NOUVEAU PRODUIT                                                 │  Breadcrumb
+│                                                                                │
+│  [contenu de la page]                                                          │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+PAGE TERTIAIRE (drill-down) :
+│  HISTORIQUE  ›  RAPPORT SEMAINE  ›  VENTES                                     │  3 niveaux max
+
+PAS DE BREADCRUMB (vue racine) :
+│  CATALOGUE PRODUITS · 11 produits actifs           [+ Ajouter un produit]      │  titre seul
+```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `items` | list\<string\> | Segments du chemin (ex: ["Catalogue", "Nouveau produit"]) |
+| `on_tap` | callback(index) | Navigation vers le niveau tappé |
+
+### Tokens
+
+```
+breadcrumb-item       : Inter 13sp 500 color-neutral-500
+breadcrumb-item-tap   : hover underline color-primary-600 (tappable)
+breadcrumb-active     : Inter 13sp 600 color-neutral-900 (dernière page — non tappable)
+breadcrumb-separator  : "›" Inter 13sp 400 color-neutral-300 · margin H-6
+breadcrumb-height     : 32px · margin-bottom 12px
+```
+
+### Règle flèche ← sur web
+
+**La flèche ← n'est PAS utilisée sur web.** Le breadcrumb remplace la navigation retour.
+- Mobile : AppBar avec ← (tap = back)
+- Web : Breadcrumb avec lien tappable (tap PARENT = back)
+
+---
+
 ## BottomNav (Mobile Android)
 
 **Rôle :** Navigation principale en bas sur mobile. Toujours visible (sauf dans les formulaires plein écran).
