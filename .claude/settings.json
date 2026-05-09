@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python3 -c ':*)",
       "Bash(flutter build:*)",
-      "Bash(ls /tmp/figma_*)"
+      "Bash(ls /tmp/figma_*)",
+      "Bash(ls /tmp/scalario-ds/*.html)",
+      "Bash(ls /home/carlos-simpore/PersonalProjects/scalario/design-process/C-UX-Scenarios/*.md)"
     ]
   }
 }
