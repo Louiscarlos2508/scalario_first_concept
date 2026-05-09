@@ -51,24 +51,73 @@ VUE MODALE / FORMULAIRE :
 
 ## TopBar (Flutter Web PWA + Admin)
 
-**Rôle :** Barre de navigation horizontale en haut sur Flutter Web.
-**Position :** Fixe en haut — au-dessus de la sidebar et du contenu.
+**Rôle :** Barre de navigation principale sur Flutter Web — contient à la fois le branding et les items de navigation.
+**Position :** Fixe en haut — couvre toute la largeur.
 **Hauteur :** 64px.
+**Pattern desktop :** TopBar + nav horizontale uniquement. **Pas de sidebar** — max 6 items de navigation OWNER ; la horizontale tient à 1280px. La sidebar n'est pas utilisée dans Scalario PWA.
 
-### Sketches ASCII
+### Structure TopBar
 
 ```
-FLUTTER WEB PWA :
-┌────────────────────────────────────────────────────────────┐
-│ [Sc] MON MAGASIN — Épicerie Aminata    [🔔 2]  Blandine ▾ │
-└────────────────────────────────────────────────────────────┘
-  Logo+tenant                            Notif   User menu
+FLUTTER WEB PWA — OWNER (Blandine) :
+┌────────────────────────────────────────────────────────────────────────────────┐  64px
+│ [Sc] MON MAGASIN — Blandine   Dashboard  Catalogue  Historique  Équipe  ⚙️   │
+│  Logo + tenant                ←───── navigation horizontale ─────→    User/Notif│
+└────────────────────────────────────────────────────────────────────────────────┘
 
-ADMIN SCALARIO :
-┌────────────────────────────────────────────────────────────┐
-│ [Sc] SCALARIO ADMIN                    [🔔 2]  Carlos ▾   │
-└────────────────────────────────────────────────────────────┘
+  Zone 1 (gauche)  : Monogramme [Sc] + nom magasin + nom utilisateur
+  Zone 2 (centre)  : Tabs de navigation (depuis JSON rôle) — inter 14sp 500
+  Zone 3 (droite)  : 🔔 NotificationBadge + user profile (avatar ou initiales)
+
+FLUTTER WEB PWA — INTÉGRATEUR (Kofi — config tenant) :
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ [Sc] SCALARIO                 Tenants    Déploiements    Templates    ⚙️       │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+ADMIN SCALARIO (Carlos) :
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ [Sc] SCALARIO ADMIN           Tenants    Configs    Billings    Support    ⚙️  │
+└────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `tenant_name` | string | Nom du magasin (depuis JSON) |
+| `user_name` | string | Prénom de l'utilisateur |
+| `nav_items` | list | Items de navigation depuis JSON rôle (max 6) |
+| `active_route` | string | Route active — tab surlignée |
+| `notification_count` | int | Badge 🔔 (0 = pas de badge) |
+
+### Tokens
+
+```
+topbar-bg          : color-white
+topbar-border-b    : 1px color-neutral-100
+topbar-height      : 64px
+topbar-shadow      : elevation-1
+
+logo-monogram      : "Sc" Inter 18sp 700 color-neutral-900
+logo-tenant        : Inter 14sp 500 color-neutral-700
+logo-user          : "— Blandine" Inter 14sp 400 color-neutral-500
+
+nav-tab            : Inter 14sp 500 color-neutral-500
+nav-tab-active     : Inter 14sp 600 color-neutral-900
+nav-tab-indicator  : 2px color-primary-500 en bas du tab actif
+nav-tab-hover      : bg color-neutral-50 radius-md
+
+user-zone          : 🔔 [count] + initiales avatar 32px bg color-primary-100
+```
+
+### Règles navigation par rôle (web)
+
+| Rôle | Items nav web |
+|------|--------------|
+| OWNER | Dashboard · Catalogue · Historique · Équipe · Paramètres |
+| OWNER + rapports | Dashboard · Catalogue · Rapports · Historique · Équipe · Paramètres |
+| INTÉGRATEUR | Tenants · Déploiements · Templates · Paramètres |
+| ADMIN | Tenants · Configs · Billings · Support · Paramètres |
 
 ---
 
