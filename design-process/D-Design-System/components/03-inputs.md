@@ -1,7 +1,7 @@
 ---
 type: components
 group: inputs
-components: [TextInput, NumberInput, QuantityControl, TimePicker, DatePicker, Toggle]
+components: [TextInput, NumberInput, QuantityControl, TimePicker, DatePicker, Toggle, FormWidget, ExpandableSection]
 ---
 
 # Composants — Inputs
@@ -205,4 +205,97 @@ INACTIF :
 SILENCE NOCTURNE :
   Silence nocturne               [●────]
   _Pas d'alertes entre 22:00 et 07:00_
+```
+
+---
+
+## FormWidget
+
+**Rôle :** Conteneur de formulaire — wraps tous les champs de saisie d'un écran. Gère le scroll, l'évitement du clavier, l'état de validation global et l'activation du CTA.
+**Usage :** S06.2, S09.2, S10.2, S11.2, S13.2, S15.2, S16.2, S17.1, S17.2, S23.1, S25.2, S26.1 — présent dans tout écran avec des champs de saisie.
+**Règle :** Le CTA principal (ActionButton) est toujours à l'intérieur du FormWidget, en position sticky-bottom. Le FormWidget expose un état `is_valid: bool` qui active ou désactive le CTA.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `fields` | list | Composants enfants (TextInput, NumberInput, ChipSelector…) |
+| `cta_label` | string | Label du bouton de soumission |
+| `cta_route` | string | Route de destination si validation OK |
+| `on_submit` | callback | Action déclenchée à la soumission |
+| `scroll` | bool | true = SingleChildScrollView (défaut: true) |
+| `keyboard_avoid` | bool | true = resizeToAvoidBottomInset (défaut: true) |
+
+### Sketch ASCII
+
+```
+FORMULAIRE EMPLOYÉ (S10.2) :
+┌──────────────────────────────────────────────┐
+│ ← AJOUTER UN EMPLOYÉ                        │  AppBar
+├──────────────────────────────────────────────┤
+│  [scroll zone — FormWidget body]             │
+│                                              │
+│  Prénom *                                    │
+│  ┌──────────────────────────────────────┐   │
+│  │ Ibrahim                              │   │  TextInput
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Téléphone *                                 │
+│  ┌──────────────────────────────────────┐   │
+│  │ +225 07 89 12 34                     │   │  TextInput type=phone
+│  └──────────────────────────────────────┘   │
+│                                              │
+│  Rôle *                                      │
+│  [● Commercial]  [○ Manager]                 │  ChipSelector
+│                                              │
+│  [... autres champs ...]                     │
+│                                              │
+├──────────────────────────────────────────────┤  ← sticky-bottom (dans FormWidget)
+│  [████████████ Créer l'employé █████████████]│  ActionButton · activé si is_valid
+└──────────────────────────────────────────────┘
+
+CTA DÉSACTIVÉ (champs invalides) :
+│  [░░░░░░░░░░░░ Créer l'employé ░░░░░░░░░░░░]│  bg color-neutral-200
+```
+
+---
+
+## ExpandableSection
+
+**Rôle :** Section de formulaire repliable — masquée par défaut, s'ouvre au tap du titre. Utilisé pour les champs optionnels ou rarement modifiés (changement MDP, options avancées).
+**Usage :** S25.2 (Edit profil — section changement MDP), S17.2 (config avancée tenant).
+**Règle :** Titre toujours visible. Animation expand/collapse 200ms ease-in-out. Jamais de champ required dans une ExpandableSection (risque de soumission avec champ caché invalide).
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `title` | string | Label du titre cliquable |
+| `initially_expanded` | bool | false = replié par défaut |
+| `children` | list | Champs internes |
+
+### Sketch ASCII
+
+```
+REPLIÉ (défaut) :
+  ┌──────────────────────────────────────────┐
+  │ Changer le mot de passe              [+] │  ← tap pour ouvrir
+  └──────────────────────────────────────────┘
+  Inter 13sp 600 neutral-700 · icône [+] primary-500
+
+OUVERT :
+  ┌──────────────────────────────────────────┐
+  │ Changer le mot de passe              [−] │  ← tap pour refermer
+  │  ─────────────────────────────────────   │  séparateur
+  │  Mot de passe actuel *                   │
+  │  ┌──────────────────────────────────┐   │  TextInput obscureText
+  │  │ ●●●●●●●●                    [👁] │   │
+  │  └──────────────────────────────────┘   │
+  │                                          │
+  │  Nouveau mot de passe *                  │
+  │  ┌──────────────────────────────────┐   │
+  │  │ ●●●●●●●●●●●●            [👁]    │   │
+  │  └──────────────────────────────────┘   │
+  │  [PasswordStrengthBar]                   │
+  └──────────────────────────────────────────┘
 ```

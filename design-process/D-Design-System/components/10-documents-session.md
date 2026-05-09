@@ -1,7 +1,7 @@
 ---
 type: components
 group: documents-session
-components: [ReceiptPreview, CaisseSessionCard, CreditTracker]
+components: [ReceiptPreview, CaisseSessionCard, CreditTracker, TicketPreview, InvoicePreview]
 scenarios: [15, 26, 27, 28]
 ---
 
@@ -146,6 +146,35 @@ AUCUNE SESSION (Commercial — matin) :
 | `closed` écart positif | Vert | Excédent (rare, pas alarmant) |
 | `closed` écart négatif | Rouge | Manque constaté — alerte |
 | `none` | Ambre | Pas de session — CTA "Ouvrir la caisse" |
+
+---
+
+## TicketPreview
+
+**Rôle :** Alias de `ReceiptPreview` avec `type = "ticket"` — aperçu du ticket de caisse (vente cash) avant envoi au client.
+**Usage :** S27.1 (Ticket caisse — BottomSheet après vente).
+**Règle :** Même widget Flutter que `ReceiptPreview`. Le JSON peut référencer `TicketPreview` directement — le renderer résout vers `ReceiptPreview(type: "ticket")`.
+
+```
+Alias JSON : TicketPreview → ReceiptPreview(type: "ticket")
+Props identiques à ReceiptPreview — voir définition ci-dessus.
+Champs non applicables au ticket : invoice_number, credit_amount, due_date (ignorés).
+```
+
+---
+
+## InvoicePreview
+
+**Rôle :** Alias de `ReceiptPreview` avec `type = "facture"` — aperçu de la facture PDF (vente à crédit) avant envoi au client.
+**Usage :** S27.2 (Facture PDF — BottomSheet après vente crédit).
+**Règle :** Même widget Flutter que `ReceiptPreview`. Le JSON peut référencer `InvoicePreview` directement — le renderer résout vers `ReceiptPreview(type: "facture")`.
+
+```
+Alias JSON : InvoicePreview → ReceiptPreview(type: "facture")
+Props identiques à ReceiptPreview — voir définition ci-dessus.
+Champs obligatoires en mode facture : invoice_number, credit_amount, due_date, client_name.
+Numérotation offline : TMP-XXXX → numéro définitif à la sync backend.
+```
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 type: components
 group: specialized
-components: [PaymentConfirm, AlertPreview, CredentialsCard, OnboardingCard, EmptyState, LoginWidget, TemplateSelector]
+components: [PaymentConfirm, AlertPreview, CredentialsCard, OnboardingCard, EmptyState, LoginWidget, TemplateSelector, AvatarCard, POSPreview]
 ---
 
 # Composants — Spécialisés
@@ -224,4 +224,87 @@ Choisir un template *
 │    _Service de restauration_     [Bientôt]  │
 └──────────────────────────────────────────────┘
 _Seul "Retail Fresh Produce" est disponible pour Gate 0_
+```
+
+---
+
+## AvatarCard
+
+**Rôle :** Affichage de l'avatar utilisateur — initiales sur fond coloré (pas de photo). Accompagné du nom, du rôle et du nom du magasin.
+**Usage :** S25.1 (Vue profil utilisateur).
+**Règle :** Jamais de photo — initiales uniquement (2 premières lettres prénom+nom). Taille 64px sur mobile, 80px sur web.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `initials` | string | 2 lettres (ex: "BK" pour Blandine Kouamé) |
+| `name` | string | Nom complet |
+| `role` | enum | `owner` / `commercial` / `manager` |
+| `tenant_name` | string | Nom du magasin |
+| `size` | enum | `md` (64px mobile) / `lg` (80px web) |
+
+### Tokens
+
+| Élément | Token | Valeur |
+|---------|-------|--------|
+| Fond avatar | `color-primary-500` | #FFCC00 |
+| Initiales | `color-neutral-900` | Inter 24sp 700 |
+| Diamètre mobile | — | 64px · radius-full |
+| Diamètre web | — | 80px · radius-full |
+| Nom | `text-title` | Inter 18sp 700 neutral-900 |
+| Rôle badge | `text-caption` | Inter 12sp 500 neutral-500 |
+
+### Sketch ASCII
+
+```
+MOBILE (S25.1) :
+┌──────────────────────────────────────────────┐
+│           ╔══════════╗                       │
+│           ║    BK    ║  ← 64px radius-full   │
+│           ╚══════════╝  bg color-primary-500  │
+│                                              │
+│         Blandine Kouamé                      │  Inter 18sp 700
+│         PROPRIÉTAIRE                         │  Inter 12sp 500 neutral-500
+│         Boutique Kouamé                      │  Inter 13sp 400 neutral-600
+└──────────────────────────────────────────────┘
+centré · padding-top 24px
+```
+
+---
+
+## POSPreview
+
+**Rôle :** Aperçu compact de l'état courant du POS — session active, fond de caisse, nombre de ventes du jour. Affiché sur le Dashboard COMMERCIAL pour donner le contexte avant d'ouvrir le POS.
+**Usage :** S21.1 (Dashboard Commercial — bloc session).
+**Règle :** Tappable → ouvre directement le POS (S02). Affiché seulement si une session caisse est active.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `session_status` | enum | `active` / `none` |
+| `ventes_count` | int | Nb ventes du jour |
+| `ca_today` | number | CA encaissé du jour (FCFA) |
+| `fond_ouverture` | number | Fond déclaré à l'ouverture |
+| `opened_at` | datetime | Heure d'ouverture session |
+
+### Sketch ASCII
+
+```
+SESSION ACTIVE :
+┌──────────────────────────────────────────────┐
+│ 🟢 Session ouverte depuis 08h15              │  bg color-success-50
+│ Fond de caisse : 15 000 FCFA                 │  Roboto Mono
+│ Mes ventes : 7  ·  CA : 42 500 FCFA          │  Roboto Mono
+│                                              │
+│ [████████████ Nouvelle vente ███████████████]│  → POS direct
+└──────────────────────────────────────────────┘
+
+AUCUNE SESSION (matin avant ouverture) :
+┌──────────────────────────────────────────────┐
+│ ○ Aucune session active                      │  bg color-warning-50
+│ _Ouvrez la caisse avant de vendre_           │
+│ [████████████ Ouvrir la caisse █████████████]│  → S26.1
+└──────────────────────────────────────────────┘
 ```

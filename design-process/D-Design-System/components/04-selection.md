@@ -1,7 +1,7 @@
 ---
 type: components
 group: selection
-components: [ProductGrid, QuantityControl, ChipSelector, FilterChips, PeriodSelector, ProductSelector, CartSummary]
+components: [ProductGrid, QuantityControl, ChipSelector, FilterChips, PeriodSelector, ProductSelector, CartSummary, ChoiceCard, PaymentMethodSelector, BluetoothDeviceSelector]
 ---
 
 # Composants — Selection
@@ -279,4 +279,127 @@ PANIER ACTIF — expanded (web, side panel) :
 
 STOCK BLOQUANT (qté > stock) :
   bg color-neutral-900 · CTA bg color-neutral-400 (disabled) · texte "Stock insuffisant"
+```
+
+---
+
+## ChoiceCard
+
+**Rôle :** Carte de sélection large — permet de choisir une option parmi 2 ou 3 alternatives visuellement distinctes. Différent de ChipSelector : chaque option est une carte full-tap avec description, pas juste un chip.
+**Usage :** S24.1 (Setup PIN/biométrie — choix méthode de déverrouillage).
+**Règle :** Tap sur toute la surface de la carte = sélection. Indicateur radio ○/● en haut à droite. Une seule carte sélectionnée à la fois.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `options` | list | `{id, icon, title, description, available}` |
+| `selected` | string | ID de l'option sélectionnée |
+| `on_select` | callback(id) | Mise à jour sélection |
+
+### Sketch ASCII
+
+```
+2 OPTIONS — PIN sélectionné :
+┌──────────────────────────────────────────────┐
+│ ●  🔢 Code PIN                               │  ← sélectionné (radio plein)
+│    Déverrouillez avec un code à 6 chiffres   │  bg color-primary-50 · border color-primary-500
+│    Fonctionne hors ligne                     │  Inter 13sp 400 neutral-600
+└──────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────┐
+│ ○  👆 Biométrie (empreinte / face)           │  ← non sélectionné
+│    Déverrouillez sans saisir de code         │  bg color-white · border color-neutral-200
+│    Nécessite configuration Android           │
+└──────────────────────────────────────────────┘
+
+OPTION NON DISPONIBLE (web — biométrie grisée) :
+┌──────────────────────────────────────────────┐
+│ ○  👆 Biométrie (empreinte / face)    [Web]  │  bg color-neutral-50 · opacity 0.5
+│    _Disponible sur l'application mobile_     │  Inter 13sp 400 neutral-400 (grisé)
+└──────────────────────────────────────────────┘
+```
+
+---
+
+## PaymentMethodSelector
+
+**Rôle :** Sélecteur de mode de paiement dans le flow POS — similaire à ChipSelector mais avec gestion de l'état partiel (vente crédit = montant versé + solde dû).
+**Usage :** S02.3 (Confirmation paiement standard), S15.2 (Paiement partiel / crédit).
+**Règle :** Sélection "Crédit" révèle les champs `Montant versé` et `Nom client`. Sélection "Espèces" ou "Mobile Money" = paiement complet, pas de champs additionnels.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `modes` | list | Modes disponibles depuis retail_fresh_produce.json |
+| `selected` | enum | `cash` / `mobile_money` / `credit` |
+| `on_select` | callback(mode) | Révèle champs conditionnels selon mode |
+
+### Sketch ASCII
+
+```
+ESPÈCES SÉLECTIONNÉ :
+  [● Espèces]  [○ Mobile Money]  [○ Crédit]
+
+CRÉDIT SÉLECTIONNÉ — champs révélés :
+  [○ Espèces]  [○ Mobile Money]  [● Crédit]
+
+  Montant versé maintenant (FCFA)
+  ┌──────────────────────────────────────────┐
+  │  5 000                                   │  NumberInput
+  └──────────────────────────────────────────┘
+  _Solde dû : 10 000 FCFA — sera enregistré comme créance_
+
+  Nom client *
+  ┌──────────────────────────────────────────┐
+  │  Koné Fatou                              │  TextInput
+  └──────────────────────────────────────────┘
+```
+
+---
+
+## BluetoothDeviceSelector
+
+**Rôle :** Sélecteur d'imprimante Bluetooth thermique — scan des appareils à portée, sélection et mémorisation de l'imprimante préférée.
+**Usage :** S27.1 (Ticket caisse — canal "Impression Bluetooth").
+**Règle :** Le scan se lance automatiquement quand le canal "Impression" est sélectionné. Durée du scan : 3s. Imprimante mémorisée = auto-sélectionnée au prochain usage.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `scan_status` | enum | `scanning` / `found` / `empty` / `error` |
+| `devices` | list | `{name, address, signal_strength, is_preferred}` |
+| `selected_device` | string? | Adresse MAC de l'appareil sélectionné |
+| `on_select` | callback(device) | Sélection d'un appareil |
+
+### Sketch ASCII
+
+```
+SCAN EN COURS (3s) :
+  ┌──────────────────────────────────────────┐
+  │ [↻] Recherche imprimantes Bluetooth...   │  spinner + ProgressBar 3s
+  │ ██████████████░░░░░░░░░░░░░░░░░░░░░░░░  │
+  └──────────────────────────────────────────┘
+
+IMPRIMANTE TROUVÉE :
+  ┌──────────────────────────────────────────┐
+  │ [● ★] Epson TM-T20 · A4:B8:C1:D2 ████  │  ← préférée · signal fort
+  │ [○  ] Sunmi T2 Mini · B4:C9:D3:E4 ███░  │  signal moyen
+  └──────────────────────────────────────────┘
+  ★ = imprimante mémorisée · signal: Roboto Mono barres
+
+AUCUN APPAREIL :
+  ┌──────────────────────────────────────────┐
+  │ ⚠ Aucune imprimante trouvée             │
+  │ _Activez le Bluetooth et l'imprimante_  │
+  │ [  Réessayer  ]                         │
+  └──────────────────────────────────────────┘
+
+ERREUR BLUETOOTH DÉSACTIVÉ :
+  ┌──────────────────────────────────────────┐
+  │ ⚠ Bluetooth désactivé                   │
+  │ [  Activer le Bluetooth  ]              │  → Intent Android Bluetooth settings
+  └──────────────────────────────────────────┘
 ```

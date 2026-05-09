@@ -1,7 +1,7 @@
 ---
 type: components
 group: loading-states
-components: [Skeleton, LoadingSpinner, ErrorState, PasswordStrengthBar, PINInput, ImageUploader]
+components: [Skeleton, LoadingSpinner, ErrorState, PasswordStrengthBar, PINInput, ImageUploader, SplashScreen, DriftLoader, ProfileLoader]
 ---
 
 # Composants — Loading States & Utilitaires
@@ -211,4 +211,110 @@ BOUTON EN LOADING :
 SYNC INLINE (ProfileLoader) :
   [↻] Chargement de votre profil...
   _Connexion sécurisée avec le serveur_
+```
+
+---
+
+## SplashScreen
+
+**Rôle :** Écran de démarrage affiché pendant l'initialisation de l'application — logo, animation, attente Drift + JWT check.
+**Usage :** S01.1 (App Init — premier état avant dashboard ou login).
+**Règle :** Durée maximale 3s. Si Drift initialisé + JWT valide → navigate vers Dashboard rôle. Si JWT absent/expiré → navigate vers LoginWidget. Jamais de spinner infini — ErrorState si > 5s sans réponse.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `status` | enum | `loading` / `success` / `error` |
+| `on_ready` | callback | Navigation auto quand status = success |
+
+### Sketch ASCII
+
+```
+CHARGEMENT (défaut) :
+┌──────────────────────────────────────────────┐
+│                                              │
+│                                              │
+│              ╔══════════╗                    │
+│              ║  SCALARIO║                   │  Logo centré
+│              ╚══════════╝                    │  Inter 24sp 700 neutral-900
+│                                              │
+│              [↻ animation]                   │  LoadingSpinner 32px primary-500
+│                                              │
+│       _Chargement de votre espace..._        │  Inter 13sp neutral-400
+│                                              │
+│                                              │
+└──────────────────────────────────────────────┘
+bg: color-white · centré vertical
+
+SUCCÈS (transition rapide 200ms vers dashboard) :
+  → navigate(role_dashboard_route)  — pas d'affichage intermédiaire
+
+ERREUR (> 5s sans réponse) :
+  → ErrorState remplace le SplashScreen
+```
+
+---
+
+## DriftLoader
+
+**Rôle :** État de chargement spécifique à l'initialisation de Drift — affiché pendant l'ouverture de la base de données locale au premier lancement ou après une mise à jour du schéma.
+**Usage :** S01.1 (App Init — DriftLoader avant SplashScreen si migration en cours).
+**Règle :** Distinct du LoadingSpinner : DriftLoader = opération de base de données locale, pas réseau. Toujours accompagné d'un message rassurant ("données locales en cours de préparation"). Durée typique < 500ms — invisible si rapide (seuil 300ms avant affichage).
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `migration_version` | int? | Version du schéma si migration en cours |
+| `progress` | double? | 0.0–1.0 si progression quantifiable |
+
+### Sketch ASCII
+
+```
+INIT DRIFT (affiché si > 300ms) :
+┌──────────────────────────────────────────────┐
+│                                              │
+│              [↻]                             │  spinner 24px neutral-400
+│                                              │
+│   _Préparation des données locales..._       │  Inter 12sp neutral-400
+│                                              │
+└──────────────────────────────────────────────┘
+bg: color-white · pas de logo — trop tôt dans le cycle
+
+MIGRATION SCHÉMA (mise à jour app) :
+  _Mise à jour de votre base de données locale..._
+  [████████████████░░░░░░░░░░░░]  62%           ← ProgressBar si progress fourni
+```
+
+---
+
+## ProfileLoader
+
+**Rôle :** État de chargement inline affiché pendant la récupération des données de profil utilisateur post-authentification (JWT validé, profil en cours de fetch depuis le backend).
+**Usage :** S07.1 (post-submit LoginWidget), S25.1 (chargement profil).
+**Règle :** Jamais plein écran. Inline dans la zone de contenu (remplace le corps de la vue). Durée typique < 1s. Si > 3s → ErrorState.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `user_name` | string? | Prénom si déjà connu (JWT) |
+| `tenant_name` | string? | Nom tenant si déjà connu |
+
+### Sketch ASCII
+
+```
+POST-LOGIN (zone centrale) :
+┌──────────────────────────────────────────────┐
+│                                              │
+│           [↻] Chargement du profil...        │  LoadingSpinner 24px primary-500
+│                                              │
+│    _Connexion sécurisée avec le serveur_     │  Inter 12sp neutral-400
+│                                              │
+└──────────────────────────────────────────────┘
+
+POST-LOGIN (prénom connu depuis JWT) :
+│           [↻] Bonjour, Blandine !            │  Inter 14sp 500 neutral-700
+│    _Chargement de votre espace..._           │
 ```

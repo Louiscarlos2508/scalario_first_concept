@@ -1,7 +1,7 @@
 ---
 type: components
 group: feedback
-components: [AlertBanner, StatusBadge, SyncStatusBar, ProgressBar, NotificationBadge]
+components: [AlertBanner, StatusBadge, SyncStatusBar, ProgressBar, NotificationBadge, TypeBadge]
 ---
 
 # Composants — Feedback
@@ -210,4 +210,53 @@ COMPLET :
 
 0 NOTIFICATION : badge absent — rendu neutre
   🔔
+```
+
+---
+
+## TypeBadge
+
+**Rôle :** Badge coloré indiquant le type d'un mouvement de stock ou d'une opération dans une liste chronologique. Plus spécifique que `StatusBadge` — encode le type d'événement, pas son statut.
+**Usage :** S19.2 (Historique article — MouvementItem), S19.3 (Détail mouvement).
+**Règle :** Toujours affiché à gauche du montant/delta dans un item de liste. Couleur déterminée par le `type`, pas par un état calculé.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `type` | enum | `sale` / `delivery` / `loss` / `inventory_gap` / `order` / `credit_sale` |
+
+### Tokens par type
+
+| Type | Label | bg | couleur texte | border-l couleur |
+|------|-------|-----|--------------|-----------------|
+| `sale` | Vente | color-primary-50 | color-primary-700 | color-primary-400 |
+| `credit_sale` | Crédit | color-warning-50 | color-warning-700 | color-warning-400 |
+| `delivery` | Livraison | color-success-50 | color-success-700 | color-success-500 |
+| `loss` | Perte | color-warning-50 | color-warning-800 | color-warning-600 |
+| `inventory_gap` | Inventaire | color-danger-50 | color-danger-700 | color-danger-400 |
+| `order` | Commande | color-violet-50 | color-violet-700 | color-violet-400 |
+
+### Sketch ASCII
+
+```
+DANS UN MouvementItem :
+
+border-l vente :
+┌────────────────────────────────────────────────┐
+║ [Vente]  Tomates 2,5kg · Bananes 3kg   −5,5kg  ║  TypeBadge primary
+└────────────────────────────────────────────────┘
+  bg primary-50 bordure gauche primary-400
+
+border-l livraison :
+┌────────────────────────────────────────────────┐
+║ [Livraison]  FrutPro · 12 articles    +45 kg   ║  TypeBadge success
+└────────────────────────────────────────────────┘
+  bg success-50 bordure gauche success-500
+
+border-l inventaire :
+┌────────────────────────────────────────────────┐
+║ [Inventaire]  Ibrahim · Écart significatif −3kg ║  TypeBadge danger
+└────────────────────────────────────────────────┘
+  bg danger-50 bordure gauche danger-400
 ```

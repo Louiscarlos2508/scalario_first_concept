@@ -1,7 +1,7 @@
 ---
 type: components
 group: navigation-layout
-components: [AppBar, TopBar, BottomNav, SearchBar, BottomSheet]
+components: [AppBar, TopBar, BottomNav, SearchBar, BottomSheet, MiniTopBar, Breadcrumb]
 ---
 
 # Composants — Navigation & Layout
@@ -203,9 +203,10 @@ OWNER (Blandine) :
 
 COMMERCIAL :
 ┌──────────────────────────────────────────────┐
-│       🏠 Dashboard           📋 Historique   │
-│       [●]                                    │
+│  🛒 Vente    🏠 Dashboard    📋 Historique   │
+│              [●]                             │
 └──────────────────────────────────────────────┘
+Note : 🛒 Vente = raccourci direct vers le POS (S02) — 1 tap depuis n'importe où.
 
 MANAGER (Ibrahim) :
 ┌──────────────────────────────────────────────┐
@@ -214,6 +215,58 @@ MANAGER (Ibrahim) :
 └──────────────────────────────────────────────┘
 
 INTÉGRATEUR (Kofi) — Flutter Web uniquement, pas de bottom nav mobile
+```
+
+---
+
+## MiniTopBar
+
+**Rôle :** Barre d'en-tête compacte mobile — version réduite du TopBar pour les écrans où le contexte tenant + utilisateur doit être visible sans occuper toute la hauteur d'une AppBar standard.
+**Usage :** S20.1 (Dashboard Owner mobile), S21.1 (Dashboard Commercial mobile), S22.1 (Dashboard Manager mobile).
+**Règle :** Hauteur 48px (vs 56px AppBar). Pas de flèche retour — toujours sur une vue racine. Pas d'actions icônes (celles-ci vont dans le BottomNav ou les ActionButtons). Monogramme [Sc] + nom tenant à gauche, salutation + prénom à droite.
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `tenant_name` | string | Nom du magasin (depuis config JSON) |
+| `user_greeting` | string | Salutation dynamique ("Bonjour", "Bon après-midi"…) |
+| `user_name` | string | Prénom de l'utilisateur |
+
+### Tokens
+
+| Élément | Token | Valeur |
+|---------|-------|--------|
+| Fond | `color-white` | + border-b 1px color-neutral-100 |
+| Hauteur | — | 48px |
+| Monogramme [Sc] | `font-logo` | Inter 14sp 700 color-neutral-900 |
+| Nom tenant | `text-body-sm` | Inter 13sp 500 color-neutral-700 |
+| Salutation | `text-caption` | Inter 12sp 400 color-neutral-500 |
+| Prénom | `text-caption` | Inter 12sp 600 color-neutral-800 |
+
+### Sketch ASCII
+
+```
+MOBILE (48px) :
+┌──────────────────────────────────────────────┐  48px
+│ [Sc] Boutique Kouamé      Bonjour, Blandine  │
+└──────────────────────────────────────────────┘
+  ← gauche : monogramme + tenant               → droite : salutation + prénom
+
+COMMERCIAL (matin) :
+┌──────────────────────────────────────────────┐
+│ [Sc] Boutique Kouamé    Bonjour, Ibrahim     │
+└──────────────────────────────────────────────┘
+
+MANAGER (après-midi) :
+┌──────────────────────────────────────────────┐
+│ [Sc] Boutique Kouamé    Bon après-midi, Kofi │
+└──────────────────────────────────────────────┘
+
+Salutation dynamique :
+  Avant 12h00  → "Bonjour,"
+  12h00–17h30  → "Bon après-midi,"
+  Après 17h30  → "Bonne soirée,"
 ```
 
 ---
