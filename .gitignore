@@ -41,6 +41,7 @@ supabase/.temp/
 
 # BMAD framework & agents
 _bmad/
+bmad/
 
 # Misc
 .gemini/
