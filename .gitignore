@@ -39,8 +39,5 @@ supabase/.temp/
 # Claude Code
 .claude/skills/
 
-# BMAD generated output
-_bmad-output/
-
 # Misc
 .gemini/

@@ -1,0 +1,19 @@
+version: "6.0.0"
+project_name: "scalario"
+project_type: "platform"
+project_level: 4
+last_updated: "2026-05-09"
+
+workflow_status:
+  product_brief: "_bmad-output/product-brief-scalario-2026-05-09.md"
+  prd: "_bmad-output/prd-scalario-2026-05-09.md"
+  architecture: "_bmad-output/architecture-scalario-2026-05-09.md"
+  ux_design: "not_started"
+  sprint_planning: "not_started"
+  implementation: "not_started"
+
+notes: |
+  Refondation complète 2026-05-09 — reparti de zéro sur architecture BDUI Engine + Templates.
+  PRD couvre Phase 1 MVP (EPIC-001 à EPIC-007, 35-48 stories) + roadmap post-MVP (Phase 2-3 + H2-H3).
+  Architecture complète 2026-05-09 — 11 composants, 59 FRs couverts, 10 NFRs couverts, schéma PostgreSQL complet, API design, CI/CD, Docker Compose.
+  Prochaine étape : /bmad:sprint-planning
