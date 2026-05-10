@@ -3,7 +3,7 @@
 **Epic :** EPIC-002 — BDUI Engine Flutter
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -329,8 +329,19 @@ De même, `FAB` du PRD ↔ `ActionButton` du DS (variant `floating`) : on enregi
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Completed (Carlos / `/bmad:dev-story STORY-005`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Notes :**
+- `ComponentConfig.fromJson` robuste aux `Map<dynamic, dynamic>` issus de `jsonDecode` (cast explicite)
+- `fromConfig(props, ctx)` ajouté aux 7 composants DS — signature sans import engine pour éviter dépendance circulaire
+- `ScalarioDataTable.fromConfig` crée un `ScalarioDataTable<Map<String, dynamic>>` avec colonnes JSON
+- `FormSection.fromConfig` retourne children vides — câblage data-driven STORY-011
+- `ErrorBoundary` stub pass-through — API complète STORY-010
+- Couverture : 98% sur `lib/engine/component_registry/` (gate ≥90% ✓)
+- Tests : 54 tests (component_registry × 22, bootstrap × 27, unknown_component × 5)
+- get_it 8.3.0 — singleton `ComponentRegistry` enregistré avant `runApp`
 
 ---
 
