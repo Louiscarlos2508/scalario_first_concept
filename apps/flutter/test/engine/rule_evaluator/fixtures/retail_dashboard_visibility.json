@@ -1,0 +1,98 @@
+{
+  "screen": "retail_dashboard",
+  "description": "Fixture de test pour la visibilité RBAC du tableau de bord retail.",
+  "components": [
+    {
+      "id": "kpi_revenue_panel",
+      "type": "KPICard",
+      "description": "Visible uniquement pour MANAGER et DG",
+      "visible_if": { "role": ["MANAGER", "DG"] },
+      "expected_manager": true,
+      "expected_cashier": false
+    },
+    {
+      "id": "cashier_pos_panel",
+      "type": "POSGrid",
+      "description": "Visible pour CASHIER et MANAGER",
+      "visible_if": {
+        "OR": [
+          { "role": ["CASHIER"] },
+          { "role": ["MANAGER"] }
+        ]
+      },
+      "expected_manager": true,
+      "expected_cashier": true
+    },
+    {
+      "id": "admin_settings_panel",
+      "type": "FormSection",
+      "description": "Visible si MANAGER ET admin flag activé",
+      "visible_if": {
+        "AND": [
+          { "role": ["MANAGER"] },
+          { "field": "user.attributes.is_admin", "operator": "==", "value": true }
+        ]
+      },
+      "expected_manager_admin": true,
+      "expected_manager_non_admin": false,
+      "expected_cashier": false
+    },
+    {
+      "id": "guest_blocked_action",
+      "type": "ActionButton",
+      "description": "Caché pour GUEST, visible pour tous les autres",
+      "visible_if": {
+        "NOT": { "role": ["GUEST"] }
+      },
+      "expected_manager": true,
+      "expected_cashier": true,
+      "expected_guest": false
+    },
+    {
+      "id": "high_value_sale_alert",
+      "type": "AlertBanner",
+      "description": "Visible si montant vente > 500 000 FCFA",
+      "visible_if": {
+        "field": "record.montant",
+        "operator": ">",
+        "value": 500000
+      },
+      "expected_with_high_value": true,
+      "expected_with_low_value": false
+    },
+    {
+      "id": "pending_orders_badge",
+      "type": "StatusBadge",
+      "description": "Visible si statut est en attente ou en cours",
+      "visible_if": {
+        "field": "record.status",
+        "operator": "in",
+        "value": ["pending", "in_progress"]
+      },
+      "expected_pending": true,
+      "expected_completed": false
+    },
+    {
+      "id": "multi_role_complex_widget",
+      "type": "DataTable",
+      "description": "Visible si (MANAGER OU DG) ET PAS GUEST",
+      "visible_if": {
+        "AND": [
+          {
+            "OR": [
+              { "role": ["MANAGER"] },
+              { "role": ["DG"] }
+            ]
+          },
+          {
+            "NOT": { "role": ["GUEST"] }
+          }
+        ]
+      },
+      "expected_manager": true,
+      "expected_dg": true,
+      "expected_cashier": false,
+      "expected_guest": false
+    }
+  ]
+}

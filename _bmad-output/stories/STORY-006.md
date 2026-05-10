@@ -3,7 +3,7 @@
 **Epic :** EPIC-002 — BDUI Engine Flutter
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -332,8 +332,20 @@ Le sprint plan (ligne 176) liste les opérateurs `AND`, `OR`, `role`, `>`, `<`, 
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Implemented (Carlos / Developer via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Notes :**
+
+- Pure Dart — zéro import `package:flutter/...` vérifié par `flutter analyze`
+- 4 fichiers : `rule.dart`, `user_context.dart`, `field_resolver.dart`, `rule_evaluator.dart`
+- 12 opérateurs : AND, OR, NOT, role, ==, !=, >, <, >=, <=, in, not_in
+- Résolveur de chemins : notation pointée + index liste (e.g. `record.lines[0].qty`)
+- 121 tests unitaires dans 7 fichiers de test
+- Couverture : **97.4%** (190/195 lignes) — Gate 0 ≥95% ✓
+- Benchmark : **~88µs** par évaluation 5-niveaux (< 1ms ✓)
+- AC-25 : aucun nom de rôle hardcodé dans `lib/engine/rule_evaluator/`
 
 ---
 

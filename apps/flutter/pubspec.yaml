@@ -25,6 +25,9 @@ dependencies:
   # DI container — ComponentRegistry singleton + BDUIEngine (STORY-005, STORY-008).
   get_it: ^8.0.3
 
+  # Annotations @immutable, @visibleForTesting — pure Dart, no Flutter import.
+  meta: ^1.16.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
