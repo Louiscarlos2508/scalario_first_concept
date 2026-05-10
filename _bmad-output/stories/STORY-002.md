@@ -30,7 +30,7 @@ Cette story est le **pont** entre tokens Dart (statiques) et le runtime Flutter 
 1. **ThemeData light + dark** construits depuis `ScalarioColors` / `ScalarioTypography` / `ScalarioSpacing` — toutes les primitives Material 3 héritent.
 2. **`ThemeExtension`** custom pour les tokens **qui n'ont pas d'équivalent dans `ColorScheme`** : statuts sync (synced/syncing/offline/error), couleurs sémantiques sync/conflict, élévations Scalario, espacements layout — accessibles via `Theme.of(context).extension<ScalarioThemeExtension>()`.
 
-C'est explicitement **Material 3 natif**, **pas shadcn_ui** — décision sprint plan 2026-05-10 : Material 3 est déjà flat, accessible, à jour ; ajouter shadcn_ui = dette de dépendance externe pour zéro gain.
+C'est explicitement **Material 3 natif** — déjà flat, accessible, à jour, zéro dépendance UI externe à maintenir.
 
 ### Scope
 
@@ -317,7 +317,7 @@ abstract final class ScalarioButtonStyles {
 
 ### Spec source — résolutions de conflits
 
-**Conflit 1 — PRD vs DS (shadcn_ui).** Le PRD `FR-005` mentionne « shadcn_ui Flutter intégré ». **Décision** (sprint plan note 2026-05-10) : on **n'utilise pas** shadcn_ui — Material 3 natif suffit, est déjà flat, accessible, à jour, et évite une dépendance externe. Cette story implémente Material 3 pur. Le PRD sera mis à jour en parallèle (PR séparé).
+**Conflit 1 — Base UI.** PRD et architecture alignés sur Material 3 Flutter natif + tokens Scalario via `ThemeData` + `ThemeExtensions`. Aucune dépendance UI externe. Cette story implémente Material 3 pur.
 
 **Conflit 2 — variants nommées.** Le sprint plan parle de variants `primary` / `secondary` / `ghost` / `danger`. La spec DS (`components/05-actions.md`) nomme `primary` / `secondary` / `destructive` / `ghost`. **Source de vérité : la spec DS** — on aligne sur `destructive` côté ASCII / docs, mais on expose **deux noms équivalents** côté Dart : `ScalarioButtonStyles.danger` (terme sprint plan, plus court) avec alias `ScalarioButtonStyles.destructive`. Préférence dans la PR : utiliser `danger` partout dans le code, garder `destructive` exporté pour cohérence avec la spec ASCII.
 
@@ -388,7 +388,7 @@ N/A — couche présentation pure. Pas d'input utilisateur, pas de secret. Le se
 
 ## Notes additionnelles
 
-- **Décision Material 3 vs shadcn_ui :** documenter dans `apps/flutter/lib/core/theme/scalario_theme.dart` en docstring de classe : *« Scalario s'appuie sur Material 3 natif Flutter — pas shadcn_ui. Décision 2026-05-10 : M3 est flat, accessible, à jour, et évite une dépendance externe. Le DS Scalario s'applique via ThemeData + ThemeExtensions. »*
+- **Base Material 3 :** documenter dans `apps/flutter/lib/core/theme/scalario_theme.dart` en docstring de classe : *« Base : Material 3 natif Flutter (2026-05-10). Material 3 est déjà flat, accessible, à jour, et évite toute dépendance UI externe. Le DS Scalario s'applique via ThemeData + ThemeExtensions. »*
 - **Hot reload du thème en dev :** garantie automatique par Flutter dès que `ScalarioTheme.light()` est une fonction pure — aucune config supplémentaire.
 - **Couleur `info-700` manquante dans tokens.** STORY-001 expose `info100/500` mais pas `info700`. Si `DialogTheme` ou un component theme en a besoin, **ne pas l'inventer ici** — ajouter une issue séparée pour étendre la palette en STORY-001 (post-merge).
 - **Roboto Mono dans les TextTheme slots.** `bodyMedium`/`labelLarge` restent en Inter ; les widgets numériques (KPICard value, totaux POS) utiliseront `style: ScalarioTypography.fontKpiValue` explicitement (passé via la classe tokens, pas via `Theme.of`). Cohérent avec la règle "mono pour temps réel".

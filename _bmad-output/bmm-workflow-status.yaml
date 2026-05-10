@@ -9,11 +9,12 @@ workflow_status:
   prd: "_bmad-output/prd-scalario-2026-05-09.md"
   architecture: "_bmad-output/architecture-scalario-2026-05-09.md"
   ux_design: "not_started"
-  sprint_planning: "not_started"
-  implementation: "not_started"
+  sprint_planning: "_bmad-output/sprint-plan-scalario-2026-05-09.md"
+  implementation: "in_progress"
 
 notes: |
   Refondation complète 2026-05-09 — reparti de zéro sur architecture BDUI Engine + Templates.
   PRD couvre Phase 1 MVP (EPIC-001 à EPIC-007, 35-48 stories) + roadmap post-MVP (Phase 2-3 + H2-H3).
   Architecture complète 2026-05-09 — 11 composants, 59 FRs couverts, 10 NFRs couverts, schéma PostgreSQL complet, API design, CI/CD, Docker Compose.
-  Prochaine étape : /bmad:sprint-planning
+  Sprint planning 2026-05-10 — 4 sprints × 2 semaines, 43 stories, 174pts. Gate 0 = 2026-07-08.
+  Prochaine étape : /bmad:dev-story STORY-001

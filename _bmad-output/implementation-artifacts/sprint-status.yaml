@@ -428,7 +428,7 @@ epics:
     stories: ["STORY-001", "STORY-002", "STORY-003", "STORY-004"]
     points: 15
     sprint: 1
-    notes: "shadcn_ui retiré 2026-05-10 — Material 3 natif Flutter + ThemeData Scalario. Toutes stories defined."
+    notes: "Material 3 natif Flutter + ThemeData Scalario depuis tokens. Toutes stories defined."
   EPIC-002:
     name: "BDUI Engine Flutter"
     status: "ready"
