@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Plateforme Linux générée automatiquement — projet cible mobile/web uniquement.
+/linux/
