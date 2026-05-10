@@ -1,0 +1,58 @@
+{
+  "type": "FormWidget",
+  "id": "create_sale_form",
+  "config": { "validate_on": "blur" },
+  "props": {
+    "fields": [
+      {
+        "type": "TextInput",
+        "id": "client_phone",
+        "props": { "label": "Téléphone client" },
+        "validation": [
+          { "type": "required" },
+          {
+            "type": "regex",
+            "value": "^[0-9]{8}$",
+            "errorKey": "validation.phone.eight_digits",
+            "errorMessage": "Téléphone à 8 chiffres"
+          }
+        ]
+      },
+      {
+        "type": "NumberInput",
+        "id": "amount",
+        "props": { "label": "Montant" },
+        "validation": [
+          { "type": "required" },
+          { "type": "min", "value": 100 },
+          { "type": "max", "value": 10000000 }
+        ]
+      },
+      {
+        "type": "TextInput",
+        "id": "payment_method",
+        "props": { "label": "Moyen de paiement" },
+        "validation": [
+          {
+            "type": "enum",
+            "value": ["cash", "mobile_money", "credit"],
+            "errorMessage": "Moyen de paiement invalide"
+          }
+        ]
+      },
+      {
+        "type": "TextInput",
+        "id": "notes",
+        "props": { "label": "Notes" },
+        "validation": [
+          {
+            "type": "required_if",
+            "requiredIf": { "field": "amount", "operator": ">", "value": 500000 },
+            "errorMessage": "Notes obligatoires pour montants > 500 000 FCFA"
+          }
+        ]
+      }
+    ],
+    "submit_action": "create_sale"
+  }
+}
