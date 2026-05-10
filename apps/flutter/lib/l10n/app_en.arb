@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "bdui.error.component_unavailable": "Component unavailable",
+  "@bdui.error.component_unavailable": {
+    "description": "Fallback shown when a BDUI component throws during build."
+  },
+  "bdui.error.screen_title": "Screen unavailable",
+  "@bdui.error.screen_title": {
+    "description": "Title of the full-screen fallback shown when the entire BDUI pipeline fails."
+  },
+  "bdui.error.screen_subtitle": "An error occurred. Please retry or contact your administrator.",
+  "@bdui.error.screen_subtitle": {
+    "description": "Subtitle of the full-screen fallback."
+  },
+  "bdui.error.retry": "Retry",
+  "@bdui.error.retry": {
+    "description": "Label of the retry button on the error screen."
+  },
+  "bdui.error.global_snackbar": "Technical error reported",
+  "@bdui.error.global_snackbar": {
+    "description": "Non-blocking SnackBar message for unhandled global errors (release only)."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "@@locale": "fr",
+  "bdui.error.component_unavailable": "Composant indisponible",
+  "@bdui.error.component_unavailable": {
+    "description": "Fallback affiché lorsqu'un composant BDUI lève une exception lors de son build."
+  },
+  "bdui.error.screen_title": "Écran indisponible",
+  "@bdui.error.screen_title": {
+    "description": "Titre du fallback plein-écran affiché quand tout le pipeline BDUI échoue."
+  },
+  "bdui.error.screen_subtitle": "Une erreur est survenue. Réessayez ou contactez votre administrateur.",
+  "@bdui.error.screen_subtitle": {
+    "description": "Sous-titre du fallback plein-écran."
+  },
+  "bdui.error.retry": "Réessayer",
+  "@bdui.error.retry": {
+    "description": "Label du bouton de retry sur l'écran d'erreur."
+  },
+  "bdui.error.global_snackbar": "Erreur technique signalée",
+  "@bdui.error.global_snackbar": {
+    "description": "Message SnackBar non-bloquant affiché pour les erreurs globales non-attrapées (release uniquement)."
+  }
+}

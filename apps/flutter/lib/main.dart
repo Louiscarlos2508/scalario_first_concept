@@ -7,6 +7,12 @@
 // STORY-005 : RegistryBootstrap.registerPhase1 est appelé avant runApp ;
 // le singleton ComponentRegistry est disponible via GetIt tout au long de
 // la session. L'ordre est critique : DI d'abord, UI ensuite.
+//
+// STORY-010 : GlobalErrorHandler.install() est appelé avant runApp, et
+// runApp est enveloppé dans runZonedGuarded pour capturer les erreurs async
+// non-attrapées (niveau 3 de la stratégie 3-niveaux).
+
+import 'dart:async' show runZonedGuarded;
 
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
@@ -16,11 +22,24 @@ import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
 import 'engine/component_registry/component_registry.dart';
 import 'engine/component_registry/registry_bootstrap.dart';
+import 'engine/error_boundary/global_error_handler.dart';
 import 'engine/layout_resolver/layout_resolver.dart';
 
+/// Shared navigator key — allows [GlobalErrorHandler] to show SnackBars from
+/// anywhere in the app without a BuildContext (AC-10).
+final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
-  _setupDependencies();
-  runApp(const ScalarioApp());
+  // Level 3 error hooks must be installed before runApp (AC-09).
+  GlobalErrorHandler.install(navigatorKey: _navigatorKey);
+
+  runZonedGuarded(
+    () {
+      _setupDependencies();
+      runApp(ScalarioApp(navigatorKey: _navigatorKey));
+    },
+    GlobalErrorHandler.handleZoneError,
+  );
 }
 
 void _setupDependencies() {
@@ -33,13 +52,16 @@ void _setupDependencies() {
 }
 
 class ScalarioApp extends StatelessWidget {
-  const ScalarioApp({super.key});
+  const ScalarioApp({super.key, this.navigatorKey});
+
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Scalario',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey,
       theme: ScalarioTheme.light(),
       darkTheme: ScalarioTheme.dark(),
       // Explicite (= défaut MaterialApp) — AC-21 exige le wiring système.

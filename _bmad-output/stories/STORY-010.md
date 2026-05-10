@@ -3,8 +3,8 @@
 **Epic :** EPIC-002 — BDUI Engine Flutter
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** Completed
+**Assigned To :** Carlos Simporé
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
 **Dependencies :** STORY-005 (ComponentRegistry — fournit le hook `ErrorBoundary` autour de chaque build) ; STORY-001 + STORY-002 (tokens + theme — pour le fallback UI cohérent visuellement)
@@ -367,8 +367,20 @@ Aucun conflit majeur PRD ↔ DS. Le PRD §FR-050 (ligne 292) et le sprint plan l
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Completed (Carlos / Developer via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 points (matched estimate)
+
+**Implementation Notes :**
+
+- Flutter a aucune API ErrorBoundary native par sous-arbre. Solution : override scoped de `ErrorWidget.builder` coordonné par `ErrorCapture` (coordinateur frame-scoped) pour éviter les interférences entre composants frères dans le même frame.
+- `ErrorCapture` maintient un compteur de profondeur (`_depth`) : seul le dernier `leave()` (quand depth → 0) restaure le vrai builder original.
+- `addPostFrameCallback` requis pour différer `setState` après les erreurs de build (setState mid-frame illégal dans Flutter).
+- Stack hash : `hashCode.toUnsigned(32).toRadixString(16)` — pas besoin du package `crypto`.
+- `flutter_error_boundary` package (community) évalué et écarté : approche maison `ErrorCapture` est plus simple et sans dépendance externe.
+- Version app hardcodée `'0.1.0+1'` en attendant `package_info_plus` (Phase 2).
+- Toutes les chaînes i18n hardcodées en français avec `// TODO i18n:` — STORY-042 finalisera le wiring ARB.
+- 482/482 tests passent. `flutter analyze lib/` zéro issue.
 
 ---
 
