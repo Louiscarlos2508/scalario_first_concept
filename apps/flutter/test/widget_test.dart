@@ -1,4 +1,4 @@
-// Scaffold smoke test : l'app boot et affiche le label tokens.
+// Scaffold smoke test : l'app boot avec le ThemeData Scalario chargé.
 
 import 'dart:async';
 
@@ -12,8 +12,6 @@ void main() {
 
   setUpAll(() async {
     GoogleFonts.config.allowRuntimeFetching = false;
-    // Pré-cache les TextStyles pour que les erreurs async de google_fonts
-    // (police absente du bundle de test) soient absorbées une seule fois ici.
     await runZonedGuarded<Future<void>>(() async {
       // ignore: unnecessary_statements
       ScalarioTypography.display;
@@ -23,13 +21,13 @@ void main() {
     }, (Object error, StackTrace stack) {});
   });
 
-  testWidgets('ScalarioApp boots et rend le label tokens', (
+  testWidgets('ScalarioApp boots avec ThemeData Scalario', (
     WidgetTester tester,
   ) async {
     await runZonedGuarded<Future<void>>(() async {
       await tester.pumpWidget(const ScalarioApp());
-      expect(find.text('Scalario'), findsOneWidget);
-      expect(find.text('Design tokens chargés ✓'), findsOneWidget);
+      expect(find.text('Scalario'), findsWidgets);
+      expect(find.text('ThemeData Scalario chargé'), findsOneWidget);
     }, (Object error, StackTrace stack) {});
   });
 }

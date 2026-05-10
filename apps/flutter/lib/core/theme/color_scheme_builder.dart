@@ -1,0 +1,98 @@
+import 'package:flutter/material.dart';
+
+import '../design_system/tokens/colors.dart';
+
+/// Construit les `ColorScheme` Material 3 light + dark à partir de
+/// `ScalarioColors`.
+///
+/// On **ne passe pas par `ColorScheme.fromSeed`** : `fromSeed` génère une
+/// palette algorithmique qui dévie des hex Scalario. On instancie le
+/// `ColorScheme` à la main, en mappant chaque slot M3 sur un token précis.
+///
+/// Spec : `STORY-002` AC-01, AC-02, AC-03.
+abstract final class ScalarioColorSchemeBuilder {
+  static ColorScheme light() => const ColorScheme(
+        brightness: Brightness.light,
+        // Primary
+        primary: ScalarioColors.primary500,
+        onPrimary: ScalarioColors.white,
+        primaryContainer: ScalarioColors.primary100,
+        onPrimaryContainer: ScalarioColors.primary900,
+        // Secondary — primary300 (teinte plus claire, usage outlined / chips)
+        secondary: ScalarioColors.primary300,
+        onSecondary: ScalarioColors.textPrimary,
+        secondaryContainer: ScalarioColors.primary50,
+        onSecondaryContainer: ScalarioColors.primary900,
+        // Tertiary — réutilisé pour "info" Scalario
+        tertiary: ScalarioColors.info500,
+        onTertiary: ScalarioColors.white,
+        tertiaryContainer: ScalarioColors.info100,
+        onTertiaryContainer: ScalarioColors.primary900,
+        // Error
+        error: ScalarioColors.danger500,
+        onError: ScalarioColors.white,
+        errorContainer: ScalarioColors.danger100,
+        onErrorContainer: ScalarioColors.danger700,
+        // Surface — bgCard (white) pour les cards / dialogs / menus
+        surface: ScalarioColors.bgCard,
+        onSurface: ScalarioColors.textPrimary,
+        surfaceContainerLowest: ScalarioColors.white,
+        surfaceContainerLow: ScalarioColors.neutral50,
+        surfaceContainer: ScalarioColors.neutral50,
+        surfaceContainerHigh: ScalarioColors.neutral100,
+        surfaceContainerHighest: ScalarioColors.neutral100,
+        onSurfaceVariant: ScalarioColors.textSecondary,
+        // Outline / borders
+        outline: ScalarioColors.borderDefault,
+        outlineVariant: ScalarioColors.neutral100,
+        // Inverse / shadow / scrim
+        inverseSurface: ScalarioColors.neutral900,
+        onInverseSurface: ScalarioColors.neutral50,
+        inversePrimary: ScalarioColors.primary300,
+        shadow: Colors.black,
+        scrim: Colors.black,
+      );
+
+  static ColorScheme dark() => const ColorScheme(
+        brightness: Brightness.dark,
+        // Primary
+        primary: ScalarioColors.primary300,
+        onPrimary: ScalarioColors.primary900,
+        primaryContainer: ScalarioColors.primary700,
+        onPrimaryContainer: ScalarioColors.primary100,
+        // Secondary
+        secondary: ScalarioColors.primary300,
+        onSecondary: ScalarioColors.primary900,
+        secondaryContainer: ScalarioColors.primary700,
+        onSecondaryContainer: ScalarioColors.primary100,
+        // Tertiary
+        tertiary: ScalarioColors.info500,
+        onTertiary: ScalarioColors.white,
+        tertiaryContainer: ScalarioColors.primary700,
+        onTertiaryContainer: ScalarioColors.info100,
+        // Error
+        error: ScalarioColors.danger500,
+        onError: ScalarioColors.white,
+        errorContainer: ScalarioColors.danger700,
+        onErrorContainer: ScalarioColors.danger100,
+        // Surface — palette dark dérivée mécaniquement (voir STORY-001 §
+        // "Tokens d'application — Dark"). À valider avec designer Sprint 2.
+        surface: ScalarioColors.bgCardDark,
+        onSurface: ScalarioColors.textPrimaryDark,
+        surfaceContainerLowest: ScalarioColors.neutral900,
+        surfaceContainerLow: ScalarioColors.bgCardDark,
+        surfaceContainer: ScalarioColors.bgCardDark,
+        surfaceContainerHigh: ScalarioColors.neutral700,
+        surfaceContainerHighest: ScalarioColors.neutral700,
+        onSurfaceVariant: ScalarioColors.textSecondaryDark,
+        // Outline / borders
+        outline: ScalarioColors.borderDefaultDark,
+        outlineVariant: ScalarioColors.neutral700,
+        // Inverse / shadow / scrim
+        inverseSurface: ScalarioColors.neutral50,
+        onInverseSurface: ScalarioColors.neutral900,
+        inversePrimary: ScalarioColors.primary500,
+        shadow: Colors.black,
+        scrim: Colors.black,
+      );
+}

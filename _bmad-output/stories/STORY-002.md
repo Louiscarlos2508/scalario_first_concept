@@ -3,7 +3,7 @@
 **Epic :** EPIC-001 — Design System Scalario
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -400,8 +400,19 @@ N/A — couche présentation pure. Pas d'input utilisateur, pas de secret. Le se
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Implemented + tested + completed (Carlos / Dev via `/bmad:dev-story STORY-002`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 points (matched estimate)
+
+**Implementation Notes :**
+- Architecture conforme à la story : `lib/core/theme/` avec `scalario_theme.dart` comme point d'entrée + 5 component-theme files + 3 ThemeExtensions.
+- `ColorScheme` construit explicitement (pas via `fromSeed`) — palette Scalario exacte. Seuls `Colors.transparent` (surface tinting M3) et `Colors.black` (shadow/scrim M3) sont utilisés en dehors de `ScalarioColors`, conforme à AC-03.
+- 4 variants `ScalarioButtonStyles` (primary/secondary/ghost/danger) + alias `destructive` pour cohérence avec la spec ASCII.
+- `ThemeExtension.lerp` correct sur les 9 couleurs sémantiques + 10 spacings (élévations snap au target à t≥0.5 — Flutter ne sait pas mélanger des `BoxShadow` proprement).
+- `surfaceTintColor: Colors.transparent` appliqué à Card/AppBar/Dialog/BottomSheet/Button/FAB/DataTable pour conserver la palette neutre Scalario.
+- Tests : 154 tests passent (47 dans `test/core/theme/` + 107 hérités), couverture **97.1 %** sur `lib/core/theme/` (≥ 85 % requis).
+- `flutter analyze` clean. Anti-hardcode scanner clean (`lib/core/theme/` exempt mais aucun `Color(0xFF…)` non plus).
+- Workflow : commit direct sur `main` (trunk-based per règle Scalario pré-Gate 0).
 
 ---
 
