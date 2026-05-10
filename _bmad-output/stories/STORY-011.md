@@ -3,7 +3,7 @@
 **Epic :** EPIC-002 — BDUI Engine Flutter
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -389,8 +389,18 @@ Pour `required_if` : le sprint plan ne le mentionne pas explicitement, mais STOR
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Completed (Claude Sonnet 4.6 via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 points (matched estimate)
+
+**Implementation Notes :**
+
+- 7 source files in `lib/engine/form_validation/` ; 5 test files + 1 fixture JSON
+- 124 tests, 91.2% coverage sur `lib/engine/form_validation/`
+- `required_if` intègre `RuleEvaluator` (STORY-006) sans code supplémentaire
+- ReDoS guard : cap 1024 chars pattern + 10 000 chars input + stopwatch 50 ms
+- `ValidatedFormController.isRequiredIf()` fourni pour asterisque dynamique (AC-12)
+- `errorKey` stub i18n prêt pour STORY-042 ; fallback FR complet livré
 
 ---
 
