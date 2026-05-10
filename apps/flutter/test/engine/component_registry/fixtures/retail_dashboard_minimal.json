@@ -1,0 +1,105 @@
+{
+  "screen_id": "dashboard_owner",
+  "layout": "dashboard",
+  "zones": {
+    "kpis": [
+      {
+        "type": "KPICard",
+        "id": "kpi_ca",
+        "props": {
+          "label": "CA du jour",
+          "value": "47 500",
+          "unit": "FCFA",
+          "delta": "+12% vs hier",
+          "delta_positive": true,
+          "status": "nominal"
+        }
+      },
+      {
+        "type": "KPICard",
+        "id": "kpi_stock",
+        "props": {
+          "label": "Alertes stock",
+          "value": "3",
+          "status": "warning"
+        }
+      }
+    ],
+    "alerts": [
+      {
+        "type": "AlertBanner",
+        "id": "alert_sync",
+        "props": {
+          "type": "info",
+          "message": "Dernière sync : 14h32"
+        }
+      }
+    ],
+    "charts": [
+      {
+        "type": "ChartWidget",
+        "id": "chart_ventes_7j",
+        "props": {
+          "title": "Ventes 7 jours",
+          "data": [
+            { "label": "Lun", "value": 32000 },
+            { "label": "Mar", "value": 41500 },
+            { "label": "Mer", "value": 28000 },
+            { "label": "Jeu", "value": 47500 },
+            { "label": "Ven", "value": 38000 },
+            { "label": "Sam", "value": 55000 },
+            { "label": "Dim", "value": 12000 }
+          ]
+        }
+      }
+    ],
+    "actions": [
+      {
+        "type": "ActionButton",
+        "id": "fab_vendre",
+        "props": {
+          "icon_code_point": 57676,
+          "label": "Vendre"
+        }
+      }
+    ],
+    "lists": [
+      {
+        "type": "MouvementItem",
+        "id": "mvt_001",
+        "props": {
+          "title": "Vente Riz 5kg",
+          "subtitle": "14:22 · Ibrahim",
+          "status": "success"
+        }
+      }
+    ],
+    "forms": [
+      {
+        "type": "FormWidget",
+        "id": "form_perte",
+        "props": {
+          "title": "Déclaration de perte",
+          "hint": "Remplir tous les champs obligatoires"
+        }
+      }
+    ],
+    "tables": [
+      {
+        "type": "DataTable",
+        "id": "table_ventes",
+        "props": {
+          "columns": [
+            { "key": "article", "label": "Article", "align": "left" },
+            { "key": "qte", "label": "Qté", "align": "right" },
+            { "key": "montant", "label": "Montant FCFA", "align": "right" }
+          ],
+          "rows": [
+            { "article": "Riz 5kg", "qte": "2", "montant": "9 000" },
+            { "article": "Huile 1L", "qte": "3", "montant": "4 500" }
+          ]
+        }
+      }
+    ]
+  }
+}

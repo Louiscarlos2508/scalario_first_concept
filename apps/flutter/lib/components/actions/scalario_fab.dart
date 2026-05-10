@@ -24,6 +24,17 @@ class ScalarioFAB extends StatelessWidget {
     this.heroTag,
   });
 
+  /// Construit un `ScalarioFAB` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return ScalarioFAB.fromJson(props);
+    } on FormatException {
+      return ScalarioFAB(icon: Icons.add, label: props['label'] as String?);
+    }
+  }
+
   factory ScalarioFAB.fromJson(Map<String, dynamic> json) {
     final dynamic codePoint = json['icon_code_point'];
     if (codePoint is! int) {

@@ -102,6 +102,20 @@ class ChartBar extends StatefulWidget {
         height: height,
       );
 
+  /// Construit un `ChartBar` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return ChartBar.fromJson(props);
+    } on FormatException {
+      return ChartBar(
+        data: const <ChartDataPoint>[],
+        title: props['title'] as String? ?? 'Chart',
+      );
+    }
+  }
+
   factory ChartBar.fromJson(Map<String, dynamic> json) {
     final String? title = json['title'] as String?;
     if (title == null) {

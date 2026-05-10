@@ -99,6 +99,65 @@ class ScalarioDataTable<T> extends StatefulWidget {
         _errorMessage = message,
         _onRetry = onRetry;
 
+  /// Construit un `ScalarioDataTable<Map<String, dynamic>>` depuis les props
+  /// d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005) sous le type `DataTable`.
+  ///
+  /// Format props attendu :
+  /// ```json
+  /// {
+  ///   "columns": [{ "key": "nom", "label": "Nom", "align": "left" }],
+  ///   "rows": [{ "nom": "Riz 5kg" }]
+  /// }
+  /// ```
+  static Widget fromConfig(
+    Map<String, dynamic> props,
+    BuildContext ctx,
+  ) {
+    final List<dynamic> rawCols =
+        props['columns'] as List<dynamic>? ?? <dynamic>[];
+    final List<dynamic> rawRows =
+        props['rows'] as List<dynamic>? ?? <dynamic>[];
+
+    final List<DataColumnConfig<Map<String, dynamic>>> columns =
+        rawCols.map((dynamic c) {
+      final Map<String, dynamic> col = c as Map<String, dynamic>;
+      final String key = col['key'] as String? ?? '';
+      final String label = col['label'] as String? ?? key;
+      final String alignStr = col['align'] as String? ?? 'left';
+      final DataColumnAlign align = DataColumnAlign.values.firstWhere(
+        (DataColumnAlign a) => a.name == alignStr,
+        orElse: () => DataColumnAlign.left,
+      );
+      return DataColumnConfig<Map<String, dynamic>>(
+        key: key,
+        label: label,
+        cellBuilder: (Map<String, dynamic> row) =>
+            row[key]?.toString() ?? '—',
+        align: align,
+      );
+    }).toList();
+
+    if (columns.isEmpty) {
+      return ScalarioDataTable<Map<String, dynamic>>.empty(
+        columns: const <DataColumnConfig<Map<String, dynamic>>>[],
+        message: 'Aucune colonne configurée',
+      );
+    }
+
+    final List<Map<String, dynamic>> rows = rawRows
+        .whereType<Map<String, dynamic>>()
+        .toList();
+
+    return ScalarioDataTable<Map<String, dynamic>>(
+      columns: columns,
+      rows: rows,
+      defaultSortKey: props['default_sort_key'] as String?,
+      defaultSortAsc: props['default_sort_asc'] as bool? ?? true,
+    );
+  }
+
   /// Variante "vide" — illustration `inbox` + message centré.
   factory ScalarioDataTable.empty({
     required List<DataColumnConfig<T>> columns,

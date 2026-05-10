@@ -22,6 +22,9 @@ dependencies:
   # Bar/Line charts BDUI — AC-36 (STORY-003).
   fl_chart: ^0.68.0
 
+  # DI container — ComponentRegistry singleton + BDUIEngine (STORY-005, STORY-008).
+  get_it: ^8.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

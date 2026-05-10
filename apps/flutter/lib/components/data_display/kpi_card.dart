@@ -90,6 +90,17 @@ class KPICard extends StatelessWidget {
   factory KPICard.error({required String label, String? message}) =>
       KPICard._error(label: label, message: message);
 
+  /// Construit un `KPICard` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return KPICard.fromJson(props);
+    } on FormatException {
+      return KPICard.error(label: props['label'] as String? ?? 'KPI');
+    }
+  }
+
   /// Construit un `KPICard` depuis un `Map<String, dynamic>` BDUI.
   ///
   /// Throws `FormatException` si `label` ou `value` manquent — le moteur BDUI

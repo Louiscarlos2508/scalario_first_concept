@@ -33,6 +33,17 @@ class AlertBanner extends StatefulWidget {
     this.onDismiss,
   });
 
+  /// Construit un `AlertBanner` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return AlertBanner.fromJson(props);
+    } on FormatException {
+      return const AlertBanner(type: AlertType.warning, message: 'Alerte indisponible');
+    }
+  }
+
   factory AlertBanner.fromJson(Map<String, dynamic> json) {
     final String? message = json['message'] as String?;
     if (message == null) {

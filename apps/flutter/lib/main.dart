@@ -3,15 +3,29 @@
 // STORY-002 : `MaterialApp` consomme `ScalarioTheme.light()` /
 // `ScalarioTheme.dark()` avec `ThemeMode.system` (l'OS décide). Le thème est
 // entièrement construit depuis les tokens (STORY-001) ; aucun override local.
+//
+// STORY-005 : RegistryBootstrap.registerPhase1 est appelé avant runApp ;
+// le singleton ComponentRegistry est disponible via GetIt tout au long de
+// la session. L'ordre est critique : DI d'abord, UI ensuite.
 
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 
 import 'core/design_system/tokens/tokens.dart';
 import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
+import 'engine/component_registry/component_registry.dart';
+import 'engine/component_registry/registry_bootstrap.dart';
 
 void main() {
+  _setupDependencies();
   runApp(const ScalarioApp());
+}
+
+void _setupDependencies() {
+  final ComponentRegistry registry = ComponentRegistry();
+  GetIt.I.registerSingleton<ComponentRegistry>(registry);
+  RegistryBootstrap.registerPhase1(registry);
 }
 
 class ScalarioApp extends StatelessWidget {

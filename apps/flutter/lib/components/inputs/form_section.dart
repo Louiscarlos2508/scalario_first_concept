@@ -36,6 +36,22 @@ class FormSection extends StatelessWidget {
     this.loading = false,
   });
 
+  /// Construit un `FormSection` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005) sous les types
+  /// `FormWidget` et `FormSection`. Children vides en Sprint 1 — les champs
+  /// data-driven sont câblés par STORY-011.
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return FormSection.fromJson(props, children: const <Widget>[]);
+    } on FormatException {
+      return FormSection(
+        title: props['title'] as String? ?? 'Formulaire',
+        children: const <Widget>[],
+      );
+    }
+  }
+
   factory FormSection.fromJson(
     Map<String, dynamic> json, {
     required List<Widget> children,

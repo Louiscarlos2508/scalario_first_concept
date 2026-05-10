@@ -74,6 +74,18 @@ class ScalarioListTile extends StatelessWidget {
         _emptyMessage = null,
         _errorMessage = message;
 
+  /// Construit un `ScalarioListTile` depuis les props d'un `ComponentConfig` BDUI.
+  ///
+  /// Utilisé par le `ComponentRegistry` (STORY-005) sous les types
+  /// `MouvementItem` et `ListTile`. Délègue à [fromJson].
+  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+    try {
+      return ScalarioListTile.fromJson(props);
+    } on FormatException {
+      return ScalarioListTile(title: props['title'] as String? ?? '—');
+    }
+  }
+
   const factory ScalarioListTile.loading() = _LoadingTile;
 
   factory ScalarioListTile.empty(String message) =>
