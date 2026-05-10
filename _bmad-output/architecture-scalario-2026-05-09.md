@@ -145,7 +145,7 @@ Client Flutter (offline-first)
 **Rationale :** Flutter est le seul framework qui produit un vrai codebase unique pour mobile + web avec des performances natives. React Native a trop de divergences platform. Flutter Web avec Drift (IndexedDB) couvre le besoin admin. Le BDUIEngine est identique sur toutes les plateformes — même JSON, même composants, même comportement.
 
 **Trade-offs :**
-- Gain : un seul codebase à maintenir, BDUIEngine cohérent partout, shadcn_ui Flutter unifie le Design System
+- Gain : un seul codebase à maintenir, BDUIEngine cohérent partout, Material 3 natif Flutter unifie le Design System sans dépendance UI externe
 - Perte : Flutter Web est moins mature que React/Next.js pour des interfaces admin complexes (scrolling, SEO). Acceptable car l'admin est une app interne, pas un site public.
 
 **Packages clés :**
@@ -153,7 +153,7 @@ Client Flutter (offline-first)
 |---|---|
 | `flutter_riverpod` | State management — Provider pattern, réactif, testable |
 | `drift` | ORM offline SQLite (mobile) + IndexedDB (web) |
-| `shadcn_ui` | Composants primitifs du Design System |
+| Material 3 (Flutter SDK natif) | Composants primitifs + theming — zéro dépendance UI externe |
 | `widgetbook` | Documentation vivante des composants BDUI |
 | `json_schema_dart` | Validation JSON Schema côté Flutter |
 | `flutter_localizations` + `intl` | i18n — 0 string hardcodée |
@@ -319,13 +319,89 @@ JSON (Drift cache)
 ```dart
 class ComponentRegistry {
   static final Map<String, ComponentBuilder> _builders = {
-    'KPICard':     (config, ctx) => KPICard.fromConfig(config, ctx),
-    'DataTable':   (config, ctx) => ERPDataTable.fromConfig(config, ctx),
-    'AlertBanner': (config, ctx) => AlertBanner.fromConfig(config, ctx),
-    'FAB':         (config, ctx) => ERPFAB.fromConfig(config, ctx),
-    'ListTile':    (config, ctx) => ERPListTile.fromConfig(config, ctx),
-    'FormSection': (config, ctx) => FormSection.fromConfig(config, ctx),
-    'ChartBar':    (config, ctx) => ChartBar.fromConfig(config, ctx),
+    // 01 — Feedback
+    'AlertBanner':             (c, ctx) => AlertBanner.fromConfig(c, ctx),
+    'StatusBadge':             (c, ctx) => StatusBadge.fromConfig(c, ctx),
+    'SyncStatusBar':           (c, ctx) => SyncStatusBar.fromConfig(c, ctx),
+    'ProgressBar':             (c, ctx) => ProgressBar.fromConfig(c, ctx),
+    'NotificationBadge':       (c, ctx) => NotificationBadge.fromConfig(c, ctx),
+    'TypeBadge':               (c, ctx) => TypeBadge.fromConfig(c, ctx),
+    // 02 — Data Display
+    'KPICard':                 (c, ctx) => KPICard.fromConfig(c, ctx),
+    'TransactionList':         (c, ctx) => TransactionList.fromConfig(c, ctx),
+    'RankingList':             (c, ctx) => RankingList.fromConfig(c, ctx),
+    'ChartWidget':             (c, ctx) => ChartWidget.fromConfig(c, ctx),
+    'InfoCard':                (c, ctx) => InfoCard.fromConfig(c, ctx),
+    'DateSeparator':           (c, ctx) => DateSeparator.fromConfig(c, ctx),
+    'MouvementItem':           (c, ctx) => MouvementItem.fromConfig(c, ctx),
+    'StockListItem':           (c, ctx) => StockListItem.fromConfig(c, ctx),
+    'OperationItem':           (c, ctx) => OperationItem.fromConfig(c, ctx),
+    'ContextCard':             (c, ctx) => ContextCard.fromConfig(c, ctx),
+    'ContentPreview':          (c, ctx) => ContentPreview.fromConfig(c, ctx),
+    'DataTable':               (c, ctx) => DataTable.fromConfig(c, ctx),
+    'StatusTable':             (c, ctx) => StatusTable.fromConfig(c, ctx),
+    'LogItem':                 (c, ctx) => LogItem.fromConfig(c, ctx),
+    // 03 — Inputs
+    'TextInput':               (c, ctx) => TextInput.fromConfig(c, ctx),
+    'NumberInput':             (c, ctx) => NumberInput.fromConfig(c, ctx),
+    'QuantityControl':         (c, ctx) => QuantityControl.fromConfig(c, ctx),
+    'TimePicker':              (c, ctx) => TimePicker.fromConfig(c, ctx),
+    'DatePicker':              (c, ctx) => DatePicker.fromConfig(c, ctx),
+    'Toggle':                  (c, ctx) => Toggle.fromConfig(c, ctx),
+    'FormWidget':              (c, ctx) => FormWidget.fromConfig(c, ctx),
+    'ExpandableSection':       (c, ctx) => ExpandableSection.fromConfig(c, ctx),
+    // 04 — Selection
+    'ProductGrid':             (c, ctx) => ProductGrid.fromConfig(c, ctx),
+    'ChipSelector':            (c, ctx) => ChipSelector.fromConfig(c, ctx),
+    'FilterChips':             (c, ctx) => FilterChips.fromConfig(c, ctx),
+    'PeriodSelector':          (c, ctx) => PeriodSelector.fromConfig(c, ctx),
+    'ProductSelector':         (c, ctx) => ProductSelector.fromConfig(c, ctx),
+    'CartSummary':             (c, ctx) => CartSummary.fromConfig(c, ctx),
+    'ChoiceCard':              (c, ctx) => ChoiceCard.fromConfig(c, ctx),
+    'PaymentMethodSelector':   (c, ctx) => PaymentMethodSelector.fromConfig(c, ctx),
+    'BluetoothDeviceSelector': (c, ctx) => BluetoothDeviceSelector.fromConfig(c, ctx),
+    // 05 — Lists métier
+    'EmployeeList':            (c, ctx) => EmployeeList.fromConfig(c, ctx),
+    'SupplierList':            (c, ctx) => SupplierList.fromConfig(c, ctx),
+    'ProductPriceList':        (c, ctx) => ProductPriceList.fromConfig(c, ctx),
+    'AlertConfigList':         (c, ctx) => AlertConfigList.fromConfig(c, ctx),
+    // 06 — Actions
+    'ActionButton':            (c, ctx) => ActionButton.fromConfig(c, ctx),
+    'ConfirmationDialog':      (c, ctx) => ConfirmationDialog.fromConfig(c, ctx),
+    // 07 — Spécialisés
+    'PaymentConfirm':          (c, ctx) => PaymentConfirm.fromConfig(c, ctx),
+    'AlertPreview':            (c, ctx) => AlertPreview.fromConfig(c, ctx),
+    'CredentialsCard':         (c, ctx) => CredentialsCard.fromConfig(c, ctx),
+    'OnboardingCard':          (c, ctx) => OnboardingCard.fromConfig(c, ctx),
+    'EmptyState':              (c, ctx) => EmptyState.fromConfig(c, ctx),
+    'LoginWidget':             (c, ctx) => LoginWidget.fromConfig(c, ctx),
+    'TemplateSelector':        (c, ctx) => TemplateSelector.fromConfig(c, ctx),
+    'AvatarCard':              (c, ctx) => AvatarCard.fromConfig(c, ctx),
+    'POSPreview':              (c, ctx) => POSPreview.fromConfig(c, ctx),
+    // 08 — Navigation & Layout
+    'AppBar':                  (c, ctx) => AppBar.fromConfig(c, ctx),
+    'TopBar':                  (c, ctx) => TopBar.fromConfig(c, ctx),
+    'BottomNav':               (c, ctx) => BottomNav.fromConfig(c, ctx),
+    'SearchBar':               (c, ctx) => SearchBar.fromConfig(c, ctx),
+    'BottomSheet':             (c, ctx) => BottomSheet.fromConfig(c, ctx),
+    'MiniTopBar':              (c, ctx) => MiniTopBar.fromConfig(c, ctx),
+    'Breadcrumb':              (c, ctx) => Breadcrumb.fromConfig(c, ctx),
+    // 09 — Loading States
+    'Skeleton':                (c, ctx) => Skeleton.fromConfig(c, ctx),
+    'LoadingSpinner':          (c, ctx) => LoadingSpinner.fromConfig(c, ctx),
+    'ErrorState':              (c, ctx) => ErrorState.fromConfig(c, ctx),
+    'PasswordStrengthBar':     (c, ctx) => PasswordStrengthBar.fromConfig(c, ctx),
+    'PINInput':                (c, ctx) => PINInput.fromConfig(c, ctx),
+    'ImageUploader':           (c, ctx) => ImageUploader.fromConfig(c, ctx),
+    'SplashScreen':            (c, ctx) => SplashScreen.fromConfig(c, ctx),
+    'DriftLoader':             (c, ctx) => DriftLoader.fromConfig(c, ctx),
+    'ProfileLoader':           (c, ctx) => ProfileLoader.fromConfig(c, ctx),
+    // 10 — Documents & Session
+    'ReceiptPreview':          (c, ctx) => ReceiptPreview.fromConfig(c, ctx),
+    'CaisseSessionCard':       (c, ctx) => CaisseSessionCard.fromConfig(c, ctx),
+    'CreditTracker':           (c, ctx) => CreditTracker.fromConfig(c, ctx),
+    'TicketPreview':           (c, ctx) => ReceiptPreview.fromConfig(c.copyWith(type: 'ticket'), ctx),
+    'InvoicePreview':          (c, ctx) => ReceiptPreview.fromConfig(c.copyWith(type: 'facture'), ctx),
   };
 
   static Widget build(ComponentConfig config, BuildContext ctx) {
@@ -336,7 +412,7 @@ class ComponentRegistry {
 }
 ```
 
-**Composants initiaux MVP :** KPICard, DataTable, AlertBanner, FAB, ListTile, FormSection, ChartBar
+**Composants DS :** 73 composants canoniques — voir `design-process/D-Design-System/components/` (10 groupes : Feedback · Data Display · Inputs · Selection · Lists · Actions · Spécialisés · Navigation · Loading States · Documents & Session). `TicketPreview` et `InvoicePreview` sont des alias de `ReceiptPreview` résolus au moment du build.
 
 **FRs adressés :** FR-001, FR-050
 
@@ -1202,7 +1278,7 @@ POST /api/v1/:tenant/ai/import
 - **Single codebase Flutter :** Breakpoints gérés par LayoutResolver (mobile < 600px, tablet 600-1024px, desktop > 1024px).
 - **Drift cross-platform :** Drift mobile (SQLite) + Drift web (IndexedDB via `drift_web`). Même API, même schema, même requêtes.
 - **PWA :** `flutter build web --pwa-strategy=offline-first`. Service Worker configuré pour cache des assets Flutter.
-- **shadcn_ui :** Composants Flutter compatibles toutes plateformes (pas de platform-specific widgets dans le Design System).
+- **Material 3 natif :** Composants Flutter compatibles toutes plateformes (pas de platform-specific widgets dans le Design System).
 
 **Validation :** Tests automatisés sur émulateurs Android API 26, iOS 14 Simulator, et Chrome headless en CI.
 
@@ -1540,10 +1616,10 @@ scalario/
 │   └── flutter/                    # Flutter app (mobile + admin web)
 │       ├── lib/
 │       │   ├── core/
-│       │   │   ├── design_system/  # Design tokens, shadcn_ui overrides
+│       │   │   ├── design_system/  # Design tokens (couleurs, spacing, typo, icons)
 │       │   │   └── theme/          # ThemeData Scalario
 │       │   ├── engine/             # BDUIEngine, ComponentRegistry, RuleEvaluator, LayoutResolver
-│       │   ├── components/         # KPICard, DataTable, AlertBanner, FAB, ListTile, FormSection, ChartBar
+│       │   ├── components/         # 73 composants DS — Feedback, DataDisplay, Inputs, Selection, Lists, Actions, Specialized, Navigation, Loading, Documents
 │       │   ├── offline/            # Drift schema, SyncQueue, ConflictResolver
 │       │   ├── features/
 │       │   │   ├── auth/           # Login, token management
@@ -1951,13 +2027,12 @@ services:
 
 ---
 
-### Décision 3 : Admin en Flutter Web vs React + ShadCN Next.js
+### Décision 3 : Admin en Flutter Web vs React + Next.js
 
 **Choix :** Flutter Web (per PRD FR-029)
-**Note :** Le PDF de référence (Avril 2026) suggère React + ShadCN + Next.js pour l'admin. Le PRD (Mai 2026, plus récent) tranche pour Flutter Web.
-**Gain :** Un seul codebase Flutter, même BDUIEngine dans l'admin (preview BDUI identique par construction), même Design System shadcn_ui Flutter
+**Gain :** Un seul codebase Flutter, même BDUIEngine dans l'admin (preview BDUI identique par construction), même Design System Material 3 + tokens Scalario
 **Perte :** Flutter Web est moins mature que React pour des interfaces admin complexes (rich text, drag-and-drop avancé). Performance Web Flutter légèrement inférieure à React pour du contenu lourd.
-**Rationale :** La prévisibilité du BDUIEngine identical sur mobile ET admin compense largement les limitations Web Flutter. Un solo dev maintient 1 stack au lieu de 2. À réévaluer si l'admin devient une interface publique externe.
+**Rationale :** La prévisibilité du BDUIEngine identique sur mobile ET admin compense largement les limitations Web Flutter. Un solo dev maintient 1 stack au lieu de 2. À réévaluer si l'admin devient une interface publique externe.
 
 ---
 
@@ -2085,8 +2160,8 @@ Lancer `/bmad:sprint-planning` pour :
 
 **Ordre de build recommandé (issu du PDF + dépendances PRD) :**
 1. JSON Schema BDUI → contrat TypeScript/Dart généré (FR-020, FR-054)
-2. Design System Flutter → shadcn_ui + tokens (FR-005)
-3. Widgetbook + 5 composants de base → KPICard, DataTable, AlertBanner, ListTile, FAB (FR-007)
+2. Design System Flutter → Material 3 natif + tokens Scalario (FR-005)
+3. Widgetbook + 5 composants de base → KPICard, ActionButton, AlertBanner, FormWidget, TransactionList (FR-007)
 4. BDUIEngine → Registry + RuleEvaluator + LayoutResolver (FR-001 à FR-004)
 5. Sandbox JSON → Preuve end-to-end BDUIEngine (FR-006)
 6. Backend Foundation → Auth JWT + RBAC + RLS + Redis (FR-009 à FR-017, FR-019)
@@ -2114,7 +2189,7 @@ L'implémentation peut commencer story par story.
 
 | Catégorie | Choix retenu | Alternatives considérées | Raison du choix |
 |---|---|---|---|
-| Frontend mobile | Flutter | React Native, Xamarin | Vrai codebase unique, BDUIEngine cohérent, shadcn_ui disponible |
+| Frontend mobile | Flutter | React Native, Xamarin | Vrai codebase unique, BDUIEngine cohérent, Material 3 natif zéro dépendance externe |
 | Frontend web admin | Flutter Web | React+Next.js | Même codebase, même BDUIEngine, même Design System |
 | Backend principal | NestJS | Express.js, Fastify, Hapi | Architecture modulaire, DI intégré, TypeScript natif, écosystème |
 | Microservice IA | FastAPI | Node.js + LangChain.js | Écosystème IA Python supérieur (LlamaIndex, Instructor, Docling) |

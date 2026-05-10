@@ -27,6 +27,7 @@ D-Design-System/
     colors.md         ← Palette + tokens sémantiques
     typography.md     ← Inter — échelle typographique
     spacing.md        ← Grille 4px — espacements + layout
+    icons.md          ← Bibliothèque Material Icons + tokens taille + mapping sémantique
   ux-rules/
     principles.md     ← 10 règles UX fondamentales (P1–P10)
     patterns.md       ← 10 patterns d'interaction (flows, confirmations, offline…)
@@ -35,16 +36,16 @@ D-Design-System/
     ascii-sketch.md   ← Conventions complètes pour tous les sketches ASCII hi-fi
     surfaces.md       ← Variants composants par surface (mobile / web / admin)
   components/
-    01-feedback.md        ← AlertBanner, StatusBadge, SyncStatusBar, ProgressBar
-    02-data-display.md    ← KPICard, TransactionList, RankingList, ChartWidget
-    03-inputs.md          ← TextInput, NumberInput, QuantityControl, TimePicker, DatePicker, Toggle
-    04-selection.md       ← ProductGrid, ChipSelector, FilterChips, PeriodSelector, ProductSelector
+    01-feedback.md        ← AlertBanner, StatusBadge, SyncStatusBar, ProgressBar, NotificationBadge, TypeBadge
+    02-data-display.md    ← KPICard, TransactionList, RankingList, ChartWidget, InfoCard, DateSeparator, MouvementItem, StockListItem, OperationItem, ContextCard, ContentPreview, DataTable, StatusTable, LogItem
+    03-inputs.md          ← TextInput, NumberInput, QuantityControl, TimePicker, DatePicker, Toggle, FormWidget, ExpandableSection
+    04-selection.md       ← ProductGrid, ChipSelector, FilterChips, PeriodSelector, ProductSelector, CartSummary, ChoiceCard, PaymentMethodSelector, BluetoothDeviceSelector
     05-actions.md         ← ActionButton, ConfirmationDialog
     06-lists.md           ← EmployeeList, SupplierList, ProductPriceList, AlertConfigList
-    07-specialized.md     ← PaymentConfirm, AlertPreview, CredentialsCard, OnboardingCard, EmptyState, LoginWidget, TemplateSelector
-    08-navigation-layout.md ← AppBar, TopBar, BottomNav, SearchBar, BottomSheet
-    09-loading-states.md  ← Skeleton, LoadingSpinner, ErrorState, PasswordStrengthBar, PINInput, ImageUploader
-    10-documents-session.md ← ReceiptPreview, CaisseSessionCard, CreditTracker
+    07-specialized.md     ← PaymentConfirm, AlertPreview, CredentialsCard, OnboardingCard, EmptyState, LoginWidget, TemplateSelector, AvatarCard, POSPreview
+    08-navigation-layout.md ← AppBar, TopBar, BottomNav, SearchBar, BottomSheet, MiniTopBar, Breadcrumb
+    09-loading-states.md  ← Skeleton, LoadingSpinner, ErrorState, PasswordStrengthBar, PINInput, ImageUploader, SplashScreen, DriftLoader, ProfileLoader
+    10-documents-session.md ← ReceiptPreview, CaisseSessionCard, CreditTracker, TicketPreview, InvoicePreview
   composites/
     01-dashboard-owner.md      ← Dashboard OWNER complet (mobile + web 3col) — S01, S20
     02-dashboard-commercial.md ← Dashboard COMMERCIAL (mobile) — S02, S21
@@ -59,7 +60,7 @@ D-Design-System/
 
 ---
 
-## Index Composants Atomiques (45)
+## Index Composants Atomiques (73)
 
 | Composant | Fichier | Scénarios |
 |-----------|---------|-----------|
@@ -67,21 +68,39 @@ D-Design-System/
 | `StatusBadge` | 01-feedback | 14,18,19 |
 | `SyncStatusBar` | 01-feedback | 01,02,03,05,07,08,20,21,22,26 |
 | `ProgressBar` | 01-feedback | 18,27 |
+| `NotificationBadge` | 01-feedback | 01,04,10,20 |
+| `TypeBadge` | 01-feedback | 14,18,19,A05 |
 | `KPICard` | 02-data-display | 01,03,04,05,12,15,16,18,19,20,21,22,26 |
 | `TransactionList` | 02-data-display | 02,03,06,12,14,15,19,21 |
 | `RankingList` | 02-data-display | 12,20 |
 | `ChartWidget` | 02-data-display | 12,20 |
+| `InfoCard` | 02-data-display | 03,05,06,12,14,18,19,20,22,26 |
+| `DateSeparator` | 02-data-display | 03,14,18,19 |
+| `MouvementItem` | 02-data-display | 14,18,19 |
+| `StockListItem` | 02-data-display | 05,06,18,19 |
+| `OperationItem` | 02-data-display | 05,06,18,22 |
+| `ContextCard` | 02-data-display | 02,14,15,18 |
+| `ContentPreview` | 02-data-display | 12,19,28 |
+| `DataTable` | 02-data-display | 12,19,20 (web) |
+| `StatusTable` | 02-data-display | A01,A05 |
+| `LogItem` | 02-data-display | A05 |
 | `TextInput` | 03-inputs | 03,05,06,09,10,11,15,16,17,25 |
 | `NumberInput` | 03-inputs | 13,18,26 |
 | `QuantityControl` | 03-inputs | 02,05,06,15,16,18 |
 | `TimePicker` | 03-inputs | 13 |
 | `DatePicker` | 03-inputs | 15,16 |
 | `Toggle` | 03-inputs | 10,13,24 |
+| `FormWidget` | 03-inputs | 09,10,11,13,15,16,17,23,24,25 |
+| `ExpandableSection` | 03-inputs | 09,10,17 |
 | `ProductGrid` | 04-selection | 02,15 |
 | `ChipSelector` | 04-selection | 09,13,14,15,16,17,18,27,28 |
-| `FilterChips` | 04-selection | 12,14,18,19 |
+| `FilterChips` | 04-selection | 12,14,18,19,A05 |
 | `PeriodSelector` | 04-selection | 12,19 |
 | `ProductSelector` | 04-selection | 06,09,16,19 |
+| `CartSummary` | 04-selection | 02,15 |
+| `ChoiceCard` | 04-selection | 07,24 |
+| `PaymentMethodSelector` | 04-selection | 02,15 |
+| `BluetoothDeviceSelector` | 04-selection | 27 |
 | `ActionButton` | 05-actions | 02–28 |
 | `ConfirmationDialog` | 05-actions | 03,05,06,14,17,25 |
 | `EmployeeList` | 06-lists | 10 |
@@ -95,20 +114,29 @@ D-Design-System/
 | `EmptyState` | 07-specialized | 07,19 |
 | `LoginWidget` | 07-specialized | 07,23 |
 | `TemplateSelector` | 07-specialized | 17 |
+| `AvatarCard` | 07-specialized | 25 |
+| `POSPreview` | 07-specialized | 21 |
 | `AppBar` | 08-navigation-layout | tous (mobile) |
 | `TopBar` | 08-navigation-layout | tous (web) |
 | `BottomNav` | 08-navigation-layout | tous (mobile) |
 | `SearchBar` | 08-navigation-layout | 02,09,10,11,14,15,16,18,19 |
 | `BottomSheet` | 08-navigation-layout | 02,27,28 |
+| `MiniTopBar` | 08-navigation-layout | 20,21,22 |
+| `Breadcrumb` | 08-navigation-layout | tous (web — pages secondaires) |
 | `Skeleton` | 09-loading-states | 01,07,20,21,22 |
 | `LoadingSpinner` | 09-loading-states | 07,17,27,28 |
 | `ErrorState` | 09-loading-states | 07,08 |
 | `PasswordStrengthBar` | 09-loading-states | 23,25 |
 | `PINInput` | 09-loading-states | 24 |
 | `ImageUploader` | 09-loading-states | 17 |
+| `SplashScreen` | 09-loading-states | 01 |
+| `DriftLoader` | 09-loading-states | 01 |
+| `ProfileLoader` | 09-loading-states | 07,25 |
 | `ReceiptPreview` | 10-documents-session | 27 |
 | `CaisseSessionCard` | 10-documents-session | 03,20,26 |
 | `CreditTracker` | 10-documents-session | 15,20 |
+| `TicketPreview` | 10-documents-session | 27 (alias → ReceiptPreview type=ticket) |
+| `InvoicePreview` | 10-documents-session | 27 (alias → ReceiptPreview type=facture) |
 
 ---
 

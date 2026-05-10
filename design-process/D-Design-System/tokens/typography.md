@@ -7,9 +7,13 @@ token-category: typography
 
 ## Famille
 
-**Font principale :** Inter (Google Fonts)
+**Font principale :** Inter (Google Fonts) — tous les labels, titres, corps de texte
+**Font numérique :** Roboto Mono (Google Fonts) — montants FCFA, KPI values, codes PIN, totaux POS
 **Fallback :** system-ui, -apple-system, sans-serif
 **Langue :** Français — UTF-8 — chiffres FCFA avec séparateur espace insécable
+
+> **Règle :** Dès qu'un chiffre change en temps réel (KPI, total panier, montant caisse),
+> utiliser Roboto Mono pour éviter le layout shift (chiffres à largeur fixe).
 
 ## Échelle Typographique
 

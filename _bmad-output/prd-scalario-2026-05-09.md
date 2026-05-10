@@ -152,7 +152,7 @@ Niveau 3 — Config client (JSON override, zéro code)
 | RAG | LlamaIndex + pgvector | Indexation + hybrid search données métier |
 | Permissions | CASL / Casbin | ABAC complexe dans NestJS |
 | LLM | Claude API / Ollama | Cloud ou local selon connectivité client |
-| Composants UI | shadcn_ui Flutter | Design System cohérent |
+| Composants UI | Material 3 Flutter natif + DS Scalario | Design System cohérent, zéro dépendance UI externe |
 | Maquettage | Widgetbook (Flutter) | Storybook vivant des composants BDUI |
 | Déploiement | Docker Compose (5 services) | nestjs, fastapi, postgresql, redis, minio |
 
@@ -248,11 +248,11 @@ Ajouter un nouveau module = nouveau JSON dans le catalogue, zéro endpoint NestJ
 #### FR-005 : Design Tokens Flutter
 **Priorité :** Must Have
 
-**Description :** Système de theming data-driven. shadcn_ui Flutter comme base de composants primitifs. Tokens Scalario (couleurs, spacing, typographie) appliqués par-dessus. Cohérence visuelle garantie sur toutes les plateformes.
+**Description :** Système de theming data-driven basé sur Material 3 Flutter natif. Tokens Scalario (couleurs, spacing, typographie) appliqués via `ThemeData` + `ThemeExtensions`. Aucune dépendance UI externe. Cohérence visuelle garantie sur toutes les plateformes.
 
 **Critères d'acceptation :**
 - [ ] Tokens définis : couleurs primary/success/danger/warning/surface, spacing scale (4-64px), typographie (h1-h2-body-caption)
-- [ ] Shadcn_ui Flutter intégré : Button, Card, Table, Badge, Input, Select, Dialog
+- [ ] Material 3 natif Flutter utilisé — composants stock (FilledButton, Card, DataTable, Badge, TextField, DropdownMenu, Dialog) théméisés via `ThemeData`
 - [ ] Theme appliqué globalement — aucun composant n'a de couleurs hardcodées
 - [ ] Hot reload du theme en dev
 
@@ -970,7 +970,7 @@ Ajouter un nouveau module = nouveau JSON dans le catalogue, zéro endpoint NestJ
 ### EPIC-001 : Design System Scalario
 **Phase :** 1 — MVP | **Priorité :** Must Have | **Stories estimées :** 5-7
 
-Construire le Design System Scalario une fois, pour toujours. Design tokens, composants primitifs shadcn_ui Flutter, composants BDUI métier (KPICard, DataTable, AlertBanner, FAB, ListTile, FormSection, ChartBar), documentation vivante Widgetbook avec tous les états de chaque composant.
+Construire le Design System Scalario une fois, pour toujours. Design tokens, theming Material 3 natif (zéro dépendance UI externe), composants BDUI métier (KPICard, DataTable, AlertBanner, FAB, ListTile, FormSection, ChartBar), documentation vivante Widgetbook avec tous les états de chaque composant.
 
 **FRs :** FR-005, FR-007 | **Valeur :** Base immuable. Widgetbook = référence de non-régression visuelle permanente.
 
@@ -1184,7 +1184,7 @@ Intégrateur crée pharmacie.json dans catalog/domains/
 | Docker + Docker Compose | 5 services (nestjs, fastapi, postgresql, redis, minio) | Critique |
 | Claude API (Anthropic) | Config Agent Phase 2 | Phase 2 |
 | Ollama | LLM local Phase 3 | Phase 3 |
-| shadcn_ui Flutter | Design System base | Critique |
+| Material 3 Flutter natif | Design System base (zéro dépendance externe) | Critique |
 | Widgetbook | Documentation composants | Critique |
 | CASL / Casbin | ABAC NestJS | Critique |
 | Drift / Isar | Offline persistence Flutter | Critique |
