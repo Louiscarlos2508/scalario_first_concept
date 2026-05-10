@@ -16,10 +16,10 @@ sprints:
     start_date: "2026-05-12"
     end_date: "2026-05-23"
     capacity_points: 42
-    committed_points: 39
+    committed_points: 36
     completed_points: 30
     status: "in_progress"
-    goal: "Le BDUIEngine rend n'importe quel JSON en screen Flutter fonctionnel — Design System complet, composants BDUI, RuleEvaluator, LayoutResolver, Sandbox opérationnelle."
+    goal: "Le BDUIEngine rend n'importe quel JSON en screen Flutter fonctionnel — Design System complet, composants BDUI, RuleEvaluator, LayoutResolver, Error Boundaries, Validation Formulaires."
     stories:
       - story_id: "STORY-001"
         title: "Design Tokens Flutter"
@@ -98,14 +98,6 @@ sprints:
         completed_date: "2026-05-10"
         actual_points: 5
         branch: "main"
-      - story_id: "STORY-009"
-        title: "Sandbox JSON + Hot Reload Dev"
-        epic: "EPIC-002"
-        points: 3
-        status: "defined"
-        priority: "must_have"
-        story_doc: "_bmad-output/stories/STORY-009.md"
-        defined_date: "2026-05-10"
       - story_id: "STORY-010"
         title: "Error Boundaries BDUI"
         epic: "EPIC-002"
@@ -127,7 +119,7 @@ sprints:
     start_date: "2026-05-26"
     end_date: "2026-06-06"
     capacity_points: 42
-    committed_points: 41
+    committed_points: 44
     completed_points: 0
     status: "ready"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
@@ -140,6 +132,15 @@ sprints:
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-008.md"
         defined_date: "2026-05-10"
+      - story_id: "STORY-009"
+        title: "Sandbox JSON + Hot Reload Dev"
+        epic: "EPIC-002"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-009.md"
+        defined_date: "2026-05-10"
+        notes: "Déplacée Sprint 1→2 : dépend de STORY-008 (BDUIEngine) qui est Sprint 2."
       - story_id: "STORY-012"
         title: "Support Multi-plateforme Flutter"
         epic: "EPIC-002"
