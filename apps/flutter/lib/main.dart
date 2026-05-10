@@ -16,6 +16,7 @@ import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
 import 'engine/component_registry/component_registry.dart';
 import 'engine/component_registry/registry_bootstrap.dart';
+import 'engine/layout_resolver/layout_resolver.dart';
 
 void main() {
   _setupDependencies();
@@ -26,6 +27,9 @@ void _setupDependencies() {
   final ComponentRegistry registry = ComponentRegistry();
   GetIt.I.registerSingleton<ComponentRegistry>(registry);
   RegistryBootstrap.registerPhase1(registry);
+
+  // STORY-007 — LayoutResolver singleton, injecté avec le registry Phase 1.
+  GetIt.I.registerSingleton<LayoutResolver>(LayoutResolver(registry: registry));
 }
 
 class ScalarioApp extends StatelessWidget {
