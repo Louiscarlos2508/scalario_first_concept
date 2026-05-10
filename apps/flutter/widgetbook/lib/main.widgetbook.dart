@@ -18,7 +18,7 @@ class _ScalarioWidgetbook extends StatelessWidget {
           children: <WidgetbookNode>[
             WidgetbookComponent(
               name: 'Hello World (stub Sprint 1)',
-              usecases: <WidgetbookUseCase>[
+              useCases: <WidgetbookUseCase>[
                 WidgetbookUseCase(
                   name: 'Default',
                   builder: (BuildContext context) => const Center(
