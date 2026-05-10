@@ -1,0 +1,35 @@
+name: scalario
+description: "Scalario — Instant Business OS pour PME africaines (BDUI Engine + Templates JSON)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+  flutter: ">=3.41.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Design System fonts (Inter + Roboto Mono via Google Fonts API runtime cache).
+  google_fonts: ^6.3.2
+
+  # Brand SVG icons (WhatsApp et autres marques tierces).
+  flutter_svg: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+
+  # Inter et Roboto Mono sont chargées via google_fonts (runtime cache).
+  # Voir lib/core/design_system/tokens/typography.dart.

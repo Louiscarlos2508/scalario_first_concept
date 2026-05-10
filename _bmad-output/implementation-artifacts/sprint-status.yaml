@@ -17,18 +17,21 @@ sprints:
     end_date: "2026-05-23"
     capacity_points: 42
     committed_points: 39
-    completed_points: 0
-    status: "ready"
+    completed_points: 3
+    status: "in_progress"
     goal: "Le BDUIEngine rend n'importe quel JSON en screen Flutter fonctionnel — Design System complet, composants BDUI, RuleEvaluator, LayoutResolver, Sandbox opérationnelle."
     stories:
       - story_id: "STORY-001"
         title: "Design Tokens Flutter"
         epic: "EPIC-001"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-001.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 3
+        branch: "feat/story-001-design-tokens"
       - story_id: "STORY-002"
         title: "Material 3 + ThemeData Scalario"
         epic: "EPIC-001"
@@ -469,10 +472,10 @@ epics:
 # Récap définitions
 definition_summary:
   total_stories: 43
-  defined: 43
+  defined: 42
   not_started: 0
   in_progress: 0
-  completed: 0
+  completed: 1
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038
@@ -481,4 +484,4 @@ definition_summary:
     STORY-002 à STORY-043 : génération parallèle 7 sub-agents (1 par EPIC),
     chacun avec STORY-001 comme template, sources PRD + sprint plan + architecture
     + design-process/D-Design-System/. Conflit PRD↔DS toujours résolu en faveur DS.
-  next_step: "/bmad:dev-story STORY-001"
+  next_step: "/bmad:dev-story STORY-002"
