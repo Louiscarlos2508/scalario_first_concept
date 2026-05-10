@@ -15,11 +15,9 @@ import 'theme_extensions.dart';
 /// `ThemeData` Material 3 entièrement construits depuis les tokens
 /// Scalario (`lib/core/design_system/tokens/`).
 ///
-/// **Décision Material 3 vs shadcn_ui (2026-05-10) :**
-/// Scalario s'appuie sur Material 3 natif Flutter — pas de shadcn_ui.
-/// Material 3 est déjà flat, accessible, à jour, et évite une dépendance
-/// externe redondante avec le DS Scalario complet. Le DS s'applique via
-/// `ThemeData` + `ThemeExtensions`.
+/// **Base : Material 3 natif Flutter (2026-05-10).**
+/// Material 3 est déjà flat, accessible, à jour, et évite toute dépendance
+/// UI externe. Le DS Scalario s'applique via `ThemeData` + `ThemeExtensions`.
 ///
 /// **Surface tinting :** M3 applique par défaut une teinte primary
 /// translucide sur les surfaces élévées (`surfaceTintColor`). Scalario
