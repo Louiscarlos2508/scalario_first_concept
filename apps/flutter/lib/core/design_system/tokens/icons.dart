@@ -132,6 +132,34 @@ abstract final class ScalarioIcons {
   static const IconData sharePdf = Icons.picture_as_pdf_outlined;
 
   // ---------------------------------------------------------------------------
+  // UI Primitives — chevrons, flèches, conteneurs vides
+  // ---------------------------------------------------------------------------
+  /// Chevron `›` pour KPICard tappable, ListTile drill-down.
+  static const IconData chevronRight = Icons.chevron_right;
+  static const IconData chevronLeft = Icons.chevron_left;
+
+  /// Flèches de tri DataTable (header sortable).
+  static const IconData arrowUp = Icons.arrow_upward;
+  static const IconData arrowDown = Icons.arrow_downward;
+
+  /// Conteneur vide — état empty d'une liste/table.
+  static const IconData inbox = Icons.inbox_outlined;
+
+  /// Graphique générique — état empty d'un ChartBar.
+  static const IconData chart = Icons.bar_chart_outlined;
+
+  // ---------------------------------------------------------------------------
+  // Aliases sémantiques — feedback (raccourcis pour AlertBanner)
+  // ---------------------------------------------------------------------------
+  /// Alias `state*` raccourcis pour les composants feedback.
+  /// Pointent vers les mêmes `IconData` que `stateError`/`stateWarning`/etc.
+  static const IconData error = stateError;
+  static const IconData alert = stateWarning;
+  static const IconData warning = stateWarning;
+  static const IconData check = stateSuccess;
+  static const IconData info = stateInfo;
+
+  // ---------------------------------------------------------------------------
   // Administration
   // ---------------------------------------------------------------------------
   static const IconData adminTenant = Icons.business_outlined;

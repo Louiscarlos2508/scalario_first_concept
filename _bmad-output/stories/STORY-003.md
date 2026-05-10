@@ -3,7 +3,7 @@
 **Epic :** EPIC-001 — Design System Scalario
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -405,8 +405,22 @@ abstract class BdUiComponent {
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Completed (Carlos / Developer via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Notes :**
+- 7 widgets implémentés conformément aux ACs : `KPICard`, `ScalarioDataTable<T>`, `AlertBanner`, `ScalarioFAB`, `ScalarioListTile`, `FormSection`, `ChartBar`.
+- Chaque widget expose `.fromJson(Map<String,dynamic>)` + factories `loading()/empty()/error()` selon les états applicables.
+- Shimmer maison (`lib/components/_internal/shimmer.dart`) — 0 dépendance externe ajoutée. À ré-évaluer si volume widget loading explose.
+- ChartBar implémenté en `CustomPaint` direct — `fl_chart` non ajouté pour Sprint 1 (pas de tooltips/animations exigés). Le passage à `fl_chart` reste possible si on a besoin de stacks/lines plus tard.
+- AlertBanner action : `GestureDetector + Padding + Text` au lieu de `TextButton` — `TextButton` dans un Row déclenche l'assertion "BoxConstraints forces an infinite width" pendant la mesure intrinsèque du Flex (incompatibilité connue Flutter 3.41 entre `_RenderInputPadding` et le passe Flex initial). Visuel "ghost button" préservé. Documenté inline.
+- AlertBanner swipe : `GestureDetector.onHorizontalDragEnd` au lieu de `Dismissible` — même raison de contraintes. Behavior fonctionnel équivalent (swipe vélocité > 200 → dismiss).
+- Bug du checker `scripts/check_no_hardcoded_tokens.dart` corrigé en cours de route : la regex EdgeInsets matchait les digits de `ScalarioSpacing.space4`. Ajout d'un negative lookbehind `(?<!\w)` pour ne flag que les littéraux nus.
+- 10 nouveaux alias dans `tokens/icons.dart` (`chevronRight`, `arrowUp`, `arrowDown`, `inbox`, `chart`, `error`, `alert`, `warning`, `check`, `info`).
+- Coverage `lib/components/` = **93.4%** (cible AC-43 ≥ 80%) — 568/608 lignes couvertes.
+- 55 tests widget verts ; suite globale 209/209.
+- `flutter analyze` propre, anti-hardcode propre.
 
 ---
 

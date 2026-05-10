@@ -43,8 +43,11 @@ final List<({RegExp pattern, String label})> _forbiddenPatterns =
     label: 'Colors.* (Material) — utilisez ScalarioColors.*',
   ),
   (
-    pattern:
-        RegExp(r'EdgeInsets\.(?:all|symmetric|fromLTRB|only)\s*\([^)]*?\d'),
+    // Le négatif lookbehind `(?<!\w)` ignore les digits qui font partie d'un
+    // identifier (ex: `ScalarioSpacing.space4`) — seuls les littéraux nus
+    // (`16`, `-8`) sont signalés.
+    pattern: RegExp(
+        r'EdgeInsets\.(?:all|symmetric|fromLTRB|only)\s*\([^)]*?(?<!\w)-?\d'),
     label:
         'EdgeInsets avec littéral numérique — utilisez ScalarioSpacing.space*',
   ),
