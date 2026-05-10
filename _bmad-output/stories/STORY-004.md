@@ -3,7 +3,7 @@
 **Epic :** EPIC-001 — Design System Scalario
 **Priorité :** Must Have
 **Story Points :** 4
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)
@@ -430,8 +430,17 @@ N/A — outil de développement, jamais build en release. Les fichiers `_*_showc
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-10 : Completed (Carlos / Dev via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 4 points (matched estimate)
+
+**Implementation Notes :**
+- Pattern Santera respecté : 7 fichiers `_<feature>_showcase.dart` + 2 compositions + helper `ScalarioShowcaseApp`
+- `@Preview` avec thème/wrapper Scalario, un seul preview par variant (pas de duplication Light/Dark — toggle dans le `main()`)
+- `flutter analyze` vert sur tous les fichiers showcase
+- 11 smoke tests verts (`test/showcases/`)
+- Widgetbook stub minimal créé dans `widgetbook/` (Sprint 2 = galerie complète)
+- `SHOWCASES.md` créé ≤ 80 lignes
 
 ---
 

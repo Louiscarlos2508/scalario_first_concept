@@ -19,6 +19,9 @@ dependencies:
   # Brand SVG icons (WhatsApp et autres marques tierces).
   flutter_svg: ^2.2.3
 
+  # Bar/Line charts BDUI — AC-36 (STORY-003).
+  fl_chart: ^0.68.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

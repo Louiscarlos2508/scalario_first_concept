@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -44,10 +45,9 @@ class ChartDataPoint {
 /// `type: line | bar` ; on commence par la variante `bar` ici. La variante
 /// `ChartLine` viendra dans une story ultérieure quand un écran l'exigera.
 ///
-/// **Implémentation :** `CustomPaint` direct, pas de dépendance externe
-/// (`fl_chart`). Le besoin Sprint 1 est minimal — un bar chart de base avec
-/// axes, labels et hover. Si on a besoin de plus (tooltips, animations,
-/// stacks), on évaluera à ce moment-là d'introduire `fl_chart`.
+/// **Implémentation :** `fl_chart` (`BarChart` widget) — AC-36 STORY-003.
+/// Couleurs depuis tokens : barres `primary-500`, hover `primary-700`,
+/// axe X `neutral-300`, labels `caption` + `textSecondary`.
 ///
 /// **États supportés :** Normal, Loading (5 barres shimmer), Vide (icône +
 /// message), Erreur (icône + message + retry).
@@ -139,6 +139,11 @@ class ChartBar extends StatefulWidget {
 class _ChartBarState extends State<ChartBar> {
   int? _hoveredIndex;
 
+  String _formatValue(double v) {
+    if (v == v.roundToDouble()) return v.toStringAsFixed(0);
+    return v.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -174,27 +179,27 @@ class _ChartBarState extends State<ChartBar> {
   Widget _buildChart(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = constraints.maxWidth;
-        final double height = constraints.maxHeight;
-        final double barCount = widget.data.length.toDouble();
-        final double slotWidth = width / barCount;
+        final double totalWidth = constraints.maxWidth;
+        final double slotWidth = totalWidth / widget.data.length;
+        final double barWidth = (slotWidth * 0.6).clamp(8.0, 64.0);
+        final double maxValue = widget.data.fold<double>(
+          0,
+          (double acc, ChartDataPoint p) => p.value > acc ? p.value : acc,
+        );
 
         return MouseRegion(
           onHover: (PointerHoverEvent event) {
             final int idx = (event.localPosition.dx / slotWidth).floor();
-            if (idx >= 0 && idx < widget.data.length) {
-              if (_hoveredIndex != idx) {
-                setState(() => _hoveredIndex = idx);
-              }
+            if (idx >= 0 && idx < widget.data.length && _hoveredIndex != idx) {
+              setState(() => _hoveredIndex = idx);
             }
           },
           onExit: (_) {
-            if (_hoveredIndex != null) {
-              setState(() => _hoveredIndex = null);
-            }
+            if (_hoveredIndex != null) setState(() => _hoveredIndex = null);
           },
           child: GestureDetector(
             key: const ValueKey<String>('chart-bar-tap-area'),
+            behavior: HitTestBehavior.opaque,
             onTapUp: widget.onTap == null
                 ? null
                 : (TapUpDetails details) {
@@ -204,15 +209,93 @@ class _ChartBarState extends State<ChartBar> {
                       widget.onTap!(widget.data[idx]);
                     }
                   },
-            child: CustomPaint(
-              size: Size(width, height),
-              painter: _BarChartPainter(
-                data: widget.data,
-                hoveredIndex: _hoveredIndex,
-                axisLabelStyle: ScalarioTypography.caption,
-                valueLabelStyle: ScalarioTypography.captionMono,
-                unit: widget.unit,
+            child: BarChart(
+              BarChartData(
+                maxY: maxValue > 0 ? maxValue * 1.2 : 1,
+                minY: 0,
+                alignment: BarChartAlignment.spaceEvenly,
+                barGroups: <BarChartGroupData>[
+                  for (int i = 0; i < widget.data.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      showingTooltipIndicators:
+                          _hoveredIndex == i ? <int>[0] : <int>[],
+                      barRods: <BarChartRodData>[
+                        BarChartRodData(
+                          toY: widget.data[i].value,
+                          width: barWidth,
+                          color: _hoveredIndex == i
+                              ? ScalarioColors.primary700
+                              : ScalarioColors.primary500,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(ScalarioRadius.sm),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: ScalarioSpacing.space6,
+                      getTitlesWidget: (double value, TitleMeta meta) {
+                        final int idx = value.round();
+                        if (idx < 0 || idx >= widget.data.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          widget.data[idx].label,
+                          style: ScalarioTypography.caption.copyWith(
+                            color: ScalarioColors.textSecondary,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: const AxisTitles(),
+                  rightTitles: const AxisTitles(),
+                  topTitles: const AxisTitles(),
+                ),
+                gridData: const FlGridData(),
+                borderData: FlBorderData(
+                  border: const Border(
+                    bottom: BorderSide(color: ScalarioColors.neutral300),
+                  ),
+                ),
+                barTouchData: BarTouchData(
+                  // Touch events handled by outer GestureDetector + MouseRegion.
+                  // handleBuiltInTouches: false lets showingTooltipIndicators
+                  // drive tooltip display manually on hover.
+                  enabled: false,
+                  handleBuiltInTouches: false,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => ScalarioColors.neutral900,
+                    getTooltipItem: (
+                      BarChartGroupData group,
+                      int groupIndex,
+                      BarChartRodData rod,
+                      int rodIndex,
+                    ) {
+                      if (groupIndex < 0 ||
+                          groupIndex >= widget.data.length) {
+                        return null;
+                      }
+                      final ChartDataPoint p = widget.data[groupIndex];
+                      final String label = widget.unit != null
+                          ? '${_formatValue(p.value)} ${widget.unit}'
+                          : _formatValue(p.value);
+                      return BarTooltipItem(
+                        label,
+                        ScalarioTypography.captionMono.copyWith(
+                          color: ScalarioColors.white,
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
+              swapAnimationDuration: Duration.zero,
             ),
           ),
         );
@@ -226,7 +309,6 @@ class _ChartBarState extends State<ChartBar> {
         final math.Random rng = math.Random(42);
         const int barCount = 5;
         final double slotWidth = constraints.maxWidth / barCount;
-        const double barInset = ScalarioSpacing.space2;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
@@ -234,7 +316,9 @@ class _ChartBarState extends State<ChartBar> {
               SizedBox(
                 width: slotWidth,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: barInset),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: ScalarioSpacing.space2,
+                  ),
                   child: ScalarioShimmer(
                     child: ScalarioShimmerBox(
                       width: double.infinity,
@@ -305,117 +389,3 @@ class _ChartBarState extends State<ChartBar> {
 }
 
 enum _ChartVariant { normal, loading, error }
-
-class _BarChartPainter extends CustomPainter {
-  _BarChartPainter({
-    required this.data,
-    required this.hoveredIndex,
-    required this.axisLabelStyle,
-    required this.valueLabelStyle,
-    this.unit,
-  });
-
-  final List<ChartDataPoint> data;
-  final int? hoveredIndex;
-  final TextStyle axisLabelStyle;
-  final TextStyle valueLabelStyle;
-  final String? unit;
-
-  static const double _axisInset = 32;
-  static const double _topPadding = 16;
-  static const double _barInset = 8;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
-
-    final double maxValue = data.fold<double>(
-      0,
-      (double acc, ChartDataPoint p) => p.value > acc ? p.value : acc,
-    );
-    if (maxValue <= 0) return;
-
-    final double chartHeight = size.height - _axisInset - _topPadding;
-    final double chartWidth = size.width;
-    final double slotWidth = chartWidth / data.length;
-
-    final Paint axisPaint = Paint()
-      ..color = ScalarioColors.neutral300
-      ..strokeWidth = 1;
-
-    // Axe horizontal (baseline).
-    canvas.drawLine(
-      Offset(0, _topPadding + chartHeight),
-      Offset(chartWidth, _topPadding + chartHeight),
-      axisPaint,
-    );
-
-    for (int i = 0; i < data.length; i++) {
-      final ChartDataPoint p = data[i];
-      final double normalized = p.value / maxValue;
-      final double barHeight = normalized * chartHeight;
-      final double left = i * slotWidth + _barInset;
-      final double right = (i + 1) * slotWidth - _barInset;
-      final double top = _topPadding + chartHeight - barHeight;
-      final double bottom = _topPadding + chartHeight;
-
-      final Paint barPaint = Paint()
-        ..color = i == hoveredIndex
-            ? ScalarioColors.primary700
-            : ScalarioColors.primary500;
-      final RRect rrect = RRect.fromLTRBAndCorners(
-        left,
-        top,
-        right,
-        bottom,
-        topLeft: const Radius.circular(ScalarioRadius.sm),
-        topRight: const Radius.circular(ScalarioRadius.sm),
-      );
-      canvas.drawRRect(rrect, barPaint);
-
-      // Label en bas (axe X).
-      final TextPainter labelPainter = TextPainter(
-        text: TextSpan(text: p.label, style: axisLabelStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      )..layout(maxWidth: slotWidth);
-      labelPainter.paint(
-        canvas,
-        Offset(
-          i * slotWidth + (slotWidth - labelPainter.width) / 2,
-          _topPadding + chartHeight + 8,
-        ),
-      );
-
-      // Tooltip valeur au-dessus de la barre hovered.
-      if (i == hoveredIndex) {
-        final String label = unit != null
-            ? '${_formatValue(p.value)} $unit'
-            : _formatValue(p.value);
-        final TextPainter valuePainter = TextPainter(
-          text: TextSpan(text: label, style: valueLabelStyle),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        valuePainter.paint(
-          canvas,
-          Offset(
-            i * slotWidth + (slotWidth - valuePainter.width) / 2,
-            top - valuePainter.height - 4,
-          ),
-        );
-      }
-    }
-  }
-
-  String _formatValue(double v) {
-    if (v == v.roundToDouble()) return v.toStringAsFixed(0);
-    return v.toStringAsFixed(1);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BarChartPainter oldDelegate) {
-    return oldDelegate.data != data ||
-        oldDelegate.hoveredIndex != hoveredIndex ||
-        oldDelegate.unit != unit;
-  }
-}
