@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0.0",
+  "screen": "retail_dashboard",
+  "layout": "dashboard",
+  "title": "Tableau de bord",
+  "i18n_key": "screen.retail_dashboard.title",
+  "zones": {
+    "kpis": [
+      {
+        "type": "KPICard",
+        "id": "kpi_ventes_jour",
+        "props": {
+          "label": "Ventes du jour",
+          "value": "342 500",
+          "unit": "FCFA",
+          "delta": "+12%",
+          "delta_positive": true,
+          "status": "nominal"
+        }
+      },
+      {
+        "type": "KPICard",
+        "id": "kpi_panier_moyen",
+        "props": {
+          "label": "Panier moyen",
+          "value": "8 250",
+          "unit": "FCFA",
+          "delta": "+3%",
+          "delta_positive": true
+        }
+      },
+      {
+        "type": "KPICard",
+        "id": "kpi_marge_owner_only",
+        "props": {
+          "label": "Marge brute",
+          "value": "28%",
+          "delta": "-2pt",
+          "delta_positive": false,
+          "status": "warning"
+        },
+        "visible_if": {
+          "role": ["OWNER"]
+        }
+      },
+      {
+        "type": "KPICard",
+        "id": "kpi_pertes",
+        "props": {
+          "label": "Pertes",
+          "value": "12",
+          "unit": "kg",
+          "status": "critical"
+        }
+      }
+    ],
+    "main": [
+      {
+        "type": "AlertBanner",
+        "id": "alert_stock",
+        "props": {
+          "type": "warning",
+          "message": "3 produits en rupture de stock"
+        }
+      }
+    ],
+    "actions": [
+      {
+        "type": "FAB",
+        "id": "fab_new_sale",
+        "props": {
+          "icon_code_point": 57669,
+          "label": "Nouvelle vente"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "screen": "transactions_list",
+  "layout": "list",
+  "title": "Transactions du jour",
+  "i18n_key": "screen.transactions_list.title",
+  "zones": {
+    "main": [
+      {
+        "type": "MouvementItem",
+        "id": "tx_1",
+        "props": {
+          "title": "Vente #1042",
+          "subtitle": "8 250 FCFA · 14:32",
+          "status": "primary"
+        }
+      },
+      {
+        "type": "MouvementItem",
+        "id": "tx_2",
+        "props": {
+          "title": "Vente #1041",
+          "subtitle": "12 500 FCFA · 14:18",
+          "status": "primary"
+        }
+      },
+      {
+        "type": "MouvementItem",
+        "id": "tx_3_owner_only",
+        "props": {
+          "title": "Annulation #1039",
+          "subtitle": "-3 200 FCFA · 13:54",
+          "status": "critical"
+        },
+        "visible_if": {
+          "role": ["OWNER"]
+        }
+      },
+      {
+        "type": "MouvementItem",
+        "id": "tx_4",
+        "props": {
+          "title": "Vente #1038",
+          "subtitle": "5 000 FCFA · 13:42",
+          "status": "primary"
+        }
+      },
+      {
+        "type": "MouvementItem",
+        "id": "tx_5",
+        "props": {
+          "title": "Vente #1037",
+          "subtitle": "9 800 FCFA · 13:25",
+          "status": "primary"
+        }
+      }
+    ]
+  }
+}

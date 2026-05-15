@@ -20,6 +20,7 @@ import 'package:get_it/get_it.dart';
 import 'core/design_system/tokens/tokens.dart';
 import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
+import 'engine/bdui_engine/bdui_engine_module.dart';
 import 'engine/component_registry/component_registry.dart';
 import 'engine/component_registry/registry_bootstrap.dart';
 import 'engine/error_boundary/global_error_handler.dart';
@@ -49,6 +50,9 @@ void _setupDependencies() {
 
   // STORY-007 — LayoutResolver singleton, injecté avec le registry Phase 1.
   GetIt.I.registerSingleton<LayoutResolver>(LayoutResolver(registry: registry));
+
+  // STORY-008 — BDUIEngine orchestrateur (consomme registry + layoutResolver).
+  BDUIEngineModule.register(GetIt.I);
 }
 
 class ScalarioApp extends StatelessWidget {

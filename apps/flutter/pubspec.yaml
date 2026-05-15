@@ -39,6 +39,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/sandbox/
 
   # Inter et Roboto Mono sont chargées via google_fonts (runtime cache).
   # Voir lib/core/design_system/tokens/typography.dart.

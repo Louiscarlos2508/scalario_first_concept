@@ -4,7 +4,7 @@
 version: "6.0.0"
 project_name: "scalario"
 project_level: 4
-current_sprint: 1
+current_sprint: 2
 sprint_plan_path: "_bmad-output/sprint-plan-scalario-2026-05-09.md"
 gate_0: "2026-07-08"  # Blandine live — date non-négociable
 
@@ -18,7 +18,8 @@ sprints:
     capacity_points: 42
     committed_points: 36
     completed_points: 36
-    status: "in_progress"
+    status: "completed"
+    end_actual_date: "2026-05-14"
     goal: "Le BDUIEngine rend n'importe quel JSON en screen Flutter fonctionnel — Design System complet, composants BDUI, RuleEvaluator, LayoutResolver, Error Boundaries, Validation Formulaires."
     stories:
       - story_id: "STORY-001"
@@ -126,18 +127,22 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 0
-    status: "ready"
+    completed_points: 6
+    status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
       - story_id: "STORY-008"
         title: "BDUIEngine Orchestrateur"
         epic: "EPIC-002"
         points: 6
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-008.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 6
+        branch: "main"
+        notes: "Pipeline complet : ScreenCache LRU + DataSourceResolver (Fixture+InMemory) + StructuralScreenValidator (Phase 1, json_schema_dart pendant STORY-023) + visible_if filtering via RuleEvaluator + BDUIErrorBoundary global. 3 fixtures sandbox + BDUIScreen widget + DI BDUIEngineModule. 30/30 tests verts (unit + 3 intégration + benchmark soft). Budgets perf AC-07/AC-08 informatifs sur dev host — gate dur sur émulateur Snapdragon déféré (STORY-009/CI)."
       - story_id: "STORY-009"
         title: "Sandbox JSON + Hot Reload Dev"
         epic: "EPIC-002"
@@ -429,7 +434,7 @@ deferred:
     reason: "Should Have — Blandine = Android mobile. Déferré à Sprint 5."
 
 velocity:
-  sprint_1: null
+  sprint_1: 36
   sprint_2: null
   sprint_3: null
   sprint_4: null
