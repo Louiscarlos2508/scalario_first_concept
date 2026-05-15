@@ -4,7 +4,7 @@
 version: "6.0.0"
 project_name: "scalario"
 project_level: 4
-current_sprint: 2
+current_sprint: 3
 sprint_plan_path: "_bmad-output/sprint-plan-scalario-2026-05-09.md"
 gate_0: "2026-07-08"  # Blandine live — date non-négociable
 
@@ -128,7 +128,8 @@ sprints:
     capacity_points: 42
     committed_points: 44
     completed_points: 44
-    status: "in_progress"
+    status: "completed"
+    end_actual_date: "2026-05-15"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
       - story_id: "STORY-008"
@@ -473,10 +474,10 @@ deferred:
 
 velocity:
   sprint_1: 36
-  sprint_2: null
+  sprint_2: 44
   sprint_3: null
   sprint_4: null
-  rolling_average: null
+  rolling_average: 40
 
 team:
   size: 1
@@ -543,7 +544,7 @@ definition_summary:
   defined: 42
   not_started: 0
   in_progress: 0
-  completed: 6
+  completed: 20
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038
