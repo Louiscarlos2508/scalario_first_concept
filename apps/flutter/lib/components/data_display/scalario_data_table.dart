@@ -253,7 +253,12 @@ class _ScalarioDataTableState<T> extends State<ScalarioDataTable<T>> {
         columns: <DataColumn>[
           for (int i = 0; i < widget.columns.length; i++)
             DataColumn(
-              label: Text(widget.columns[i].label),
+              label: Flexible(
+                child: Text(
+                  widget.columns[i].label,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               numeric: widget.columns[i].align == DataColumnAlign.right,
               onSort: widget.columns[i].sortable
                   ? (int columnIndex, bool asc) {
