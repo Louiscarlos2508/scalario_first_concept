@@ -3,7 +3,7 @@
 **Epic :** EPIC-003 — Backend Foundation
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 2 (2026-05-26 → 2026-06-06)
@@ -426,8 +426,21 @@ Sprint plan ligne 384 : "Path de migration shared schema → schema-per-tenant d
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-15 : Completed (Dev / `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 points (matched estimate)
+
+**Implementation Notes :**
+- `tenantContext` AsyncLocalStorage wrapper (`run`/`get`/`getOrThrow` + `TenantContextMissingError`) — AC-01→AC-04 prouvés par 100-req concurrence.
+- `TenantMiddleware` global (`AppModule.configure(forRoutes('*'))`). NestJS middleware tournent AVANT les guards : on décode donc le JWT directement via `JwtService.verify` (Passport JwtAuthGuard reste l'autorité officielle de signature). Cas public route / token absent / token invalide → skip, JwtAuthGuard prend le relais pour le 401.
+- `TenantsService` (cache `is_active` TTL 5 min) ajouté dans `TenantsModule` — AC-08.
+- `TenantAwareQueryRunner` : `set_config('app.current_tenant_id', tenant_id, false)` à l'acquisition + `RESET` garanti au release. STORY-017 ajoutera les policies RLS qui consomment ce setting.
+- `TenantIsolationFilter` (APP_FILTER global) intercepte `QueryFailedError` PG `42501` → 403 sanitized + log `TENANT_VIOLATION_DETECTED` (stub audit pour STORY-020).
+- `@CurrentTenant()` param decorator + `withTenantContext(tenant_id, fn)` helper workers + `TenantScopedEntity` abstract base.
+- Migration `1700000000003-tenant-id-default` pose `app.current_tenant_id=''` au niveau DB (best-effort sur managed DB).
+- Document `_bmad-output/architecture-notes/phase2-schema-per-tenant.md` rédigé (triggers, procédure, dual-mode middleware, estimation 5j dev + 2j QA).
+- Tests : 76/76 verts (15 suites). Tests dédiés : `tenant-context.spec`, `tenant.middleware.spec` (6 cas incl. 100-req concurrency AC-23 et AC-11 no-leakage 2 req consécutives), `tenants.service.spec`, `tenant-isolation.filter.spec`, `with-tenant-context.spec`, `current-tenant.decorator.spec`.
+- Defers : AC-22 (intrusion E2E cross-tenant via RLS) → STORY-017. AC-13 (CI lint check TenantScopedEntity extends) → Phase 2 quand entities métier seront en masse.
 
 ---
 

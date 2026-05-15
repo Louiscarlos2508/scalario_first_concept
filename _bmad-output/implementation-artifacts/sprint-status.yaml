@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 14
+    completed_points: 22
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -187,18 +187,26 @@ sprints:
         title: "RBAC Guards Dynamiques"
         epic: "EPIC-003"
         points: 5
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-015.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 2 RBAC dynamique data-driven. @Roles(...) décorateur + RbacGuard global (intersection req.user.roles ∩ tenants.config.roles ∩ required) + SUPER_ADMIN bypass. RolesService cache mémoire TTL 5 min (API Redis-shaped pour STORY-018). AuthService.issueTokens filtre les rôles invalides avant de signer le JWT (AC-11). Migration 1700000000002 ajoute tenants.config JSONB avec default {roles:['OWNER']}. GET/PATCH /tenants/:slug/roles avec Zod (UPPER_SNAKE, unique, ≤32, system roles bloqués), 409 si DELETE d'un rôle assigné à ≥1 user actif. /tenants/provision passe de @Public à @Roles('SUPER_ADMIN') + accepte un template optionnel (catalog/domains/<id>.json) qui peuple tenants.config.roles à la création. Template retail_fresh_produce.json créé avec roles ['OWNER','MANAGER','COMMERCIAL']. 55/55 tests verts (rbac.guard 10 cases AC-03→AC-07 + SUPER_ADMIN + stale-JWT defense, roles.service 5 cases cache+invalidate+set, rbac.e2e 9 scenarios dont AC-21 OWNER 200 / COMMERCIAL 403, AC-22 LIVREUR ajouté runtime → 200 sans restart, AC-23 LIVREUR retiré → 403 next call). Lint + typecheck verts. Audit log STORY-020 = stub logger.log pour l'instant. Pas de lint CI check_roles_decorator script (déféré — Phase 2 quand les routes métier seront décorées en masse)."
       - story_id: "STORY-016"
         title: "Multi-tenant Isolation"
         epic: "EPIC-003"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-016.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 3 cross-cutting tenant isolation. tenantContext (AsyncLocalStorage) avec run/get/getOrThrow + TenantContextMissingError (AC-01→AC-04 incl. concurrence 100 req). TenantMiddleware applied globally via AppModule.configure(forRoutes('*')) — décode le JWT lui-même (middleware runs before guards en NestJS), vérifie tenants.is_active via TenantsService cache TTL 5 min (AC-08), ouvre le scope ALS, et pose app.current_tenant_id via set_config session-scoped (RESET sur release par TenantAwareQueryRunner). @CurrentTenant() decorator (AC-15/16). withTenantContext helper pour workers/cron (AC-17). TenantScopedEntity abstract base (AC-12). TenantIsolationFilter (APP_FILTER) intercepte QueryFailedError code 42501 → 403 sanitized sans leak SQL (AC-19) + log TENANT_VIOLATION_DETECTED (AC-20 stub). TenantAwareQueryRunner pour raw SQL (set_config + RESET garanti on release, AC-09/10/11). Migration 1700000000003-tenant-id-default pose le GUC par défaut au niveau DB (best-effort si managed DB sans privilege). Document _bmad-output/architecture-notes/phase2-schema-per-tenant.md livré (triggers, procédure, dual-mode middleware, estimation 5j+2j). 76/76 tests verts (15 suites) — AC-23 concurrence 100 req parallèles A/B sans leak prouvée. Lint + typecheck verts. AC-22 (intrusion cross-tenant via RLS) deferred to STORY-017 (RLS policies pas encore en place). CI lint check TenantScopedEntity extends déféré (Phase 2 quand entities métier seront en masse)."
       - story_id: "STORY-017"
         title: "PostgreSQL RLS"
         epic: "EPIC-003"
