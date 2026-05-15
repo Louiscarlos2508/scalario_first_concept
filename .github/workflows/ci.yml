@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nestjs-tests:
+    name: NestJS — lint / typecheck / test / build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: scalario_test
+          POSTGRES_USER: scalario
+          POSTGRES_PASSWORD: scalario_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U scalario -d scalario_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://scalario:scalario_test_password@localhost:5432/scalario_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci_jwt_secret_min_32_chars_dummy_value_xx
+      JWT_REFRESH_SECRET: ci_jwt_refresh_secret_min_32_chars_dummy
+      FASTAPI_URL: http://localhost:8000
+      MINIO_ENDPOINT: http://localhost:9000
+      MINIO_ACCESS_KEY: ci
+      MINIO_SECRET_KEY: ci_minio_dummy
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Lint
+        run: pnpm --filter @scalario/nestjs run lint
+
+      - name: Typecheck
+        run: pnpm --filter @scalario/nestjs run typecheck
+
+      - name: Test
+        run: pnpm --filter @scalario/nestjs run test
+
+      - name: Build
+        run: pnpm --filter @scalario/nestjs run build

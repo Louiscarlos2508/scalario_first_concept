@@ -441,8 +441,26 @@ Le sprint plan ligne 328 mentionne 5 services : `nestjs`, `fastapi`, `postgresql
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-15 : Completed (Carlos / Dev via `/bmad:dev-story`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 points (matched estimate)
+
+**Implementation Notes :**
+- Monorepo pnpm activé : `pnpm-workspace.yaml` (apps/nestjs + packages/*), Flutter exclu (pubspec local).
+- 11 modules NestJS scaffoldés vides (`@Module({})`) + `common/`, `health/` opérationnels — prêts pour STORY-014→STORY-020.
+- Health check via `@nestjs/terminus` : `TypeOrmHealthIndicator` + `RedisHealthIndicator` custom (ioredis), 2 specs jest.
+- TypeORM `DataSource` séparé (CLI vs runtime) — `synchronize: false`, pool 10, migration `1700000000000-init.ts` qui active `vector` + `pgcrypto`.
+- Docker Compose : 5 services (nestjs, postgres pgvector:pg16, redis:7-alpine, fastapi stub, minio) + override dev (adminer + ports postgres/redis exposés). Healthchecks 10s/5s/5retries sur les 5.
+- FastAPI stub : `python:3.12-slim` + uvicorn + `GET /health` → `{"status":"phase2-stub"}`.
+- CI GitHub Actions `nestjs-tests` : pnpm + services postgres/redis + lint/typecheck/test/build.
+- Choix figé : **TypeORM** (vs Prisma) — meilleur support RLS pour STORY-017.
+- Sécurité : aucun secret dans `docker-compose.yml`, tout via `.env` gitignoré ; postgres/redis non exposés en prod (uniquement `expose:`) ; MinIO console désactivée.
+
+**Validation manuelle (à faire dev) :**
+- `pnpm install` à la racine.
+- `cp .env.example .env` + remplir secrets minimums.
+- `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` puis vérifier `docker compose ps` (6 services healthy).
+- `curl http://localhost:3000/health` → 200 ; stop redis → 503.
 
 ---
 

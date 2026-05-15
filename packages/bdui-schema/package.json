@@ -1,0 +1,13 @@
+{
+  "name": "@scalario/bdui-schema",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JSON Schemas BDUI partagés Flutter ↔ NestJS (placeholder STORY-013, contenu réel EPIC-004).",
+  "main": "index.json",
+  "scripts": {
+    "build": "echo 'no build (placeholder)' && exit 0",
+    "lint": "echo 'no lint (placeholder)' && exit 0",
+    "test": "echo 'no test (placeholder)' && exit 0",
+    "typecheck": "echo 'no typecheck (placeholder)' && exit 0"
+  }
+}

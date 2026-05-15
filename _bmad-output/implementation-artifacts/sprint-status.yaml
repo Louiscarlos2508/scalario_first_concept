@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 6
+    completed_points: 9
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -164,10 +164,13 @@ sprints:
         title: "NestJS Setup + Docker Compose 5 services"
         epic: "EPIC-003"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-013.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
       - story_id: "STORY-014"
         title: "Auth JWT Multi-tenant"
         epic: "EPIC-003"

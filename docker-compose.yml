@@ -1,0 +1,110 @@
+services:
+  nestjs:
+    build:
+      context: ./apps/nestjs
+      dockerfile: Dockerfile
+    image: scalario/nestjs:dev
+    container_name: scalario-nestjs
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [scalario]
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: scalario-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    expose:
+      - "5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [scalario]
+
+  redis:
+    image: redis:7-alpine
+    container_name: scalario-redis
+    restart: unless-stopped
+    command:
+      - "redis-server"
+      - "--requirepass"
+      - "${REDIS_PASSWORD}"
+      - "--appendonly"
+      - "yes"
+    expose:
+      - "6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [scalario]
+
+  fastapi:
+    build:
+      context: ./services/fastapi
+      dockerfile: Dockerfile
+    image: scalario/fastapi:dev
+    container_name: scalario-fastapi
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [scalario]
+
+  minio:
+    image: minio/minio:latest
+    container_name: scalario-minio
+    restart: unless-stopped
+    command: server /data --console-address ""
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [scalario]
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+
+networks:
+  scalario:
+    driver: bridge

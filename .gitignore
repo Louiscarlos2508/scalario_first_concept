@@ -4,8 +4,16 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 .env
+.env.local
+.env.*.local
 dist/
 coverage/
+*.tsbuildinfo
+
+# Docker volumes (host-side, if bind-mounted)
+pgdata/
+redisdata/
+miniodata/
 
 # Flutter
 .dart_tool/

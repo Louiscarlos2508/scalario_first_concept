@@ -1,0 +1,14 @@
+{
+  "name": "@scalario/bdui-types",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript types BDUI partagés (placeholder STORY-013, contenu réel EPIC-004).",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo 'no build (placeholder)' && exit 0",
+    "lint": "echo 'no lint (placeholder)' && exit 0",
+    "test": "echo 'no test (placeholder)' && exit 0",
+    "typecheck": "echo 'no typecheck (placeholder)' && exit 0"
+  }
+}
