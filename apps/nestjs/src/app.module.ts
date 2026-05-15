@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { CacheModule } from './cache/cache.module';
 import { DatabaseModule } from './common/database.module';
 import { TenantAwareQueryRunner } from './common/database/tenant-aware-query-runner';
 import { TenantIsolationFilter } from './common/filters/tenant-isolation.filter';
@@ -25,6 +26,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 1000 }]),
     DatabaseModule,
+    CacheModule,
     HealthModule,
     AuthModule,
     BduiModule,

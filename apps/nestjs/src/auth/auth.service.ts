@@ -15,6 +15,8 @@ import { User } from './entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import type { AuthTokens } from './interfaces/auth-tokens.interface';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
+import { TokenBlacklistService } from '../cache/services/token-blacklist.service';
+import { TTL_SECONDS } from '../cache/constants';
 import { RolesService } from '../security/services/roles.service';
 import { SUPER_ADMIN } from '../security/constants';
 
@@ -35,6 +37,7 @@ export class AuthService {
     private readonly refreshRepo: Repository<RefreshToken>,
     private readonly jwt: JwtService,
     private readonly rolesService: RolesService,
+    private readonly tokenBlacklist: TokenBlacklistService,
   ) {}
 
   /**
@@ -109,6 +112,7 @@ export class AuthService {
       tenant_id: tenant.id,
       roles: validRoles,
       department_id: user.department_id,
+      jti: crypto.randomUUID(),
       iat: now,
       exp: now + ACCESS_TTL_SECONDS,
     };
@@ -168,9 +172,28 @@ export class AuthService {
     return this.issueTokens(user, tenant);
   }
 
-  async logout(refresh_token: string): Promise<void> {
+  /**
+   * STORY-018 — Revokes the refresh token in DB AND pushes both the
+   * refresh hash and the current access-token `jti` into the Redis
+   * blacklist so reuse is rejected instantly (no 15-min wait on JWT
+   * expiry). `access` is optional — when omitted (e.g. tests, or when
+   * called without an authenticated request) only the refresh side is
+   * blacklisted.
+   */
+  async logout(refresh_token: string, access?: { jti: string; exp: number }): Promise<void> {
     const token_hash = AuthService.hashRefreshToken(refresh_token);
+    const stored = await this.refreshRepo.findOne({ where: { token_hash } });
     await this.refreshRepo.update({ token_hash, revoked_at: IsNull() }, { revoked_at: new Date() });
+
+    if (stored && stored.revoked_at === null) {
+      const ttl = Math.floor((stored.expires_at.getTime() - Date.now()) / 1000);
+      await this.tokenBlacklist.add(token_hash, ttl);
+    }
+    if (access?.jti) {
+      const now = Math.floor(Date.now() / 1000);
+      const ttl = Math.min(TTL_SECONDS.ACCESS_MAX, Math.max(0, access.exp - now));
+      await this.tokenBlacklist.add(access.jti, ttl);
+    }
   }
 
   /**

@@ -32,10 +32,18 @@ describe('AuthController', () => {
     expect(service.refresh).toHaveBeenCalledWith('r');
   });
 
-  it('logout() forwards refresh_token to AuthService.logout', async () => {
+  it('logout() forwards refresh_token + access jti/exp to AuthService.logout', async () => {
     service.logout.mockResolvedValue(undefined);
-    await controller.logout({ refresh_token: 'r' });
-    expect(service.logout).toHaveBeenCalledWith('r');
+    const user = {
+      user_id: 'u1',
+      tenant_id: 't1',
+      roles: ['OWNER'],
+      department_id: null,
+      jti: 'jti-1',
+      exp: 9999,
+    };
+    await controller.logout({ refresh_token: 'r' }, user);
+    expect(service.logout).toHaveBeenCalledWith('r', { jti: 'jti-1', exp: 9999 });
   });
 
   it('me() returns the request-injected user', () => {
@@ -44,6 +52,8 @@ describe('AuthController', () => {
       tenant_id: 't1',
       roles: ['OWNER'],
       department_id: null,
+      jti: 'jti-1',
+      exp: 9999,
     };
     expect(controller.me(user)).toEqual(user);
   });

@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 35
+    completed_points: 38
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -230,10 +230,14 @@ sprints:
         title: "Redis Sessions + Cache Layouts BDUI"
         epic: "EPIC-003"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-018.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 1.5 — Redis cache module avec 3 rôles (blacklist tokens, BDUI layouts, rate-limit stub Phase 2). apps/nestjs/src/cache/ : RedisService singleton ioredis (client + subscriber dédié pub/sub, retry exponential 200ms×N max 2s, fail-open boot — pas de crash NestJS si Redis down, /health passe à 503), TokenBlacklistService.add/isRevoked (préfixe blacklist:, fail-open sur erreur Redis — trade-off documenté Phase 1, circuit breaker Phase 2), BdUiCacheService.get/set/invalidate (L1 LRU in-process 100×60s + L2 Redis TTL 5min, gzip si payload >10KB détecté par magic bytes 0x1f 0x8b sur getBuffer, SCAN+DEL par batch pour invalidation pattern), pub/sub bdui:invalidate cross-process (publish au DEL → tous les nodes invalident leur L1+L2), RateLimiterService stub fixed-window INCR+EXPIRE Phase 2 non câblé. JWT payload étendu avec claim jti UUID v4 généré à l'émission (AuthService.issueTokens) — JwtAuthGuard vérifie blacklist.isRevoked(jti) après passport auth → 401 'Token revoked' instantané (pas d'attente TTL 15min). AuthService.logout(refresh_token, access?) push refresh_hash dans blacklist avec TTL=expires_at-now() ET access.jti avec TTL=min(900,exp-now) ; AuthController.logout extrait user.jti+user.exp via @CurrentUser. JwtStrategy.validate propage payload.jti et payload.exp dans req.user. RolesService migré : Map L1 60s + Redis L2 TTL 5min (clé roles:<tenant_id>) + pub/sub roles:invalidate cross-node (setRolesForTenant et invalidateCache publient le message → autres nodes nettoient L1) → STORY-015 AC-14 fonctionne désormais cross-process. lru-cache@11 ajouté. CacheModule @Global pour injection sans import explicite. Tests : 96 verts (token-blacklist 6 cas add/isRevoked/TTL expire/fail-open Redis-down/fail-open client-throws, bdui-cache 7 cas get/set/gzip-roundtrip/L1-skip-L2/invalidate-by-screen/invalidate-by-tenant/cross-process-pubsub via FakeRedisService double pair() avec store partagé, rate-limiter 3 cas, roles-pubsub cross-node invalidate, blacklist-revocation.e2e login→/me→logout→/me-401 immédiat avec real TokenBlacklistService+real JwtAuthGuard câblés à FakeRedis). Différé/non livré : (a) benchmark scripts/benchmark-bdui-cache.sh AC-15 cache hit <20ms p95 — non livré, à mesurer en pré-prod avec vraie volumétrie ; (b) Redis health.indicator déjà présent (STORY-013) — pas migré sur RedisService partagé, garde sa propre connexion pour test isolé à chaque /health ; (c) ioredis-mock non utilisé — FakeRedisService minimal in-process suffit pour la surface ioredis qu'on touche (SET/GET/GETBUFFER/EXISTS/DEL/INCR/EXPIRE/PUBLISH/SUBSCRIBE/SCAN) ; (d) audit log des révocations différé STORY-020 ; (e) test E2E TTL expire réel (AC-11) couvert par jest.useFakeTimers, pas Redis réel."
       - story_id: "STORY-019"
         title: "ABAC CASL — Layer 3 Sécurité"
         epic: "EPIC-003"

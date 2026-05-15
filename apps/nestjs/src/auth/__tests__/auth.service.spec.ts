@@ -11,6 +11,7 @@ import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { RolesService } from '../../security/services/roles.service';
+import { TokenBlacklistService } from '../../cache/services/token-blacklist.service';
 
 const JWT_SECRET = 'test-secret-test-secret-test-secret-32+chars';
 
@@ -82,6 +83,10 @@ describe('AuthService', () => {
             getRolesForTenant: jest.fn(async () => ['OWNER', 'MANAGER', 'COMMERCIAL']),
             invalidateCache: jest.fn(),
           },
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: { add: jest.fn(), isRevoked: jest.fn(async () => false) },
         },
       ],
     }).compile();

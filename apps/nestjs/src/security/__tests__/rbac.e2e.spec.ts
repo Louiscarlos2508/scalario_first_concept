@@ -12,6 +12,8 @@ import { User } from '../../auth/entities/user.entity';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { SUPER_ADMIN } from '../constants';
 import { RbacGuard } from '../guards/rbac.guard';
+import { RedisService } from '../../cache/services/redis.service';
+import { TokenBlacklistService } from '../../cache/services/token-blacklist.service';
 import { RolesService } from '../services/roles.service';
 
 const JWT_SECRET = 'test-secret-test-secret-test-secret-32+chars';
@@ -93,6 +95,11 @@ describe('RBAC e2e (Layer 1 + Layer 2)', () => {
         RolesService,
         { provide: getRepositoryToken(Tenant), useValue: tenantRepo },
         { provide: getRepositoryToken(User), useValue: { findOne: jest.fn() } },
+        { provide: RedisService, useValue: { isAvailable: () => false } },
+        {
+          provide: TokenBlacklistService,
+          useValue: { add: jest.fn(), isRevoked: jest.fn(async () => false) },
+        },
         { provide: APP_GUARD, useClass: JwtAuthGuard },
         { provide: APP_GUARD, useClass: RbacGuard },
       ],

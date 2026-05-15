@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { Tenant } from '../../auth/entities/tenant.entity';
+import { RedisService } from '../../cache/services/redis.service';
 import { RolesService } from '../services/roles.service';
 
 describe('RolesService', () => {
@@ -26,7 +27,11 @@ describe('RolesService', () => {
     };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [RolesService, { provide: getRepositoryToken(Tenant), useValue: repo }],
+      providers: [
+        RolesService,
+        { provide: getRepositoryToken(Tenant), useValue: repo },
+        { provide: RedisService, useValue: { isAvailable: () => false } },
+      ],
     }).compile();
     service = moduleRef.get(RolesService);
   });

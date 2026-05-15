@@ -32,9 +32,11 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @UsePipes(new ZodValidationPipe(LogoutSchema))
-  async logout(@Body() dto: LogoutDto): Promise<void> {
-    await this.auth.logout(dto.refresh_token);
+  async logout(
+    @Body(new ZodValidationPipe(LogoutSchema)) dto: LogoutDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<void> {
+    await this.auth.logout(dto.refresh_token, { jti: user.jti, exp: user.exp });
   }
 
   @Get('me')

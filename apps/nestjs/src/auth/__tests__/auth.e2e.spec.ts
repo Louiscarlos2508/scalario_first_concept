@@ -14,6 +14,7 @@ import { RefreshToken } from '../entities/refresh-token.entity';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { JwtStrategy } from '../strategies/jwt.strategy';
 import { RolesService } from '../../security/services/roles.service';
+import { TokenBlacklistService } from '../../cache/services/token-blacklist.service';
 
 const JWT_SECRET = 'test-secret-test-secret-test-secret-32+chars';
 
@@ -151,6 +152,10 @@ describe('Auth e2e (in-memory)', () => {
             invalidateCache: jest.fn(),
           },
         },
+        {
+          provide: TokenBlacklistService,
+          useValue: { add: jest.fn(), isRevoked: jest.fn(async () => false) },
+        },
       ],
     }).compile();
 
@@ -193,6 +198,8 @@ describe('Auth e2e (in-memory)', () => {
       tenant_id: 'tenant-A',
       roles: ['OWNER'],
       department_id: null,
+      jti: expect.any(String),
+      exp: expect.any(Number),
     });
 
     // /me without token → 401
