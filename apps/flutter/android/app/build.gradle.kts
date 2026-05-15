@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.scalario.scalario"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // STORY-012 — pinned SDKs (do not inherit flutter.* defaults). Android 8.0+
+    // floor cible Snapdragon 680 mid-range (Blandine en pharmacie terrain).
+    compileSdk = 34
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -20,21 +21,20 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.scalario.scalario"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 26
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // STORY-012 — debug signing placeholder. STORY-046 livrera la upload
+            // key Play Store + rotation. Pas d'obfuscation Phase 1.
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

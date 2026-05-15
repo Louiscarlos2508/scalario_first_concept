@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 30
+    completed_points: 35
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -159,10 +159,14 @@ sprints:
         title: "Support Multi-plateforme Flutter"
         epic: "EPIC-002"
         points: 5
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-012.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Couche d'adaptation plateforme livrée : lib/core/platform/ (PlatformInfo + PlatformCapabilities + storage conditional imports io/web/stub). Android pinned minSdk 26 / targetSdk 34 / compileSdk 34 + permissions BT/Camera declared (runtime Phase 2). iOS scaffold + Info.plist (iOS 14+, usage descriptions BT/Camera/Photos). Web : index.html branded (theme-color #2980B9 = ScalarioColors.primary500, splash anti-flash, viewport) + manifest.json PWA (name Scalario, standalone, icônes maskable). Showcase _platform_capabilities_showcase.dart pour debug runtime. Lint script check_no_direct_platform_check.dart (0 violation sur 16 fichiers components+features). CI workflow .github/workflows/build-multiplatform.yml — 4 jobs (analyze-and-test + android-build APK/AAB + ios-build no-codesign + web-build PWA verify). Docs apps/flutter/docs/multi-platform.md. 12/12 tests platform verts. flutter analyze sur le code livré = 0 issue. Différé STORY-046 : signing prod, hosting staging.scalario.app, Lighthouse CI, CSP. Différé STORY-035 : Drift web IndexedDB + cache service worker stratégique. Breakpoints isMobileWeb/isDesktopWeb réutilisent BreakpointResolver projet (600/1024) — déviation volontaire vs texte story (768/1024) pour source unique."
       - story_id: "STORY-013"
         title: "NestJS Setup + Docker Compose 5 services"
         epic: "EPIC-003"

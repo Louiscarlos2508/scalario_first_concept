@@ -1,12 +1,14 @@
 {
-    "name": "scalario",
-    "short_name": "scalario",
-    "start_url": ".",
+    "name": "Scalario — Instant Business OS",
+    "short_name": "Scalario",
+    "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "orientation": "any",
+    "background_color": "#2980B9",
+    "theme_color": "#2980B9",
+    "description": "Scalario — Instant Business OS pour PME africaines. BDUI Engine + templates JSON.",
+    "lang": "fr",
     "prefer_related_applications": false,
     "icons": [
         {

@@ -1,6 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- STORY-012 — permissions Phase 1 : INTERNET (BDUI JSON) + ACCESS_NETWORK_STATE
+         (offline-first detection). Bluetooth/Camera déclarés mais inutilisés
+         Phase 1 — runtime activation différée (STORY-PD-XX, Phase 2). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
-        android:label="scalario"
+        android:label="Scalario"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
