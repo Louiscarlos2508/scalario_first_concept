@@ -42,7 +42,13 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://scalario:scalario_test_password@localhost:5432/scalario_test
+      # STORY-017 — two DB users:
+      #   DATABASE_URL_ADMIN  → superuser, runs migrations + intrusion-test fixtures.
+      #   DATABASE_URL        → scalario_app (NOBYPASSRLS), used by the spec to
+      #                          assert RLS actually filters rows.
+      DATABASE_URL: postgresql://scalario_app:scalario_app_ci_password@localhost:5432/scalario_test
+      DATABASE_URL_ADMIN: postgresql://scalario:scalario_test_password@localhost:5432/scalario_test
+      SCALARIO_APP_DB_PASSWORD: scalario_app_ci_password
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci_jwt_secret_min_32_chars_dummy_value_xx
       JWT_REFRESH_SECRET: ci_jwt_refresh_secret_min_32_chars_dummy
@@ -73,6 +79,9 @@ jobs:
 
       - name: Typecheck
         run: pnpm --filter @scalario/nestjs run typecheck
+
+      - name: Run migrations (creates scalario_app + RLS policies)
+        run: pnpm --filter @scalario/nestjs run migration:run
 
       - name: Test
         run: pnpm --filter @scalario/nestjs run test

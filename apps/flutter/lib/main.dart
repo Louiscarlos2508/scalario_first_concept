@@ -14,6 +14,7 @@
 
 import 'dart:async' show runZonedGuarded;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -25,6 +26,7 @@ import 'engine/component_registry/component_registry.dart';
 import 'engine/component_registry/registry_bootstrap.dart';
 import 'engine/error_boundary/global_error_handler.dart';
 import 'engine/layout_resolver/layout_resolver.dart';
+import 'sandbox/sandbox_screen.dart';
 
 /// Shared navigator key — allows [GlobalErrorHandler] to show SnackBars from
 /// anywhere in the app without a BuildContext (AC-10).
@@ -72,6 +74,12 @@ class ScalarioApp extends StatelessWidget {
       // ignore: avoid_redundant_argument_values
       themeMode: ThemeMode.system,
       home: const _ThemeSmokePage(),
+      // STORY-009 — la route sandbox dev-only est enregistrée **uniquement**
+      // en `kDebugMode`. En release build, naviguer vers `/dev/sandbox`
+      // n'expose aucune route (test couvert dans sandbox_release_exclusion_test).
+      routes: <String, WidgetBuilder>{
+        if (kDebugMode) kSandboxRouteName: (BuildContext _) => const SandboxScreen(),
+      },
     );
   }
 }
@@ -89,6 +97,16 @@ class _ThemeSmokePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scalario'),
+        actions: <Widget>[
+          if (kDebugMode)
+            IconButton(
+              key: const Key('home.openSandbox'),
+              tooltip: 'BDUI Sandbox (dev)',
+              icon: const Icon(Icons.science_outlined),
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(kSandboxRouteName),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(ScalarioSpacing.space4),

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "screen": "error_state",
+  "layout": "dashboard",
+  "title": "Sandbox erreur",
+  "i18n_key": "screen.error_state.title",
+  "zones": {
+    "kpis": [
+      {
+        "type": "DoesNotExist",
+        "id": "kpi_invalid",
+        "props": {
+          "label": "Composant inconnu",
+          "value": "—"
+        }
+      }
+    ]
+  }
+}

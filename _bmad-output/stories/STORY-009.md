@@ -3,7 +3,7 @@
 **Epic :** EPIC-002 — BDUI Engine Flutter
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 1 (2026-05-12 → 2026-05-23)

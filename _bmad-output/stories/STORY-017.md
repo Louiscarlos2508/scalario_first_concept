@@ -3,7 +3,7 @@
 **Epic :** EPIC-003 — Backend Foundation
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 2 (2026-05-26 → 2026-06-06)
@@ -421,9 +421,22 @@ Sprint plan ligne 402 : "Migration RLS : script rollback documenté". Livré (AC
 ## Progress Tracking
 
 **Status History :**
-- 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
 
-**Actual Effort :** TBD
+- 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-15 : Completed (Carlos via `/bmad:dev-story`)
+
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Summary :**
+
+Layer 5 RLS livré sur 8 tables tenant-scoped via 2 migrations idempotentes (`1700000000004-rls-policies`, `1700000000005-rls-app-user`) — `ENABLE` + `FORCE ROW LEVEL SECURITY` + policy uniforme `<table>_tenant_isolation` (`USING` + `WITH CHECK`, fail-closed via `missing_ok=true`). Rôle PostgreSQL `scalario_app` créé `NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS` avec GRANT DML scopé (INSERT/SELECT only sur `audit_logs`). `DatabaseModule` expose maintenant 2 DataSources (`TypeOrmModule` = app role, `ADMIN_DATA_SOURCE` = bypass role, pool 2) + boot check qui refuse `rolbypassrls=true` sur le user d'app. `RlsBypassService.withBypass` (whitelist runtime + audit log) est l'unique voie cross-tenant. Tests d'intrusion E2E (`rls-intrusion.e2e.spec.ts`) couvrent les 6 cas AC-11 + AC-12, auto-skip si `DATABASE_URL_ADMIN` absent — CI provisionne les 2 DSN + lance `migration:run` avant `test`. Script `scripts/benchmark-rls.sh`, `scripts/rollback-rls.sql`, et doc checklist `apps/nestjs/docs/migrations-tenant-scoped.md` livrés.
+
+**Différé (non bloquant Phase 1) :**
+
+- Lint CI script `check-rls-bypass-callers.sh` — whitelist runtime + unit test couvrent Phase 1.
+- Rapport benchmark `_bmad-output/benchmarks/rls-overhead.md` avec p50/p95/p99 chiffrés — script livré, le run sera fait en pré-prod avec une vraie volumétrie.
+- Index ivfflat sur `embeddings` — table vide en Phase 1, indexer en Phase 2 RAG.
+- Audit log `INSERT`-only enforcement complet → STORY-020.
 
 ---
 

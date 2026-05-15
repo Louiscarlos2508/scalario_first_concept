@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "screen": "empty_screen",
+  "layout": "detail",
+  "title": "Sandbox vide",
+  "i18n_key": "screen.empty_screen.title",
+  "zones": {
+    "main": [
+      {
+        "type": "AlertBanner",
+        "id": "empty_main_banner",
+        "props": {
+          "type": "info",
+          "message": "Aucun contenu — ce screen sandbox sert de canevas minimal pour tester un layout."
+        }
+      }
+    ],
+    "actions": [
+      {
+        "type": "ActionButton",
+        "id": "btn_create",
+        "props": {
+          "icon_code_point": 57669,
+          "label": "Créer"
+        }
+      }
+    ]
+  }
+}

@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 22
+    completed_points: 30
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -147,11 +147,14 @@ sprints:
         title: "Sandbox JSON + Hot Reload Dev"
         epic: "EPIC-002"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-009.md"
         defined_date: "2026-05-10"
-        notes: "Déplacée Sprint 1→2 : dépend de STORY-008 (BDUIEngine) qui est Sprint 2."
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Sandbox dev-only (kDebugMode) sur route /dev/sandbox. Modules livrés : SandboxScreen orchestrateur (loader + watcher + breakpoint + console), SandboxJsonLoader (BundleJsonSource + FileJsonSource via conditional imports dart:io/web), SandboxFileWatcher (IoFileWatcher dart:io + PollingFileWatcher web fallback 1.5s), SandboxUserContextProvider mutable (5 presets + Custom JSON), SandboxBreakpointOverlay (mobile 360×740 / tablet 768×1024 / desktop 1440×900), SandboxErrorView (path + ligne/col + voisinage + Réessayer), SandboxConsoleController (50 entrées). 5 fixtures dont 2 nouvelles (empty_screen.json, error_state.json volontairement invalide). 17/17 tests sandbox verts (widget + parse error + UserContext switch + reload + release exclusion). Route enregistrée uniquement en kDebugMode + bouton dev d'accès depuis l'écran smoke-test. flutter analyze sandbox + main = 0 issue."
       - story_id: "STORY-012"
         title: "Support Multi-plateforme Flutter"
         epic: "EPIC-002"
@@ -211,10 +214,14 @@ sprints:
         title: "PostgreSQL RLS"
         epic: "EPIC-003"
         points: 5
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-017.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 5 — RLS sur 8 tables tenant-scoped. Migration 1700000000004-rls-policies crée les 6 tables encore manquantes (screen_configs, entities, workflow_states, audit_logs, sync_mutations, embeddings via pgvector) avec ENABLE+FORCE ROW LEVEL SECURITY et policies <table>_tenant_isolation (USING + WITH CHECK) liées à current_setting('app.current_tenant_id', true)::uuid — fail-closed (missing_ok=true). Drop de la policy placeholder user_tenant_isolation de STORY-014. audit_logs : REVOKE UPDATE/DELETE FROM PUBLIC (insert-only, STORY-020 finalisera). Migration 1700000000005-rls-app-user provisionne le rôle scalario_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS avec GRANT DML scopé (INSERT/SELECT only sur audit_logs) + ALTER DEFAULT PRIVILEGES pour les futures tables. typeorm.datasource.ts bascule sur DATABASE_URL_ADMIN (fallback DATABASE_URL) pour les migrations. DatabaseModule expose APP_DATASOURCE (TypeOrmModule via DATABASE_URL = scalario_app, pool 10) + ADMIN_DATA_SOURCE (DataSource raw via DATABASE_URL_ADMIN, pool 2). Boot check onModuleInit refuse de démarrer si current_user a rolbypassrls (skip en NODE_ENV=test ou RLS_BOOT_CHECK=skip). RlsBypassService.withBypass(opts, fn) avec whitelist runtime hardcodée (TenantsService.provision, AuthService.superAdminLogin, CleanupService.purge) + audit_logs INSERT systématique + ForbiddenException sur caller non-whitelisté. Tests d'intrusion rls-intrusion.e2e.spec couvrent AC-11 T1→T6 + AC-12 (WITH CHECK INSERT cross-tenant rejected) — auto-skip si DATABASE_URL_ADMIN absent (CI: les 2 URLs sont fournies + `pnpm migration:run` ajouté avant pnpm test). Unit test rls-bypass.service.spec assert le gate whitelist sans toucher la DB. Script scripts/benchmark-rls.sh (10K seed + EXPLAIN ANALYZE admin vs scalario_app + 1000 iters) + scripts/rollback-rls.sql + apps/nestjs/docs/migrations-tenant-scoped.md (checklist 6 étapes pour toute future table métier). .env.example documente DATABASE_URL_ADMIN + SCALARIO_APP_DB_PASSWORD. Différé/non livré : (a) lint CI check_rls_bypass_callers.sh — la whitelist runtime + le test unit suffisent Phase 1, le script CI sera livré quand un 4ᵉ call site sera proposé en review ; (b) benchmark p50/p95/p99 numbers concrets dans _bmad-output/benchmarks/rls-overhead.md — le script est livré, le run + rapport seront faits en pré-prod (Sprint 5 hardening) avec une vraie volumétrie ; (c) audit_logs full retention/insert-only triggers déférés à STORY-020 ; (d) RLS sur pgvector index ivfflat non créé (table vide en Phase 1 — créer l'index sur table populée Phase 2 RAG)."
       - story_id: "STORY-018"
         title: "Redis Sessions + Cache Layouts BDUI"
         epic: "EPIC-003"
