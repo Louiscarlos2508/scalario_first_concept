@@ -1,10 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be set and at least 32 characters long (>= 256 bits).');
+  }
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');

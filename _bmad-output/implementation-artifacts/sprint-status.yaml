@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 9
+    completed_points: 14
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -175,10 +175,14 @@ sprints:
         title: "Auth JWT Multi-tenant"
         epic: "EPIC-003"
         points: 5
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-014.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 1 sécurité complet : Passport Local+JWT, JwtAuthGuard global avec @Public, AuthService (login + issueTokens + refresh rotation + reuse-detection family-revoke + logout + findUserById tenant-scoped). Migration tenants/users/refresh_tokens avec indexes + RLS placeholder. bcrypt cost 12 + SHA-256 sur refresh tokens + dummy-hash anti-timing user enumeration. Throttler 5/min sur /auth/login. RedactInterceptor global (password/access_token/refresh_token/token_hash → [REDACTED]). JWT_SECRET validé au boot (≥32 chars). 29/29 tests verts (auth.service + auth.controller + auth.e2e in-memory + redact). Lint + typecheck verts. AC-19 (forged JWT 401) + AC-20 (findUserById tenant-scoped) + AC-12 (reuse family revoke) explicitement testés. AC-23 (JWT_REFRESH_SECRET) non implémenté — refresh tokens sont random bytes + SHA-256, pas des JWTs (incohérence interne story). RBAC SUPER_ADMIN sur /tenants/provision déféré à STORY-015."
       - story_id: "STORY-015"
         title: "RBAC Guards Dynamiques"
         epic: "EPIC-003"

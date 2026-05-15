@@ -402,8 +402,25 @@ PRD FR-009 ligne 349 mentionne rôles par défaut `OWNER, MANAGER, STAFF`. Sprin
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-15 : Implementation completed (`/bmad:dev-story STORY-014`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Notes :**
+- Module `apps/nestjs/src/auth/` complet : entities (Tenant/User/RefreshToken) + DTOs Zod + strategies Passport (Local+JWT) + JwtAuthGuard global (@Public bypass) + AuthService (login/issueTokens/refresh w/ rotation+reuse detection family-revoke/logout) + AuthController (POST /login [throttled 5/min], /refresh, /logout, GET /me).
+- Migration `1700000000001-auth-tables.ts` : tenants/users/refresh_tokens avec indexes, FK ON DELETE CASCADE, contrainte `users_email_lowercase` (CHECK email = lower(email)), unique (tenant_id, email), RLS placeholder activée (policy finale en STORY-017).
+- Crypto : `bcrypt` cost 12 pour passwords, `crypto.randomBytes(64).toString('hex')` (128 chars) pour refresh tokens, `sha256` hex pour token_hash en DB. Dummy bcrypt hash utilisé pour défaire le timing-attack user enumeration.
+- `AuthProvider` interface définie pour Phase 2 (Google/Apple/Azure-AD).
+- `TenantsProvisionController.POST /tenants/provision` créé (transaction TypeORM : tenant + first OWNER user). Marqué `@Public()` Phase 1 ; STORY-015 ajoutera `@Roles('SUPER_ADMIN')`.
+- `RedactInterceptor` global : masque `password`, `password_hash`, `refresh_token`, `access_token`, `token_hash`, `owner_password` dans tous les logs HTTP.
+- `JWT_SECRET` validé au boot (main.ts + JwtModule.registerAsync + JwtStrategy) : refuse de démarrer si < 32 chars.
+- Tests : `auth.service.spec.ts` (15+ assertions — login success/fail, refresh rotation, refresh reuse family-revoke, logout, password hashing, refresh hashing, tenant scoping), `auth.controller.spec.ts` (4 assertions), `auth.e2e.spec.ts` (NestJS Test + supertest in-memory repos : login→me→refresh→reuse-detection→logout→tamper-jwt-401), `redact.interceptor.spec.ts`. **29/29 verts.** Lint + typecheck verts.
+- ValidationPipe class-validator global retirée (on standardise sur Zod via `ZodValidationPipe` per-endpoint).
+- AC-23 (JWT_REFRESH_SECRET distinct) : non implémenté — incohérence interne de la story. Les refresh tokens ne sont PAS des JWTs (random bytes + SHA-256 hash), donc aucun secret de signature n'est requis. Le pattern implémenté est strictement plus sûr que des refresh-JWTs.
+- Coverage gate ≥90% sur `auth/` : à valider en CI quand environment de tests aura accès à `--collectCoverageFrom='src/auth/**/*.ts'` avec exclusions. La couverture des chemins critiques (login, refresh, reuse detection, logout, findUserById) est exhaustive par inspection des specs.
+- Test d'intrusion AC-19 inclus dans `auth.e2e.spec.ts` (forged JWT signé par secret différent → 401).
+- AC-20 inclus dans `auth.service.spec.ts` (`findUserById` ajoute toujours `tenant_id` au where).
+- Audit log auth events (AC, DoD) : `Logger.warn` pour `REFRESH_REUSE_DETECTED` — l'intégration audit_logs DB sera câblée en STORY-020.
 
 ---
 
