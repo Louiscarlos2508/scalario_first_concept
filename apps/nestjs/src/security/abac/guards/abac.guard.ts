@@ -4,10 +4,13 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ABAC_ACTION_KEY, type AbacActionMetadata } from '../decorators/abac-action.decorator';
 import type { AbacAbility } from '../types';
+import { AuditLogService } from '../../../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../../../audit/constants';
 
 interface AbacRequest {
   user?: { user_id?: string; tenant_id?: string };
@@ -33,7 +36,10 @@ interface AbacRequest {
 export class AbacGuard implements CanActivate {
   private readonly logger = new Logger(AbacGuard.name);
 
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    @Optional() private readonly audit?: AuditLogService,
+  ) {}
 
   canActivate(ctx: ExecutionContext): boolean {
     const required = this.reflector.getAllAndOverride<AbacActionMetadata | undefined>(
@@ -48,6 +54,17 @@ export class AbacGuard implements CanActivate {
       this.logger.warn(
         `ABAC_DENY action=${required.action} subject=${required.subject} reason=missing_ability user=${req.user?.user_id ?? 'anon'}`,
       );
+      if (this.audit)
+        void this.audit.log({
+          action: AUDIT_ACTIONS.ABAC_DENY,
+          tenant_id: req.user?.tenant_id ?? null,
+          user_id: req.user?.user_id ?? null,
+          metadata: {
+            action: required.action,
+            subject: required.subject,
+            reason: 'missing_ability',
+          },
+        });
       throw new ForbiddenException('ABAC denied');
     }
 
@@ -55,6 +72,13 @@ export class AbacGuard implements CanActivate {
       this.logger.warn(
         `ABAC_DENY action=${required.action} subject=${required.subject} user=${req.user?.user_id ?? 'anon'} tenant=${req.user?.tenant_id ?? 'none'}`,
       );
+      if (this.audit)
+        void this.audit.log({
+          action: AUDIT_ACTIONS.ABAC_DENY,
+          tenant_id: req.user?.tenant_id ?? null,
+          user_id: req.user?.user_id ?? null,
+          metadata: { action: required.action, subject: required.subject },
+        });
       throw new ForbiddenException('ABAC denied');
     }
     return true;

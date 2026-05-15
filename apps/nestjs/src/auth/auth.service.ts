@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -19,6 +20,8 @@ import { TokenBlacklistService } from '../cache/services/token-blacklist.service
 import { TTL_SECONDS } from '../cache/constants';
 import { RolesService } from '../security/services/roles.service';
 import { SUPER_ADMIN } from '../security/constants';
+import { AuditLogService } from '../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../audit/constants';
 
 const BCRYPT_COST = 12;
 const ACCESS_TTL_SECONDS = 15 * 60;
@@ -38,7 +41,13 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly rolesService: RolesService,
     private readonly tokenBlacklist: TokenBlacklistService,
+    @Optional() private readonly audit?: AuditLogService,
   ) {}
+
+  /** Tiny helper — audit is optional in test wiring, so guard every call. */
+  private async tryAudit(entry: Parameters<AuditLogService['log']>[0]): Promise<void> {
+    if (this.audit) await this.audit.log(entry);
+  }
 
   /**
    * Returns the subset of `user.roles` that are valid for `tenant_id` (i.e.
@@ -78,7 +87,14 @@ export class AuthService {
     const tenant = await this.tenantRepo.findOne({
       where: { slug: input.tenant_slug, is_active: true },
     });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {
+      // STORY-020 — sync audit (critical event).
+      await this.tryAudit({
+        action: AUDIT_ACTIONS.AUTH_LOGIN_FAIL,
+        metadata: { reason: 'tenant_not_found', tenant_slug: input.tenant_slug },
+      });
+      throw new NotFoundException('Tenant not found');
+    }
 
     const email = input.email.toLowerCase();
     const user = await this.userRepo.findOne({
@@ -87,7 +103,17 @@ export class AuthService {
 
     const hashToCompare = user?.password_hash ?? DUMMY_BCRYPT_HASH;
     const ok = await bcrypt.compare(input.password, hashToCompare);
-    if (!user || !ok) throw new UnauthorizedException('Invalid credentials');
+    if (!user || !ok) {
+      await this.tryAudit({
+        action: AUDIT_ACTIONS.AUTH_LOGIN_FAIL,
+        tenant_id: tenant.id,
+        user_id: user?.id ?? null,
+        metadata: {
+          reason: user ? 'invalid_credentials' : 'user_not_found_or_disabled',
+        },
+      });
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     return { user, tenant };
   }
@@ -98,7 +124,14 @@ export class AuthService {
     tenant_slug: string;
   }): Promise<AuthTokens> {
     const { user, tenant } = await this.validateLocalCredentials(input);
-    return this.issueTokens(user, tenant);
+    const tokens = await this.issueTokens(user, tenant);
+    await this.tryAudit({
+      action: AUDIT_ACTIONS.AUTH_LOGIN_SUCCESS,
+      tenant_id: tenant.id,
+      user_id: user.id,
+      metadata: { roles: tokens.user.roles },
+    });
+    return tokens;
   }
 
   async issueTokens(user: User, tenant: Tenant): Promise<AuthTokens> {
@@ -157,6 +190,12 @@ export class AuthService {
         { revoked_at: new Date() },
       );
       this.logger.warn(`REFRESH_REUSE_DETECTED user_id=${stored.user_id} — family revoked`);
+      // STORY-020 — sync audit (critical).
+      await this.tryAudit({
+        action: AUDIT_ACTIONS.AUTH_REFRESH_REUSE_DETECTED,
+        tenant_id: stored.tenant_id,
+        user_id: stored.user_id,
+      });
       throw new UnauthorizedException('Token reuse detected');
     }
 
@@ -169,7 +208,13 @@ export class AuthService {
     });
     if (!tenant) throw new UnauthorizedException('Invalid refresh token');
 
-    return this.issueTokens(user, tenant);
+    const tokens = await this.issueTokens(user, tenant);
+    await this.tryAudit({
+      action: AUDIT_ACTIONS.AUTH_REFRESH,
+      tenant_id: tenant.id,
+      user_id: user.id,
+    });
+    return tokens;
   }
 
   /**
@@ -194,6 +239,12 @@ export class AuthService {
       const ttl = Math.min(TTL_SECONDS.ACCESS_MAX, Math.max(0, access.exp - now));
       await this.tokenBlacklist.add(access.jti, ttl);
     }
+    // STORY-020 — async audit (best-effort).
+    await this.tryAudit({
+      action: AUDIT_ACTIONS.AUTH_LOGOUT,
+      tenant_id: stored?.tenant_id ?? null,
+      user_id: stored?.user_id ?? null,
+    });
   }
 
   /**

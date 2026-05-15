@@ -1,9 +1,17 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  Optional,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../../common/decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../../common/decorators/public.decorator';
 import { SUPER_ADMIN } from '../constants';
 import { RolesService } from '../services/roles.service';
+import { AuditLogService } from '../../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../../audit/constants';
 
 /**
  * Layer 2 RBAC guard — STORY-015.
@@ -21,7 +29,18 @@ export class RbacGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly rolesService: RolesService,
+    @Optional() private readonly audit?: AuditLogService,
   ) {}
+
+  private deny(message: string, required: string[], userRoles: string[]): never {
+    if (this.audit) {
+      void this.audit.log({
+        action: AUDIT_ACTIONS.RBAC_DENY,
+        metadata: { required_roles: required, user_roles: userRoles, reason: message },
+      });
+    }
+    throw new ForbiddenException(message);
+  }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -41,7 +60,7 @@ export class RbacGuard implements CanActivate {
     }>();
     const user = req.user;
     if (!user || !Array.isArray(user.roles) || user.roles.length === 0) {
-      throw new ForbiddenException('No roles in token');
+      this.deny('No roles in token', required, []);
     }
 
     const userRoles = (user.roles as unknown[]).filter((r): r is string => typeof r === 'string');
@@ -49,7 +68,7 @@ export class RbacGuard implements CanActivate {
     if (userRoles.includes(SUPER_ADMIN)) return true;
 
     if (typeof user.tenant_id !== 'string') {
-      throw new ForbiddenException('Tenant context missing');
+      this.deny('Tenant context missing', required, userRoles);
     }
 
     const tenantRoles = await this.rolesService.getRolesForTenant(user.tenant_id);
@@ -57,7 +76,7 @@ export class RbacGuard implements CanActivate {
 
     const intersection = validUserRoles.filter((r) => required.includes(r));
     if (intersection.length === 0) {
-      throw new ForbiddenException(`Required role(s): ${required.join(', ')}`);
+      this.deny(`Required role(s): ${required.join(', ')}`, required, userRoles);
     }
     return true;
   }

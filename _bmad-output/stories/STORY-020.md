@@ -3,7 +3,7 @@
 **Epic :** EPIC-003 — Backend Foundation
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 2 (2026-05-26 → 2026-06-06)

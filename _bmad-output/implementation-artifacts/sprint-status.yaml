@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 41
+    completed_points: 44
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -254,10 +254,14 @@ sprints:
         title: "Audit Log"
         epic: "EPIC-003"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-020.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 5 audit log insert-only via privilèges PostgreSQL. apps/nestjs/src/audit/ : AuditLogService (auto-fill tenant/user via tenantContext, SHA-256 payload jamais persisté, buffer async batch de 100 ou flush 1s, sync forcé pour SYNC_AUDIT_ACTIONS=AUTH_LOGIN_FAIL/AUTH_REFRESH_REUSE_DETECTED/RLS_BYPASS_USED/ABAC_DENY/TENANT_VIOLATION_DETECTED, never-crash try/catch, drop-oldest si buffer>10K, branché sur ADMIN_DATA_SOURCE pour éviter la trap GUC sur les flushes hors ALS), @Audited(action) decorator + AuditInterceptor global (skip si pas de metadata, capture latency_ms/result/error_code/error_message, module_id+entity_id depuis path params ou response.id), AuditPurgeService (setInterval-based cron quotidien 03:00, retention clampée [30,3650]j default 90 via tenant.config.audit_retention_days, single-flight in-process, DELETE via ADMIN_DATA_SOURCE car scalario_app n'a pas DELETE, méta-event AUDIT_PURGE par tenant avec rows_deleted), AuditController GET /tenants/:slug/audit-logs (Roles OWNER+SUPER_ADMIN + AbacAction read AuditLog, cursor pagination base64url (created_at,id) sur idx_audit_logs_tenant_time, filtres from/to/user_id/action/module_id, limit max 500). Migration 1700000000007 REVOKE UPDATE/DELETE/TRUNCATE explicite sur scalario_app + ajout index idx_audit_logs_user_time (tenant_id,user_id,created_at DESC) — note : 006 était déjà pris par tenant-abac-rules (STORY-019). Hooks audit câblés (audit injecté @Optional pour ne pas casser les tests existants qui construisent les services à la main) : AuthService.login/logout/refresh/reuse + validateLocalCredentials, RbacGuard.deny, AbacGuard (missing_ability + ability.cannot), RlsBypassService.withBypass remplace son INSERT SQL direct par AuditLogService.log (fallback SQL conservé pour bootstrap pré-DI), TenantIsolationFilter sur 42501, TenantsProvisionController, TenantsRolesController (remplace le stub logger.log). AuditModule @Global pour injection partout sans re-import. Tests : 23 nouveaux verts (audit-log.service 8 cas hash/auto-fill/payload-never-persisted/sync-vs-async/batch/threshold/crash-safe-async/crash-safe-sync, audit-purge.service 5 cas clamp+msUntilNext3am, audit-query.dto 4 cas coerce/regex/iso/cap, audit.interceptor 3 cas skip/success/error), suite totale backend = 165 passing (vs 142 avant). pnpm lint + typecheck + test = 0 erreur. Doc apps/nestjs/docs/audit-events-catalog.md livré (15 events catalogués avec metadata schemas et runbook ajout d'event). Différé/non livré : (a) tests d'intégration UPDATE/DELETE rejected par PostgreSQL (AC-02/03) — couverts par la migration REVOKE explicite + le mécanisme PG ; un test E2E nécessiterait un real DB qui n'est pas en place pour les unit suites — à valider en pré-prod avec scripts/benchmark-rls.sh ; (b) cron-driven E2E purge avec 1000 rows réels (AC-29) — couvert au niveau unit via clampRetention + purgeTenant qui sont les seules nouvelles surfaces algorithmiques ; (c) benchmark p95 < 200ms sur 1M rows (AC-20) — l'index idx_audit_logs_tenant_time est en place, mesure pré-prod ; (d) AUDIT_LEGAL_DELETE procédure ops — documentée dans audit-events-catalog.md, pas câblée Phase 1 ; (e) distributed Redis lock pour cron purge — la single-flight in-process suffit Phase 1 (1 instance NestJS) ; (f) CI lint check obligeant @Audited sur tous les @Post/@Patch/@Delete métier — déféré Sprint 3+ avec STORY-022 ModuleEngine ; (g) signature cryptographique blockchain-style — Phase 3 si OHADA exige preuves cryptographiques."
 
   - sprint_number: 3
     start_date: "2026-06-09"
@@ -539,7 +543,7 @@ definition_summary:
   defined: 42
   not_started: 0
   in_progress: 0
-  completed: 5
+  completed: 6
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038

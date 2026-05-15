@@ -17,6 +17,8 @@ import { Tenant } from '../auth/entities/tenant.entity';
 import { User } from '../auth/entities/user.entity';
 import { SUPER_ADMIN } from '../security/constants';
 import { loadTemplateRoles } from '../catalogue/templates.loader';
+import { AuditLogService } from '../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../audit/constants';
 import { ProvisionTenantDto, ProvisionTenantSchema } from './dto/provision.dto';
 
 /**
@@ -28,7 +30,10 @@ import { ProvisionTenantDto, ProvisionTenantSchema } from './dto/provision.dto';
 export class TenantsProvisionController {
   private readonly logger = new Logger(TenantsProvisionController.name);
 
-  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly ds: DataSource,
+    private readonly audit: AuditLogService,
+  ) {}
 
   @Roles(SUPER_ADMIN)
   @Post('provision')
@@ -70,6 +75,16 @@ export class TenantsProvisionController {
       this.logger.log(
         `Provisioned tenant slug=${tenant.slug} id=${tenant.id} owner=${user.id} roles=${templateRoles.join(',')}`,
       );
+      await this.audit.log({
+        action: AUDIT_ACTIONS.TENANT_PROVISIONED,
+        tenant_id: tenant.id,
+        user_id: user.id,
+        metadata: {
+          slug: tenant.slug,
+          template: dto.template ?? null,
+          roles: templateRoles,
+        },
+      });
       return {
         tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, roles: templateRoles },
         owner: { id: user.id, email: user.email, roles: user.roles },

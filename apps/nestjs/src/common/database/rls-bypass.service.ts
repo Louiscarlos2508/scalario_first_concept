@@ -1,7 +1,9 @@
-import { ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { ADMIN_DATA_SOURCE } from '../database.module';
 import { tenantContext } from '../context/tenant-context';
+import { AuditLogService } from '../../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../../audit/constants';
 
 /**
  * STORY-017 — `withBypass` is the ONLY legitimate way to read or write
@@ -42,7 +44,10 @@ export interface RlsBypassOptions {
 export class RlsBypassService {
   private readonly logger = new Logger(RlsBypassService.name);
 
-  constructor(@Inject(ADMIN_DATA_SOURCE) private readonly adminDS: DataSource) {}
+  constructor(
+    @Inject(ADMIN_DATA_SOURCE) private readonly adminDS: DataSource,
+    @Optional() private readonly audit?: AuditLogService,
+  ) {}
 
   async withBypass<T>(opts: RlsBypassOptions, fn: (qr: QueryRunner) => Promise<T>): Promise<T> {
     if (!ALLOWED_CALLERS.includes(opts.caller)) {
@@ -57,36 +62,43 @@ export class RlsBypassService {
     try {
       await qr.connect();
 
-      // Audit FIRST so a crashing `fn` still leaves a breadcrumb.
-      // STORY-020 will own the durable audit_logs insert pipeline; until
-      // then we use direct SQL so this helper has no dependency cycle.
+      // Audit FIRST (synchronous, critical event — see STORY-020
+      // SYNC_AUDIT_ACTIONS) so a crashing `fn` still leaves a breadcrumb.
       const auditTenant = ctx?.tenant_id ?? opts.tenantFilter ?? null;
       const auditUser = ctx?.user_id ?? null;
-      if (auditTenant && auditUser) {
-        try {
-          await qr.query(
-            `INSERT INTO audit_logs (tenant_id, user_id, action, metadata)
-             VALUES ($1, $2, 'RLS_BYPASS_USED', $3::jsonb)`,
-            [
-              auditTenant,
-              auditUser,
-              JSON.stringify({
-                caller: opts.caller,
-                reason: opts.reason,
-                tenant_filter: opts.tenantFilter ?? null,
-              }),
-            ],
-          );
-        } catch (err) {
-          // Don't fail the operation if audit insert errors (audit_logs
-          // may not exist yet during very early bootstrap). Log loudly.
-          this.logger.warn(`audit_logs insert skipped: ${(err as Error).message}`);
-        }
+      if (this.audit) {
+        await this.audit.log({
+          action: AUDIT_ACTIONS.RLS_BYPASS_USED,
+          tenant_id: auditTenant,
+          user_id: auditUser,
+          metadata: {
+            caller: opts.caller,
+            reason: opts.reason,
+            tenant_filter: opts.tenantFilter ?? null,
+          },
+        });
       } else {
-        this.logger.warn(
-          `RLS bypass called without tenant/user context (caller=${opts.caller}). ` +
-            `Audit row skipped — verify this is intentional (provisioning?).`,
-        );
+        // Bootstrap path before AuditLogService is wired (tests / very
+        // early provisioning). Fall back to direct SQL — non-fatal.
+        if (auditTenant && auditUser) {
+          try {
+            await qr.query(
+              `INSERT INTO audit_logs (tenant_id, user_id, action, metadata)
+               VALUES ($1, $2, 'RLS_BYPASS_USED', $3::jsonb)`,
+              [
+                auditTenant,
+                auditUser,
+                JSON.stringify({
+                  caller: opts.caller,
+                  reason: opts.reason,
+                  tenant_filter: opts.tenantFilter ?? null,
+                }),
+              ],
+            );
+          } catch (err) {
+            this.logger.warn(`audit_logs insert skipped: ${(err as Error).message}`);
+          }
+        }
       }
 
       return await fn(qr);

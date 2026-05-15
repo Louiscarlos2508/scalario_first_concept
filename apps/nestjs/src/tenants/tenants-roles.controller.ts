@@ -17,6 +17,8 @@ import { Tenant } from '../auth/entities/tenant.entity';
 import { User } from '../auth/entities/user.entity';
 import { RolesService } from '../security/services/roles.service';
 import { SUPER_ADMIN } from '../security/constants';
+import { AuditLogService } from '../audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../audit/constants';
 import { RolesListSchema, UpdateRolesDto, UpdateRolesSchema } from './dto/update-roles.dto';
 
 /**
@@ -35,6 +37,7 @@ export class TenantsRolesController {
     @InjectRepository(Tenant) private readonly tenantRepo: Repository<Tenant>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly rolesService: RolesService,
+    private readonly audit: AuditLogService,
   ) {}
 
   @Get(':slug/roles')
@@ -78,10 +81,15 @@ export class TenantsRolesController {
 
     await this.rolesService.setRolesForTenant(tenant.id, parsed.data);
 
-    // STORY-020 audit log — stub. Replace with AuditService.record() once merged.
-    this.logger.log(
-      `[AUDIT] tenant=${slug} roles_patch add=${(dto.add ?? []).join(',') || '-'} remove=${(dto.remove ?? []).join(',') || '-'}`,
-    );
+    await this.audit.log({
+      action: AUDIT_ACTIONS.TENANT_ROLES_PATCHED,
+      tenant_id: tenant.id,
+      metadata: {
+        added: dto.add ?? [],
+        removed: dto.remove ?? [],
+        resulting: parsed.data,
+      },
+    });
 
     return { roles: parsed.data };
   }
