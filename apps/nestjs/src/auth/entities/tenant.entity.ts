@@ -8,6 +8,8 @@ import {
 
 export interface TenantConfig {
   roles?: string[];
+  /** STORY-019 — Attribute-Based Access Control rules, evaluated by CASL. */
+  abac_rules?: Record<string, unknown>[];
   [k: string]: unknown;
 }
 

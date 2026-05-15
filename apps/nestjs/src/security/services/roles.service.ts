@@ -101,7 +101,7 @@ export class RolesService implements OnModuleInit {
     if (!tenant) throw new NotFoundException(`Tenant ${tenant_id} not found`);
 
     const config = { ...(tenant.config ?? {}), roles };
-    await this.tenantRepo.update({ id: tenant_id }, { config });
+    await this.tenantRepo.update({ id: tenant_id }, { config: config as never });
     await this.invalidateCache(tenant_id);
     return roles;
   }

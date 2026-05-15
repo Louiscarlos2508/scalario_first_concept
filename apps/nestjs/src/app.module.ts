@@ -8,6 +8,8 @@ import { TenantAwareQueryRunner } from './common/database/tenant-aware-query-run
 import { TenantIsolationFilter } from './common/filters/tenant-isolation.filter';
 import { RedactInterceptor } from './common/interceptors/redact.interceptor';
 import { TenantMiddleware } from './security/middleware/tenant.middleware';
+import { AbilityMiddleware } from './security/abac/middleware/ability.middleware';
+import { AbacModule } from './security/abac/abac.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { BduiModule } from './bdui/bdui.module';
@@ -35,6 +37,7 @@ import { RealtimeModule } from './realtime/realtime.module';
     CatalogueModule,
     TenantsModule,
     SecurityModule,
+    AbacModule,
     SyncModule,
     AuditModule,
     AiRelayModule,
@@ -53,5 +56,8 @@ export class AppModule implements NestModule {
     // STORY-016 — runs after Passport's JwtAuthGuard (APP_GUARD), so
     // `req.user.tenant_id` is populated before this middleware reads it.
     consumer.apply(TenantMiddleware).forRoutes('*');
+    // STORY-019 — AbilityMiddleware runs after TenantMiddleware so
+    // `req.ability` is built once per request. AbacGuard reads from it.
+    consumer.apply(AbilityMiddleware).forRoutes('*');
   }
 }

@@ -127,7 +127,7 @@ sprints:
     end_date: "2026-06-06"
     capacity_points: 42
     committed_points: 44
-    completed_points: 38
+    completed_points: 41
     status: "in_progress"
     goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
     stories:
@@ -242,10 +242,14 @@ sprints:
         title: "ABAC CASL — Layer 3 Sécurité"
         epic: "EPIC-003"
         points: 3
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-019.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 3 ABAC data-driven via @casl/ability v6.8. Module src/security/abac/ livré : rule.schema.ts (Zod mirror de catalog/schemas/abac-rule.schema.json — actions CRUD+manage+custom, subjects PascalCase, conditions MongoDB-like, fields whitelist, inverted, $user.* variables), parsers/variable-substitutor.ts (résolution $user.<path> dot-segments avec throw AbacRuleSubstitutionError sur unresolved), engines/abac-engine.interface.ts (ABACEngine swap-ready Rete Phase 3) + engines/casl.engine.ts (CaslAbacEngine.buildAbility + rules/fromRules pour cache roundtrip), ability.factory.ts (cache Redis L2 par (tenant_id,user_id,config_version) TTL 5 min, fail-open Redis-down, rebuild-on-miss), middleware/ability.middleware.ts (peuple req.ability via JWT verify ou req.user worker-inject), decorators/abac-action.decorator.ts (@AbacAction(action,subject)), guards/abac.guard.ts (Layer 3 enregistré APP_GUARD après JwtAuthGuard+RbacGuard, skip si pas @AbacAction, deny + warn-log ABAC_DENY pour STORY-020), helpers/filter-fields-by-ability.ts (permittedFieldsOf CASL extra, AC-11/12) + helpers/apply-ability-to-query.ts (TypeORM QB WHERE clauses, supporte $eq/$ne/$lt/$lte/$gt/$gte/$in/$nin + cannot fragments NOT(...), 1=0 si aucune rule match). Migration 1700000000006 ajoute tenants.config.abac_rules default []. AbacModule branché AppModule.imports + AbilityMiddleware câblé via configure(). Permissive par défaut documenté (no rules → manage all, RBAC+RLS restent les gates). Cache key inclut config.version → PATCH config bump version → invalidation O(1) cluster-wide. 46/46 tests verts (variable-substitutor 8, casl-engine 13, ability-factory 4, ability-middleware 5, abac-guard 4, helpers 7, abac-invoice.e2e 5 scenarios AC-15 dont MANAGER dept-A list filtré, 404 sur dept-A 600K, 404 sur dept-B, OWNER full access, field-level whitelist). Coverage abac/ hors abac.module.ts = 92.7% lines / 88.9% functions (rule.schema, errors, decorators, filter-fields, abac-engine.interface = 100%). flutter analyze N/A (backend). pnpm lint + typecheck + test = 0 erreur (138 verts total backend). Doc apps/nestjs/docs/abac-rules-syntax.md guide intégrateur livré. Différé/non livré : (a) audit log persistant des deny ABAC vers audit_logs — STORY-020 récupère le warn-log AbacGuard ; (b) CI lint check sur Repository.find() sans applyAbilityToQuery — Phase 2 quand les services métier seront en masse ; (c) PATCH tenants.config endpoint pour éditer abac_rules + bump version — Sprint 3+ avec EPIC-008 admin ; (d) ReteAbacEngine (interface ABACEngine prête, swap quand >50 rules ou p95>5ms) ; (e) @CaslPolicies decorator (handlers complexes) — non livré, @AbacAction couvre les cas CRUD standard du PRD, @CaslPolicies réintroduit si Sprint 3+ a un cas qui ne peut pas être encodé dans le DSL JSON."
       - story_id: "STORY-020"
         title: "Audit Log"
         epic: "EPIC-003"
@@ -535,7 +539,7 @@ definition_summary:
   defined: 42
   not_started: 0
   in_progress: 0
-  completed: 4
+  completed: 5
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038
