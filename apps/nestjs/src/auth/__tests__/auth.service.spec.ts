@@ -10,6 +10,7 @@ import { Tenant } from '../entities/tenant.entity';
 import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { RolesService } from '../../security/services/roles.service';
 
 const JWT_SECRET = 'test-secret-test-secret-test-secret-32+chars';
 
@@ -39,6 +40,7 @@ describe('AuthService', () => {
     name: 'Acme',
     slug: 'acme',
     is_active: true,
+    config: { roles: ['OWNER', 'MANAGER', 'COMMERCIAL'] },
     created_at: new Date(),
     updated_at: new Date(),
   };
@@ -74,6 +76,13 @@ describe('AuthService', () => {
         { provide: getRepositoryToken(Tenant), useValue: tenantRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(RefreshToken), useValue: refreshRepo },
+        {
+          provide: RolesService,
+          useValue: {
+            getRolesForTenant: jest.fn(async () => ['OWNER', 'MANAGER', 'COMMERCIAL']),
+            invalidateCache: jest.fn(),
+          },
+        },
       ],
     }).compile();
     service = moduleRef.get(AuthService);

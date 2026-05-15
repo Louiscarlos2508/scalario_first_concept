@@ -13,6 +13,7 @@ import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { JwtStrategy } from '../strategies/jwt.strategy';
+import { RolesService } from '../../security/services/roles.service';
 
 const JWT_SECRET = 'test-secret-test-secret-test-secret-32+chars';
 
@@ -37,6 +38,7 @@ describe('Auth e2e (in-memory)', () => {
         name: 'Acme',
         slug: 'acme',
         is_active: true,
+        config: { roles: ['OWNER', 'MANAGER', 'COMMERCIAL'] },
         created_at: new Date(),
         updated_at: new Date(),
       },
@@ -139,6 +141,16 @@ describe('Auth e2e (in-memory)', () => {
         { provide: getRepositoryToken(Tenant), useValue: tenantRepo },
         { provide: getRepositoryToken(User), useValue: userRepo },
         { provide: getRepositoryToken(RefreshToken), useValue: refreshRepo },
+        {
+          provide: RolesService,
+          useValue: {
+            getRolesForTenant: jest.fn(async (tenant_id: string) => {
+              const t = tenants.find((x) => x.id === tenant_id);
+              return (t?.config?.roles as string[] | undefined) ?? [];
+            }),
+            invalidateCache: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

@@ -3,7 +3,7 @@
 **Epic :** EPIC-003 — Backend Foundation
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 2 (2026-05-26 → 2026-06-06)
@@ -355,8 +355,21 @@ PRD ligne 349 et sprint plan ligne 367 mentionnent rôles différents (`STAFF` v
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-15 : Completed (Carlos / Developer via `/bmad:dev-story STORY-015`)
 
-**Actual Effort :** TBD
+**Actual Effort :** 5 points (matched estimate)
+
+**Implementation Notes :**
+
+- Layer 2 RBAC dynamique data-driven implémenté. `@Roles(...)` + `RbacGuard` global (intersection `req.user.roles ∩ tenants.config.roles ∩ required`) + bypass `SUPER_ADMIN`. `RolesService` avec cache mémoire TTL 5 min (API Redis-shaped pour STORY-018).
+- `AuthService.issueTokens` filtre les rôles invalides avant de signer le JWT (AC-11), refuse login si aucun rôle valide ne reste.
+- Migration `1700000000002-tenant-roles.ts` ajoute `tenants.config` JSONB (default `{"roles":["OWNER"]}`) + backfill.
+- `GET /tenants/:slug/roles` + `PATCH /tenants/:slug/roles` (Zod : UPPER_SNAKE `^[A-Z][A-Z0-9_]{0,31}$`, unique, ≤32 chars, system roles bloqués). DELETE d'un rôle assigné à ≥1 user actif → 409 avec liste des users.
+- `/tenants/provision` : `@Public` → `@Roles('SUPER_ADMIN')` + paramètre optionnel `template` qui peuple `tenants.config.roles` depuis `catalog/domains/<id>.json` (AC-20).
+- Template `catalog/domains/retail_fresh_produce.json` créé avec `roles: ["OWNER", "MANAGER", "COMMERCIAL"]`.
+- Tests : 55/55 verts. `rbac.guard.spec` (10 cas AC-03→AC-07, multi-rôle, defense stale-JWT, SUPER_ADMIN bypass, edge cases), `roles.service.spec` (cache + invalidate + setRolesForTenant), `rbac.e2e.spec` (9 scénarios HTTP réels dont AC-21 OWNER 200 / COMMERCIAL 403, AC-22 LIVREUR ajouté runtime → 200 sans restart, AC-23 LIVREUR retiré → 403 next call).
+- Lint + typecheck verts.
+- **Différé / stub :** audit log = `logger.log` (STORY-020 branchera `AuditService.record()`). Script CI `check_roles_decorator.ts` non créé (Phase 2 quand les routes métier seront décorées en masse). Endpoint user-assignment de rôles déféré aux stories de gestion users.
 
 ---
 

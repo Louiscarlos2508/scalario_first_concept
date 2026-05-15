@@ -12,6 +12,13 @@ export const ProvisionTenantSchema = z.object({
     .min(8)
     .regex(/[A-Z]/, 'password must contain an uppercase letter')
     .regex(/[0-9]/, 'password must contain a digit'),
+  // Optional template id from `catalog/domains/*.json` — populates
+  // `tenants.config.roles` at provision time (STORY-015 AC-20).
+  template: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]*$/, 'template id must match ^[a-z][a-z0-9_]*$')
+    .max(64)
+    .optional(),
 });
 
 export type ProvisionTenantDto = z.infer<typeof ProvisionTenantSchema>;

@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +15,8 @@ import { User } from './entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import type { AuthTokens } from './interfaces/auth-tokens.interface';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
+import { RolesService } from '../security/services/roles.service';
+import { SUPER_ADMIN } from '../security/constants';
 
 const BCRYPT_COST = 12;
 const ACCESS_TTL_SECONDS = 15 * 60;
@@ -26,7 +34,21 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private readonly refreshRepo: Repository<RefreshToken>,
     private readonly jwt: JwtService,
+    private readonly rolesService: RolesService,
   ) {}
+
+  /**
+   * Returns the subset of `user.roles` that are valid for `tenant_id` (i.e.
+   * still present in `tenants.config.roles`) plus any system roles (e.g.
+   * `SUPER_ADMIN`) the user holds. STORY-015 AC-11: a user whose only
+   * business roles have been removed must be denied login.
+   */
+  async filterValidRoles(userRoles: string[], tenant_id: string): Promise<string[]> {
+    const systemHeld = userRoles.filter((r) => r === SUPER_ADMIN);
+    const tenantRoles = await this.rolesService.getRolesForTenant(tenant_id);
+    const businessHeld = userRoles.filter((r) => tenantRoles.includes(r));
+    return [...new Set([...systemHeld, ...businessHeld])];
+  }
 
   static hashRefreshToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
@@ -78,10 +100,14 @@ export class AuthService {
 
   async issueTokens(user: User, tenant: Tenant): Promise<AuthTokens> {
     const now = Math.floor(Date.now() / 1000);
+    const validRoles = await this.filterValidRoles(user.roles, tenant.id);
+    if (validRoles.length === 0) {
+      throw new ForbiddenException('No valid roles for this tenant');
+    }
     const payload: JwtPayload = {
       sub: user.id,
       tenant_id: tenant.id,
-      roles: user.roles,
+      roles: validRoles,
       department_id: user.department_id,
       iat: now,
       exp: now + ACCESS_TTL_SECONDS,
@@ -106,7 +132,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        roles: user.roles,
+        roles: validRoles,
         department_id: user.department_id,
       },
     };

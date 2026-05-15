@@ -15,11 +15,7 @@ describe('LocalStrategy', () => {
       user: { id: 'u' },
       tenant: { id: 't' },
     });
-    const result = await strategy.validate(
-      { body: { tenant_slug: 'acme' } },
-      'a@b.test',
-      'pw',
-    );
+    const result = await strategy.validate({ body: { tenant_slug: 'acme' } }, 'a@b.test', 'pw');
     expect(authMock.validateLocalCredentials).toHaveBeenCalledWith({
       email: 'a@b.test',
       password: 'pw',

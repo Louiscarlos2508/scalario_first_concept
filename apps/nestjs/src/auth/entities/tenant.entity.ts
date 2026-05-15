@@ -6,6 +6,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export interface TenantConfig {
+  roles?: string[];
+  [k: string]: unknown;
+}
+
 @Entity({ name: 'tenants' })
 export class Tenant {
   @PrimaryGeneratedColumn('uuid')
@@ -19,6 +24,9 @@ export class Tenant {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   is_active!: boolean;
+
+  @Column({ type: 'jsonb', default: () => `'{"roles":["OWNER"]}'::jsonb` })
+  config!: TenantConfig;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   created_at!: Date;

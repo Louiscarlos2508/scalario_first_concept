@@ -11,9 +11,11 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
+    SecurityModule,
     TypeOrmModule.forFeature([Tenant, User, RefreshToken]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

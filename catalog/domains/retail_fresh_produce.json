@@ -1,0 +1,10 @@
+{
+  "$schema": "../schemas/domain-template.schema.json",
+  "id": "retail_fresh_produce",
+  "name": "Retail — Fresh Produce",
+  "description": "Template Scalario pour la distribution de produits frais (fruits, légumes, viandes, poissons). Workflow inspiré de Boulangerie Blandine — 8 phases du fournisseur au client.",
+  "version": "0.1.0",
+  "roles": ["OWNER", "MANAGER", "COMMERCIAL"],
+  "modules": [],
+  "fusions": []
+}
