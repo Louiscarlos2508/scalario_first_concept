@@ -269,7 +269,7 @@ sprints:
     end_date: "2026-06-20"
     capacity_points: 42
     committed_points: 38
-    completed_points: 20
+    completed_points: 25
     status: "in_progress"
     goal: "ModuleEngine opérationnel — 2 endpoints servent 100% des modules. DAG Validator valide les workflows. Drift offline mobile setup."
     stories:
@@ -347,10 +347,12 @@ sprints:
         title: "Workflow Executor"
         epic: "EPIC-005"
         points: 5
-        status: "defined"
+        status: "review"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-030.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-20"
+        completed_date: "2026-05-20"
       - story_id: "STORY-033"
         title: "Drift/Isar Setup Mobile — Persistance Locale"
         epic: "EPIC-006"

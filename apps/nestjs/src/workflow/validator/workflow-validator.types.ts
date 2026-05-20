@@ -21,8 +21,11 @@ export interface WorkflowStep {
   id: string;
   type: 'action' | 'condition' | 'notification' | 'approval';
   dependsOn?: string[];
-  next?: string | { rules: Array<{ condition: unknown; next: string }>; default?: string };
+  next?:
+    | string
+    | { true: string; false: string }
+    | { rules: Array<{ condition: unknown; next: string }>; default?: string };
   action?: string;
   params?: Record<string, unknown>;
-  condition?: { field: string; op: '>' | '<' | '==' | '!='; value: unknown };
+  condition?: { field: string; op: '>' | '<' | '==' | '!=' | '>=' | '<='; value: unknown };
 }
