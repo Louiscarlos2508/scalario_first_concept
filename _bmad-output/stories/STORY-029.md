@@ -3,7 +3,7 @@
 **Epic :** EPIC-005 — Workflow DAG Engine
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Review
+**Status :** Done
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 3 (2026-06-09 → 2026-06-20)
@@ -463,6 +463,25 @@ Pas de conflit ici. Le PRD (FR-018) et l'architecture (Composant 7) s'alignent :
 - 353/353 tests verts
 - Lint 0 erreur, typecheck 0 erreur
 - Tous les AC-01→AC-20 couverts
+
+---
+
+### Review Findings (2026-05-20 — BMad Code Review)
+
+#### Patch
+- [x] [Review][Patch] `adj.get(from)!` non-null assertion crashes on unknown `from` node [kahn.ts:15] — fixed: guarded with `!nodeSet.has(from) || !nodeSet.has(to)` continue
+- [x] [Review][Patch] Unknown `to` nodes injected into inDegree can produce false cycle detection [kahn.ts:16] — fixed: guarded with same edge validation
+- [x] [Review][Patch] Duplicate entries in `nodes` array causes false cycle detection [kahn.ts:4-9] — fixed: deduplicate via `new Set(nodes)` + `uniqueNodes.length`
+
+#### Deferred
+- [x] [Review][Defer] Partial sort discarded on cycle detection [kahn.ts:38] — intentional; remaining suffices for diagnostic
+- [x] [Review][Defer] O(n) Array.shift() makes sort O(n²) [kahn.ts:20] — irrelevant for expected workflow sizes (<100 steps, <20ms confirmed)
+- [x] [Review][Defer] WF_UNREACHABLE structurally impossible after Kahn passes — defensive check, costs nothing
+- [x] [Review][Defer] WF_NO_ENTRY_POINT unreachable when cycles exist — documented design choice, WF_CYCLE is more actionable
+- [x] [Review][Defer] Empty steps returns WF_NO_ENTRY_POINT instead of distinct code — semantic, message is clear
+- [x] [Review][Defer] `workflow`-type catalogue files bypass DAG validation — by design (standalone workflow defs used differently)
+- [x] [Review][Defer] entryPoints/terminalSteps dropped at controller — API surface correctly scoped
+- [x] [Review][Defer] `next` field routing ignored for DAG edges — by design, dependsOn is the explicit DAG boundary
 
 ---
 

@@ -8,10 +8,13 @@ export function kahnTopologicalSort(
   nodes: string[],
   edges: ReadonlyArray<readonly [string, string]>,
 ): KahnResult {
-  const inDegree = new Map<string, number>(nodes.map((n) => [n, 0]));
-  const adj = new Map<string, string[]>(nodes.map((n) => [n, []]));
+  const nodeSet = new Set(nodes);
+  const uniqueNodes = [...nodeSet];
+  const inDegree = new Map<string, number>(uniqueNodes.map((n) => [n, 0]));
+  const adj = new Map<string, string[]>(uniqueNodes.map((n) => [n, []]));
 
   for (const [from, to] of edges) {
+    if (!nodeSet.has(from) || !nodeSet.has(to)) continue;
     adj.get(from)!.push(to);
     inDegree.set(to, (inDegree.get(to) ?? 0) + 1);
   }
@@ -32,7 +35,7 @@ export function kahnTopologicalSort(
     }
   }
 
-  if (sorted.length === nodes.length) {
+  if (sorted.length === uniqueNodes.length) {
     return { ok: true, sorted, remaining: [] };
   }
 
