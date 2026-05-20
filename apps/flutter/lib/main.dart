@@ -11,6 +11,10 @@
 // STORY-010 : GlobalErrorHandler.install() est appelé avant runApp, et
 // runApp est enveloppé dans runZonedGuarded pour capturer les erreurs async
 // non-attrapées (niveau 3 de la stratégie 3-niveaux).
+//
+// STORY-033 : Drift + SQLCipher initialisé avant le BDUIEngine.
+// `DriftDataSourceResolver` remplace `FixtureDataSourceResolver`
+// au DI bootstrap pour lecture offline-first des layouts.
 
 import 'dart:async' show runZonedGuarded;
 
@@ -19,6 +23,12 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import 'core/design_system/tokens/tokens.dart';
+import 'core/offline/auth_storage.dart';
+import 'core/offline/cache_cleaner.dart';
+import 'core/offline/database.dart';
+import 'core/offline/db_encryption.dart';
+import 'core/offline/drift_data_source_resolver.dart';
+import 'core/offline/local_store.dart';
 import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
 import 'engine/bdui_engine/bdui_engine_module.dart';
@@ -53,9 +63,37 @@ Future<void> _setupDependencies() async {
   // STORY-007 — LayoutResolver singleton, injecté avec le registry Phase 1.
   GetIt.I.registerSingleton<LayoutResolver>(LayoutResolver(registry: registry));
 
+  // STORY-033 — Persistance offline-first avec Drift + SQLCipher.
+  // L'ordre est critique : la DB doit être ouverte AVANT le BDUIEngine
+  // pour que le DriftDataSourceResolver soit prêt.
+  final AuthStorage authStorage = AuthStorage();
+  GetIt.I.registerSingleton<AuthStorage>(authStorage);
+
+  final ScalarioDatabase db = ScalarioDatabase(
+    executor: await DbEncryption(authStorage).openEncrypted(),
+  );
+
+  final LocalStore store = LocalStore(db);
+  GetIt.I.registerSingleton<LocalStore>(store);
+
+  final DriftDataSourceResolver driftResolver = DriftDataSourceResolver(
+    layoutDao: store.cachedLayoutDao,
+  );
+
+  final CacheCleaner cleaner = CacheCleaner(
+    tenantConfigDao: store.tenantConfigDao,
+    cachedLayoutDao: store.cachedLayoutDao,
+    localDataDao: store.localDataDao,
+  );
+  GetIt.I.registerSingleton<CacheCleaner>(cleaner);
+
   // STORY-008 — BDUIEngine orchestrateur (consomme registry + layoutResolver).
   // STORY-026 — appelle BduiValidator.init() en interne pour charger les schémas.
-  await BDUIEngineModule.register(GetIt.I);
+  // STORY-033 — DriftDataSourceResolver remplace FixtureDataSourceResolver.
+  await BDUIEngineModule.register(
+    GetIt.I,
+    dataResolver: driftResolver,
+  );
 }
 
 class ScalarioApp extends StatelessWidget {

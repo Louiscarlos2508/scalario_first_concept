@@ -34,11 +34,25 @@ dependencies:
   # SHA-256 for payload hashing (no PII in logs).
   crypto: ^3.0.6
 
+  # STORY-033 — Persistance locale offline-first avec Drift ORM + SQLCipher.
+  drift: ^2.33.0
+  drift_flutter: ^0.3.0
+  sqlcipher_flutter_libs: ^0.7.0+eol
+  sqlite3: ^3.3.1
+  path_provider: ^2.1.5
+
+  # STORY-033 — Stockage sécurisé passphrase DB + JWT tokens (hors Drift).
+  flutter_secure_storage: ^10.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+
+  # STORY-033 — Code generation Drift (tables → .g.dart).
+  build_runner: ^2.15.0
+  drift_dev: ^2.33.0
 
 flutter:
   uses-material-design: true
