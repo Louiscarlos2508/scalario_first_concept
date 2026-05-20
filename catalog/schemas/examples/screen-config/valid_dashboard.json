@@ -1,0 +1,14 @@
+{
+  "screen": "dashboard",
+  "schema_version": "1.0.0",
+  "layout": "dashboard",
+  "zones": {
+    "main": [
+      {
+        "schema_version": "1.0.0",
+        "type": "KPICard",
+        "props": {}
+      }
+    ]
+  }
+}

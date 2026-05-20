@@ -12,11 +12,14 @@
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
+    "test:schemas": "node scripts/validate-schemas.mjs",
     "typecheck": "pnpm -r run typecheck",
     "docker:up": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
     "docker:down": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
   },
   "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "typescript": "^5.4.5"
   },
   "packageManager": "pnpm@9.12.0"

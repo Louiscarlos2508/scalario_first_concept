@@ -1,0 +1,10 @@
+{
+  "id": "no_prefix",
+  "schema_version": "1.0.0",
+  "initial_state": "start",
+  "states": {
+    "start": {
+      "transitions": { "go": "end" }
+    }
+  }
+}

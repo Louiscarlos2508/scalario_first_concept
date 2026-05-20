@@ -1,0 +1,14 @@
+{
+  "id": "retail_fresh_produce",
+  "schema_version": "1.0.0",
+  "name": "Produits Frais Retail",
+  "entities": [
+    {
+      "name": "Product",
+      "fields": [
+        { "name": "label", "type": "string", "required": true },
+        { "name": "price", "type": "number", "required": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "type": "FormSection",
+  "id": "delivery-section",
+  "props": {
+    "title": "Livraison"
+  },
+  "visible_if": {
+    "operator": "OR",
+    "children": [
+      {
+        "operator": "role",
+        "value": ["MANAGER", "COMMERCIAL"]
+      },
+      {
+        "operator": "==",
+        "field": "order.total",
+        "value": 500
+      }
+    ]
+  }
+}

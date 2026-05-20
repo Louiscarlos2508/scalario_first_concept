@@ -1,0 +1,19 @@
+{
+  "id": "wf_checkout",
+  "schema_version": "1.0.0",
+  "initial_state": "draft",
+  "states": {
+    "draft": {
+      "transitions": { "submit": "pending" }
+    },
+    "pending": {
+      "transitions": { "approve": "completed", "reject": "cancelled" }
+    },
+    "completed": {
+      "final": true
+    },
+    "cancelled": {
+      "final": true
+    }
+  }
+}

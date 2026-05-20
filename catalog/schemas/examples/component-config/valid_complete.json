@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "type": "DataTable",
+  "id": "products-table",
+  "props": {
+    "columns": ["name", "price", "stock"],
+    "striped": true,
+    "sortable": true
+  },
+  "visible_if": {
+    "operator": "AND",
+    "children": [
+      {
+        "operator": "role",
+        "value": "MANAGER"
+      },
+      {
+        "operator": "==",
+        "field": "order.status",
+        "value": "active"
+      }
+    ]
+  },
+  "source": {
+    "type": "module_data",
+    "module_id": "retail_fresh_produce",
+    "query": {
+      "entity": "Product",
+      "filters": { "status": "active" }
+    }
+  },
+  "validation": [
+    { "kind": "required", "message_i18n_key": "validation.product.required" },
+    { "kind": "min_length", "value": 3, "message_i18n_key": "validation.product.name_too_short" }
+  ],
+  "i18n_key": "components.products_table"
+}

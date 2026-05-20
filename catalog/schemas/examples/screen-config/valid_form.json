@@ -1,0 +1,40 @@
+{
+  "screen": "product_form",
+  "schema_version": "1.0.0",
+  "layout": "form",
+  "title": "Ajouter un produit",
+  "i18n_key": "screens.product_form",
+  "zones": {
+    "kpis": [
+      {
+        "schema_version": "1.0.0",
+        "type": "KPICard",
+        "props": { "metric": "products_count" },
+        "source": {
+          "type": "kpi",
+          "module_id": "retail_fresh_produce",
+          "query": { "metric": "products_count" }
+        },
+        "i18n_key": "kpi.products_count"
+      }
+    ],
+    "main": [
+      {
+        "schema_version": "1.0.0",
+        "type": "FormSection",
+        "props": { "title": "Informations produit" },
+        "validation": [
+          { "kind": "required", "message_i18n_key": "validation.product.name_required" },
+          { "kind": "min_length", "value": 2, "message_i18n_key": "validation.product.name_too_short" }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "schema_version": "1.0.0",
+        "type": "Button",
+        "props": { "label": "Enregistrer", "variant": "primary" }
+      }
+    ]
+  }
+}
