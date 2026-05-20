@@ -3,7 +3,7 @@
 **Epic :** EPIC-004 — Module Engine & Catalogue JSON
 **Priorité :** Must Have
 **Story Points :** 6
-**Status :** Defined
+**Status :** Completed
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 3 (2026-06-09 → 2026-06-20)
@@ -413,8 +413,9 @@ export class ActionDispatcherService {
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-20 : Implemented via `/bmad:dev-story` (20 unit tests, 0 lint/typecheck errors)
 
-**Actual Effort :** TBD
+**Actual Effort :** 6 points
 
 ---
 

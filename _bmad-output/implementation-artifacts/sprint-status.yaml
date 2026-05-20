@@ -269,7 +269,7 @@ sprints:
     end_date: "2026-06-20"
     capacity_points: 42
     committed_points: 38
-    completed_points: 5
+    completed_points: 11
     status: "in_progress"
     goal: "ModuleEngine opérationnel — 2 endpoints servent 100% des modules. DAG Validator valide les workflows. Drift offline mobile setup."
     stories:
@@ -289,10 +289,15 @@ sprints:
         title: "ModuleEngine — 2 Endpoints Génériques"
         epic: "EPIC-004"
         points: 6
-        status: "defined"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-022.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-20"
+        completed_date: "2026-05-20"
+        actual_points: 6
+        branch: "main"
+        notes: "ModuleEngine complet livré : ModuleResolverService (catalogue filesystem + cache 60s), DataDispatcherService (query builder JSONB filters/sort/page/limit/KPIs), ActionDispatcherService (idempotence via sync_mutations + handler resolution + audit log), IdempotencyService (raw SQL check-reserve-finalize), HandlerRegistry + 4 handlers (crud.create, crud.update, crud.delete, workflow.advance stub délégué STORY-030). Controller GET /:tenant/:moduleId/data + POST /:tenant/:moduleId/action avec JWT+RBAC+ABAC+Zod validation+x-client-mutation-id. Entities EntityRecord (entities table JSONB) + SyncMutation (sync_mutations). 20 tests verts. Lint + typecheck = 0 errors. STORY-030 stub marqué dans le code (workflow.advance → 'Délégué à STORY-030')."
       - story_id: "STORY-023"
         title: "JSON Schema BDUI v1.0.0"
         epic: "EPIC-004"
@@ -548,7 +553,7 @@ definition_summary:
   defined: 42
   not_started: 0
   in_progress: 0
-  completed: 21
+  completed: 22
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038
