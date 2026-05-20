@@ -8,6 +8,10 @@ async function bootstrap() {
   }
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
+  // STORY-021 — global API prefix. Every controller is exposed under
+  // `/api/v1/...`. /health stays unprefixed for ops probes.
+  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
+
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port, '0.0.0.0');
 

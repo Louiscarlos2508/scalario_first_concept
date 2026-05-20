@@ -1,0 +1,560 @@
+# Sprint Status — Scalario (Refondation 2026-05-09)
+# Architecture BDUI Engine + Templates JSON — nouveau repo, zéro carry-over
+
+version: "6.0.0"
+project_name: "scalario"
+project_level: 4
+current_sprint: 3
+sprint_plan_path: "_bmad-output/sprint-plan-scalario-2026-05-09.md"
+gate_0: "2026-07-08"  # Blandine live — date non-négociable
+
+# 2026-05-10 : Toutes les 43 stories rédigées (STORY-001 manuelle via /bmad:create-story,
+# STORY-002 à STORY-043 batch parallèle 7 agents). Statut = defined, prêt pour /bmad:dev-story.
+
+sprints:
+  - sprint_number: 1
+    start_date: "2026-05-12"
+    end_date: "2026-05-23"
+    capacity_points: 42
+    committed_points: 36
+    completed_points: 36
+    status: "completed"
+    end_actual_date: "2026-05-14"
+    goal: "Le BDUIEngine rend n'importe quel JSON en screen Flutter fonctionnel — Design System complet, composants BDUI, RuleEvaluator, LayoutResolver, Error Boundaries, Validation Formulaires."
+    stories:
+      - story_id: "STORY-001"
+        title: "Design Tokens Flutter"
+        epic: "EPIC-001"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-001.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 3
+        branch: "feat/story-001-design-tokens"
+      - story_id: "STORY-002"
+        title: "Material 3 + ThemeData Scalario"
+        epic: "EPIC-001"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-002.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 3
+        branch: "main"
+      - story_id: "STORY-003"
+        title: "Composants BDUI Métier"
+        epic: "EPIC-001"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-003.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 5
+        branch: "main"
+      - story_id: "STORY-004"
+        title: "Showcase Files + Flutter Widget Preview + Thème Global"
+        epic: "EPIC-001"
+        points: 4
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-004.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 4
+        branch: "main"
+      - story_id: "STORY-005"
+        title: "ComponentRegistry"
+        epic: "EPIC-002"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-005.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 5
+        branch: "main"
+      - story_id: "STORY-006"
+        title: "RuleEvaluator"
+        epic: "EPIC-002"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-006.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 5
+        branch: "main"
+      - story_id: "STORY-007"
+        title: "LayoutResolver"
+        epic: "EPIC-002"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-007.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 5
+        branch: "main"
+      - story_id: "STORY-010"
+        title: "Error Boundaries BDUI"
+        epic: "EPIC-002"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-010.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 3
+        branch: "main"
+      - story_id: "STORY-011"
+        title: "Validation Formulaires Data-driven"
+        epic: "EPIC-002"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-011.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-10"
+        actual_points: 3
+        branch: "main"
+
+  - sprint_number: 2
+    start_date: "2026-05-26"
+    end_date: "2026-06-06"
+    capacity_points: 42
+    committed_points: 44
+    completed_points: 44
+    status: "completed"
+    end_actual_date: "2026-05-15"
+    goal: "Backend multi-tenant sécurisé (5 couches) + BDUIEngine orchestrateur end-to-end + support multi-plateforme Flutter."
+    stories:
+      - story_id: "STORY-008"
+        title: "BDUIEngine Orchestrateur"
+        epic: "EPIC-002"
+        points: 6
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-008.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 6
+        branch: "main"
+        notes: "Pipeline complet : ScreenCache LRU + DataSourceResolver (Fixture+InMemory) + StructuralScreenValidator (Phase 1, json_schema_dart pendant STORY-023) + visible_if filtering via RuleEvaluator + BDUIErrorBoundary global. 3 fixtures sandbox + BDUIScreen widget + DI BDUIEngineModule. 30/30 tests verts (unit + 3 intégration + benchmark soft). Budgets perf AC-07/AC-08 informatifs sur dev host — gate dur sur émulateur Snapdragon déféré (STORY-009/CI)."
+      - story_id: "STORY-009"
+        title: "Sandbox JSON + Hot Reload Dev"
+        epic: "EPIC-002"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-009.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Sandbox dev-only (kDebugMode) sur route /dev/sandbox. Modules livrés : SandboxScreen orchestrateur (loader + watcher + breakpoint + console), SandboxJsonLoader (BundleJsonSource + FileJsonSource via conditional imports dart:io/web), SandboxFileWatcher (IoFileWatcher dart:io + PollingFileWatcher web fallback 1.5s), SandboxUserContextProvider mutable (5 presets + Custom JSON), SandboxBreakpointOverlay (mobile 360×740 / tablet 768×1024 / desktop 1440×900), SandboxErrorView (path + ligne/col + voisinage + Réessayer), SandboxConsoleController (50 entrées). 5 fixtures dont 2 nouvelles (empty_screen.json, error_state.json volontairement invalide). 17/17 tests sandbox verts (widget + parse error + UserContext switch + reload + release exclusion). Route enregistrée uniquement en kDebugMode + bouton dev d'accès depuis l'écran smoke-test. flutter analyze sandbox + main = 0 issue."
+      - story_id: "STORY-012"
+        title: "Support Multi-plateforme Flutter"
+        epic: "EPIC-002"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-012.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Couche d'adaptation plateforme livrée : lib/core/platform/ (PlatformInfo + PlatformCapabilities + storage conditional imports io/web/stub). Android pinned minSdk 26 / targetSdk 34 / compileSdk 34 + permissions BT/Camera declared (runtime Phase 2). iOS scaffold + Info.plist (iOS 14+, usage descriptions BT/Camera/Photos). Web : index.html branded (theme-color #2980B9 = ScalarioColors.primary500, splash anti-flash, viewport) + manifest.json PWA (name Scalario, standalone, icônes maskable). Showcase _platform_capabilities_showcase.dart pour debug runtime. Lint script check_no_direct_platform_check.dart (0 violation sur 16 fichiers components+features). CI workflow .github/workflows/build-multiplatform.yml — 4 jobs (analyze-and-test + android-build APK/AAB + ios-build no-codesign + web-build PWA verify). Docs apps/flutter/docs/multi-platform.md. 12/12 tests platform verts. flutter analyze sur le code livré = 0 issue. Différé STORY-046 : signing prod, hosting staging.scalario.app, Lighthouse CI, CSP. Différé STORY-035 : Drift web IndexedDB + cache service worker stratégique. Breakpoints isMobileWeb/isDesktopWeb réutilisent BreakpointResolver projet (600/1024) — déviation volontaire vs texte story (768/1024) pour source unique."
+      - story_id: "STORY-013"
+        title: "NestJS Setup + Docker Compose 5 services"
+        epic: "EPIC-003"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-013.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+      - story_id: "STORY-014"
+        title: "Auth JWT Multi-tenant"
+        epic: "EPIC-003"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-014.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 1 sécurité complet : Passport Local+JWT, JwtAuthGuard global avec @Public, AuthService (login + issueTokens + refresh rotation + reuse-detection family-revoke + logout + findUserById tenant-scoped). Migration tenants/users/refresh_tokens avec indexes + RLS placeholder. bcrypt cost 12 + SHA-256 sur refresh tokens + dummy-hash anti-timing user enumeration. Throttler 5/min sur /auth/login. RedactInterceptor global (password/access_token/refresh_token/token_hash → [REDACTED]). JWT_SECRET validé au boot (≥32 chars). 29/29 tests verts (auth.service + auth.controller + auth.e2e in-memory + redact). Lint + typecheck verts. AC-19 (forged JWT 401) + AC-20 (findUserById tenant-scoped) + AC-12 (reuse family revoke) explicitement testés. AC-23 (JWT_REFRESH_SECRET) non implémenté — refresh tokens sont random bytes + SHA-256, pas des JWTs (incohérence interne story). RBAC SUPER_ADMIN sur /tenants/provision déféré à STORY-015."
+      - story_id: "STORY-015"
+        title: "RBAC Guards Dynamiques"
+        epic: "EPIC-003"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-015.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 2 RBAC dynamique data-driven. @Roles(...) décorateur + RbacGuard global (intersection req.user.roles ∩ tenants.config.roles ∩ required) + SUPER_ADMIN bypass. RolesService cache mémoire TTL 5 min (API Redis-shaped pour STORY-018). AuthService.issueTokens filtre les rôles invalides avant de signer le JWT (AC-11). Migration 1700000000002 ajoute tenants.config JSONB avec default {roles:['OWNER']}. GET/PATCH /tenants/:slug/roles avec Zod (UPPER_SNAKE, unique, ≤32, system roles bloqués), 409 si DELETE d'un rôle assigné à ≥1 user actif. /tenants/provision passe de @Public à @Roles('SUPER_ADMIN') + accepte un template optionnel (catalog/domains/<id>.json) qui peuple tenants.config.roles à la création. Template retail_fresh_produce.json créé avec roles ['OWNER','MANAGER','COMMERCIAL']. 55/55 tests verts (rbac.guard 10 cases AC-03→AC-07 + SUPER_ADMIN + stale-JWT defense, roles.service 5 cases cache+invalidate+set, rbac.e2e 9 scenarios dont AC-21 OWNER 200 / COMMERCIAL 403, AC-22 LIVREUR ajouté runtime → 200 sans restart, AC-23 LIVREUR retiré → 403 next call). Lint + typecheck verts. Audit log STORY-020 = stub logger.log pour l'instant. Pas de lint CI check_roles_decorator script (déféré — Phase 2 quand les routes métier seront décorées en masse)."
+      - story_id: "STORY-016"
+        title: "Multi-tenant Isolation"
+        epic: "EPIC-003"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-016.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 3 cross-cutting tenant isolation. tenantContext (AsyncLocalStorage) avec run/get/getOrThrow + TenantContextMissingError (AC-01→AC-04 incl. concurrence 100 req). TenantMiddleware applied globally via AppModule.configure(forRoutes('*')) — décode le JWT lui-même (middleware runs before guards en NestJS), vérifie tenants.is_active via TenantsService cache TTL 5 min (AC-08), ouvre le scope ALS, et pose app.current_tenant_id via set_config session-scoped (RESET sur release par TenantAwareQueryRunner). @CurrentTenant() decorator (AC-15/16). withTenantContext helper pour workers/cron (AC-17). TenantScopedEntity abstract base (AC-12). TenantIsolationFilter (APP_FILTER) intercepte QueryFailedError code 42501 → 403 sanitized sans leak SQL (AC-19) + log TENANT_VIOLATION_DETECTED (AC-20 stub). TenantAwareQueryRunner pour raw SQL (set_config + RESET garanti on release, AC-09/10/11). Migration 1700000000003-tenant-id-default pose le GUC par défaut au niveau DB (best-effort si managed DB sans privilege). Document _bmad-output/architecture-notes/phase2-schema-per-tenant.md livré (triggers, procédure, dual-mode middleware, estimation 5j+2j). 76/76 tests verts (15 suites) — AC-23 concurrence 100 req parallèles A/B sans leak prouvée. Lint + typecheck verts. AC-22 (intrusion cross-tenant via RLS) deferred to STORY-017 (RLS policies pas encore en place). CI lint check TenantScopedEntity extends déféré (Phase 2 quand entities métier seront en masse)."
+      - story_id: "STORY-017"
+        title: "PostgreSQL RLS"
+        epic: "EPIC-003"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-017.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 5
+        branch: "main"
+        notes: "Layer 5 — RLS sur 8 tables tenant-scoped. Migration 1700000000004-rls-policies crée les 6 tables encore manquantes (screen_configs, entities, workflow_states, audit_logs, sync_mutations, embeddings via pgvector) avec ENABLE+FORCE ROW LEVEL SECURITY et policies <table>_tenant_isolation (USING + WITH CHECK) liées à current_setting('app.current_tenant_id', true)::uuid — fail-closed (missing_ok=true). Drop de la policy placeholder user_tenant_isolation de STORY-014. audit_logs : REVOKE UPDATE/DELETE FROM PUBLIC (insert-only, STORY-020 finalisera). Migration 1700000000005-rls-app-user provisionne le rôle scalario_app NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS avec GRANT DML scopé (INSERT/SELECT only sur audit_logs) + ALTER DEFAULT PRIVILEGES pour les futures tables. typeorm.datasource.ts bascule sur DATABASE_URL_ADMIN (fallback DATABASE_URL) pour les migrations. DatabaseModule expose APP_DATASOURCE (TypeOrmModule via DATABASE_URL = scalario_app, pool 10) + ADMIN_DATA_SOURCE (DataSource raw via DATABASE_URL_ADMIN, pool 2). Boot check onModuleInit refuse de démarrer si current_user a rolbypassrls (skip en NODE_ENV=test ou RLS_BOOT_CHECK=skip). RlsBypassService.withBypass(opts, fn) avec whitelist runtime hardcodée (TenantsService.provision, AuthService.superAdminLogin, CleanupService.purge) + audit_logs INSERT systématique + ForbiddenException sur caller non-whitelisté. Tests d'intrusion rls-intrusion.e2e.spec couvrent AC-11 T1→T6 + AC-12 (WITH CHECK INSERT cross-tenant rejected) — auto-skip si DATABASE_URL_ADMIN absent (CI: les 2 URLs sont fournies + `pnpm migration:run` ajouté avant pnpm test). Unit test rls-bypass.service.spec assert le gate whitelist sans toucher la DB. Script scripts/benchmark-rls.sh (10K seed + EXPLAIN ANALYZE admin vs scalario_app + 1000 iters) + scripts/rollback-rls.sql + apps/nestjs/docs/migrations-tenant-scoped.md (checklist 6 étapes pour toute future table métier). .env.example documente DATABASE_URL_ADMIN + SCALARIO_APP_DB_PASSWORD. Différé/non livré : (a) lint CI check_rls_bypass_callers.sh — la whitelist runtime + le test unit suffisent Phase 1, le script CI sera livré quand un 4ᵉ call site sera proposé en review ; (b) benchmark p50/p95/p99 numbers concrets dans _bmad-output/benchmarks/rls-overhead.md — le script est livré, le run + rapport seront faits en pré-prod (Sprint 5 hardening) avec une vraie volumétrie ; (c) audit_logs full retention/insert-only triggers déférés à STORY-020 ; (d) RLS sur pgvector index ivfflat non créé (table vide en Phase 1 — créer l'index sur table populée Phase 2 RAG)."
+      - story_id: "STORY-018"
+        title: "Redis Sessions + Cache Layouts BDUI"
+        epic: "EPIC-003"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-018.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 1.5 — Redis cache module avec 3 rôles (blacklist tokens, BDUI layouts, rate-limit stub Phase 2). apps/nestjs/src/cache/ : RedisService singleton ioredis (client + subscriber dédié pub/sub, retry exponential 200ms×N max 2s, fail-open boot — pas de crash NestJS si Redis down, /health passe à 503), TokenBlacklistService.add/isRevoked (préfixe blacklist:, fail-open sur erreur Redis — trade-off documenté Phase 1, circuit breaker Phase 2), BdUiCacheService.get/set/invalidate (L1 LRU in-process 100×60s + L2 Redis TTL 5min, gzip si payload >10KB détecté par magic bytes 0x1f 0x8b sur getBuffer, SCAN+DEL par batch pour invalidation pattern), pub/sub bdui:invalidate cross-process (publish au DEL → tous les nodes invalident leur L1+L2), RateLimiterService stub fixed-window INCR+EXPIRE Phase 2 non câblé. JWT payload étendu avec claim jti UUID v4 généré à l'émission (AuthService.issueTokens) — JwtAuthGuard vérifie blacklist.isRevoked(jti) après passport auth → 401 'Token revoked' instantané (pas d'attente TTL 15min). AuthService.logout(refresh_token, access?) push refresh_hash dans blacklist avec TTL=expires_at-now() ET access.jti avec TTL=min(900,exp-now) ; AuthController.logout extrait user.jti+user.exp via @CurrentUser. JwtStrategy.validate propage payload.jti et payload.exp dans req.user. RolesService migré : Map L1 60s + Redis L2 TTL 5min (clé roles:<tenant_id>) + pub/sub roles:invalidate cross-node (setRolesForTenant et invalidateCache publient le message → autres nodes nettoient L1) → STORY-015 AC-14 fonctionne désormais cross-process. lru-cache@11 ajouté. CacheModule @Global pour injection sans import explicite. Tests : 96 verts (token-blacklist 6 cas add/isRevoked/TTL expire/fail-open Redis-down/fail-open client-throws, bdui-cache 7 cas get/set/gzip-roundtrip/L1-skip-L2/invalidate-by-screen/invalidate-by-tenant/cross-process-pubsub via FakeRedisService double pair() avec store partagé, rate-limiter 3 cas, roles-pubsub cross-node invalidate, blacklist-revocation.e2e login→/me→logout→/me-401 immédiat avec real TokenBlacklistService+real JwtAuthGuard câblés à FakeRedis). Différé/non livré : (a) benchmark scripts/benchmark-bdui-cache.sh AC-15 cache hit <20ms p95 — non livré, à mesurer en pré-prod avec vraie volumétrie ; (b) Redis health.indicator déjà présent (STORY-013) — pas migré sur RedisService partagé, garde sa propre connexion pour test isolé à chaque /health ; (c) ioredis-mock non utilisé — FakeRedisService minimal in-process suffit pour la surface ioredis qu'on touche (SET/GET/GETBUFFER/EXISTS/DEL/INCR/EXPIRE/PUBLISH/SUBSCRIBE/SCAN) ; (d) audit log des révocations différé STORY-020 ; (e) test E2E TTL expire réel (AC-11) couvert par jest.useFakeTimers, pas Redis réel."
+      - story_id: "STORY-019"
+        title: "ABAC CASL — Layer 3 Sécurité"
+        epic: "EPIC-003"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-019.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 3 ABAC data-driven via @casl/ability v6.8. Module src/security/abac/ livré : rule.schema.ts (Zod mirror de catalog/schemas/abac-rule.schema.json — actions CRUD+manage+custom, subjects PascalCase, conditions MongoDB-like, fields whitelist, inverted, $user.* variables), parsers/variable-substitutor.ts (résolution $user.<path> dot-segments avec throw AbacRuleSubstitutionError sur unresolved), engines/abac-engine.interface.ts (ABACEngine swap-ready Rete Phase 3) + engines/casl.engine.ts (CaslAbacEngine.buildAbility + rules/fromRules pour cache roundtrip), ability.factory.ts (cache Redis L2 par (tenant_id,user_id,config_version) TTL 5 min, fail-open Redis-down, rebuild-on-miss), middleware/ability.middleware.ts (peuple req.ability via JWT verify ou req.user worker-inject), decorators/abac-action.decorator.ts (@AbacAction(action,subject)), guards/abac.guard.ts (Layer 3 enregistré APP_GUARD après JwtAuthGuard+RbacGuard, skip si pas @AbacAction, deny + warn-log ABAC_DENY pour STORY-020), helpers/filter-fields-by-ability.ts (permittedFieldsOf CASL extra, AC-11/12) + helpers/apply-ability-to-query.ts (TypeORM QB WHERE clauses, supporte $eq/$ne/$lt/$lte/$gt/$gte/$in/$nin + cannot fragments NOT(...), 1=0 si aucune rule match). Migration 1700000000006 ajoute tenants.config.abac_rules default []. AbacModule branché AppModule.imports + AbilityMiddleware câblé via configure(). Permissive par défaut documenté (no rules → manage all, RBAC+RLS restent les gates). Cache key inclut config.version → PATCH config bump version → invalidation O(1) cluster-wide. 46/46 tests verts (variable-substitutor 8, casl-engine 13, ability-factory 4, ability-middleware 5, abac-guard 4, helpers 7, abac-invoice.e2e 5 scenarios AC-15 dont MANAGER dept-A list filtré, 404 sur dept-A 600K, 404 sur dept-B, OWNER full access, field-level whitelist). Coverage abac/ hors abac.module.ts = 92.7% lines / 88.9% functions (rule.schema, errors, decorators, filter-fields, abac-engine.interface = 100%). flutter analyze N/A (backend). pnpm lint + typecheck + test = 0 erreur (138 verts total backend). Doc apps/nestjs/docs/abac-rules-syntax.md guide intégrateur livré. Différé/non livré : (a) audit log persistant des deny ABAC vers audit_logs — STORY-020 récupère le warn-log AbacGuard ; (b) CI lint check sur Repository.find() sans applyAbilityToQuery — Phase 2 quand les services métier seront en masse ; (c) PATCH tenants.config endpoint pour éditer abac_rules + bump version — Sprint 3+ avec EPIC-008 admin ; (d) ReteAbacEngine (interface ABACEngine prête, swap quand >50 rules ou p95>5ms) ; (e) @CaslPolicies decorator (handlers complexes) — non livré, @AbacAction couvre les cas CRUD standard du PRD, @CaslPolicies réintroduit si Sprint 3+ a un cas qui ne peut pas être encodé dans le DSL JSON."
+      - story_id: "STORY-020"
+        title: "Audit Log"
+        epic: "EPIC-003"
+        points: 3
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-020.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-15"
+        actual_points: 3
+        branch: "main"
+        notes: "Layer 5 audit log insert-only via privilèges PostgreSQL. apps/nestjs/src/audit/ : AuditLogService (auto-fill tenant/user via tenantContext, SHA-256 payload jamais persisté, buffer async batch de 100 ou flush 1s, sync forcé pour SYNC_AUDIT_ACTIONS=AUTH_LOGIN_FAIL/AUTH_REFRESH_REUSE_DETECTED/RLS_BYPASS_USED/ABAC_DENY/TENANT_VIOLATION_DETECTED, never-crash try/catch, drop-oldest si buffer>10K, branché sur ADMIN_DATA_SOURCE pour éviter la trap GUC sur les flushes hors ALS), @Audited(action) decorator + AuditInterceptor global (skip si pas de metadata, capture latency_ms/result/error_code/error_message, module_id+entity_id depuis path params ou response.id), AuditPurgeService (setInterval-based cron quotidien 03:00, retention clampée [30,3650]j default 90 via tenant.config.audit_retention_days, single-flight in-process, DELETE via ADMIN_DATA_SOURCE car scalario_app n'a pas DELETE, méta-event AUDIT_PURGE par tenant avec rows_deleted), AuditController GET /tenants/:slug/audit-logs (Roles OWNER+SUPER_ADMIN + AbacAction read AuditLog, cursor pagination base64url (created_at,id) sur idx_audit_logs_tenant_time, filtres from/to/user_id/action/module_id, limit max 500). Migration 1700000000007 REVOKE UPDATE/DELETE/TRUNCATE explicite sur scalario_app + ajout index idx_audit_logs_user_time (tenant_id,user_id,created_at DESC) — note : 006 était déjà pris par tenant-abac-rules (STORY-019). Hooks audit câblés (audit injecté @Optional pour ne pas casser les tests existants qui construisent les services à la main) : AuthService.login/logout/refresh/reuse + validateLocalCredentials, RbacGuard.deny, AbacGuard (missing_ability + ability.cannot), RlsBypassService.withBypass remplace son INSERT SQL direct par AuditLogService.log (fallback SQL conservé pour bootstrap pré-DI), TenantIsolationFilter sur 42501, TenantsProvisionController, TenantsRolesController (remplace le stub logger.log). AuditModule @Global pour injection partout sans re-import. Tests : 23 nouveaux verts (audit-log.service 8 cas hash/auto-fill/payload-never-persisted/sync-vs-async/batch/threshold/crash-safe-async/crash-safe-sync, audit-purge.service 5 cas clamp+msUntilNext3am, audit-query.dto 4 cas coerce/regex/iso/cap, audit.interceptor 3 cas skip/success/error), suite totale backend = 165 passing (vs 142 avant). pnpm lint + typecheck + test = 0 erreur. Doc apps/nestjs/docs/audit-events-catalog.md livré (15 events catalogués avec metadata schemas et runbook ajout d'event). Différé/non livré : (a) tests d'intégration UPDATE/DELETE rejected par PostgreSQL (AC-02/03) — couverts par la migration REVOKE explicite + le mécanisme PG ; un test E2E nécessiterait un real DB qui n'est pas en place pour les unit suites — à valider en pré-prod avec scripts/benchmark-rls.sh ; (b) cron-driven E2E purge avec 1000 rows réels (AC-29) — couvert au niveau unit via clampRetention + purgeTenant qui sont les seules nouvelles surfaces algorithmiques ; (c) benchmark p95 < 200ms sur 1M rows (AC-20) — l'index idx_audit_logs_tenant_time est en place, mesure pré-prod ; (d) AUDIT_LEGAL_DELETE procédure ops — documentée dans audit-events-catalog.md, pas câblée Phase 1 ; (e) distributed Redis lock pour cron purge — la single-flight in-process suffit Phase 1 (1 instance NestJS) ; (f) CI lint check obligeant @Audited sur tous les @Post/@Patch/@Delete métier — déféré Sprint 3+ avec STORY-022 ModuleEngine ; (g) signature cryptographique blockchain-style — Phase 3 si OHADA exige preuves cryptographiques."
+
+  - sprint_number: 3
+    start_date: "2026-06-09"
+    end_date: "2026-06-20"
+    capacity_points: 42
+    committed_points: 38
+    completed_points: 5
+    status: "in_progress"
+    goal: "ModuleEngine opérationnel — 2 endpoints servent 100% des modules. DAG Validator valide les workflows. Drift offline mobile setup."
+    stories:
+      - story_id: "STORY-021"
+        title: "BDUIService NestJS"
+        epic: "EPIC-004"
+        points: 5
+        status: "completed"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-021.md"
+        defined_date: "2026-05-10"
+        completed_date: "2026-05-20"
+        actual_points: 5
+        branch: "main"
+        notes: "BDUIService NestJS — GET /api/v1/:tenant/layout/:screenId + bulk endpoint (max 10 screens). Architecture : BduiController (cross-tenant guard via JWT vs :tenant param → 403), BduiService (cache HIT/MISS + DB→filesystem fallback), BduiLayoutCacheService (clé bdui:{tenant}:{screen}:{role_hash} où role_hash = sha256(roles.sort()).slice(0,12), wrap BdUiCacheService L1+L2 STORY-018), RbacComponentFilter (filtrage récursif zones.kpis/main/aside/actions + props.children, visible_if operator='role' fail-closed si value non-array, AC-10→AC-14), ScreenConfigRepository (SELECT screen_configs RLS-scoped) + CatalogueLoaderService (fallback fichier catalog/domains/{slug}.json re-lu à chaque MISS pour hot-reload AC-20), TenantConfigEventsListener (subscribe bdui:invalidate channel STORY-018 pub/sub, SCAN+DEL via BdUiCacheService.invalidate AC-15). Préfixe global /api/v1 ajouté dans main.ts (setGlobalPrefix exclude /health). 28 nouveaux tests verts (bdui.controller 8 dont cross-tenant + bulk validation, bdui.service 7 dont cache hit/miss + filesystem fallback + 404 + log structuré, rbac-component-filter 13 dont AC-10→AC-14 + fail-closed + AND/OR operators + non-zone keys preserved). Suite totale backend : 193 passing (vs 165 STORY-020). pnpm lint + typecheck + test = 0 erreur. Différé/non livré : (a) AC-08 env var BDUI_CACHE_TTL_SECONDS spécifique BDUI — réutilise TTL CACHE de STORY-018 (5 min), à câbler quand on aura besoin d'un override ; (b) AC-09 interceptor métriques structurées (bdui.cache.hit/miss/latency_ms taggés) — pour l'instant LOG service `bdui.layout.served cache=hit duration_ms=...`, suffit pour grep/Loki, vrai interceptor Phase 2 avec OpenTelemetry ; (c) AC-16 invalidation auto sur screen_configs.updated_at change — couvert par AC-15 pub/sub manuel via PATCH endpoint, pas de trigger DB Phase 1 ; (d) AC-17 test E2E PATCH /tenants/:id/config → cache MISS forcé — endpoint PATCH config pas encore implémenté (Sprint 3+ avec EPIC-008 admin), test reporté ; (e) AC-05/AC-06 bench p95 < 100ms MISS / < 20ms HIT — à mesurer en pré-prod avec vraie volumétrie ; (f) AC-19 volume Docker catalog/ — à vérifier dans docker-compose STORY-025 ; (g) OpenAPI /api/docs — @nestjs/swagger pas installé Phase 1, déféré quand le contrat API se stabilise."
+      - story_id: "STORY-022"
+        title: "ModuleEngine — 2 Endpoints Génériques"
+        epic: "EPIC-004"
+        points: 6
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-022.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-023"
+        title: "JSON Schema BDUI v1.0.0"
+        epic: "EPIC-004"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-023.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-024"
+        title: "Zod Validator + API Validation"
+        epic: "EPIC-004"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-024.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-025"
+        title: "Structure Catalogue + README Intégrateur"
+        epic: "EPIC-004"
+        points: 2
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-025.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-026"
+        title: "Validation Bidirectionnelle JSON Runtime"
+        epic: "EPIC-004"
+        points: 2
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-026.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-029"
+        title: "DAG Validator — Kahn's Algorithm"
+        epic: "EPIC-005"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-029.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-030"
+        title: "Workflow Executor"
+        epic: "EPIC-005"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-030.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-033"
+        title: "Drift/Isar Setup Mobile — Persistance Locale"
+        epic: "EPIC-006"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-033.md"
+        defined_date: "2026-05-10"
+
+  - sprint_number: 4
+    start_date: "2026-06-23"
+    end_date: "2026-07-04"
+    capacity_points: 42
+    committed_points: 41
+    completed_points: 0
+    status: "ready"
+    goal: "Gate 0 — retail_fresh_produce.json déployé, workflow clôture caisse fonctionnel, sync offline mobile opérationnelle, Blandine live."
+    stories:
+      - story_id: "STORY-031"
+        title: "XState State Machine"
+        epic: "EPIC-005"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-031.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-032"
+        title: "Integration Workflow↔ModuleEngine"
+        epic: "EPIC-005"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-032.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-034"
+        title: "Sync Queue Locale Drift"
+        epic: "EPIC-006"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-034.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-035"
+        title: "Conflict Resolution Phase 1"
+        epic: "EPIC-006"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-035.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-036"
+        title: "Idempotence Endpoints POST"
+        epic: "EPIC-006"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-036.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-037"
+        title: "Sync Status UI — Data-driven"
+        epic: "EPIC-006"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-037.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-039"
+        title: "Template retail_fresh_produce.json — Structure + 3 Rôles"
+        epic: "EPIC-007"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-039.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-040"
+        title: "Modules Phase 1 JSON (6 modules)"
+        epic: "EPIC-007"
+        points: 5
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-040.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-041"
+        title: "Workflow DAG Clôture Caisse"
+        epic: "EPIC-007"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-041.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-042"
+        title: "Contraintes Global Scale (i18n + PaymentAdapter)"
+        epic: "EPIC-007"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-042.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-043"
+        title: "Validation E2E Gate 0"
+        epic: "EPIC-007"
+        points: 3
+        status: "defined"
+        priority: "must_have"
+        story_doc: "_bmad-output/stories/STORY-043.md"
+        defined_date: "2026-05-10"
+      # STRETCH — si sprint 4 avance vite
+      - story_id: "STORY-027"
+        title: "Code-gen Contrat Partagé (STRETCH)"
+        epic: "EPIC-004"
+        points: 3
+        status: "defined"
+        priority: "stretch"
+        story_doc: "_bmad-output/stories/STORY-027.md"
+        defined_date: "2026-05-10"
+      - story_id: "STORY-028"
+        title: "Tests Coverage Moteur ≥90% (STRETCH)"
+        epic: "EPIC-004"
+        points: 5
+        status: "defined"
+        priority: "stretch"
+        story_doc: "_bmad-output/stories/STORY-028.md"
+        defined_date: "2026-05-10"
+
+# Stories déférées post-Gate 0
+deferred:
+  - story_id: "STORY-038"
+    title: "Drift Web Offline + PWA"
+    epic: "EPIC-006"
+    points: 5
+    status: "defined"
+    story_doc: "_bmad-output/stories/STORY-038.md"
+    defined_date: "2026-05-10"
+    reason: "Should Have — Blandine = Android mobile. Déferré à Sprint 5."
+
+velocity:
+  sprint_1: 36
+  sprint_2: 44
+  sprint_3: null
+  sprint_4: null
+  rolling_average: 40
+
+team:
+  size: 1
+  type: "solo_ai_augmented"
+  tools: ["Claude Code", "BMAD agents"]
+  sprint_length_weeks: 2
+  dev_hours_per_day: 5.5
+  capacity_per_sprint: 42
+
+epics:
+  EPIC-001:
+    name: "Design System Scalario"
+    status: "ready"
+    stories: ["STORY-001", "STORY-002", "STORY-003", "STORY-004"]
+    points: 15
+    sprint: 1
+    notes: "Material 3 natif Flutter + ThemeData Scalario depuis tokens. Toutes stories defined."
+  EPIC-002:
+    name: "BDUI Engine Flutter"
+    status: "ready"
+    stories: ["STORY-005", "STORY-006", "STORY-007", "STORY-008", "STORY-009", "STORY-010", "STORY-011", "STORY-012"]
+    points: 35
+    sprints: [1, 2]
+    notes: "Toutes stories defined 2026-05-10. Perf budgets first-class : <200ms cold / <50ms hot (STORY-008)."
+  EPIC-003:
+    name: "Backend Foundation"
+    status: "ready"
+    stories: ["STORY-013", "STORY-014", "STORY-015", "STORY-016", "STORY-017", "STORY-018", "STORY-019", "STORY-020"]
+    points: 30
+    sprint: 2
+    notes: "5 couches sécurité documentées. Toutes stories defined 2026-05-10."
+  EPIC-004:
+    name: "Module Engine & Catalogue JSON"
+    status: "ready"
+    stories: ["STORY-021", "STORY-022", "STORY-023", "STORY-024", "STORY-025", "STORY-026", "STORY-027", "STORY-028"]
+    points: 31
+    sprints: [3, 4]
+    notes: "STORY-022 = lynchpin 2-endpoints. Toutes stories defined 2026-05-10."
+  EPIC-005:
+    name: "Workflow DAG Engine"
+    status: "ready"
+    stories: ["STORY-029", "STORY-030", "STORY-031", "STORY-032"]
+    points: 18
+    sprints: [3, 4]
+    notes: "Kahn's algorithm + XState v5. Toutes stories defined 2026-05-10."
+  EPIC-006:
+    name: "Offline-First & Sync"
+    status: "ready"
+    stories: ["STORY-033", "STORY-034", "STORY-035", "STORY-036", "STORY-037", "STORY-038"]
+    points: 26
+    sprints: [3, 4]
+    notes: "Drift mobile (Phase 1) + STORY-038 web déferré. Toutes stories defined 2026-05-10."
+  EPIC-007:
+    name: "Template retail_fresh_produce.json"
+    status: "ready"
+    stories: ["STORY-039", "STORY-040", "STORY-041", "STORY-042", "STORY-043"]
+    points: 17
+    sprint: 4
+    notes: "Gate 0 = STORY-043 = UAT Blandine binaire. Toutes stories defined 2026-05-10."
+
+# Récap définitions
+definition_summary:
+  total_stories: 43
+  defined: 42
+  not_started: 0
+  in_progress: 0
+  completed: 21
+  total_points_committed: 159  # 39+41+38+41
+  total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
+  total_points_deferred: 5      # STORY-038
+  generation_method: |
+    STORY-001 : workflow /bmad:create-story interactif (référence qualité).
+    STORY-002 à STORY-043 : génération parallèle 7 sub-agents (1 par EPIC),
+    chacun avec STORY-001 comme template, sources PRD + sprint plan + architecture
+    + design-process/D-Design-System/. Conflit PRD↔DS toujours résolu en faveur DS.
+  next_step: "/bmad:dev-story STORY-006"
