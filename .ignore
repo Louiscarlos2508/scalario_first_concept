@@ -1,0 +1,52 @@
+# ============================================================
+# Scalario — opencode AI access restriction
+# Used by the opencode-ignore plugin to block sensitive files
+# from being read by AI agents (DeepSeek / GLM / etc.)
+# Syntax: gitignore-style
+# ============================================================
+
+# ---- Stratégie produit & business (vrai IP différenciante) ----
+_bmad-output/prd-*.md
+_bmad-output/product-brief-*.md
+_bmad-output/innovation-strategy-*.md
+_bmad-output/design-thinking-*.md
+_bmad-output/phase1-brief.md
+_bmad-output/sprint-plan-*.md
+_bmad-output/bmm-workflow-status.yaml
+
+# ---- Recherche & planning amont ----
+_bmad-output/planning-artifacts/
+_bmad-output/brainstorming/
+_bmad-output/benchmarks/
+
+# ---- Templates métier verticaux (cœur du moat Scalario) ----
+catalog/domains/
+
+# ---- Archive architecture legacy ----
+ERP_IA_Architecture_v6.pdf
+
+# ---- Secrets (par sécurité, même si pas dans le repo) ----
+.env
+.env.*
+!.env.example
+**/secrets/**
+**/*.pem
+**/*.key
+**/credentials.json
+
+# ============================================================
+# Ce qui RESTE accessible à opencode (pour info, pas obligé) :
+# - apps/**             → code Flutter + NestJS
+# - packages/**         → packages partagés
+# - services/**         → services backend
+# - catalog/schemas/    → JSON Schemas BDUI (contrats publics)
+# - catalog/modules/    → modules catalogue (techniques)
+# - catalog/fusions/    → fusions (techniques)
+# - _bmad-output/stories/                     → specs techniques stories
+# - _bmad-output/architecture-*.md            → archi système (utile au dev)
+# - _bmad-output/architecture-notes/          → notes techniques
+# - _bmad-output/implementation-artifacts/    → sprint-status.yaml
+# - _bmad-output/test-artifacts/              → tests
+# - docs/                                     → docs techniques
+# - scripts/                                  → scripts build/CI
+# ============================================================
