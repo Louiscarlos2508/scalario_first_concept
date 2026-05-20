@@ -15,7 +15,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
 
-@Controller(':tenant/layout')
+@Controller('api/v1/:tenant/layout')
 export class BduiController {
   private readonly logger = new Logger(BduiController.name);
 
