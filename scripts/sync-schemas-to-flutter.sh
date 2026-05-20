@@ -57,6 +57,13 @@ if $check_mode; then
       any_diff=true
     fi
   done
+  for f in "$TARGET_DIR"/*.schema.json; do
+    base="$(basename "$f")"
+    if [ ! -f "$SOURCE_DIR/$base" ]; then
+      echo "[CHECK] STALE: $f (not in source)"
+      any_diff=true
+    fi
+  done
   if $any_diff; then
     echo "[CHECK] Schemas are out of sync."
     exit 1
@@ -66,6 +73,7 @@ if $check_mode; then
 fi
 
 echo "Syncing $SCHEMA_PATTERN from $SOURCE_DIR → $TARGET_DIR"
+rm -f "$TARGET_DIR"/*.schema.json
 cp "$SOURCE_DIR"/$SCHEMA_PATTERN "$TARGET_DIR/"
 if [ -f "$README_SOURCE" ]; then
   cp "$README_SOURCE" "$TARGET_DIR/"
