@@ -17,30 +17,35 @@ import '../design_system/tokens/typography.dart';
 /// - `labelMedium`   → `overline`
 ///
 /// Note : `Theme.of(context).textTheme.bodyMedium` doit rendre Inter 14sp
-/// regular (AC-05). Le `colorScheme` n'est pas injecté dans le `TextTheme` —
-/// les couleurs viennent déjà des tokens `ScalarioTypography`. Les composants
-/// individuels qui veulent rebrand la couleur le font via `style.copyWith`.
+/// regular (AC-05). Les couleurs sont **rebindées au ColorScheme actif** :
+/// styles principaux → `onSurface`, styles secondaires (caption / overline) →
+/// `onSurfaceVariant`. Sans ça, le texte resterait `textPrimary` (sombre)
+/// même en dark mode → invisible.
 abstract final class ScalarioTextThemeBuilder {
-  static TextTheme build() => TextTheme(
-        // Display — KPI géants, écrans hero
-        displayLarge: ScalarioTypography.display,
-        displayMedium: ScalarioTypography.display,
-        displaySmall: ScalarioTypography.headline,
-        // Headline — titres de page
-        headlineLarge: ScalarioTypography.headline,
-        headlineMedium: ScalarioTypography.headline,
-        headlineSmall: ScalarioTypography.title,
-        // Title — titres de section / cards
-        titleLarge: ScalarioTypography.title,
-        titleMedium: ScalarioTypography.bodyMedium,
-        titleSmall: ScalarioTypography.captionMedium,
-        // Body — corps de texte
-        bodyLarge: ScalarioTypography.bodyLg,
-        bodyMedium: ScalarioTypography.body,
-        bodySmall: ScalarioTypography.caption,
-        // Label — chips, badges, boutons (M3 utilise labelLarge pour boutons)
-        labelLarge: ScalarioTypography.bodyMedium,
-        labelMedium: ScalarioTypography.overline,
-        labelSmall: ScalarioTypography.captionMedium,
-      );
+  static TextTheme build(ColorScheme colors) {
+    final Color primary = colors.onSurface;
+    final Color secondary = colors.onSurfaceVariant;
+    return TextTheme(
+      // Display — KPI géants, écrans hero
+      displayLarge: ScalarioTypography.display.copyWith(color: primary),
+      displayMedium: ScalarioTypography.display.copyWith(color: primary),
+      displaySmall: ScalarioTypography.headline.copyWith(color: primary),
+      // Headline — titres de page
+      headlineLarge: ScalarioTypography.headline.copyWith(color: primary),
+      headlineMedium: ScalarioTypography.headline.copyWith(color: primary),
+      headlineSmall: ScalarioTypography.title.copyWith(color: primary),
+      // Title — titres de section / cards
+      titleLarge: ScalarioTypography.title.copyWith(color: primary),
+      titleMedium: ScalarioTypography.bodyMedium.copyWith(color: primary),
+      titleSmall: ScalarioTypography.captionMedium.copyWith(color: primary),
+      // Body — corps de texte
+      bodyLarge: ScalarioTypography.bodyLg.copyWith(color: primary),
+      bodyMedium: ScalarioTypography.body.copyWith(color: primary),
+      bodySmall: ScalarioTypography.caption.copyWith(color: secondary),
+      // Label — chips, badges, boutons (M3 utilise labelLarge pour boutons)
+      labelLarge: ScalarioTypography.bodyMedium.copyWith(color: primary),
+      labelMedium: ScalarioTypography.overline.copyWith(color: secondary),
+      labelSmall: ScalarioTypography.captionMedium.copyWith(color: primary),
+    );
+  }
 }

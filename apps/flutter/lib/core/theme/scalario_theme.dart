@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../design_system/tokens/colors.dart';
 import 'color_scheme_builder.dart';
 import 'component_themes/button_themes.dart';
 import 'component_themes/data_themes.dart';
@@ -43,14 +44,20 @@ abstract final class ScalarioTheme {
     final ColorScheme colors = brightness == Brightness.dark
         ? ScalarioColorSchemeBuilder.dark()
         : ScalarioColorSchemeBuilder.light();
-    final TextTheme textTheme = ScalarioTextThemeBuilder.build();
+    final TextTheme textTheme = ScalarioTextThemeBuilder.build(colors);
 
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: colors,
       textTheme: textTheme,
-      scaffoldBackgroundColor: colors.surfaceContainerLow,
+      // Scaffold = un cran plus sombre que `surface` pour que les Cards
+      // (qui héritent de `surface`) se détachent visiblement du fond.
+      // Light : neutral100 (#F0F0F8) vs Card white.
+      // Dark  : neutral900 (#1A1A2E) vs Card bgCardDark (#22223A).
+      scaffoldBackgroundColor: brightness == Brightness.dark
+          ? ScalarioColors.neutral900
+          : ScalarioColors.neutral100,
       // Component themes — listés explicitement pour qu'aucun composant M3
       // ne retombe sur ses defaults non-brandés.
       filledButtonTheme: buildFilledButtonTheme(colors),

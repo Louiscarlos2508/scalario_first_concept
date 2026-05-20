@@ -34,7 +34,7 @@ void main() {
 
   group('ScalarioTextThemeBuilder', () {
     _zonedTest('bodyMedium = 14sp et famille contient Inter', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
 
       expect(theme.bodyMedium, isNotNull);
       expect(theme.bodyMedium!.fontSize, 14);
@@ -42,32 +42,32 @@ void main() {
     });
 
     _zonedTest('bodyLarge = 16sp', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.bodyLarge!.fontSize, 16);
     });
 
     _zonedTest('displayLarge = 28sp', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.displayLarge!.fontSize, 28);
     });
 
     _zonedTest('headlineLarge = 22sp', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.headlineLarge!.fontSize, 22);
     });
 
     _zonedTest('titleLarge = 18sp', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.titleLarge!.fontSize, 18);
     });
 
     _zonedTest('bodySmall (caption) = 12sp', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.bodySmall!.fontSize, 12);
     });
 
     _zonedTest('labelLarge (button) = 14sp medium', () {
-      final TextTheme theme = ScalarioTextThemeBuilder.build();
+      final TextTheme theme = ScalarioTextThemeBuilder.build(const ColorScheme.light());
       expect(theme.labelLarge!.fontSize, 14);
       expect(theme.labelLarge!.fontWeight, FontWeight.w500);
     });
