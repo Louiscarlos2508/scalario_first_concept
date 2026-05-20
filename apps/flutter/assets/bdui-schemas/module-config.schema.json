@@ -1,0 +1,177 @@
+{
+  "$id": "https://scalario.io/schemas/v1.0.0/module-config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModuleConfig",
+  "description": "Configuration complète d'un module Scalario. Un module est l'unité fonctionnelle déployable — il regroupe des entités, des écrans, des actions, des workflows, et des règles de sécurité (RBAC/ABAC). Ce contrat est la source de vérité partagée entre NestJS, Flutter, et les intégrateurs.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant unique du module. Format snake_case, préfixe alphabétique (ex: 'retail_fresh_produce', 'pharmacy').",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Version du schéma BDUI. Figé à '1.0.0' pour cette version du contrat."
+    },
+    "name": {
+      "type": "string",
+      "description": "Nom affiché du module, lisible par un humain (ex: 'Produits Frais Retail')."
+    },
+    "i18n_key": {
+      "type": "string",
+      "description": "Clé i18n pour le nom du module."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icône du module (nom d'icône Material Icons ou identifiant DS)."
+    },
+    "entities": {
+      "type": "array",
+      "description": "Liste des entités métier du module. En v1.0.0, entities est permissif — chaque entité définit au minimum un nom et des champs.",
+      "items": {
+        "type": "object",
+        "description": "Définition d'une entité métier du module.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nom de l'entité (PascalCase, ex: 'Product', 'Order', 'Supplier').",
+            "pattern": "^[A-Z][A-Za-z0-9]*$"
+          },
+          "display_name": {
+            "type": "string",
+            "description": "Nom d'affichage de l'entité."
+          },
+          "i18n_key": {
+            "type": "string",
+            "description": "Clé i18n pour le nom d'affichage."
+          },
+          "fields": {
+            "type": "array",
+            "description": "Champs de l'entité. Permissif en v1.0.0 — chaque champ définit au minimum un nom et un type.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Nom du champ (snake_case)."
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Type du champ (string, number, boolean, date, reference, array, object)."
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "Si true, le champ est obligatoire.",
+                  "default": false
+                },
+                "i18n_key": {
+                  "type": "string",
+                  "description": "Clé i18n pour le label du champ."
+                }
+              },
+              "required": ["name", "type"],
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": true
+      }
+    },
+    "screens": {
+      "type": "array",
+      "description": "Écrans du module. Recommandé mais optionnel — un module peut définir des actions sans écrans déclaratifs.",
+      "items": { "$ref": "https://scalario.io/schemas/v1.0.0/screen-config.schema.json" }
+    },
+    "actions": {
+      "type": "object",
+      "description": "Map des actions du module. La clé est le nom de l'action (snake_case), la valeur est une ActionDefinition.",
+      "additionalProperties": {
+        "$ref": "#/$defs/ActionDefinition"
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "description": "Map des workflows du module. La clé est l'ID du workflow (préfixé par wf_), la valeur est une WorkflowDefinition.",
+      "additionalProperties": {
+        "$ref": "https://scalario.io/schemas/v1.0.0/workflow.schema.json"
+      }
+    },
+    "rbac_roles": {
+      "type": "array",
+      "description": "Liste des rôles déclarés par le module (ex: 'OWNER', 'MANAGER', 'COMMERCIAL'). Utilisés par le RuleEvaluator pour visible_if operator='role'.",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "abac_rules": {
+      "type": "array",
+      "description": "Règles ABAC déclarées par le module. Voir abac-rule.schema.json pour le format détaillé.",
+      "items": {
+        "type": "object",
+        "description": "Règle ABAC simplifiée inline. Pour le format complet, voir abac-rule.schema.json.",
+        "properties": {
+          "action": {
+            "description": "Action CRUD ou custom. 'manage' = wildcard.",
+            "anyOf": [
+              { "type": "string", "enum": ["read", "create", "update", "delete", "manage"] },
+              { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" }
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "description": "Type de ressource (PascalCase).",
+            "pattern": "^[A-Z][A-Za-z0-9]{0,63}$"
+          },
+          "roles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          }
+        },
+        "required": ["action", "subject", "roles"],
+        "additionalProperties": true
+      },
+      "default": []
+    },
+    "conflict_strategy": {
+      "enum": ["server_wins", "client_wins", "manual"],
+      "description": "Stratégie de résolution des conflits sync offline/online. server_wins = le serveur écrase ; client_wins = le client écrase ; manual = l'utilisateur choisit.",
+      "default": "server_wins"
+    }
+  },
+  "required": ["id", "schema_version", "name", "entities"],
+  "additionalProperties": false,
+  "$defs": {
+    "ActionDefinition": {
+      "type": "object",
+      "description": "Définition d'une action métier. Le handler détermine le type d'action (CRUD, workflow, custom).",
+      "properties": {
+        "handler": {
+          "type": "string",
+          "description": "Identifiant du handler d'action. Format : type.action (ex: 'crud.create', 'workflow.advance', 'custom.deliver').",
+          "pattern": "^[a-z]+\\.[a-z_]+$"
+        },
+        "entity_type": {
+          "type": "string",
+          "description": "Type d'entité cible, requis pour les handlers CRUD (ex: 'Product'). Conditionnel — absent pour les handlers workflow/custom."
+        },
+        "label": {
+          "type": "string",
+          "description": "Label de l'action affiché dans l'UI."
+        },
+        "i18n_key": {
+          "type": "string",
+          "description": "Clé i18n pour le label de l'action."
+        },
+        "merge": {
+          "type": "object",
+          "description": "Configuration de fusion pour les actions de mise à jour. Permissif — chaque handler définit ses propres clés.",
+          "additionalProperties": true
+        }
+      },
+      "required": ["handler"],
+      "additionalProperties": true
+    }
+  }
+}

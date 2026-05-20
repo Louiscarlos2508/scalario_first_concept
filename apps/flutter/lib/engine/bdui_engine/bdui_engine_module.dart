@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 
+import '../../core/bdui/validation/bdui_validator.dart' as bdui;
 import '../component_registry/component_registry.dart';
 import '../layout_resolver/layout_resolver.dart';
 import '../rule_evaluator/rule_evaluator.dart';
@@ -21,13 +22,21 @@ abstract final class BDUIEngineModule {
   /// - [userContextProvider] — défaut `DemoUserContextProvider` (OWNER demo).
   /// - [validator] — défaut `StructuralScreenValidator` (Phase 1).
   /// - [config] — défaut `BDUIEngineConfig.defaults`.
-  static void register(
+  /// Initialise le [BduiValidator] singleton (charge les schémas depuis
+  /// les assets) puis enregistre toutes les dépendances de l'Engine.
+  ///
+  /// Doit être appelée avec `await` dans `main()`.
+  static Future<void> register(
     GetIt getIt, {
     DataSourceResolver? dataResolver,
     UserContextProvider? userContextProvider,
     JsonSchemaValidator? validator,
     BDUIEngineConfig config = BDUIEngineConfig.defaults,
-  }) {
+  }) async {
+    // STORY-026 — initialiser le validateur JSON Schema avant tout rendu.
+    // Les schémas sont chargés une seule fois depuis assets/bdui-schemas/.
+    await bdui.BduiValidator.init();
+
     final DataSourceResolver resolver =
         dataResolver ?? FixtureDataSourceResolver();
     final UserContextProvider userCtx =

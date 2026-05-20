@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../core/bdui/fallback_screen.dart';
 import '../layout_resolver/screen_config.dart';
 import 'bdui_engine.dart';
 import 'bdui_error_screen.dart';
+import 'bdui_invalid_payload_exception.dart';
 
 /// Widget public consommé par les routes Flutter (AC-03).
 ///
@@ -61,8 +63,16 @@ class _BDUIScreenState extends State<BDUIScreen> {
           );
         }
         if (snap.hasError) {
+          final error = snap.error!;
+          if (error is BduiInvalidPayloadException) {
+            return FallbackScreen(
+              errors: error.errors,
+              errorId: error.payloadHash,
+              onRetry: _retry,
+            );
+          }
           return BDUIErrorScreen(
-            error: snap.error!,
+            error: error,
             screenId: widget.screenId,
             onRetry: _retry,
           );

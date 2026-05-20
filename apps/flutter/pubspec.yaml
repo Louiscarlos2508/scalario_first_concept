@@ -28,6 +28,12 @@ dependencies:
   # Annotations @immutable, @visibleForTesting — pure Dart, no Flutter import.
   meta: ^1.16.0
 
+  # JSON Schema Draft 2020-12 validation — STORY-026 validation bidirectionnelle.
+  json_schema: ^5.2.2
+
+  # SHA-256 for payload hashing (no PII in logs).
+  crypto: ^3.0.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -40,6 +46,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/sandbox/
+    - assets/bdui-schemas/
 
   # Inter et Roboto Mono sont chargées via google_fonts (runtime cache).
   # Voir lib/core/design_system/tokens/typography.dart.

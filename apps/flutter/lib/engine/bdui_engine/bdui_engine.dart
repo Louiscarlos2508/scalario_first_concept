@@ -1,13 +1,22 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/widgets.dart';
 
+import '../../core/bdui/validation/bdui_type.dart';
+import '../../core/bdui/validation/bdui_validator.dart' as bdui;
+import '../../core/bdui/validation/validation_result.dart';
+import '../../core/bdui/fallback_screen.dart';
 import '../component_registry/component_config.dart';
 import '../component_registry/component_registry.dart';
 import '../error_boundary/bdui_error_boundary.dart';
+import '../error_boundary/error_logger.dart';
+import '../error_boundary/error_payload.dart';
 import '../layout_resolver/layout_resolver.dart';
 import '../rule_evaluator/rule_evaluator.dart';
 import 'bdui_engine_config.dart';
+import 'bdui_invalid_payload_exception.dart';
 import 'data_source_resolver.dart';
 import 'json_schema_validator.dart';
 import 'perf_metrics.dart';
@@ -58,20 +67,79 @@ final class BDUIEngine {
   /// Charge un screen depuis le cache mémoire, sinon depuis le
   /// [DataSourceResolver]. Valide le JSON, résout les sources de données des
   /// composants, met en cache (AC-02).
+  ///
+  /// STORY-026 : validation JSON Schema via [BduiValidator] AVANT parsing.
+  /// Si invalide, log structuré + throw [BduiInvalidPayloadException] — le
+  /// caller (BDUIScreen) capture et affiche [FallbackScreen].
   Future<ScreenConfig> loadScreen(String screenId) {
     return _metrics.timeSyncAsync('loadScreen', () async {
       final ScreenConfig? cached = _cache.get(screenId);
       if (cached != null) return cached;
 
       final Map<String, dynamic> raw = await _metrics
-          .timeSyncAsync('parse', () => dataResolver.loadScreenJson(screenId));
-      _metrics.timeSync('validate', () => validator.validateScreen(raw));
+          .timeSyncAsync('fetch', () => dataResolver.loadScreenJson(screenId));
+
+      _metrics.timeSync('bdui-validate', () => _validateWithBdui(raw, screenId));
+
+      _metrics.timeSync('structural-validate', () => validator.validateScreen(raw));
       final ScreenConfig parsed = ScreenConfig.fromJson(raw);
       final ScreenConfig enriched =
           await _metrics.timeSyncAsync('data', () => _resolveData(parsed));
       _cache.put(screenId, enriched);
       return enriched;
     });
+  }
+
+  void _validateWithBdui(Map<String, dynamic> raw, String screenId) {
+    if (!bdui.BduiValidator.isInitialized) {
+      developer.log(
+        'BduiValidator not initialized — skipping JSON Schema validation',
+        name: 'BDUI.Validation',
+        level: 900,
+      );
+      return;
+    }
+    final result = bdui.BduiValidator.I.validate(raw, BduiType.screenConfig);
+    if (result is Invalid) {
+      final hash = sha256.convert(utf8.encode(jsonEncode(raw))).toString().substring(0, 16);
+      _logInvalidPayload(screenId, result.errors, hash, raw);
+      throw BduiInvalidPayloadException(
+        errors: result.errors,
+        screenId: screenId,
+        payloadHash: hash,
+      );
+    }
+  }
+
+  void _logInvalidPayload(
+    String screenId,
+    List<ValidationError> errors,
+    String hash,
+    Map<String, dynamic> raw,
+  ) {
+    final meta = {
+      'event': 'bdui.invalid_payload',
+      'screen_id': screenId,
+      'errors_count': errors.length,
+      'errors_paths': errors.take(10).map((e) => e.path).toList(),
+      'payload_hash': hash,
+      'schema_version_received': raw['schema_version'],
+    };
+    developer.log(
+      jsonEncode(meta),
+      name: 'BDUI.Validation',
+      level: 1000,
+    );
+    ErrorLogger.instance.log(ErrorPayload(
+      error: BduiInvalidPayloadException(
+        errors: errors,
+        screenId: screenId,
+        payloadHash: hash,
+      ),
+      stack: StackTrace.current,
+      componentType: 'BDUIEngine',
+      screenId: screenId,
+    ));
   }
 
   /// Vide le cache mémoire — utile au logout (sécurité multi-tenant).
@@ -98,6 +166,39 @@ final class BDUIEngine {
         rethrow;
       }
     });
+  }
+
+  /// Valide un JSON brut puis rend l'écran — STORY-026 AC-09.
+  ///
+  /// Si le JSON est invalide, retourne [FallbackScreen] au lieu de parser.
+  /// Ne throw jamais — les erreurs sont capturées et affichées gracieusement.
+  Widget renderRaw(Map<String, dynamic> rawJson, BuildContext ctx) {
+    return _metrics.timeSync('renderRaw', () {
+      if (bdui.BduiValidator.isInitialized) {
+        final result = bdui.BduiValidator.I.validate(rawJson, BduiType.screenConfig);
+        if (result is Invalid) {
+          final hash = sha256.convert(utf8.encode(jsonEncode(rawJson))).toString().substring(0, 16);
+          _logInvalidPayload(_safeScreenId(rawJson), result.errors, hash, rawJson);
+          return FallbackScreen(
+            errors: result.errors,
+            errorId: hash,
+          );
+        }
+      }
+      try {
+        final config = ScreenConfig.fromJson(rawJson);
+        return render(config, ctx);
+      } catch (e, st) {
+        _logRenderError(_safeScreenId(rawJson), e, st);
+        rethrow;
+      }
+    });
+  }
+
+  String _safeScreenId(Map<String, dynamic> json) {
+    final raw = json['screen'];
+    if (raw is String) return raw;
+    return '<raw>';
   }
 
   // ---------------------------------------------------------------------------

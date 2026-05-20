@@ -10,6 +10,7 @@ export 'bdui_engine.dart';
 export 'bdui_engine_config.dart';
 export 'bdui_engine_module.dart';
 export 'bdui_error_screen.dart';
+export 'bdui_invalid_payload_exception.dart';
 export 'bdui_screen.dart';
 export 'data_source_resolver.dart';
 export 'json_schema_validator.dart';

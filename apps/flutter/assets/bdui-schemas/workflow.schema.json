@@ -1,0 +1,138 @@
+{
+  "$id": "https://scalario.io/schemas/v1.0.0/workflow.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WorkflowDefinition",
+  "description": "Définition d'un workflow métier. Un workflow est une machine à états finis : des états nommés avec des transitions déclenchées par des événements. Utilisé pour les processus comme la clôture de caisse, l'approbation de commande, etc.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant unique du workflow. Préfixe 'wf_' obligatoire (ex: 'wf_checkout', 'wf_order_approval').",
+      "pattern": "^wf_[a-z0-9_]+$"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Version du schéma BDUI. Figé à '1.0.0' pour cette version du contrat."
+    },
+    "initial_state": {
+      "type": "string",
+      "description": "Nom de l'état initial du workflow. Doit correspondre à une clé dans 'states'.",
+      "minLength": 1
+    },
+    "states": {
+      "type": "object",
+      "description": "Map des états du workflow. La clé est le nom de l'état, la valeur est une StateDefinition.",
+      "additionalProperties": {
+        "$ref": "#/$defs/StateDefinition"
+      },
+      "minProperties": 1
+    },
+    "steps": {
+      "type": "object",
+      "description": "Map optionnelle des étapes du workflow. La clé est l'ID de l'étape, la valeur est une WorkflowStep.",
+      "additionalProperties": {
+        "$ref": "#/$defs/WorkflowStep"
+      }
+    }
+  },
+  "required": ["id", "schema_version", "initial_state", "states"],
+  "additionalProperties": false,
+  "$defs": {
+    "StateDefinition": {
+      "type": "object",
+      "description": "Définition d'un état du workflow. Chaque état a des transitions vers d'autres états, déclenchées par des événements.",
+      "properties": {
+        "transitions": {
+          "type": "object",
+          "description": "Map event → targetState. La clé est le nom de l'événement (ex: 'approve', 'reject', 'cancel'), la valeur est le nom de l'état cible.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "final": {
+          "type": "boolean",
+          "description": "Si true, cet état est un état terminal du workflow. Aucune transition possible depuis un état final.",
+          "default": false
+        },
+        "on_enter": {
+          "type": "array",
+          "description": "Actions à exécuter lors de l'entrée dans cet état.",
+          "items": { "type": "string" }
+        },
+        "on_exit": {
+          "type": "array",
+          "description": "Actions à exécuter lors de la sortie de cet état.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "WorkflowStep": {
+      "type": "object",
+      "description": "Étape de workflow avec logique conditionnelle avancée.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifiant unique de l'étape.",
+          "minLength": 1
+        },
+        "type": {
+          "enum": ["action", "condition", "notification", "approval"],
+          "description": "Type d'étape. action = exécution d'une action métier ; condition = branchement conditionnel ; notification = envoi de notification ; approval = demande d'approbation."
+        },
+        "next": {
+          "description": "Prochaine étape ou branchement conditionnel.",
+          "oneOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/ConditionalNext" }
+          ]
+        },
+        "action": {
+          "type": "string",
+          "description": "Référence à une action déclarée dans le module (clé dans actions map)."
+        },
+        "params": {
+          "type": "object",
+          "description": "Paramètres passés à l'action ou à l'étape.",
+          "additionalProperties": true
+        },
+        "visible_if": {
+          "description": "Règle conditionnelle de visibilité/exécution de l'étape.",
+          "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json#/$defs/Rule"
+        }
+      },
+      "required": ["id", "type"],
+      "additionalProperties": false
+    },
+    "ConditionalNext": {
+      "type": "object",
+      "description": "Branchement conditionnel vers la prochaine étape.",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "description": "Liste de règles conditionnelles, évaluées en ordre. La première règle qui matche détermine la prochaine étape.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "condition": {
+                "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json#/$defs/Rule"
+              },
+              "next": {
+                "type": "string",
+                "description": "ID de la prochaine étape si la condition est remplie."
+              }
+            },
+            "required": ["condition", "next"],
+            "additionalProperties": false
+          }
+        },
+        "default": {
+          "type": "string",
+          "description": "ID de l'étape par défaut si aucune condition ne matche."
+        }
+      },
+      "required": ["rules"],
+      "additionalProperties": false
+    }
+  }
+}

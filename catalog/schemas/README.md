@@ -155,3 +155,5 @@ Le schéma ne référence pas les noms de tokens DS — c'est volontaire. Les to
 
 **Source :** Architecture Scalario 2026-05-09, §Contrat JSON BDUI
 **Stories liées :** STORY-024 (Zod), STORY-025 (Catalogue), STORY-026 (Validation bidirectionnelle), STORY-027 (Code-gen), STORY-029 (DAG Validator)
+
+> ⚠️ **Contrat partagé** — Le contrat est partagé : **Zod (NestJS)** ET **json_schema (Flutter)** dérivent des mêmes fichiers `*.schema.json` dans `catalog/schemas/`. Si vous voyez une divergence de validation entre le backend et le frontend, c'est un bug dans l'un des validateurs, pas dans le contrat. Le script `scripts/sync-schemas-to-flutter.sh` propage les schémas vers les assets Flutter (`apps/flutter/assets/bdui-schemas/`).

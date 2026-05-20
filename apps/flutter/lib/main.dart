@@ -37,15 +37,15 @@ void main() {
   GlobalErrorHandler.install(navigatorKey: _navigatorKey);
 
   runZonedGuarded(
-    () {
-      _setupDependencies();
+    () async {
+      await _setupDependencies();
       runApp(ScalarioApp(navigatorKey: _navigatorKey));
     },
     GlobalErrorHandler.handleZoneError,
   );
 }
 
-void _setupDependencies() {
+Future<void> _setupDependencies() async {
   final ComponentRegistry registry = ComponentRegistry();
   GetIt.I.registerSingleton<ComponentRegistry>(registry);
   RegistryBootstrap.registerPhase1(registry);
@@ -54,7 +54,8 @@ void _setupDependencies() {
   GetIt.I.registerSingleton<LayoutResolver>(LayoutResolver(registry: registry));
 
   // STORY-008 — BDUIEngine orchestrateur (consomme registry + layoutResolver).
-  BDUIEngineModule.register(GetIt.I);
+  // STORY-026 — appelle BduiValidator.init() en interne pour charger les schémas.
+  await BDUIEngineModule.register(GetIt.I);
 }
 
 class ScalarioApp extends StatelessWidget {

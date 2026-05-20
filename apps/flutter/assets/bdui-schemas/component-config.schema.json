@@ -1,0 +1,141 @@
+{
+  "$id": "https://scalario.io/schemas/v1.0.0/component-config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ComponentConfig",
+  "description": "Décrit un composant BDUI rendu par le ComponentRegistry Flutter. Un ComponentConfig est l'unité atomique du rendu data-driven : il identifie le composant DS à instancier, ses props, sa visibilité conditionnelle, sa source de données, et ses règles de validation.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Version du schéma BDUI. Figé à '1.0.0' pour cette version du contrat. Permet au runtime de router vers le bon validateur si plusieurs versions coexistent."
+    },
+    "type": {
+      "type": "string",
+      "description": "Identifiant du composant DS (ex: 'KPICard', 'DataTable', 'FormSection'). Correspond au nom enregistré dans le ComponentRegistry Flutter.",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "description": "Identifiant optionnel du composant, utile pour les références dans les règles visible_if ou les tests E2E."
+    },
+    "props": {
+      "type": "object",
+      "description": "Props passées au widget. Schema permissif — chaque composant DS définit son propre contrat de props. La validation fine est côté Flutter.",
+      "additionalProperties": true,
+      "default": {}
+    },
+    "visible_if": {
+      "description": "Règle conditionnelle de visibilité. Si null, le composant est toujours visible.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/Rule" }
+      ]
+    },
+    "source": {
+      "description": "Source de données pour le composant. Si null, le composant utilise des données statiques via props.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/DataSource" }
+      ]
+    },
+    "validation": {
+      "type": "array",
+      "description": "Règles de validation côté client. Appliquées avant toute soumission de formulaire.",
+      "items": { "$ref": "#/$defs/ValidationRule" },
+      "default": []
+    },
+    "i18n_key": {
+      "type": "string",
+      "description": "Clé i18n pour le label/titre du composant. Résolue par le service de traduction Flutter."
+    }
+  },
+  "required": ["schema_version", "type", "props"],
+  "additionalProperties": false,
+  "$defs": {
+    "Rule": {
+      "type": "object",
+      "description": "Règle conditionnelle récursive. Les opérateurs logiques (AND, OR) ont des enfants ; les opérateurs de comparaison comparent un champ à une valeur ; l'opérateur 'role' teste l'appartenance de l'utilisateur à un rôle.",
+      "properties": {
+        "operator": {
+          "enum": ["AND", "OR", "role", ">", "<", "==", "!=", ">=", "<=", "in", "not_in"],
+          "description": "Opérateur de la règle. AND/OR = logique binaire avec children ; role = test d'appartenance ; comparaisons = test de valeur."
+        },
+        "children": {
+          "type": "array",
+          "description": "Sous-règles pour les opérateurs logiques AND/OR. Requis si operator ∈ {AND, OR}.",
+          "items": { "$ref": "#/$defs/Rule" }
+        },
+        "field": {
+          "type": "string",
+          "description": "Champ évalué par l'opérateur de comparaison. Chemin dot-noté (ex: 'order.total', 'user.department_id')."
+        },
+        "value": {
+          "description": "Valeur de comparaison. Type libre (string, number, array) selon l'opérateur. Pour 'role', c'est le nom du rôle ou un tableau de rôles."
+        },
+        "negate": {
+          "type": "boolean",
+          "description": "Si true, inverse le résultat de la règle (équivalent à NOT).",
+          "default": false
+        }
+      },
+      "required": ["operator"],
+      "oneOf": [
+        {
+          "description": "Opérateurs logiques : children requis.",
+          "properties": { "operator": { "enum": ["AND", "OR"] } },
+          "required": ["children"]
+        },
+        {
+          "description": "Opérateur role : value requis (string ou array de rôles).",
+          "properties": { "operator": { "enum": ["role"] } },
+          "required": ["value"]
+        },
+        {
+          "description": "Opérateurs de comparaison : field et value requis.",
+          "properties": { "operator": { "enum": [">", "<", "==", "!=", ">=", "<=", "in", "not_in"] } },
+          "required": ["field", "value"]
+        }
+      ]
+    },
+    "DataSource": {
+      "type": "object",
+      "description": "Déclaration d'une source de données pour un composant BDUI. Le moteur résout la source au runtime via DataSourceResolver.",
+      "properties": {
+        "type": {
+          "enum": ["module_data", "kpi", "static", "computed"],
+          "description": "Type de source. module_data = données d'une entité du module ; kpi = agrégat pré-calculé ; static = données en dur dans props ; computed = formule ou expression."
+        },
+        "module_id": {
+          "type": "string",
+          "description": "Identifiant du module source, requis si type ∈ {module_data, kpi}."
+        },
+        "query": {
+          "type": "object",
+          "description": "Paramètres de requête. Structure permissive — chaque type de source définit ses propres paramètres.",
+          "additionalProperties": true
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "ValidationRule": {
+      "type": "object",
+      "description": "Règle de validation côté client pour un champ de formulaire.",
+      "properties": {
+        "kind": {
+          "enum": ["required", "min", "max", "pattern", "min_length", "max_length"],
+          "description": "Type de validation. required = champ obligatoire ; min/max = valeurs numériques ; pattern = regex ; min_length/max_length = longueur texte."
+        },
+        "value": {
+          "description": "Valeur seuil pour la validation. Type dépend de kind : number pour min/max, string pour pattern, integer pour min_length/max_length. Ignoré pour 'required'."
+        },
+        "message_i18n_key": {
+          "type": "string",
+          "description": "Clé i18n du message d'erreur affiché si la validation échoue."
+        }
+      },
+      "required": ["kind"],
+      "additionalProperties": false
+    }
+  }
+}
