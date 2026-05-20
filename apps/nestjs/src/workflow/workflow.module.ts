@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
+import { WorkflowValidatorService } from './validator/workflow-validator.service';
 
-/**
- * WorkflowModule — scaffold (STORY-013). Implementation in follow-up stories.
- */
-@Module({})
+@Module({
+  providers: [WorkflowValidatorService],
+  exports: [WorkflowValidatorService],
+})
 export class WorkflowModule {}

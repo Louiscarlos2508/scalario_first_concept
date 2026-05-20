@@ -32,6 +32,7 @@ export const WorkflowStepZod = z
   .object({
     id: z.string().min(1),
     type: z.enum(['action', 'condition', 'notification', 'approval']),
+    dependsOn: z.array(z.string()).optional(),
     next: z.union([z.string(), ConditionalNextZod]).optional(),
     action: z.string().optional(),
     params: z.record(z.unknown()).optional(),

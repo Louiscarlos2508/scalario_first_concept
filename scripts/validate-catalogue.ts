@@ -7,12 +7,14 @@ import { ScreenConfigZod } from '../apps/nestjs/src/catalogue/validators/screen-
 import { WorkflowDefinitionZod } from '../apps/nestjs/src/catalogue/validators/workflow.zod';
 import { ComponentConfigZod } from '../apps/nestjs/src/catalogue/validators/component-config.zod';
 import { ValidationErrorFormatter } from '../apps/nestjs/src/catalogue/errors/validation-error.formatter';
+import { WorkflowValidatorService } from '../apps/nestjs/src/workflow/validator/workflow-validator.service';
 import type { ZodTypeAny } from 'zod';
 
 const ROOT = resolve(__dirname, '..');
 const CATALOG_DIR = process.env.CATALOG_DIR ?? join(ROOT, 'catalog');
 
 const formatter = new ValidationErrorFormatter();
+const dagValidator = new WorkflowValidatorService();
 
 type CatalogueType = 'domain' | 'module' | 'fusion' | 'screen' | 'workflow';
 const SCHEMA_MAP: Record<string, ZodTypeAny> = {
@@ -42,6 +44,34 @@ function listJsonFiles(dir: string): string[] {
     }
   }
   return results;
+}
+
+function validateWorkflowDags(parsed: Record<string, unknown>, filePath: string): boolean {
+  const workflows = parsed.workflows as Record<string, { id?: string; steps?: Record<string, { id: string; type: string; dependsOn?: string[] }> }> | undefined;
+  if (!workflows) return true;
+
+  let allValid = true;
+  for (const [wfKey, wf] of Object.entries(workflows)) {
+    const wfId = wf.id ?? wfKey;
+    const stepValues = wf.steps ? Object.values(wf.steps) : [];
+    if (stepValues.length === 0) continue;
+
+    const dagResult = dagValidator.validateDAG(wfId, stepValues.map((s) => ({
+      id: s.id,
+      type: s.type as 'action' | 'condition' | 'notification' | 'approval',
+      dependsOn: s.dependsOn,
+    })));
+
+    if (!dagResult.valid) {
+      allValid = false;
+      for (const err of dagResult.errors) {
+        const msg = `workflow.${wfId}: [${err.code}] ${err.message}`;
+        console.error(`     └─ ${msg}`);
+        failures.push({ file: filePath, errors: [msg] });
+      }
+    }
+  }
+  return allValid;
 }
 
 function validateFile(filePath: string, type: CatalogueType): void {
@@ -77,10 +107,7 @@ function validateFile(filePath: string, type: CatalogueType): void {
   }
 
   const result = schema.safeParse(parsed);
-  if (result.success) {
-    validFiles++;
-    console.log(`  ✅ ${filePath}`);
-  } else {
+  if (!result.success) {
     invalidFiles++;
     const errors = formatter.format(result.error);
     console.error(`  ❌ ${filePath}`);
@@ -88,7 +115,18 @@ function validateFile(filePath: string, type: CatalogueType): void {
       console.error(`     └─ ${e.path}: ${e.message}`);
     }
     failures.push({ file: filePath, errors: errors.map((e) => `${e.path}: ${e.message}`) });
+    return;
   }
+
+  const dagOk = validateWorkflowDags(result.data as Record<string, unknown>, filePath);
+  if (!dagOk) {
+    invalidFiles++;
+    console.error(`  ❌ ${filePath} — DAG validation failed`);
+    return;
+  }
+
+  validFiles++;
+  console.log(`  ✅ ${filePath}`);
 }
 
 console.log('=== Scalario Catalogue Validation ===\n');

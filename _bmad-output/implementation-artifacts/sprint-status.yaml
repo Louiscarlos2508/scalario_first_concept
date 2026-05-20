@@ -269,7 +269,7 @@ sprints:
     end_date: "2026-06-20"
     capacity_points: 42
     committed_points: 38
-    completed_points: 13
+    completed_points: 15
     status: "in_progress"
     goal: "ModuleEngine opérationnel — 2 endpoints servent 100% des modules. DAG Validator valide les workflows. Drift offline mobile setup."
     stories:
@@ -328,7 +328,8 @@ sprints:
         title: "Validation Bidirectionnelle JSON Runtime"
         epic: "EPIC-004"
         points: 2
-        status: "defined"
+        status: "review"
+        completed_date: "2026-05-20"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-026.md"
         defined_date: "2026-05-10"
@@ -336,10 +337,12 @@ sprints:
         title: "DAG Validator — Kahn's Algorithm"
         epic: "EPIC-005"
         points: 5
-        status: "defined"
+        status: "review"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-029.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-20"
+        completed_date: "2026-05-20"
       - story_id: "STORY-030"
         title: "Workflow Executor"
         epic: "EPIC-005"
@@ -552,9 +555,8 @@ epics:
 # Récap définitions
 definition_summary:
   total_stories: 43
-  defined: 42
-  not_started: 0
-  in_progress: 0
+  defined: 17
+  review: 4
   completed: 22
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)

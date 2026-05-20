@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { ModuleConfigZod } from '../validators/module-config.zod';
@@ -8,9 +8,19 @@ import {
   ValidationErrorFormatter,
   type ValidationErrorList,
 } from '../errors/validation-error.formatter';
+import { WorkflowValidatorService } from '../../workflow/validator/workflow-validator.service';
 import type { ZodTypeAny } from 'zod';
 
 export type CatalogueType = 'domain' | 'module' | 'fusion' | 'screen' | 'workflow';
+
+export interface DagValidationError {
+  workflowId: string;
+  code: string;
+  message: string;
+  stepId?: string;
+  cyclicSteps?: string[];
+  missingDependencyId?: string;
+}
 
 export interface CatalogueValidationResult {
   valid: boolean;
@@ -18,6 +28,7 @@ export interface CatalogueValidationResult {
   type: CatalogueType;
   errors?: ValidationErrorList;
   parseError?: string;
+  dagErrors?: DagValidationError[];
 }
 
 @Injectable()
@@ -32,6 +43,8 @@ export class CatalogueValidatorService {
     screen: ScreenConfigZod,
     workflow: WorkflowDefinitionZod,
   };
+
+  constructor(@Optional() private readonly dagValidator?: WorkflowValidatorService) {}
 
   validateContent(content: unknown, type: CatalogueType): CatalogueValidationResult {
     const schema = this.typeSchemaMap[type];
@@ -52,16 +65,67 @@ export class CatalogueValidatorService {
     }
 
     const result = schema.safeParse(content);
-    if (result.success) {
-      return { valid: true, file: '', type };
+    if (!result.success) {
+      return {
+        valid: false,
+        file: '',
+        type,
+        errors: this.formatter.format(result.error),
+      };
     }
 
-    return {
-      valid: false,
-      file: '',
-      type,
-      errors: this.formatter.format(result.error),
-    };
+    const dagErrors: DagValidationError[] = [];
+
+    if ((type === 'domain' || type === 'module' || type === 'fusion') && result.success) {
+      const parsed = result.data as Record<string, unknown>;
+      const workflows = parsed.workflows as
+        | Record<
+            string,
+            {
+              id?: string;
+              steps?: Record<string, { id: string; type: string; dependsOn?: string[] }>;
+            }
+          >
+        | undefined;
+
+      if (workflows) {
+        const validator = this.dagValidator ?? new WorkflowValidatorService();
+        for (const [wfKey, wf] of Object.entries(workflows)) {
+          const wfId = wf.id ?? wfKey;
+          const stepValues = wf.steps ? Object.values(wf.steps) : [];
+
+          if (stepValues.length === 0) continue;
+
+          const dagResult = validator.validateDAG(
+            wfId,
+            stepValues.map((s) => ({
+              id: s.id,
+              type: s.type as 'action' | 'condition' | 'notification' | 'approval',
+              dependsOn: s.dependsOn,
+            })),
+          );
+
+          if (!dagResult.valid) {
+            for (const err of dagResult.errors) {
+              dagErrors.push({
+                workflowId: err.workflowId,
+                code: err.code,
+                message: err.message,
+                stepId: err.stepId,
+                cyclicSteps: err.cyclicSteps,
+                missingDependencyId: err.missingDependencyId,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (dagErrors.length > 0) {
+      return { valid: false, file: '', type, dagErrors };
+    }
+
+    return { valid: true, file: '', type };
   }
 
   validateFile(filePath: string, type: CatalogueType): CatalogueValidationResult {
