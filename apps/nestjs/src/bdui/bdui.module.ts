@@ -1,7 +1,25 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BduiController } from './bdui.controller';
+import { BduiService } from './services/bdui.service';
+import { CatalogueLoaderService } from './services/catalogue-loader.service';
+import { BduiLayoutCacheService } from './cache/bdui-layout-cache.service';
+import { TenantConfigEventsListener } from './cache/tenant-config-events.listener';
+import { RbacComponentFilter } from './filters/rbac-component-filter';
+import { ScreenConfigRepository } from './repositories/screen-config.repository';
+import { ScreenConfigEntity } from './entities/screen-config.entity';
 
-/**
- * BduiModule — scaffold (STORY-013). Implementation in follow-up stories.
- */
-@Module({})
+@Module({
+  imports: [TypeOrmModule.forFeature([ScreenConfigEntity])],
+  controllers: [BduiController],
+  providers: [
+    BduiService,
+    CatalogueLoaderService,
+    BduiLayoutCacheService,
+    TenantConfigEventsListener,
+    RbacComponentFilter,
+    ScreenConfigRepository,
+  ],
+  exports: [BduiService, BduiLayoutCacheService],
+})
 export class BduiModule {}
