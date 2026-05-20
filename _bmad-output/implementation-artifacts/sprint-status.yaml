@@ -305,7 +305,7 @@ sprints:
         title: "Zod Validator + API Validation"
         epic: "EPIC-004"
         points: 3
-        status: "defined"
+        status: "review"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-024.md"
         defined_date: "2026-05-10"

@@ -1,0 +1,36 @@
+name: Validate Catalogue
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'catalog/**'
+      - 'apps/nestjs/src/catalogue/**'
+      - 'scripts/validate-catalogue.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'catalog/**'
+      - 'apps/nestjs/src/catalogue/**'
+      - 'scripts/validate-catalogue.ts'
+
+jobs:
+  validate-catalogue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Validate catalogue JSON files with Zod
+        run: npx ts-node --project apps/nestjs/tsconfig.json scripts/validate-catalogue.ts
