@@ -9,6 +9,10 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
+  nestjs:
+    volumes:
+      - ./catalog:/app/catalog:ro
+
   adminer:
     image: adminer:latest
     container_name: scalario-adminer

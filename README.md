@@ -6,6 +6,16 @@ Monorepo : Flutter (apps/flutter), NestJS (apps/nestjs), FastAPI Phase 2 (servic
 
 ---
 
+## Catalogue (intégrateurs)
+
+Vous êtes partenaire intégrateur Scalario ? Vous voulez ajouter un secteur d'activité (pharmacie, BTP, transport) ? **Vous n'avez pas besoin de coder** — juste de créer un fichier JSON.
+
+👉 Lisez [`catalog/README.md`](./catalog/README.md) — c'est votre point d'entrée. En 5 étapes et moins de 60 jours, vous livrez un template sectoriel complet, sans toucher au code Flutter ni NestJS.
+
+> Ajouter un secteur = du JSON, pas du code.
+
+---
+
 ## Quickstart en 3 commandes
 
 ```bash

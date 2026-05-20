@@ -269,7 +269,7 @@ sprints:
     end_date: "2026-06-20"
     capacity_points: 42
     committed_points: 38
-    completed_points: 11
+    completed_points: 13
     status: "in_progress"
     goal: "ModuleEngine opérationnel — 2 endpoints servent 100% des modules. DAG Validator valide les workflows. Drift offline mobile setup."
     stories:
@@ -318,7 +318,9 @@ sprints:
         title: "Structure Catalogue + README Intégrateur"
         epic: "EPIC-004"
         points: 2
-        status: "defined"
+        status: "review"
+        started_date: "2026-05-20"
+        completed_date: "2026-05-20"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-025.md"
         defined_date: "2026-05-10"
