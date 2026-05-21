@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, EntityManager } from 'typeorm';
 import { WorkflowStateEntity } from './workflow-state.entity';
 import type { StepExecution } from './workflow-executor.types';
 
@@ -62,6 +62,32 @@ export class WorkflowStateRepository {
   ): Promise<WorkflowStateEntity | null> {
     return this.repo.findOne({
       where: { tenant_id: tenantId, entity_id: entityId, workflow_id: workflowId },
+    });
+  }
+
+  async findByEntityWorkflow(
+    entityId: string,
+    workflowId: string,
+  ): Promise<WorkflowStateEntity | null> {
+    return this.repo.findOne({
+      where: { entity_id: entityId, workflow_id: workflowId },
+    });
+  }
+
+  async transactionWithLock<T>(
+    entityId: string,
+    workflowId: string,
+    fn: (row: WorkflowStateEntity) => Promise<T>,
+  ): Promise<T> {
+    return this.dataSource.transaction(async (manager: EntityManager) => {
+      const row = await manager
+        .createQueryBuilder(WorkflowStateEntity, 'wf')
+        .setLock('pessimistic_write')
+        .where('wf.entity_id = :entityId', { entityId })
+        .andWhere('wf.workflow_id = :workflowId', { workflowId })
+        .getOneOrFail();
+
+      return fn(row);
     });
   }
 }
