@@ -7,7 +7,7 @@ import { WorkflowFsmService } from '../workflow-fsm.service';
 import { FsmBuilder } from '../fsm-builder';
 import { FsmValidator } from '../fsm-validator';
 import { WorkflowDefinitionResolver } from '../workflow-definition.resolver';
-import { WorkflowStateRepository } from '../../executor/workflow-state.repository';
+import { WorkflowStateRepository, WorkflowStateRowNotFoundError } from '../../executor/workflow-state.repository';
 import { AuditLogService } from '../../../audit/services/audit-log.service';
 import type { WorkflowFsmDef } from '../workflow-fsm.types';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
@@ -166,10 +166,10 @@ describe('Workflow Transition E2E (in-memory)', () => {
         .send({ event: 'VALIDER' })
         .expect(200);
 
-      expect(res.body.currentState).toBe('reconciliation');
-      expect(res.body.previousState).toBe('saisie_fond_restant');
-      expect(res.body.isTerminal).toBe(false);
-      expect(res.body.availableTransitions).toEqual(
+      expect(res.body.current_state).toBe('reconciliation');
+      expect(res.body.previous_state).toBe('saisie_fond_restant');
+      expect(res.body.is_terminal).toBe(false);
+      expect(res.body.available_transitions).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ event: 'CONFIRMER' }),
           expect.objectContaining({ event: 'RETOUR' }),
@@ -202,7 +202,7 @@ describe('Workflow Transition E2E (in-memory)', () => {
         .send({ event: 'VALIDER' })
         .expect(200)
         .expect((res: any) => {
-          expect(res.body.currentState).toBe('reconciliation');
+          expect(res.body.current_state).toBe('reconciliation');
         });
 
       await request(server)
@@ -217,7 +217,7 @@ describe('Workflow Transition E2E (in-memory)', () => {
         .send({ event: 'CONFIRMER' })
         .expect(200)
         .expect((res: any) => {
-          expect(res.body.currentState).toBe('validation_manager');
+          expect(res.body.current_state).toBe('validation_manager');
         });
 
       await request(server)
@@ -226,8 +226,8 @@ describe('Workflow Transition E2E (in-memory)', () => {
         .send({ event: 'APPROUVER' })
         .expect(200)
         .expect((res: any) => {
-          expect(res.body.currentState).toBe('cloture_confirmee');
-          expect(res.body.isTerminal).toBe(true);
+          expect(res.body.current_state).toBe('cloture_confirmee');
+          expect(res.body.is_terminal).toBe(true);
         });
 
       await request(server)
@@ -316,14 +316,22 @@ function createMockStateRepo(store: Map<string, any>) {
     ),
     findByRunId: jest.fn(async (runId: string) => store.get(runId) ?? null),
     transactionWithLock: jest.fn(
-      async <T>(entityId: string, workflowId: string, fn: (row: any) => Promise<T>): Promise<T> => {
+      async <T>(entityId: string, workflowId: string, fn: (row: any, manager: any) => Promise<T>): Promise<T> => {
         for (const [, v] of store) {
-          if (v.entity_id === entityId && v.workflow_id === workflowId) return fn(v);
+          if (v.entity_id === entityId && v.workflow_id === workflowId) return fn(v, null);
         }
-        throw new Error('Not found');
+        throw new WorkflowStateRowNotFoundError(entityId, workflowId);
       },
     ),
     update: jest.fn(async (id: string, input: { currentState: string; history: any[] }) => {
+      const entry = store.get(id);
+      if (entry) {
+        entry.current_state = input.currentState;
+        entry.history = input.history;
+      }
+      return entry;
+    }),
+    updateInManager: jest.fn(async (_manager: any, id: string, input: { currentState: string; history: any[] }) => {
       const entry = store.get(id);
       if (entry) {
         entry.current_state = input.currentState;

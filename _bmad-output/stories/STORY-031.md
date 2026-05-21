@@ -3,7 +3,7 @@
 **Epic :** EPIC-005 — Workflow DAG Engine
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Review
+**Status :** Done
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
@@ -490,6 +490,41 @@ apps/nestjs/src/workflow/executor/
 ### Change Log
 
 - 2026-05-21 : STORY-031 implemented — XState v5 FSM engine, WorkflowFsmService, controller, FsmValidator, E2E tests (Carlos)
+
+---
+
+### Review Findings
+
+_Code review — 2026-05-21 — 3 layers (Blind Hunter + Edge Case Hunter + Acceptance Auditor)_
+
+#### Decision Needed
+
+- [x] [Review][Decision] **DN-1 — transition() signature mismatch** — resolved: service loads def internally via `defResolver`; controller inlines `workflow_${moduleId}`; spec updated to reflect actual contract
+- [x] [Review][Decision] **DN-2 — POST /transition response casing** — resolved: all response fields now snake_case (matches spec + GET endpoint)
+- [x] [Review][Decision] **DN-3 — workflow_states.history column shared with STORY-030 executor** — resolved: `getStatus` filters history by `from/event/to` field presence; mixed entries from executor are excluded
+
+#### Patches
+
+- [x] [Review][Patch] **P-01 [CRITICAL] Path traversal — tenantSlug/workflowId/moduleId unsanitized in file paths** [`workflow-definition.resolver.ts:loadFsmDef`] — `resolve()` does not prevent `../../etc/passwd` traversal. Add allowlist regex (`/^[\w-]+$/`) for tenantSlug, workflowId, moduleId; assert resolved path starts with `baseDir` before reading.
+- [x] [Review][Patch] **P-02 [CRITICAL] Cross-tenant isolation — transition() calls findByEntityWorkflow without tenantId** [`workflow-fsm.service.ts:33`] — `findByEntityWorkflow(entityId, workflowId)` queries without tenant scope; Tenant A can read/mutate Tenant B's state. Replace with `findByEntityAndWorkflow(tenantId, entityId, workflowId)` (method already exists).
+- [x] [Review][Patch] **P-03 [CRITICAL] Nested transaction deadlock — update() opens new DataSource.transaction() inside transactionWithLock** [`workflow-state.repository.ts:43-51` + `workflow-fsm.service.ts:99`] — `transactionWithLock` holds pessimistic lock on connection A; `stateRepo.update()` opens a second `dataSource.transaction()` on connection B which waits for A's lock → deadlock. Fix: pass `EntityManager` from `transactionWithLock` into callback; service calls `manager.update()` directly.
+- [x] [Review][Patch] **P-04 [HIGH] TOCTOU + EntityNotFoundError — pre-lock read is racy and ORM error is unmapped** [`workflow-fsm.service.ts:33-37` + `workflow-state.repository.ts:87`] — `findByEntityWorkflow` called outside transaction reads stale state; if row deleted before lock acquired, `getOneOrFail()` throws raw `EntityNotFoundError` (unhandled 500). Remove pre-lock check; catch `EntityNotFoundError` inside `transactionWithLock` and rethrow as `WorkflowNotStartedError`.
+- [x] [Review][Patch] **P-05 [HIGH] FsmValidator injected but never called** [`workflow.controller.ts`] — `fsmValidator` is constructed but `validate(def)` is never invoked before passing def to `fsm.transition()` / `fsm.getStatus()`. Malformed JSON from disk reaches `createMachine()` unchecked. Add `validate(def)` guard in controller after loading def; throw `BadRequestException` on invalid.
+- [x] [Review][Patch] **P-06 [HIGH] void audit log on rejected transitions** [`workflow-fsm.service.ts:55`] — `void this.auditLog.log(...)` on denied transition silently swallows errors; compliance trace incomplete. Replace `void` with `await`.
+- [x] [Review][Patch] **P-07 [HIGH] machine.getTransitionData() is not a documented XState v5 stable API** [`workflow-fsm.service.ts:49`] — This method may not exist on all machine types and is not listed in XState v5 public API surface. Use `snapshot.nextEvents` (public) to check if event is declared, or `getNextTransitions(snapshot)` (already imported) as the check. Runtime `TypeError` risk if XState minor bumps the internal API.
+- [x] [Review][Patch] **P-08 [MEDIUM] availableEvents returns XState node ID as target, not state name** [`workflow-fsm.service.ts:146`] — `t.target[0].id` in XState v5 is the composite node ID (`machineId.stateName`), not the bare state name. Clients receive `workflow_cloture_caisse.reconciliation` instead of `reconciliation`. Use `t.target[0].key` (the state's own key) or strip the machine ID prefix.
+- [x] [Review][Patch] **P-09 [MEDIUM] body.event not validated — empty string or null passes to FSM** [`workflow.controller.ts:50`] — No DTO/class-validator on `body.event`. An empty or null event reaches `machine.getTransitionData()` silently. Add a validated DTO class with `@IsString() @IsNotEmpty()`.
+- [x] [Review][Patch] **P-10 [MEDIUM] cond guards silently dropped in FsmBuilder** [`fsm-builder.ts:22-24`] — When transition target is `{ target: 'X', cond: 'guard' }`, `cond` is discarded without warning. Since Phase 1 explicitly excludes guards, add an `FsmValidator` check that emits `WF_FSM_INVALID` if any transition declares `cond`. Prevents silent logic bypass if a tenant JSON inadvertently includes guard syntax.
+- [x] [Review][Patch] **P-11 [MEDIUM] noRoute() undocumented @Post() endpoint** [`workflow.controller.ts:121`] — Bare `@Post()` with 204 response on the workflow resource base path is not in spec and creates unexplained HTTP surface. Remove.
+- [x] [Review][Patch] **P-12 [MEDIUM] WorkflowDefinitionResolver reads file from disk on every request** [`workflow-definition.resolver.ts:29`] — `readFileSync` blocks the Node.js event loop on every transition/getStatus call; no caching. Add `Map`-based in-memory cache keyed on `(tenantSlug, workflowId)`.
+
+#### Deferred
+
+- [x] [Review][Defer] **D-01 — No unique DB constraint on (tenant_id, entity_id, workflow_id)** [`workflow_states` table] — deferred, pre-existing — concurrent workflow starts can create duplicate rows; requires migration outside this story scope.
+- [x] [Review][Defer] **D-02 — Unbounded history array growth** [`workflow-fsm.service.ts:85-91`] — deferred, pre-existing — no cap/archiving on history JSONB; Phase 2 concern.
+- [x] [Review][Defer] **D-03 — No lock_timeout on pessimistic write lock** [`workflow-state.repository.ts:83`] — deferred, pre-existing — PostgreSQL default is indefinite; DB-level config outside MVP scope.
+- [x] [Review][Defer] **D-04 — AuditLog failure after DB commit is silent** [`workflow-fsm.service.ts:99-106`] — deferred, pre-existing — requires outbox pattern; Phase 2.
+- [x] [Review][Defer] **D-05 — xstate: "^5" unpinned major version** [`package.json`] — deferred, pre-existing — acceptable for MVP; pin before Gate 0 production.
 
 ---
 

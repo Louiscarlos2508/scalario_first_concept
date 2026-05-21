@@ -29,12 +29,12 @@ export interface TransitionInput {
 }
 
 export interface TransitionResult {
-  currentState: string;
-  previousState: string;
+  current_state: string;
+  previous_state: string;
   event: string;
-  availableTransitions: TransitionDescriptor[];
-  isTerminal: boolean;
-  historyLength?: number;
+  available_transitions: TransitionDescriptor[];
+  is_terminal: boolean;
+  history_length?: number;
 }
 
 export interface WorkflowStatus {
@@ -88,4 +88,24 @@ export class WorkflowNotStartedError extends Error {
 
 export interface FsmBuilderPort {
   build(def: WorkflowFsmDef): AnyStateMachine;
+}
+
+export class WorkflowNotFoundError extends Error {
+  constructor(
+    public readonly workflowId: string,
+    public readonly tenantId: string,
+  ) {
+    super(`Workflow '${workflowId}' not found for tenant '${tenantId}'.`);
+    this.name = 'WorkflowNotFoundError';
+  }
+}
+
+export class WorkflowConfigError extends Error {
+  constructor(
+    public readonly workflowId: string,
+    public readonly errors: FsmValidationError[],
+  ) {
+    super(`Workflow '${workflowId}' has invalid configuration.`);
+    this.name = 'WorkflowConfigError';
+  }
 }

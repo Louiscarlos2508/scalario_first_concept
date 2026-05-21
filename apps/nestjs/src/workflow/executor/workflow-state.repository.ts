@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, Repository, EntityManager } from 'typeorm';
+import { DataSource, Repository, EntityManager, EntityNotFoundError } from 'typeorm';
 import { WorkflowStateEntity } from './workflow-state.entity';
 import type { StepExecution } from './workflow-executor.types';
+
+export class WorkflowStateRowNotFoundError extends Error {
+  constructor(entityId: string, workflowId: string) {
+    super(`WorkflowState not found: entity='${entityId}' workflow='${workflowId}'`);
+    this.name = 'WorkflowStateRowNotFoundError';
+  }
+}
 
 export interface CreateWorkflowStateInput {
   tenantId: string;
@@ -74,20 +81,40 @@ export class WorkflowStateRepository {
     });
   }
 
+  async updateInManager(
+    manager: EntityManager,
+    runId: string,
+    input: { currentState: string; history: any[] },
+  ): Promise<void> {
+    await manager.update(WorkflowStateEntity, runId, {
+      current_state: input.currentState,
+      history: input.history as any,
+      updated_at: new Date(),
+    });
+  }
+
   async transactionWithLock<T>(
     entityId: string,
     workflowId: string,
-    fn: (row: WorkflowStateEntity) => Promise<T>,
+    fn: (row: WorkflowStateEntity, manager: EntityManager) => Promise<T>,
   ): Promise<T> {
     return this.dataSource.transaction(async (manager: EntityManager) => {
-      const row = await manager
-        .createQueryBuilder(WorkflowStateEntity, 'wf')
-        .setLock('pessimistic_write')
-        .where('wf.entity_id = :entityId', { entityId })
-        .andWhere('wf.workflow_id = :workflowId', { workflowId })
-        .getOneOrFail();
+      let row: WorkflowStateEntity;
+      try {
+        row = await manager
+          .createQueryBuilder(WorkflowStateEntity, 'wf')
+          .setLock('pessimistic_write')
+          .where('wf.entity_id = :entityId', { entityId })
+          .andWhere('wf.workflow_id = :workflowId', { workflowId })
+          .getOneOrFail();
+      } catch (err) {
+        if (err instanceof EntityNotFoundError) {
+          throw new WorkflowStateRowNotFoundError(entityId, workflowId);
+        }
+        throw err;
+      }
 
-      return fn(row);
+      return fn(row, manager);
     });
   }
 }

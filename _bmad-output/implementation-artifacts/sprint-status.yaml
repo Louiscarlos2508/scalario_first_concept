@@ -375,7 +375,7 @@ sprints:
     end_date: "2026-07-04"
     capacity_points: 42
     committed_points: 41
-    completed_points: 5
+    completed_points: 10
     status: "ready"
     goal: "Gate 0 — retail_fresh_produce.json déployé, workflow clôture caisse fonctionnel, sync offline mobile opérationnelle, Blandine live."
     stories:
@@ -383,10 +383,14 @@ sprints:
         title: "XState State Machine"
         epic: "EPIC-005"
         points: 5
-        status: "review"
+        status: "completed"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-031.md"
         defined_date: "2026-05-10"
+        completed_date: "2026-05-21"
+        actual_points: 5
+        branch: "main"
+        notes: "XState v5 FSM engine livré. WorkflowFsmService (transition + getStatus), FsmBuilder, FsmValidator, WorkflowDefinitionResolver (cache in-memory + path containment), WorkflowController. 36/36 tests verts (30 unit + 6 E2E). Typecheck 0 erreur. Code review passé : 3 CRITICAL + 4 HIGH + 5 MEDIUM patchés (P-01→P-12), 5 différés (D-01→D-05), 3 décisions résolues (DN-1→DN-3)."
       - story_id: "STORY-032"
         title: "Integration Workflow↔ModuleEngine"
         epic: "EPIC-005"

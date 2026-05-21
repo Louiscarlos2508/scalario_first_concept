@@ -8,31 +8,34 @@ import {
   HttpStatus,
   ConflictException,
   NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
   UseGuards,
   Logger,
 } from '@nestjs/common';
 import { WorkflowFsmService } from './fsm/workflow-fsm.service';
-import { WorkflowDefinitionResolver } from './fsm/workflow-definition.resolver';
-import { FsmValidator } from './fsm/fsm-validator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
-import { WorkflowTransitionDeniedError, WorkflowNotStartedError } from './fsm/workflow-fsm.types';
+import {
+  WorkflowTransitionDeniedError,
+  WorkflowNotStartedError,
+  WorkflowNotFoundError,
+  WorkflowConfigError,
+} from './fsm/workflow-fsm.types';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RbacGuard } from '../security/guards/rbac.guard';
 import { AbacGuard } from '../security/abac/guards/abac.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AbacAction } from '../security/abac/decorators/abac-action.decorator';
 
+const SLUG_RE = /^[\w-]+$/;
+
 @Controller(':tenant/:moduleId/entities/:id/workflow')
 @UseGuards(JwtAuthGuard, RbacGuard, AbacGuard)
 export class WorkflowController {
   private readonly logger = new Logger(WorkflowController.name);
 
-  constructor(
-    private readonly fsm: WorkflowFsmService,
-    private readonly defResolver: WorkflowDefinitionResolver,
-    private readonly fsmValidator: FsmValidator,
-  ) {}
+  constructor(private readonly fsm: WorkflowFsmService) {}
 
   @Post('transition')
   @HttpCode(HttpStatus.OK)
@@ -45,27 +48,26 @@ export class WorkflowController {
     @Body() body: { event: string; params?: Record<string, unknown> },
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    const workflowId = this.defResolver.resolveWorkflowId(moduleId);
-    const def = this.defResolver.loadFsmDef(tenant, workflowId);
-
-    if (!def) {
-      throw new NotFoundException({
-        error: 'WORKFLOW_NOT_FOUND',
-        message: `Workflow '${workflowId}' not found for tenant '${tenant}'.`,
-      });
+    if (!body.event || typeof body.event !== 'string' || !body.event.trim()) {
+      throw new BadRequestException({ error: 'INVALID_EVENT', message: 'event must be a non-empty string.' });
     }
 
+    if (!SLUG_RE.test(moduleId)) {
+      throw new BadRequestException({ error: 'INVALID_MODULE_ID', message: 'moduleId contains invalid characters.' });
+    }
+
+    const workflowId = `workflow_${moduleId}`;
+
     try {
-      const result = await this.fsm.transition(def, {
+      return await this.fsm.transition({
         tenantId: tenant,
         moduleId,
         entityId,
         workflowId,
-        event: body.event,
+        event: body.event.trim(),
         params: body.params,
         triggeredBy: user.user_id,
       });
-      return result;
     } catch (err) {
       if (err instanceof WorkflowTransitionDeniedError) {
         throw new ConflictException({
@@ -76,10 +78,13 @@ export class WorkflowController {
         });
       }
       if (err instanceof WorkflowNotStartedError) {
-        throw new NotFoundException({
-          error: 'WORKFLOW_NOT_STARTED',
-          message: err.message,
-        });
+        throw new NotFoundException({ error: 'WORKFLOW_NOT_STARTED', message: err.message });
+      }
+      if (err instanceof WorkflowNotFoundError) {
+        throw new NotFoundException({ error: 'WORKFLOW_NOT_FOUND', message: err.message });
+      }
+      if (err instanceof WorkflowConfigError) {
+        throw new InternalServerErrorException({ error: 'WORKFLOW_CONFIG_ERROR', message: err.message });
       }
       throw err;
     }
@@ -93,32 +98,25 @@ export class WorkflowController {
     @Param('moduleId') moduleId: string,
     @Param('id') entityId: string,
   ) {
-    const workflowId = this.defResolver.resolveWorkflowId(moduleId);
-    const def = this.defResolver.loadFsmDef(tenant, workflowId);
-
-    if (!def) {
-      throw new NotFoundException({
-        error: 'WORKFLOW_NOT_FOUND',
-        message: `Workflow '${workflowId}' not found for tenant '${tenant}'.`,
-      });
+    if (!SLUG_RE.test(moduleId)) {
+      throw new BadRequestException({ error: 'INVALID_MODULE_ID', message: 'moduleId contains invalid characters.' });
     }
 
+    const workflowId = `workflow_${moduleId}`;
+
     try {
-      return await this.fsm.getStatus(tenant, entityId, workflowId, def);
+      return await this.fsm.getStatus(tenant, entityId, workflowId);
     } catch (err) {
       if (err instanceof WorkflowNotStartedError) {
-        throw new NotFoundException({
-          error: 'WORKFLOW_NOT_STARTED',
-          message: err.message,
-        });
+        throw new NotFoundException({ error: 'WORKFLOW_NOT_STARTED', message: err.message });
+      }
+      if (err instanceof WorkflowNotFoundError) {
+        throw new NotFoundException({ error: 'WORKFLOW_NOT_FOUND', message: err.message });
+      }
+      if (err instanceof WorkflowConfigError) {
+        throw new InternalServerErrorException({ error: 'WORKFLOW_CONFIG_ERROR', message: err.message });
       }
       throw err;
     }
-  }
-
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @Post()
-  noRoute() {
-    return;
   }
 }

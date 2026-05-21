@@ -41,6 +41,14 @@ export class FsmValidator {
               workflowId: def.id,
             });
           }
+          if (typeof target === 'object' && target.cond) {
+            errors.push({
+              code: 'WF_FSM_INVALID',
+              message: `FSM '${def.id}' : state '${name}' transition '${event}' declares 'cond' which is not supported in Phase 1. Use DAG guards via WorkflowExecutorService instead.`,
+              stepId: name,
+              workflowId: def.id,
+            });
+          }
         }
       }
     }

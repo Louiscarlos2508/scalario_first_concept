@@ -1,7 +1,9 @@
 import { WorkflowFsmService } from '../workflow-fsm.service';
 import { FsmBuilder } from '../fsm-builder';
+import { FsmValidator } from '../fsm-validator';
 import type { WorkflowFsmDef, TransitionInput } from '../workflow-fsm.types';
 import { WorkflowTransitionDeniedError, WorkflowNotStartedError } from '../workflow-fsm.types';
+import { WorkflowStateRowNotFoundError } from '../../executor/workflow-state.repository';
 
 const clotureCaisseFsmDef: WorkflowFsmDef = {
   id: 'workflow_cloture_caisse',
@@ -66,19 +68,22 @@ class MockWorkflowStateRepository {
         this.store.set(k, { ...v, current_state: input.currentState, history: input.history });
       }
     }
-    const found = Array.from(this.store.values()).find((v) => v.id === id);
-    return found ?? null;
+    return Array.from(this.store.values()).find((v) => v.id === id) ?? null;
+  }
+
+  async updateInManager(_manager: any, id: string, input: { currentState: string; history: any[] }) {
+    return this.update(id, input);
   }
 
   async transactionWithLock<T>(
     entityId: string,
     workflowId: string,
-    fn: (row: any) => Promise<T>,
+    fn: (row: any, manager: any) => Promise<T>,
   ): Promise<T> {
     const key = `${entityId}:${workflowId}`;
     const row = this.store.get(key);
-    if (!row) throw new Error('Not found');
-    return fn(row);
+    if (!row) throw new WorkflowStateRowNotFoundError(entityId, workflowId);
+    return fn(row, null);
   }
 }
 
@@ -95,11 +100,23 @@ class MockAuditLogService {
   }
 }
 
+class MockWorkflowDefinitionResolver {
+  resolveWorkflowId(moduleId: string) {
+    return `workflow_${moduleId}`;
+  }
+  loadFsmDef(_tenantSlug: string, workflowId: string) {
+    if (workflowId === 'workflow_cloture_caisse') return clotureCaisseFsmDef;
+    return null;
+  }
+}
+
 describe('WorkflowFsmService', () => {
   let service: WorkflowFsmService;
   let fsmBuilder: FsmBuilder;
   let stateRepo: MockWorkflowStateRepository;
   let auditLog: MockAuditLogService;
+  let defResolver: MockWorkflowDefinitionResolver;
+  let fsmValidator: FsmValidator;
 
   const makeTransitionInput = (overrides: Partial<TransitionInput> = {}): TransitionInput => ({
     tenantId: 'tenant-1',
@@ -115,7 +132,15 @@ describe('WorkflowFsmService', () => {
     fsmBuilder = new FsmBuilder();
     stateRepo = new MockWorkflowStateRepository();
     auditLog = new MockAuditLogService();
-    service = new WorkflowFsmService(stateRepo as any, fsmBuilder, auditLog as any);
+    defResolver = new MockWorkflowDefinitionResolver();
+    fsmValidator = new FsmValidator();
+    service = new WorkflowFsmService(
+      stateRepo as any,
+      fsmBuilder,
+      auditLog as any,
+      defResolver as any,
+      fsmValidator,
+    );
 
     await stateRepo.create({
       runId: 'run-1',
@@ -138,86 +163,69 @@ describe('WorkflowFsmService', () => {
 
   describe('transition', () => {
     it('AC-06 — legal transition: VALIDER from saisie_fond_restant → reconciliation', async () => {
-      const result = await service.transition(
-        clotureCaisseFsmDef,
-        makeTransitionInput({ event: 'VALIDER' }),
-      );
-      expect(result.currentState).toBe('reconciliation');
-      expect(result.previousState).toBe('saisie_fond_restant');
+      const result = await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      expect(result.current_state).toBe('reconciliation');
+      expect(result.previous_state).toBe('saisie_fond_restant');
       expect(result.event).toBe('VALIDER');
-      expect(result.isTerminal).toBe(false);
-      expect(result.availableTransitions.map((t) => t.event)).toEqual(
+      expect(result.is_terminal).toBe(false);
+      expect(result.available_transitions.map((t) => t.event)).toEqual(
         expect.arrayContaining(['CONFIRMER', 'RETOUR']),
       );
     });
 
-    it('AC-06 — illegal transition: APPROUVER from saisie_fond_restant → 409', async () => {
+    it('AC-06 — illegal transition: APPROUVER from saisie_fond_restant → WorkflowTransitionDeniedError', async () => {
       await expect(
-        service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'APPROUVER' })),
+        service.transition(makeTransitionInput({ event: 'APPROUVER' })),
       ).rejects.toThrow(WorkflowTransitionDeniedError);
 
       try {
-        await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'APPROUVER' }));
+        await service.transition(makeTransitionInput({ event: 'APPROUVER' }));
       } catch (err) {
         expect(err).toBeInstanceOf(WorkflowTransitionDeniedError);
         expect((err as WorkflowTransitionDeniedError).currentState).toBe('saisie_fond_restant');
         expect((err as WorkflowTransitionDeniedError).availableTransitions).toHaveLength(1);
-        expect((err as WorkflowTransitionDeniedError).availableTransitions[0].event).toBe(
-          'VALIDER',
-        );
+        expect((err as WorkflowTransitionDeniedError).availableTransitions[0].event).toBe('VALIDER');
       }
     });
 
-    it('AC-07 — transition to final state returns isTerminal:true', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'CONFIRMER' }));
-      const result = await service.transition(
-        clotureCaisseFsmDef,
-        makeTransitionInput({ event: 'APPROUVER' }),
-      );
-      expect(result.currentState).toBe('cloture_confirmee');
-      expect(result.isTerminal).toBe(true);
+    it('AC-07 — transition to final state returns is_terminal:true', async () => {
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      await service.transition(makeTransitionInput({ event: 'CONFIRMER' }));
+      const result = await service.transition(makeTransitionInput({ event: 'APPROUVER' }));
+      expect(result.current_state).toBe('cloture_confirmee');
+      expect(result.is_terminal).toBe(true);
     });
 
     it('AC-19 — retransition to same state (RETOUR) is allowed', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
-      const result = await service.transition(
-        clotureCaisseFsmDef,
-        makeTransitionInput({ event: 'RETOUR' }),
-      );
-      expect(result.currentState).toBe('saisie_fond_restant');
-      expect(result.previousState).toBe('reconciliation');
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      const result = await service.transition(makeTransitionInput({ event: 'RETOUR' }));
+      expect(result.current_state).toBe('saisie_fond_restant');
+      expect(result.previous_state).toBe('reconciliation');
     });
 
-    it('AC-19 — event not declared → 409 (XState ignores silently)', async () => {
+    it('AC-19 — event not declared → WorkflowTransitionDeniedError', async () => {
       await expect(
-        service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'UNKNOWN_EVENT' })),
+        service.transition(makeTransitionInput({ event: 'UNKNOWN_EVENT' })),
       ).rejects.toThrow(WorkflowTransitionDeniedError);
     });
 
     it('throws WorkflowNotStartedError when entity has no workflow state', async () => {
       await expect(
-        service.transition(clotureCaisseFsmDef, {
-          ...makeTransitionInput(),
-          entityId: 'nonexistent',
-        }),
+        service.transition({ ...makeTransitionInput(), entityId: 'nonexistent' }),
       ).rejects.toThrow(WorkflowNotStartedError);
     });
 
     it('AC-06 — history is appended on each transition', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
       const row = await stateRepo.findByEntityWorkflow('entity-1', 'workflow_cloture_caisse');
       expect(row.history).toHaveLength(1);
       expect(row.history[0].event).toBe('VALIDER');
     });
 
-    it('AC-06 — availableTransitions include all legal next events', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
-      const result = await service.transition(
-        clotureCaisseFsmDef,
-        makeTransitionInput({ event: 'CONFIRMER' }),
-      );
-      expect(result.availableTransitions.map((t) => t.event)).toEqual(
+    it('AC-06 — available_transitions include all legal next events', async () => {
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      const result = await service.transition(makeTransitionInput({ event: 'CONFIRMER' }));
+      expect(result.available_transitions.map((t) => t.event)).toEqual(
         expect.arrayContaining(['APPROUVER', 'REJETER']),
       );
     });
@@ -225,44 +233,25 @@ describe('WorkflowFsmService', () => {
 
   describe('getStatus', () => {
     it('AC-11 — returns status with current_state, available_transitions, history', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
-
-      const status = await service.getStatus(
-        'tenant-1',
-        'entity-1',
-        'workflow_cloture_caisse',
-        clotureCaisseFsmDef,
-      );
-
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      const status = await service.getStatus('tenant-1', 'entity-1', 'workflow_cloture_caisse');
       expect(status.current_state).toBe('reconciliation');
       expect(status.available_transitions).toHaveLength(2);
       expect(status.history).toHaveLength(1);
       expect(status.is_terminal).toBe(false);
     });
 
-    it('AC-11 — returns 404 for non-started workflow', async () => {
+    it('AC-11 — returns 404 error for non-started workflow', async () => {
       await expect(
-        service.getStatus(
-          'tenant-1',
-          'nonexistent',
-          'workflow_cloture_caisse',
-          clotureCaisseFsmDef,
-        ),
+        service.getStatus('tenant-1', 'nonexistent', 'workflow_cloture_caisse'),
       ).rejects.toThrow(WorkflowNotStartedError);
     });
 
     it('AC-07 — is_terminal:true for terminal states', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'CONFIRMER' }));
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'APPROUVER' }));
-
-      const status = await service.getStatus(
-        'tenant-1',
-        'entity-1',
-        'workflow_cloture_caisse',
-        clotureCaisseFsmDef,
-      );
-
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
+      await service.transition(makeTransitionInput({ event: 'CONFIRMER' }));
+      await service.transition(makeTransitionInput({ event: 'APPROUVER' }));
+      const status = await service.getStatus('tenant-1', 'entity-1', 'workflow_cloture_caisse');
       expect(status.current_state).toBe('cloture_confirmee');
       expect(status.is_terminal).toBe(true);
     });
@@ -284,16 +273,15 @@ describe('WorkflowFsmService', () => {
         currentState: 'only',
         history: [],
       });
-
-      const status = await service.getStatus('tenant-1', 'entity-2', 'single_state', def);
-
+      jest.spyOn(defResolver, 'loadFsmDef').mockReturnValueOnce(def);
+      const status = await service.getStatus('tenant-1', 'entity-2', 'single_state');
       expect(status.available_transitions).toHaveLength(0);
     });
   });
 
   describe('audit logging', () => {
     it('logs workflow.transition on legal transition', async () => {
-      await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'VALIDER' }));
+      await service.transition(makeTransitionInput({ event: 'VALIDER' }));
       const logged = auditLog.getLogged();
       const transitions = logged.filter((l: any) => l.action === 'workflow.transition');
       expect(transitions).toHaveLength(1);
@@ -301,7 +289,7 @@ describe('WorkflowFsmService', () => {
 
     it('logs workflow.transition_rejected on illegal transition', async () => {
       try {
-        await service.transition(clotureCaisseFsmDef, makeTransitionInput({ event: 'APPROUVER' }));
+        await service.transition(makeTransitionInput({ event: 'APPROUVER' }));
       } catch {
         /* expected */
       }
