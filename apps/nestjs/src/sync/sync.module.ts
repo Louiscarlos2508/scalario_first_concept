@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ModuleEngineModule } from '../module-engine/module-engine.module';
+import { SyncController } from './sync.controller';
 
-/**
- * SyncModule — scaffold (STORY-013). Implementation in follow-up stories.
- */
-@Module({})
+@Module({
+  imports: [ModuleEngineModule],
+  controllers: [SyncController],
+})
 export class SyncModule {}

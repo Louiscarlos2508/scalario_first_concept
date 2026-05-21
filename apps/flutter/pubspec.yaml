@@ -44,6 +44,11 @@ dependencies:
   # STORY-033 — Stockage sécurisé passphrase DB + JWT tokens (hors Drift).
   flutter_secure_storage: ^10.2.0
 
+  # STORY-034 — Sync queue worker : HTTP client, connectivity monitoring, UUID generation.
+  dio: ^5.8.0
+  connectivity_plus: ^6.1.4
+  uuid: ^4.5.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

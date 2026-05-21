@@ -375,7 +375,7 @@ sprints:
     end_date: "2026-07-04"
     capacity_points: 42
     committed_points: 41
-    completed_points: 0
+    completed_points: 5
     status: "ready"
     goal: "Gate 0 — retail_fresh_produce.json déployé, workflow clôture caisse fonctionnel, sync offline mobile opérationnelle, Blandine live."
     stories:
@@ -399,10 +399,11 @@ sprints:
         title: "Sync Queue Locale Drift"
         epic: "EPIC-006"
         points: 5
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-034.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-20"
       - story_id: "STORY-035"
         title: "Conflict Resolution Phase 1"
         epic: "EPIC-006"
@@ -565,9 +566,9 @@ epics:
 # Récap définitions
 definition_summary:
   total_stories: 43
-  defined: 17
+  defined: 16
   review: 4
-  completed: 22
+  completed: 23
   total_points_committed: 159  # 39+41+38+41
   total_points_stretch: 8       # STORY-027 (3) + STORY-028 (5)
   total_points_deferred: 5      # STORY-038
@@ -576,4 +577,4 @@ definition_summary:
     STORY-002 à STORY-043 : génération parallèle 7 sub-agents (1 par EPIC),
     chacun avec STORY-001 comme template, sources PRD + sprint plan + architecture
     + design-process/D-Design-System/. Conflit PRD↔DS toujours résolu en faveur DS.
-  next_step: "/bmad:dev-story STORY-006"
+  next_step: "/bmad:dev-story STORY-031"

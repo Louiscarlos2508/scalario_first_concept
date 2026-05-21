@@ -29,6 +29,9 @@ import 'core/offline/database.dart';
 import 'core/offline/db_encryption.dart';
 import 'core/offline/drift_data_source_resolver.dart';
 import 'core/offline/local_store.dart';
+import 'core/offline/sync/connectivity_listener.dart';
+import 'core/offline/sync/sync_api_client.dart';
+import 'core/offline/sync/sync_queue_service.dart';
 import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
 import 'engine/bdui_engine/bdui_engine_module.dart';
@@ -86,6 +89,23 @@ Future<void> _setupDependencies() async {
     localDataDao: store.localDataDao,
   );
   GetIt.I.registerSingleton<CacheCleaner>(cleaner);
+
+  // STORY-034 — Sync Queue worker dependencies.
+  GetIt.I.registerSingleton<ConnectivityListener>(ConnectivityListener());
+
+  GetIt.I.registerSingleton<SyncQueueService>(
+    SyncQueueService(
+      queueDao: store.syncQueueDao,
+      localDataDao: store.localDataDao,
+    ),
+  );
+
+  GetIt.I.registerSingleton<SyncApiClient>(
+    SyncApiClient(
+      baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000'),
+      tokenProvider: () => authStorage.readAccessToken(),
+    ),
+  );
 
   // STORY-008 — BDUIEngine orchestrateur (consomme registry + layoutResolver).
   // STORY-026 — appelle BduiValidator.init() en interne pour charger les schémas.

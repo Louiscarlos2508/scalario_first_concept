@@ -3,7 +3,7 @@
 **Epic :** EPIC-005 — Workflow DAG Engine
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Review
+**Status :** done
 **Assigned To :** Unassigned
 **Created :** 2026-05-10
 **Sprint :** 3 (2026-06-09 → 2026-06-20)

@@ -64,4 +64,11 @@ final class LocalDataDao extends DatabaseAccessor<ScalarioDatabase> {
       (delete(db.localData)..where((t) => t.id.equals(id))).go();
 
   Future<void> deleteAll() => delete(db.localData).go();
+
+  Future<void> updateSyncStatus(String id, String syncStatus) =>
+      (update(db.localData)..where((t) => t.id.equals(id)))
+          .write(LocalDataCompanion(
+            syncStatus: Value(syncStatus),
+            localUpdatedAt: Value(DateTime.now()),
+          ));
 }
