@@ -12,7 +12,10 @@ import { AuthGuard } from '@nestjs/passport';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { ActionDispatcherService } from '../module-engine/services/action-dispatcher.service';
+import {
+  ActionDispatcherService,
+  type ActionResponse,
+} from '../module-engine/services/action-dispatcher.service';
 import { MutationInProgressError } from '../module-engine/services/idempotency.service';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
 import {
@@ -27,9 +30,7 @@ import {
 export class SyncController {
   private readonly logger = new Logger(SyncController.name);
 
-  constructor(
-    private readonly actionDispatcher: ActionDispatcherService,
-  ) {}
+  constructor(private readonly actionDispatcher: ActionDispatcherService) {}
 
   @Post('mutations')
   @Roles('OWNER', 'MANAGER')
@@ -49,7 +50,7 @@ export class SyncController {
 
     for (const mutation of body.mutations) {
       try {
-        const response = await this.actionDispatcher.dispatch({
+        const response = (await this.actionDispatcher.dispatch({
           tenantSlug: tenant,
           moduleId: mutation.module_id,
           mutationId: mutation.mutation_id,
@@ -65,7 +66,7 @@ export class SyncController {
             jti: user.jti,
             exp: user.exp,
           },
-        });
+        })) as ActionResponse;
 
         results.push({
           mutation_id: mutation.mutation_id,

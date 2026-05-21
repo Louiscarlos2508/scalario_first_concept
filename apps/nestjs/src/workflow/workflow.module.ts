@@ -32,6 +32,11 @@ import { DatabaseModule } from '../common/database.module';
     WorkflowDefinitionResolver,
   ],
   controllers: [WorkflowController],
-  exports: [WorkflowValidatorService, WorkflowExecutorService, WorkflowFsmService],
+  exports: [
+    WorkflowValidatorService,
+    WorkflowExecutorService,
+    WorkflowFsmService,
+    WorkflowStateRepository,
+  ],
 })
 export class WorkflowModule {}

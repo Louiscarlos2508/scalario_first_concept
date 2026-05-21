@@ -375,7 +375,7 @@ sprints:
     end_date: "2026-07-04"
     capacity_points: 42
     committed_points: 41
-    completed_points: 10
+    completed_points: 13
     status: "ready"
     goal: "Gate 0 — retail_fresh_produce.json déployé, workflow clôture caisse fonctionnel, sync offline mobile opérationnelle, Blandine live."
     stories:
@@ -395,10 +395,14 @@ sprints:
         title: "Integration Workflow↔ModuleEngine"
         epic: "EPIC-005"
         points: 3
-        status: "defined"
+        status: "review"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-032.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-21"
+        completed_date: "2026-05-21"
+        actual_points: 3
+        branch: "main"
       - story_id: "STORY-034"
         title: "Sync Queue Locale Drift"
         epic: "EPIC-006"

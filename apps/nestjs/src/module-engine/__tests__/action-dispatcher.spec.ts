@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ActionDispatcherService } from '../services/action-dispatcher.service';
+import {
+  ActionDispatcherService,
+  type ActionResponse,
+} from '../services/action-dispatcher.service';
 import { ModuleResolverService } from '../services/module-resolver.service';
 import { IdempotencyService } from '../services/idempotency.service';
 import { HandlerRegistry } from '../handlers/handler-registry';
 import { AuditLogService } from '../../audit/services/audit-log.service';
+import { WorkflowResponseMapper } from '../workflow-response.mapper';
 import { CrudCreateHandler } from '../handlers/crud-create.handler';
 import type { Repository } from 'typeorm';
 import type { EntityRecord } from '../entities/entity.entity';
@@ -67,7 +71,16 @@ describe('ActionDispatcherService', () => {
       log: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    service = new ActionDispatcherService(resolver, handlerRegistry, idempotency, audit);
+    service = new ActionDispatcherService(
+      resolver,
+      handlerRegistry,
+      idempotency,
+      audit,
+      new WorkflowResponseMapper(),
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it('returns 422 for unknown action', async () => {
@@ -88,13 +101,13 @@ describe('ActionDispatcherService', () => {
       previousResult: { result: { id: 'entity-1' }, mutation_id: 'mutation-1' },
     });
 
-    const result = await service.dispatch({
+    const result = (await service.dispatch({
       tenantSlug: 'acme',
       moduleId: 'stock',
       mutationId: 'mutation-1',
       body: { action: 'creer_produit', payload: { name: 'Tomate' } },
       user: mockUser,
-    });
+    })) as ActionResponse;
 
     expect(result.result).toEqual({ id: 'entity-1' });
   });
@@ -113,13 +126,13 @@ describe('ActionDispatcherService', () => {
       created_at: new Date(),
     } as any);
 
-    const result = await service.dispatch({
+    const result = (await service.dispatch({
       tenantSlug: 'acme',
       moduleId: 'stock',
       mutationId: 'mutation-2',
       body: { action: 'creer_produit', payload: { name: 'Tomate' } },
       user: mockUser,
-    });
+    })) as ActionResponse;
 
     expect(result.entity).toBeDefined();
     expect(result.mutation_id).toBe('mutation-2');

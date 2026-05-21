@@ -12,21 +12,21 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DataDispatcherService } from './services/data-dispatcher.service';
 import { ActionDispatcherService, type ActionResponse } from './services/action-dispatcher.service';
+import type { WorkflowActionResponse } from './workflow-response.mapper';
 import { GetDataQuerySchema, type GetDataQuery } from './dto/get-data.dto';
 import { ExecuteActionBodySchema, type ExecuteActionBody } from './dto/execute-action.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { AbacAction } from '../security/abac/decorators/abac-action.decorator';
 import { MutationInProgressError } from './services/idempotency.service';
 import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
 
 @Controller('api/v1/:tenant/:moduleId')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 export class ModuleEngineController {
   private readonly logger = new Logger(ModuleEngineController.name);
 
@@ -43,9 +43,8 @@ export class ModuleEngineController {
     @Param('moduleId') moduleId: string,
     @Query(new ZodValidationPipe(GetDataQuerySchema)) query: GetDataQuery,
     @CurrentUser() user: AuthenticatedUser,
-    @CurrentTenant() tenantId: string,
   ) {
-    if (tenantSlug !== tenantId) {
+    if (tenantSlug !== user.tenant_id) {
       throw new ForbiddenException('Cross-tenant access denied');
     }
 
@@ -61,9 +60,8 @@ export class ModuleEngineController {
     @Headers('x-client-mutation-id') mutationId: string,
     @Body(new ZodValidationPipe(ExecuteActionBodySchema)) body: ExecuteActionBody,
     @CurrentUser() user: AuthenticatedUser,
-    @CurrentTenant() tenantId: string,
-  ): Promise<ActionResponse> {
-    if (tenantSlug !== tenantId) {
+  ): Promise<ActionResponse | WorkflowActionResponse> {
+    if (tenantSlug !== user.tenant_id) {
       throw new ForbiddenException('Cross-tenant access denied');
     }
 

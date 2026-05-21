@@ -10,11 +10,13 @@ import { CrudCreateHandler } from './handlers/crud-create.handler';
 import { CrudUpdateHandler } from './handlers/crud-update.handler';
 import { CrudDeleteHandler } from './handlers/crud-delete.handler';
 import { WorkflowAdvanceHandler } from './handlers/workflow-advance.handler';
+import { WorkflowResponseMapper } from './workflow-response.mapper';
 import { EntityRecord } from './entities/entity.entity';
 import { SyncMutation } from './entities/sync-mutation.entity';
+import { WorkflowModule } from '../workflow/workflow.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([EntityRecord, SyncMutation])],
+  imports: [TypeOrmModule.forFeature([EntityRecord, SyncMutation]), WorkflowModule],
   controllers: [ModuleEngineController],
   providers: [
     ModuleResolverService,
@@ -26,6 +28,7 @@ import { SyncMutation } from './entities/sync-mutation.entity';
     CrudUpdateHandler,
     CrudDeleteHandler,
     WorkflowAdvanceHandler,
+    WorkflowResponseMapper,
   ],
   exports: [
     ModuleResolverService,
