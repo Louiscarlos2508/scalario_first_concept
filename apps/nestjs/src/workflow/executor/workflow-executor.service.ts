@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { WorkflowValidatorService } from '../validator/workflow-validator.service';
 import type { WorkflowStep } from '../validator/workflow-validator.types';
@@ -65,7 +66,7 @@ export class WorkflowExecutorService {
       );
     }
 
-    const runId = crypto.randomUUID();
+    const runId = randomUUID();
     const ctx: ExecutionContext = {
       runId,
       tenantId: input.tenantId,
@@ -75,6 +76,7 @@ export class WorkflowExecutorService {
       stepStatus: new Map(),
       stepOutput: new Map(),
       history: [],
+      clientMutationId: input.clientMutationId,
     };
 
     await this.stateRepo.create({

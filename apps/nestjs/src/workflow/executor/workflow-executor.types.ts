@@ -4,6 +4,7 @@ export interface ExecutionInput {
   entityId?: string;
   triggeredBy: string;
   initialContext: Record<string, unknown>;
+  clientMutationId?: string;
 }
 
 export interface ExecutionResult {
@@ -38,6 +39,7 @@ export interface ExecutionContext {
   stepStatus: Map<string, StepStatus>;
   stepOutput: Map<string, unknown>;
   history: StepExecution[];
+  clientMutationId?: string;
 }
 
 export interface StepStatus {

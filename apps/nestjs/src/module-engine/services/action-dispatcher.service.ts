@@ -22,7 +22,6 @@ import type { AuthenticatedUser } from '../../auth/interfaces/jwt-payload.interf
 import type { ExecuteActionBody } from '../dto/execute-action.dto';
 import { StartWorkflowActionSchema } from '../dto/start-workflow-action.dto';
 import { TransitionWorkflowActionSchema } from '../dto/transition-workflow-action.dto';
-import { createHash } from 'node:crypto';
 
 export interface ActionResponse {
   entity?: Record<string, unknown>;
@@ -108,11 +107,18 @@ export class ActionDispatcherService {
       action: 'start_workflow',
       payload: { workflow_id: dto.workflow_id, entity_id: dto.entity_id },
     });
-    if (existingIdem.alreadyDone && existingIdem.previousResult) {
+    if (existingIdem.alreadyDone) {
+      if (!existingIdem.previousResult) {
+        throw new InternalServerErrorException({
+          error: 'IDEMPOTENCY_CACHE_CORRUPT',
+          message: `Mutation '${ctx.mutationId}' marked as done but no cached result available.`,
+        });
+      }
       this.logger.log(
         `Idempotent start_workflow: mutation_id=${ctx.mutationId} — returning cached result`,
       );
-      return existingIdem.previousResult as unknown as WorkflowActionResponse;
+      // The stored cache wraps the workflow response in `result`.
+      return existingIdem.previousResult.result as unknown as WorkflowActionResponse;
     }
 
     try {
@@ -122,31 +128,61 @@ export class ActionDispatcherService {
         entityId: dto.entity_id,
         triggeredBy: ctx.user.user_id,
         initialContext: dto.initial_context ?? {},
+        clientMutationId: dto.client_mutation_id,
       });
 
-      const response = this.mapper.fromExecutionResult(execResult);
+      // AC-07: populate available_transitions from FSM when paused awaiting approval.
+      let availableTransitions: Array<{ event: string; target: string }> = [];
+      if (execResult.finalState === 'awaiting_approval' && dto.entity_id && this.workflowFsm) {
+        try {
+          const status = await this.workflowFsm.getStatus(
+            ctx.user.tenant_id,
+            dto.entity_id,
+            dto.workflow_id,
+          );
+          availableTransitions = status.available_transitions;
+        } catch (err) {
+          this.logger.warn(
+            `Could not fetch FSM transitions for run ${execResult.runId}: ${(err as Error).message}`,
+          );
+        }
+      }
+
+      const response = this.mapper.fromExecutionResult(execResult, availableTransitions);
 
       await this.idempotency.markSuccess(
         ctx.mutationId,
         response as unknown as Record<string, unknown>,
       );
 
-      await this.audit.log({
-        tenant_id: ctx.user.tenant_id,
-        user_id: ctx.user.user_id,
-        action: 'start_workflow',
-        module_id: ctx.moduleId,
-        entity_id: dto.entity_id,
-        metadata: {
-          workflow_id: dto.workflow_id,
-          run_id: response.run_id,
-          final_state: response.final_state,
-        },
-      });
+      await this.audit
+        .log({
+          tenant_id: ctx.user.tenant_id,
+          user_id: ctx.user.user_id,
+          action: 'start_workflow',
+          module_id: ctx.moduleId,
+          entity_id: dto.entity_id,
+          metadata: {
+            workflow_id: dto.workflow_id,
+            run_id: response.run_id,
+            final_state: response.final_state,
+          },
+        })
+        .catch((auditErr) =>
+          this.logger.error(
+            `Audit log failed for start_workflow mutation=${ctx.mutationId}: ${(auditErr as Error).message}`,
+          ),
+        );
 
       return response;
     } catch (err) {
-      await this.idempotency.markError(ctx.mutationId);
+      await this.idempotency
+        .markError(ctx.mutationId)
+        .catch((markErr) =>
+          this.logger.error(
+            `markError failed for mutation=${ctx.mutationId}: ${(markErr as Error).message}`,
+          ),
+        );
 
       const error = err as Error & {
         name?: string;
@@ -183,20 +219,8 @@ export class ActionDispatcherService {
       throw err;
     }
 
-    const existingIdem = await this.idempotency.checkAndReserve(ctx.mutationId, {
-      tenantId: ctx.user.tenant_id,
-      userId: ctx.user.user_id,
-      moduleId: ctx.moduleId,
-      action: 'transition_workflow',
-      payload: { run_id: dto.run_id, event: dto.event },
-    });
-    if (existingIdem.alreadyDone && existingIdem.previousResult) {
-      this.logger.log(
-        `Idempotent transition_workflow: mutation_id=${ctx.mutationId} — returning cached result`,
-      );
-      return existingIdem.previousResult as unknown as WorkflowActionResponse;
-    }
-
+    // P4: validation BEFORE idempotency reserve, so 4xx exits don't leave a
+    // pending sync_mutations row that blocks all future retries.
     const runState = await this.stateRepo.findByRunId(dto.run_id);
     if (!runState) {
       throw new NotFoundException({
@@ -206,6 +230,16 @@ export class ActionDispatcherService {
     }
 
     if (runState.tenant_id !== ctx.user.tenant_id) {
+      // Return 404 (not 403) to avoid leaking that the run exists for another tenant.
+      throw new NotFoundException({
+        error: 'WORKFLOW_RUN_NOT_FOUND',
+        message: `Workflow run '${dto.run_id}' not found.`,
+      });
+    }
+
+    // P3 (AC-03): the run must belong to a workflow declared in this module.
+    const moduleConfig = await this.resolveModule(ctx.tenantSlug, ctx.moduleId);
+    if (!moduleConfig.workflows || !(runState.workflow_id in moduleConfig.workflows)) {
       throw new NotFoundException({
         error: 'WORKFLOW_RUN_NOT_FOUND',
         message: `Workflow run '${dto.run_id}' not found.`,
@@ -217,6 +251,26 @@ export class ActionDispatcherService {
         error: 'WORKFLOW_NO_ENTITY',
         message: `Workflow run '${dto.run_id}' has no entity_id — cannot transition.`,
       });
+    }
+
+    const existingIdem = await this.idempotency.checkAndReserve(ctx.mutationId, {
+      tenantId: ctx.user.tenant_id,
+      userId: ctx.user.user_id,
+      moduleId: ctx.moduleId,
+      action: 'transition_workflow',
+      payload: { run_id: dto.run_id, event: dto.event },
+    });
+    if (existingIdem.alreadyDone) {
+      if (!existingIdem.previousResult) {
+        throw new InternalServerErrorException({
+          error: 'IDEMPOTENCY_CACHE_CORRUPT',
+          message: `Mutation '${ctx.mutationId}' marked as done but no cached result available.`,
+        });
+      }
+      this.logger.log(
+        `Idempotent transition_workflow: mutation_id=${ctx.mutationId} — returning cached result`,
+      );
+      return existingIdem.previousResult.result as unknown as WorkflowActionResponse;
     }
 
     try {
@@ -241,27 +295,39 @@ export class ActionDispatcherService {
         response as unknown as Record<string, unknown>,
       );
 
-      await this.audit.log({
-        tenant_id: ctx.user.tenant_id,
-        user_id: ctx.user.user_id,
-        action: 'transition_workflow',
-        module_id: ctx.moduleId,
-        entity_id: runState.entity_id,
-        metadata: {
-          run_id: dto.run_id,
-          workflow_id: runState.workflow_id,
-          event: dto.event,
-          from: transResult.previous_state,
-          to: transResult.current_state,
-        },
-      });
+      await this.audit
+        .log({
+          tenant_id: ctx.user.tenant_id,
+          user_id: ctx.user.user_id,
+          action: 'transition_workflow',
+          module_id: ctx.moduleId,
+          entity_id: runState.entity_id,
+          metadata: {
+            run_id: dto.run_id,
+            workflow_id: runState.workflow_id,
+            event: dto.event,
+            from: transResult.previous_state,
+            to: transResult.current_state,
+          },
+        })
+        .catch((auditErr) =>
+          this.logger.error(
+            `Audit log failed for transition_workflow mutation=${ctx.mutationId}: ${(auditErr as Error).message}`,
+          ),
+        );
 
       return response;
     } catch (err) {
-      await this.idempotency.markError(ctx.mutationId);
+      await this.idempotency
+        .markError(ctx.mutationId)
+        .catch((markErr) =>
+          this.logger.error(
+            `markError failed for mutation=${ctx.mutationId}: ${(markErr as Error).message}`,
+          ),
+        );
 
       const error = err as Error & {
-        constructor?: { name: string };
+        name?: string;
         currentState?: string;
         availableTransitions?: Array<{ event: string; target: string }>;
       };
@@ -362,9 +428,5 @@ export class ActionDispatcherService {
 
   private async resolveModule(tenantSlug: string, moduleId: string) {
     return this.resolver.resolve(tenantSlug, moduleId);
-  }
-
-  private hashPayload(payload: unknown): string {
-    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   }
 }

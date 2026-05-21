@@ -52,7 +52,10 @@ export class ModuleEngineController {
   }
 
   @Post('action')
-  @Roles('OWNER', 'MANAGER')
+  // No @Roles decorator: per-action authorization is data-driven via @AbacAction.
+  // RBAC is enforced through tenant.config.roles + module.action role mappings
+  // (see AC-11). Controller-level @Roles would coarse-block legitimate workflow
+  // actions like COMMERCIAL triggering start_workflow.
   @AbacAction('execute', 'ModuleAction')
   async executeAction(
     @Param('tenant') tenantSlug: string,

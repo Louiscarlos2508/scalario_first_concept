@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { ExecutionResult } from '../workflow/executor/workflow-executor.types';
-import type { TransitionResult } from '../workflow/fsm/workflow-fsm.types';
+import type { TransitionResult, TransitionDescriptor } from '../workflow/fsm/workflow-fsm.types';
 
 export interface WorkflowActionResponse {
   run_id: string;
@@ -16,14 +16,17 @@ export interface WorkflowActionResponse {
 
 @Injectable()
 export class WorkflowResponseMapper {
-  fromExecutionResult(r: ExecutionResult): WorkflowActionResponse {
+  fromExecutionResult(
+    r: ExecutionResult,
+    availableTransitions: TransitionDescriptor[] = [],
+  ): WorkflowActionResponse {
     const lastStep = r.history[r.history.length - 1];
 
     return {
       run_id: r.runId,
       workflow_id: r.workflowId,
-      current_state: lastStep?.stepId ?? 'unknown',
-      available_transitions: [],
+      current_state: lastStep?.stepId ?? r.finalState ?? 'unknown',
+      available_transitions: availableTransitions,
       is_terminal: r.finalState === 'completed' || r.finalState === 'failed',
       history_length: r.history.length,
       final_state: r.finalState,

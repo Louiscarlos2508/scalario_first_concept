@@ -58,7 +58,8 @@ export class StepDispatcher {
     step: ExecutableWorkflowStep,
     ctx: ExecutionContext,
   ): Promise<StepDispatchResult> {
-    const clientMutationId = `${ctx.runId}:${step.id}`;
+    const seed = ctx.clientMutationId ?? ctx.runId;
+    const clientMutationId = `${seed}:${step.id}`;
     const moduleId = (step.params?.moduleId as string) ?? 'default';
     const actionId = step.action ?? step.id;
 

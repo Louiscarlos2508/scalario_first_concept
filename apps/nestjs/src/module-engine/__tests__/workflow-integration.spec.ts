@@ -144,8 +144,8 @@ describe('ActionDispatcherService — Workflow Integration', () => {
 
     idempotency = {
       checkAndReserve: jest.fn().mockResolvedValue({ alreadyDone: false, previousResult: null }),
-      markSuccess: jest.fn(),
-      markError: jest.fn(),
+      markSuccess: jest.fn().mockResolvedValue(undefined),
+      markError: jest.fn().mockResolvedValue(undefined),
     } as any;
 
     audit = {
@@ -158,6 +158,15 @@ describe('ActionDispatcherService — Workflow Integration', () => {
 
     mockWorkflowFsm = {
       transition: jest.fn().mockResolvedValue(transResult),
+      getStatus: jest.fn().mockResolvedValue({
+        current_state: 'reconciliation',
+        available_transitions: [
+          { event: 'CONFIRMER', target: 'validation_manager' },
+          { event: 'RETOUR', target: 'saisie_fond_restant' },
+        ],
+        history: [],
+        is_terminal: false,
+      }),
     };
 
     mockStateRepo = {
@@ -213,6 +222,29 @@ describe('ActionDispatcherService — Workflow Integration', () => {
       });
     });
 
+    it('AC-07 — fromExecutionResult uses provided availableTransitions for awaiting_approval', () => {
+      const transitions = [
+        { event: 'APPROUVER', target: 'cloture_confirmee' },
+        { event: 'REJETER', target: 'reconciliation' },
+      ];
+      const result = mapper.fromExecutionResult(execResult, transitions);
+      expect(result.available_transitions).toEqual(transitions);
+      expect(result.final_state).toBe('awaiting_approval');
+      expect(result.is_terminal).toBe(false);
+    });
+
+    it('P9 — fromExecutionResult falls back to finalState when history is empty', () => {
+      const emptyHistoryResult = {
+        runId: UUID.runId,
+        workflowId: 'workflow_cloture_caisse',
+        finalState: 'completed' as const,
+        history: [],
+      };
+      const result = mapper.fromExecutionResult(emptyHistoryResult);
+      expect(result.current_state).toBe('completed');
+      expect(result.is_terminal).toBe(true);
+    });
+
     it('maps TransitionResult to WorkflowActionResponse', () => {
       const result = mapper.fromTransitionResult(
         transResult,
@@ -256,11 +288,44 @@ describe('ActionDispatcherService — Workflow Integration', () => {
         entityId: UUID.entity,
         triggeredBy: UUID.user,
         initialContext: {},
+        clientMutationId: UUID.mutation1,
       });
       expect(result.run_id).toBe(UUID.runId);
       expect(result.workflow_id).toBe('workflow_cloture_caisse');
       expect(result.current_state).toBe('reconciliation');
       expect(result.final_state).toBe('awaiting_approval');
+    });
+
+    it('AC-07 — start_workflow on awaiting_approval queries FSM for available_transitions', async () => {
+      idempotency.checkAndReserve.mockResolvedValue({
+        alreadyDone: false,
+        previousResult: null,
+      });
+      mockWorkflowExecutor.run.mockResolvedValue(execResult); // awaiting_approval
+
+      const result: any = await service.dispatch({
+        tenantSlug: 'acme',
+        moduleId: 'caisse',
+        mutationId: UUID.mutation1,
+        body: {
+          action_type: 'start_workflow',
+          workflow_id: 'workflow_cloture_caisse',
+          entity_id: UUID.entity,
+          client_mutation_id: UUID.mutation1,
+          initial_context: {},
+        },
+        user: mockUser,
+      });
+
+      expect(mockWorkflowFsm.getStatus).toHaveBeenCalledWith(
+        UUID.tenant,
+        UUID.entity,
+        'workflow_cloture_caisse',
+      );
+      expect(result.available_transitions).toEqual([
+        { event: 'CONFIRMER', target: 'validation_manager' },
+        { event: 'RETOUR', target: 'saisie_fond_restant' },
+      ]);
     });
 
     it('AC-02 — workflow_id not in module.workflows returns 400 WORKFLOW_NOT_IN_MODULE', async () => {
@@ -302,17 +367,22 @@ describe('ActionDispatcherService — Workflow Integration', () => {
     });
 
     it('AC-09 — idempotent start_workflow returns cached result', async () => {
+      const cachedResponse = {
+        run_id: UUID.runId,
+        workflow_id: 'workflow_cloture_caisse',
+        current_state: 'reconciliation',
+        is_terminal: false,
+        history_length: 2,
+        final_state: 'awaiting_approval',
+        available_transitions: [],
+      };
       idempotency.checkAndReserve.mockResolvedValue({
         alreadyDone: true,
         previousResult: {
-          run_id: UUID.runId,
-          workflow_id: 'workflow_cloture_caisse',
-          current_state: 'reconciliation',
-          is_terminal: false,
-          history_length: 2,
-          final_state: 'awaiting_approval',
-          available_transitions: [],
-        } as any,
+          entity: undefined,
+          result: cachedResponse as any,
+          mutation_id: UUID.mutationDup,
+        },
       });
 
       const result: any = await service.dispatch({
@@ -437,7 +507,36 @@ describe('ActionDispatcherService — Workflow Integration', () => {
       expect(result.previous_state).toBe('saisie_fond_restant');
     });
 
-    it('AC-03/AC-17 — run_id from another tenant returns 404', async () => {
+    it('AC-03 — run_id from another module returns 404 (cross-module isolation)', async () => {
+      mockStateRepo.findByRunId.mockResolvedValue({
+        id: UUID.runId,
+        tenant_id: UUID.tenant,
+        entity_id: UUID.entity,
+        workflow_id: 'workflow_some_other_module',
+        current_state: 'saisie_fond_restant',
+        history: [],
+      });
+
+      await expect(
+        service.dispatch({
+          tenantSlug: 'acme',
+          moduleId: 'caisse',
+          mutationId: UUID.mutationCross,
+          body: {
+            action_type: 'transition_workflow',
+            run_id: UUID.runId,
+            event: 'VALIDER',
+            params: {},
+            client_mutation_id: UUID.mutationCross,
+          },
+          user: mockUser,
+        }),
+      ).rejects.toMatchObject({ status: 404 });
+      // Should not have reserved an idempotency row for a cross-module 4xx
+      expect(idempotency.checkAndReserve).not.toHaveBeenCalled();
+    });
+
+    it('AC-03/AC-17/P4 — run_id from another tenant returns 404 and does not reserve idempotency', async () => {
       mockStateRepo.findByRunId.mockResolvedValue({
         id: UUID.runOther,
         tenant_id: '00000000-0000-0000-0000-000000000099',
@@ -462,6 +561,8 @@ describe('ActionDispatcherService — Workflow Integration', () => {
           user: mockUser,
         }),
       ).rejects.toMatchObject({ status: 404 });
+      // P4: validation 4xx must run BEFORE checkAndReserve to avoid pending row stuck.
+      expect(idempotency.checkAndReserve).not.toHaveBeenCalled();
     });
 
     it('returns 404 when run_id not found', async () => {
@@ -526,17 +627,22 @@ describe('ActionDispatcherService — Workflow Integration', () => {
     });
 
     it('AC-09 — idempotent transition_workflow returns cached result', async () => {
+      const cachedResponse = {
+        run_id: UUID.runId,
+        workflow_id: 'workflow_cloture_caisse',
+        current_state: 'reconciliation',
+        previous_state: 'saisie_fond_restant',
+        available_transitions: [{ event: 'CONFIRMER', target: 'validation_manager' }],
+        is_terminal: false,
+        history_length: 1,
+      };
       idempotency.checkAndReserve.mockResolvedValue({
         alreadyDone: true,
         previousResult: {
-          run_id: UUID.runId,
-          workflow_id: 'workflow_cloture_caisse',
-          current_state: 'reconciliation',
-          previous_state: 'saisie_fond_restant',
-          available_transitions: [{ event: 'CONFIRMER', target: 'validation_manager' }],
-          is_terminal: false,
-          history_length: 1,
-        } as any,
+          entity: undefined,
+          result: cachedResponse as any,
+          mutation_id: UUID.mutationTransDup,
+        },
       });
 
       const result: any = await service.dispatch({

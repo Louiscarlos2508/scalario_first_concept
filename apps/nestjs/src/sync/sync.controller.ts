@@ -49,6 +49,19 @@ export class SyncController {
     const results: SyncResultItem[] = [];
 
     for (const mutation of body.mutations) {
+      // Workflow actions (start_workflow, transition_workflow) require synchronous
+      // request/response semantics (the client needs current_state + available_transitions
+      // to render the next step). The bulk sync endpoint is FIFO-drain for offline CRUD
+      // mutations only; mixing the two would silently truncate the workflow response.
+      if (mutation.action === 'start_workflow' || mutation.action === 'transition_workflow') {
+        results.push({
+          mutation_id: mutation.mutation_id,
+          status: 'error',
+          error: 'WORKFLOW_ACTION_NOT_SUPPORTED_IN_BULK_SYNC',
+        });
+        continue;
+      }
+
       try {
         const response = (await this.actionDispatcher.dispatch({
           tenantSlug: tenant,

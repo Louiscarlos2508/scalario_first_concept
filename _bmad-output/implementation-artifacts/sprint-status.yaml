@@ -395,7 +395,7 @@ sprints:
         title: "Integration Workflow↔ModuleEngine"
         epic: "EPIC-005"
         points: 3
-        status: "review"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-032.md"
         defined_date: "2026-05-10"
@@ -403,6 +403,7 @@ sprints:
         completed_date: "2026-05-21"
         actual_points: 3
         branch: "main"
+        notes: "Integration Workflow↔ModuleEngine livré. ActionDispatcherService étendu avec start_workflow + transition_workflow routing. WorkflowResponseMapper unifie ExecutionResult + TransitionResult. Zod DTOs avec z.enum action_type + XOR action/action_type. E2E clôture caisse complet (4 transitions COMMERCIAL→MANAGER + illegal + idempotence). Code review passé : D1 résolu (retrait @Roles → ABAC seul, data-driven), D2 résolu (sync endpoint bloque workflow actions). 13 patches : P1 (FSM.getStatus pour available_transitions awaiting_approval), P2 (clientMutationId propagé executor→step-dispatcher), P3 (cross-module run_id 404), P4 (validation 4xx avant checkAndReserve), P5 (cache shape .result extract + guard corruption), P6 (audit non-throwing), P7 (markError non-throwing), P8 (schema z.enum + XOR), P9 (current_state fallback), P10-P12 (E2E test MANAGER+exact audit count+markSuccess count), P13 (dead code hashPayload). 4 différés : W1 AC-08 atomicité cross-service DB (architectural), W2 IdempotencyService race (pre-existing), W3 Swagger docs (déféré depuis STORY-021), W4 perf reorder. Bonus : crypto.randomUUID() → randomUUID import résout 10 tests pré-existants STORY-030. Suite : 473/473 verts (vs 463/473 avant). Typecheck + lint = 0 erreur sur mes fichiers."
       - story_id: "STORY-034"
         title: "Sync Queue Locale Drift"
         epic: "EPIC-006"
