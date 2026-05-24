@@ -24,6 +24,7 @@ import { AiRelayModule } from './ai-relay/ai-relay.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { IdempotencyModule } from './idempotency/idempotency.module';
 import { IdempotencyInterceptor } from './idempotency/idempotency.interceptor';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { IdempotencyInterceptor } from './idempotency/idempotency.interceptor';
     AiRelayModule,
     RealtimeModule,
     IdempotencyModule,
+    PaymentModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

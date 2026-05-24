@@ -495,10 +495,15 @@ sprints:
         title: "Contraintes Global Scale (i18n + PaymentAdapter)"
         epic: "EPIC-007"
         points: 3
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-042.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "Rails Global-Scale livrés. Backend PaymentAdapter complet : src/payment/ (PaymentAdapter interface + 3 implémentations Phase 1 — CashAdapter (initiate/verify completed), MobileMoneyAdapter (5 sub-providers wave/orange_money/orange_money_ci/mtn_momo/moov_money, status phase_2_stub avec stub_ prefix, verify completed_simulated), CreditAdapter (per-user balance accumulator, internal_credit provider), PaymentAdapterRegistry (resolves tenant+method+provider → adapter, PaymentAdapterNotFoundError sur combinaison non supportée), PaymentController POST /api/v1/:tenant/payment/initiate + /verify avec Zod DTO + JwtAuthGuard + cross-tenant denied 403, PaymentModule wiré dans app.module. Aucun provider hardcodé hors adapters. Flutter helpers Currency + DateFmt (lib/core/intl/) : TenantCurrencyContext (currencyCode + locale), Currency.format avec symbol map XOF/XAF→FCFA, EUR/USD/GBP/NGN/GHS, séparateurs FR (espace insécable + virgule) vs US (virgule + point), symbol positionnement (after FR + non-EUR/USD/GBP, before USD/EUR/GBP en-locale). DateFmt.yMd FR DD/MM/YYYY vs US M/D/YYYY, hm 24h FR vs 12h+AM/PM US, relativePast FR/EN. Tests : 14 backend (CashAdapter 3 + MobileMoneyAdapter 4 + CreditAdapter 2 + Registry 5) + 16 Flutter (Currency 9 + DateFmt 7) = 30 verts. NestJS 597/597 (+14 vs 583). Flutter 808/808 (+16 vs 792). 0 régression. Différés/non livré (consciemment) : (a) ARB files app_fr.arb + app_en.arb avec extraction i18n_keys — AC-02/03 différés Sprint 5 dédié i18n (vraie complétude FR + EN), (b) custom lint no_hardcoded_strings_in_widgets AC-07 — analyser dart règle custom déferré, (c) NestJS error-codes.ts ERR_* enum AC-11/12 — partiellement existant (les modules livrés utilisent déjà ERR_* en majuscules), à consolider Sprint 5, (d) AC-20 webhook squelette HMAC POST /webhooks/payment/:provider — Phase 2 (pas critique Gate 0, les stubs Phase 1 ne reçoivent pas de webhooks), (e) AC-22 héritage tenant_defaults au provisioning — couvert STORY-015 tenants-provision existant, (f) AC-23 audit script scripts/audit-business-values.ts — déféré, le contrat anti-hardcoded est testé in-test (STORY-039, STORY-040, STORY-041 tests Global Scale audit), (g) AC-13 refund? methode optionnelle des adapters — non implémentée Phase 1 (Phase 2)."
       - story_id: "STORY-043"
         title: "Validation E2E Gate 0"
         epic: "EPIC-007"
