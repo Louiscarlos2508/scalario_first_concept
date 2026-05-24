@@ -508,10 +508,15 @@ sprints:
         title: "Validation E2E Gate 0"
         epic: "EPIC-007"
         points: 3
-        status: "defined"
+        status: "review"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-043.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "Technical contract Gate 0 validé. Human UAT pending 1-7 juillet 2026 (status='review' jusqu'à signature Carlos post-UAT). Livrables : (1) scripts/audit-no-business-logic-in-flutter.ts (AC-01/AC-02) — grep apps/flutter/lib/features|screens pour patterns interdits (rôles literal OWNER/MANAGER/COMMERCIAL/SUPER_ADMIN + module_id literal + sector literal + business words cloture/arrivage/perte/caisse), whitelist core/bdui + comment annotation. Run 2026-05-24 = clean. (2) apps/nestjs/src/catalogue/__tests__/gate0-multirole.spec.ts — 19 tests catalogue contract : AC-04 4 fonctions Gate 0 (F1 dashboard owner KPIs+chart+table, F2 arrivage validation form+action, F3 perte form+5 causes, F4 wf_cloture_caisse 5 FSM states) + AC-10 3 rôles → 3 dashboards distincts + AC-11 cross-RBAC (COMMERCIAL no owner-dash no cloture.validate, MANAGER no owner-dash no ventes.write, OWNER read.all) + AC-17 portabilité template (Ouagadougou exactly once dans tenant_defaults.timezone, BCP-47 locale, ISO 4217 currency, payment_methods dans tenant_defaults pas modules) + AC-19 sector-first 12 points (datasets matchent, locale BCP-47, devise ISO, intégrité ModuleConfig Zod + DAG validator) + audit anti-FCFA/Burkina/Wave/Orange Money + audit anti-XOF hardcoded modules. (3) docs/gate-0-validation-report.md — rapport skeleton avec sprint 4 completion summary (12 stories, +219 nouveaux tests, 0 régression : NestJS 616/616, Flutter 808/808), section UAT à remplir post-juillet, sign-off checklist 9 items dont 5 humains. Différés (consciemment, gating Gate 0 humain) : AC-05/06 E2E Android device + perf <2s, AC-07/08/09 gate0_offline_test.dart device-side (logique offline déjà testée STORY-033/034/035), AC-13/14/15/16 UAT session humaine 1-7 juillet 2026, AC-20 vidéo screencast, AC-21 bmm-workflow-status.yaml gate_0:passed, AC-22 annonce. NestJS 616/616 (+19). 0 régression."
       # STRETCH — si sprint 4 avance vite
       - story_id: "STORY-027"
         title: "Code-gen Contrat Partagé (STRETCH)"

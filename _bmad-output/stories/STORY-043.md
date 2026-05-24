@@ -3,9 +3,10 @@
 **Epic :** EPIC-007 — Premier Template `retail_fresh_produce.json` (Gate 0 Blandine)
 **Priorité :** Must Have (story de gating Gate 0)
 **Story Points :** 3
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** review (technical contract done — human UAT pending 1-7 July 2026)
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Technical Done :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-039 (squelette), STORY-040 (modules), STORY-041 (workflow), STORY-042 (i18n + Payment), STORY-026 (BDUIEngine renderer), STORY-037 (sync offline mobile)
 
