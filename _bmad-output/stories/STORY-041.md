@@ -3,9 +3,10 @@
 **Epic :** EPIC-007 — Premier Template `retail_fresh_produce.json` (Gate 0 Blandine)
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** done
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Completed :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-040 (modules ventes + pertes), STORY-029 (DAG validator), STORY-031 (XState FSM generator), STORY-032 (Integration Workflow ↔ ModuleEngine)
 

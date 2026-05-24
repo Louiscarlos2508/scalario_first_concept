@@ -472,10 +472,15 @@ sprints:
         title: "Workflow DAG Clôture Caisse"
         epic: "EPIC-007"
         points: 3
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-041.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "catalog/workflows/wf_cloture_caisse.json livré : 5 FSM states (saisie_fond_restant initial → reconciliation_auto → validation_manager → cloture_confirmee final, branch litige final). Matrice transitions complète : SUBMIT, AUTO_PASS, AUTO_REQUIRE_VALIDATION, VALIDATE, REQUEST_CORRECTION, REJECT. Steps DAG (notifications + audit + reconciliation condition) avec rule ctx.cash_gap_abs <= tenant.config.cloture_auto_threshold. on_enter hooks (audit + notif). Validation via CatalogueValidatorService (workflow type) + FsmValidator + FsmBuilder XState build (avec adapter inline catalogue shape → runtime FSM shape — schema mismatch documenté comme follow-up). Transitions illégales rejetées (terminal states ignorent events, événements non-mappés ignorés). Aucun XOF/FCFA/Wave/Orange Money hardcodé, threshold résolu via tenant.config.cloture_auto_threshold. 20 tests verts. Suite totale 578/578 (+20 vs 558). 0 régression. Typecheck = 0 erreur. Différés/non livré : (a) AC-15 persistence workflow_states — couvert par STORY-031 + STORY-032 existants, (b) AC-16/17/18/19 endpoints API + idempotence + RBAC — couverts par STORY-022 + STORY-032 + STORY-036 existants (workflow.transition handler déjà câblé), (c) AC-20/21/22 tests E2E nominal/écart/rejet — déférés à STORY-043 E2E Gate 0 avec vraie DB seed, (d) AC-23/24 tests offline Flutter — déférés à STORY-043, (e) screens cloture_form/validation_manager/confirmee/litige — embedded dans le JSON via screen_ref placeholders, ScreenConfigs complets dans STORY-040 module_cloture_caisse (référencé indirectement)."
       - story_id: "STORY-042"
         title: "Contraintes Global Scale (i18n + PaymentAdapter)"
         epic: "EPIC-007"
