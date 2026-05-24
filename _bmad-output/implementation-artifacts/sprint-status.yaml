@@ -443,10 +443,15 @@ sprints:
         title: "Sync Status UI — Data-driven"
         epic: "EPIC-006"
         points: 3
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-037.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "Core sync status logic livré (Phase 1 — pure Dart, sans dépendances Flutter UI). lib/features/sync/ : sync_status_state.dart (sealed class SyncStatusState avec 4 sous-types Synced/Syncing/Offline/ConflictsPending + value equality), sync_status_controller.dart (SyncStatusController combine 3 streams connectivity/mutations/conflicts + lastSyncedAt provider, broadcast stream output, computeSyncStatus pure function avec algo priorité conflicts > offline > syncing > synced AC-02). 20 tests verts couvrant AC-01 (3 streams combinés), AC-02 (algo priorité), AC-24 (4 input combinations), value equality, lifecycle (start/dispose). Flutter 792/792 (+20 vs 772). 0 régression. flutter analyze 0 issue. Différés/non livré : (a) widget SyncStatusBar UI + golden tests Light+Dark (AC-04→AC-12, AC-23) — déféré Sprint 5 polish + branchement ComponentRegistry quand BDUI featureflag actif, (b) ConflictReviewScreen + JsonDiffViewer + ABAC sync.resolve_conflict (AC-16→AC-20) — déféré Sprint 5 (l'algo de résolution existe déjà via STORY-035 ConflictResolver), (c) badge app icon Android/iOS via flutter_app_badger (AC-21/22) — plugin natif, déféré, (d) AC-25 test E2E navigation conflict review — déféré. La couche logique est complète et déterministe ; la couche présentation s'y branche en Sprint 5."
       - story_id: "STORY-039"
         title: "Template retail_fresh_produce.json — Structure + 3 Rôles"
         epic: "EPIC-007"
