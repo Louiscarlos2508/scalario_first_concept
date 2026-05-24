@@ -425,10 +425,15 @@ sprints:
         title: "Idempotence Endpoints POST"
         epic: "EPIC-006"
         points: 3
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-036.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "HTTP-level idempotency cache livré : src/idempotency/ (IdempotencyCacheService Redis-backed + IdempotencyInterceptor global APP_INTERCEPTOR + IdempotencyModule global + README). Validation header X-Client-Mutation-Id (UUID v4 regex, max 128 chars). Cache scopé par tenant_id (lu du JWT, pas du body) — empêche cross-tenant replay. Fail-open Redis down. URL allowlist : /api/v1/{tenant}/sync/* + /api/v1/{tenant}/{moduleId}/action. AC-12 cross-user replay detection → 409. AC-10 5xx non cachées (transient). Coexiste avec business-layer IdempotencyService (sync_mutations Postgres) — defense in depth. 28/28 tests verts (10 cache unit + 11 interceptor unit + 7 E2E HTTP). 501/501 full suite (+28 vs 473). 0 régression. Typecheck + lint = 0 erreur sur mes fichiers. Différés/non livré : (a) AC-14 bench Artillery 500 req/s — pré-prod, (b) AC-21 Swagger @ApiHeader — W3 déféré depuis STORY-032 (@nestjs/swagger non installé), (c) métriques Prometheus exposées via structured logs (idempotency.metric.*) au lieu de prom-client (deferred même raison)."
       - story_id: "STORY-037"
         title: "Sync Status UI — Data-driven"
         epic: "EPIC-006"

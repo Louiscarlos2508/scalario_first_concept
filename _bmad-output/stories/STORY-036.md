@@ -3,9 +3,10 @@
 **Epic :** EPIC-006 — Offline-First & Sync
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** done
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Completed :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-022 (ModuleEngine endpoints), STORY-013 (docker-compose Redis)
 
@@ -352,8 +353,18 @@ Story 100% backend, pas d'UI.
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-24 : Implemented end-to-end (HTTP-level Redis cache + global interceptor). 28/28 tests verts (10 unit cache + 11 unit interceptor + 7 E2E HTTP). Status: done.
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 pts (= estimate). New module `src/idempotency/` (CacheService + Interceptor + Module + README). Wired global via APP_INTERCEPTOR dans app.module.ts.
+
+**Implementation Notes :**
+- HTTP layer (cette story) coexiste avec la couche business-level existante `module-engine/services/idempotency.service.ts` (Postgres sync_mutations table de STORY-022). Defense in depth : interceptor short-circuit avant le controller, DB layer protège action-level.
+- Fail-open sur Redis down (la couche business prévient les doublons en DB).
+- Patterns URL : `/api/v1/{tenant}/sync/*` + `/api/v1/{tenant}/{moduleId}/action`. Autres POST (auth/login) skipped automatiquement.
+- Métriques exposées via structured logs (`idempotency.metric.hit|miss|collision|user_mismatch`). prom-client deferred (W3 from STORY-032 review).
+- Swagger `@ApiHeader` deferred (`@nestjs/swagger` non installé — W3).
+- AC-21 (Swagger) et AC-22 (README) : README livré, Swagger deferred.
+- AC-14 (bench Artillery 500 req/s) : non livré, à mesurer pré-prod (cohérent avec autres benchmarks différés).
 
 ---
 

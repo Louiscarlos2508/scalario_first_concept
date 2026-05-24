@@ -22,6 +22,8 @@ import { SyncModule } from './sync/sync.module';
 import { AuditModule } from './audit/audit.module';
 import { AiRelayModule } from './ai-relay/ai-relay.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { IdempotencyModule } from './idempotency/idempotency.module';
+import { IdempotencyInterceptor } from './idempotency/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -42,10 +44,14 @@ import { RealtimeModule } from './realtime/realtime.module';
     AuditModule,
     AiRelayModule,
     RealtimeModule,
+    IdempotencyModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: RedactInterceptor },
+    // STORY-036 — global HTTP idempotency cache. Runs after RedactInterceptor
+    // so cached bodies are already redacted. Filters POST + URL allowlist.
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_FILTER, useClass: TenantIsolationFilter },
     TenantAwareQueryRunner,
   ],
