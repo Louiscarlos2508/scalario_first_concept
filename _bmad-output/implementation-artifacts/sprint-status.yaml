@@ -459,10 +459,15 @@ sprints:
         title: "Modules Phase 1 JSON (6 modules)"
         epic: "EPIC-007"
         points: 5
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-040.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 5
+        branch: "main"
+        notes: "6 modules Phase 1 livrés dans catalog/modules/ : module_dashboard_owner (4 KPIs CA/ventes/alertes/pertes + LineChart 7j + DataTable clôtures + NotificationCenter + Button), module_dashboard_manager (3 KPIs arrivages/alertes/clôtures + DataTable arrivages + CTA), module_dashboard_commercial (KPI solde caisse + ProductGrid 12 articles + Sell CTA + DataTable my-sales), module_ventes (entity Vente avec payment_method enum + payment_provider visible_if + 3 screens list/create/detail + 3 actions dont create_vente idempotent), module_pertes (entity Perte avec 5 causes + 3 screens + 3 actions + conflict_strategy 'manual' + workflow inline wf_perte_validation FSM-style), module_stock (3 entities Product/Arrivage/SeuilStock + 4 screens + 4 actions + champs fresh-produce taux_de_frotte/conversion_vrac_sachet/freshness_indicator). Tous validés via CatalogueValidatorService (ModuleConfigZod + DAG validator). Currency partout via tenant.config.currency (jamais XOF en dur). 41 tests verts. Suite totale 558/558 (+41 vs 517). 0 régression. Typecheck + lint = 0 erreur. Différés/non livré : (a) mock data __mocks__/*.mock.json — non livré, à ajouter quand on aura besoin de seed E2E réel (AC-06), (b) widget snapshot test 3 rôles × 3 dashboards (AC-25) — Flutter side, déféré à STORY-043 E2E, (c) test ModuleEngine create_vente idempotence DB (AC-26) — couvert par STORY-022 + STORY-036 existants, (d) test RBAC scope.own enforced backend (AC-27) — couvert par RbacGuard/AbacGuard existants STORY-015/019."
       - story_id: "STORY-041"
         title: "Workflow DAG Clôture Caisse"
         epic: "EPIC-007"

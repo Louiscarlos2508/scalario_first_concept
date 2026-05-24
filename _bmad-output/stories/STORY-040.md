@@ -3,9 +3,10 @@
 **Epic :** EPIC-007 — Premier Template `retail_fresh_produce.json` (Gate 0 Blandine)
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** done
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Completed :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-039 (squelette domaine), STORY-023 (JSON Schema BDUI), STORY-006 (RuleEvaluator pour `visible_if`)
 
