@@ -446,10 +446,15 @@ sprints:
         title: "Template retail_fresh_produce.json — Structure + 3 Rôles"
         epic: "EPIC-007"
         points: 3
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-039.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 3
+        branch: "main"
+        notes: "Domain template livré : catalog/domains/retail_fresh_produce.json refactored au nouveau schéma DomainTemplate v1.0.0 (3 rôles OWNER/MANAGER/COMMERCIAL en objects avec permissions module_id.action.scope, 6 modules référencés, navigation_per_role + dashboard_layouts_per_role + roles_meta + tenant_defaults Global Scale). src/catalogue/dto/domain-template.dto.ts (Zod DomainTemplateSchema + 3 cross-validations : nav_modules ⊆ modules[], navigation_per_role keys = roles[].id, dashboard_layouts_per_role 1-per-role). templates.loader.ts étendu : loadDomainTemplate(name) typé + loadTemplateRoles backward-compat (détecte old/new shape). 16/16 tests verts. Suite totale 517/517 (+16 vs 501). 137/137 catalogue+tenants (0 régression STORY-015). Typecheck + lint = 0 erreur sur mes fichiers. Différés/non livré : (a) AC-17 test intégration BDUI 3 rôles → 3 ScreenConfigs distincts — déféré à STORY-040 où les vrais ScreenConfigs existeront, (b) AC-18 lint script check-i18n-keys.ts — couvert par test Jest 'no hardcoded strings' (AC-19), (c) AC-22 script standalone validate-catalogue.ts — couvert par les tests Jest sur le fichier réel."
       - story_id: "STORY-040"
         title: "Modules Phase 1 JSON (6 modules)"
         epic: "EPIC-007"

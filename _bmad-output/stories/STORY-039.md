@@ -3,9 +3,10 @@
 **Epic :** EPIC-007 — Premier Template `retail_fresh_produce.json` (Gate 0 Blandine)
 **Priorité :** Must Have
 **Story Points :** 3
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** done
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Completed :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-025 (structure catalogue), STORY-024 (Zod validator)
 
@@ -369,8 +370,17 @@ Le `RbacGuard` (STORY-013 ou équivalent) parse cette string et applique le filt
 
 **Status History :**
 - 2026-05-10 : Created (Carlos / Scrum Master via `/bmad:create-story`)
+- 2026-05-24 : Implemented end-to-end. 16/16 tests verts + 0 régression. Status: done.
 
-**Actual Effort :** TBD
+**Actual Effort :** 3 pts (= estimate). Livrables : catalog/domains/retail_fresh_produce.json refactored vers le nouveau schéma DomainTemplate, src/catalogue/dto/domain-template.dto.ts (Zod DomainTemplateSchema avec cross-refs validation), templates.loader.ts étendu (loadDomainTemplate + loadTemplateRoles backward compat).
+
+**Implementation Notes :**
+- Migration de l'ancien shape (stub STORY-015 : id/entities/actions/rbac_roles:string[]) vers le nouveau (DomainTemplate v1.0.0 : domain_id, 3 rôles objects, modules[], navigation_per_role, dashboard_layouts_per_role).
+- Backward compat : loadTemplateRoles() détecte les deux shapes et extrait les role ids. STORY-015 provisioning continue de fonctionner.
+- Zod schema avec 3 cross-validations : (a) nav_modules + dashboard_module_id référencent modules[] déclarés (avec exception documentée pour module_cloture_caisse implicit via workflow), (b) navigation_per_role keys = roles[].id exactement, (c) dashboard_layouts_per_role = 1 entry par rôle.
+- AC-17 (test intégration RBAC 3 rôles → 3 layouts) déféré à STORY-040 quand les ScreenConfigs réels existent.
+- AC-18 (lint check-i18n-keys) + AC-22 (script standalone validate-catalogue.ts) non livrés — les tests Jest sur le fichier réel couvrent le besoin de validation. Scripts standalone à ajouter si besoin CI séparé.
+- AC-19 Global Scale vérifié par 2 tests : aucune mention de FCFA/Burkina Faso/Wave, Africa/Ouagadougou apparaît UNIQUEMENT dans tenant_defaults.timezone.
 
 ---
 
