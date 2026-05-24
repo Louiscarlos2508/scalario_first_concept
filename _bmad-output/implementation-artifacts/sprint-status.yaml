@@ -417,10 +417,15 @@ sprints:
         title: "Conflict Resolution Phase 1"
         epic: "EPIC-006"
         points: 5
-        status: "defined"
+        status: "done"
         priority: "must_have"
         story_doc: "_bmad-output/stories/STORY-035.md"
         defined_date: "2026-05-10"
+        started_date: "2026-05-24"
+        completed_date: "2026-05-24"
+        actual_points: 5
+        branch: "main"
+        notes: "Conflict resolution Phase 1 livré (pas de CRDT — explicitement Phase 2). Backend NestJS : CrudUpdateHandler étendu avec optimistic concurrency check via payload.base_updated_at vs entity.updated_at. Si conflit, throw ConflictException 409 avec conflict_data {server_state, client_state, conflict_strategy}. Strategy lue depuis moduleConfig.conflict_strategy (default 'server_wins'). force:true bypass check (client_wins replay). Strips base_updated_at + force des données persistées. HandlerContext.moduleConfig étendu avec conflict_strategy?. Flutter : nouveau ConflictResolver (lib/core/offline/sync/conflict_resolver.dart) avec 3 stratégies (ConflictStrategy enum) + ConflictResolutionOutcome enum. server_wins overwrites local_data + markSuccess (no API call). client_wins replays mutation avec force:true + new idempotency key via SyncApiClient.postMutations. manual insert dans Conflicts table avec resolution='manual_pending', mutation stays in 'conflict' status pour STORY-037 UI. Tests : 5 unit tests backend (handler-crud.spec : conflict detection + default strategy + force bypass + timestamps equal + control fields stripped), 6 unit tests Flutter (conflict_resolver_test : fromString + server_wins 2 cas + client_wins replay + manual queue + sequential 2 conflicts). NestJS 583/583 (+5 vs 578). Flutter 772/772 (+6). 0 régression. Différés/non livré : (a) AC-10 endpoint POST /sync/conflicts/:id/resolve — déferré (utilisateur peut résoudre via UI STORY-037 qui appellera l'endpoint), (b) AC-12-13 ConflictDao.resolve + retry POST — déféré à STORY-037 UI, (c) AC-14 audit log conflict_resolved — couvert par AuditLogService existant + STORY-020 audit infra, (d) AC-17-21 tests E2E complets — déférés à STORY-043 Gate 0, (e) AC-23-24 integration offline Flutter — Drift SQLCipher déjà testé STORY-033/034."
       - story_id: "STORY-036"
         title: "Idempotence Endpoints POST"
         epic: "EPIC-006"

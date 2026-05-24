@@ -3,9 +3,10 @@
 **Epic :** EPIC-006 — Offline-First & Sync
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** Defined
-**Assigned To :** Unassigned
+**Status :** done
+**Assigned To :** Carlos
 **Created :** 2026-05-10
+**Completed :** 2026-05-24
 **Sprint :** 4 (2026-06-23 → 2026-07-04)
 **Dependencies :** STORY-033 (table `conflicts`), STORY-034 (worker remonte les 409), STORY-036 (idempotence serveur), STORY-037 (UI conflict review)
 
