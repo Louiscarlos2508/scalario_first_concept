@@ -694,11 +694,23 @@ architecture_v14:
           title: "Restructure NestJS (src/core/ + engines/ + bdui/ + config-agent/ + modules/ + ai/)"
           epic: "EPIC-V14-001"
           points: 3
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-005.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-25"
           sprint: "v14-1"
+          actual_points: 3
+          commit_sha: "b30c075"
+          notes: |
+            8 dirs moved (auth/cache/audit/idempotency/security → core/, module-engine+workflow → engines/, catalogue → catalog-loader).
+            3 placeholders Phase 2 créés avec README (config-agent/, ai/, modules/).
+            src/README.md documente la structure v14 + mapping v13→v14.
+            Imports relatifs ajustés via sed location-aware (depth-aware, longest-first pour éviter cascade).
+            Cas spécial bdui/cache : sous-dir intra-bdui préservé (≠ core/cache).
+            Tests : 616 passed, 7 skipped — 0 régression vs baseline pré-V14-005.
+            Typecheck : 0 erreur.
         - story_id: "V14-006"
           title: "Catalogue v14 — modules génériques + ux_profiles + queries + capabilities"
           epic: "EPIC-V14-003"

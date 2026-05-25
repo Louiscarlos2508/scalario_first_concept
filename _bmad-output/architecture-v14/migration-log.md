@@ -141,3 +141,63 @@ $ git log --follow --oneline apps/flutter/lib/engine/canvas/scalario_canvas.dart
 ---
 
 **STORY-V14-001 — Partial completion :** Flutter ✅ (canvas + vault + sync via merge) / NestJS ⏭️ deferred to V14-005.
+
+---
+
+## STORY-V14-005 — NestJS Restructure (2026-05-25)
+
+**Commit :** [`b30c075`](https://github.com/.../commit/b30c075) — `refactor(v14): NestJS restructure (STORY-V14-005)`
+
+### Renommages directory
+
+| Avant (v13) | Après (v14) |
+|---|---|
+| `apps/nestjs/src/auth/` | `apps/nestjs/src/core/auth/` |
+| `apps/nestjs/src/cache/` | `apps/nestjs/src/core/cache/` |
+| `apps/nestjs/src/audit/` | `apps/nestjs/src/core/audit/` |
+| `apps/nestjs/src/idempotency/` | `apps/nestjs/src/core/idempotency/` |
+| `apps/nestjs/src/security/` | `apps/nestjs/src/core/security/` |
+| `apps/nestjs/src/module-engine/` | `apps/nestjs/src/engines/action/` |
+| `apps/nestjs/src/workflow/` | `apps/nestjs/src/engines/workflow/` |
+| `apps/nestjs/src/catalogue/` | `apps/nestjs/src/catalog-loader/` |
+
+### Placeholders Phase 2 créés
+
+- `apps/nestjs/src/config-agent/` + README (Scalario Forge backend — V14-019)
+- `apps/nestjs/src/ai/` + README (FastAPI bridge — V14-014)
+- `apps/nestjs/src/modules/` + README (6 moteurs ERP génériques — V14-007)
+
+### Documentation
+
+- `apps/nestjs/src/README.md` — nouvelle structure + mapping v13→v14
+
+### Méthode
+
+Au lieu d'utiliser le script `migrate-v13-to-v14.sh` (qui n'a pas été étendu pour NestJS faute de path aliases TypeScript), j'ai fait :
+
+1. `git mv` des 8 dirs en une seule transaction
+2. Sed location-aware pour réécrire les imports relatifs, ordonné **longest-first** pour éviter le cascade (e.g., `'../../../X/'` substitué AVANT `'../../X/'` AVANT `'../X/'`)
+3. Cas spécial `bdui/cache/` : sous-arbre intra-bdui préservé (≠ top-level cache)
+4. Cas spécial `engines/` : les siblings (action ↔ workflow) gardent `'../Y/'` ; les imports vers `core/` deviennent `'../../core/Y/'`
+
+### Validation
+
+```bash
+$ pnpm typecheck
+# → 0 erreurs
+
+$ pnpm jest
+Test Suites: 1 skipped, 69 passed, 69 of 70 total
+Tests:       7 skipped, 616 passed, 623 total
+# → 616 tests OK (baseline préservé)
+```
+
+### Notes pour la suite
+
+- V14-007 (6 moteurs ERP) ira dans `src/modules/`
+- V14-014 (FastAPI) ira dans `src/ai/`
+- V14-019 (Scalario Forge) ira dans `src/config-agent/`
+- V14-025 supprimera `src/payment/` (migration vers Scalario Sense Flutter)
+- V14-026 fusionnera `src/sync/` dans `src/engines/action/`
+
+**STORY-V14-005 — Completed.**
