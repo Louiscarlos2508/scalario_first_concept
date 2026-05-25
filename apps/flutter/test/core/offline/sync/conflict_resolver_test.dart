@@ -6,12 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uuid/data.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:scalario/core/offline/dao/conflict_dao.dart';
-import 'package:scalario/core/offline/dao/local_data_dao.dart';
-import 'package:scalario/core/offline/dao/sync_queue_dao.dart';
-import 'package:scalario/core/offline/database.dart';
-import 'package:scalario/core/offline/sync/conflict_resolver.dart';
-import 'package:scalario/core/offline/sync/sync_api_client.dart';
+import 'package:scalario/core/vault/dao/conflict_dao.dart';
+import 'package:scalario/core/vault/dao/local_data_dao.dart';
+import 'package:scalario/core/vault/dao/sync_queue_dao.dart';
+import 'package:scalario/core/vault/database.dart';
+import 'package:scalario/core/sync/conflict_resolver.dart';
+import 'package:scalario/core/sync/sync_api_client.dart';
 
 /// In-memory fake of [SyncApiClient] that records calls without I/O.
 class _FakeApiClient implements SyncApiClient {
@@ -59,7 +59,7 @@ void main() {
   late SyncQueueDao queueDao;
   late LocalDataDao localDataDao;
   late _FakeApiClient api;
-  late ConflictResolver resolver;
+  late ScalarioSyncConflictResolver resolver;
 
   Future<void> seedPendingMutation(String mutationId, String tenantId) async {
     await db.into(db.syncQueueItems).insert(
@@ -81,7 +81,7 @@ void main() {
     queueDao = SyncQueueDao(db);
     localDataDao = LocalDataDao(db);
     api = _FakeApiClient();
-    resolver = ConflictResolver(
+    resolver = ScalarioSyncConflictResolver(
       conflictDao: conflictDao,
       queueDao: queueDao,
       localDataDao: localDataDao,

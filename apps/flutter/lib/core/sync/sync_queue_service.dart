@@ -5,9 +5,9 @@ import 'dart:developer' as developer;
 import 'package:drift/drift.dart' show Value;
 import 'package:uuid/uuid.dart';
 
-import '../dao/local_data_dao.dart';
-import '../dao/sync_queue_dao.dart';
-import '../database.dart';
+import '../vault/dao/local_data_dao.dart';
+import '../vault/dao/sync_queue_dao.dart';
+import '../vault/database.dart';
 
 class SyncQueueService {
   SyncQueueService({

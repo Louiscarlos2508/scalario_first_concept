@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/core/offline/sync/retry_policy.dart';
+import 'package:scalario/core/sync/retry_policy.dart';
 
 void main() {
   late RetryPolicy policy;

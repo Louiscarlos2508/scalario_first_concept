@@ -4,10 +4,10 @@ import 'dart:developer' as developer;
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
-import '../dao/conflict_dao.dart';
-import '../dao/local_data_dao.dart';
-import '../dao/sync_queue_dao.dart';
-import '../database.dart';
+import '../vault/dao/conflict_dao.dart';
+import '../vault/dao/local_data_dao.dart';
+import '../vault/dao/sync_queue_dao.dart';
+import '../vault/database.dart';
 import 'sync_api_client.dart';
 
 /// STORY-035 — conflict resolution strategies declared per module.
@@ -39,7 +39,7 @@ enum ConflictStrategy {
   }
 }
 
-/// Outcome of [ConflictResolver.resolve]. Useful for tests + the
+/// Outcome of [ScalarioSyncConflictResolver.resolve]. Useful for tests + the
 /// SyncStatusBar that reports counts (STORY-037).
 enum ConflictResolutionOutcome {
   resolvedServerWins,
@@ -49,10 +49,10 @@ enum ConflictResolutionOutcome {
 
 /// STORY-035 — applies a per-module conflict resolution strategy to a
 /// mutation that the server returned as `409 Conflict`. Called by the
-/// SyncQueueWorker when [SyncApiClient] surfaces a conflict (status =
+/// ScalarioSyncWorker when [SyncApiClient] surfaces a conflict (status =
 /// `conflict` in the batch response). Phase 1: 3 strategies; no CRDT.
-class ConflictResolver {
-  ConflictResolver({
+class ScalarioSyncConflictResolver {
+  ScalarioSyncConflictResolver({
     required ConflictDao conflictDao,
     required SyncQueueDao queueDao,
     required LocalDataDao localDataDao,

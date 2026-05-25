@@ -15,7 +15,7 @@ export interface CachedHttpResponse {
  * Distinct from the business-layer `IdempotencyService` (sync_mutations
  * table, Postgres) which prevents double-execution at the action level.
  * This service caches the full HTTP response so that re-played requests
- * (network retry, SyncQueueWorker drain) short-circuit before reaching
+ * (network retry, ScalarioSyncWorker drain) short-circuit before reaching
  * the controller.
  *
  * Key shape: `idem:{tenant_id}:{client_mutation_id}`. TTL 24h. Fail-open

@@ -2,7 +2,7 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:scalario/core/offline/database.dart';
+import 'package:scalario/core/vault/database.dart';
 
 void main() {
   late ScalarioDatabase db;

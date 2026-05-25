@@ -4,12 +4,12 @@ import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift/native.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:scalario/core/offline/database.dart';
-import 'package:scalario/core/offline/dao/sync_queue_dao.dart';
-import 'package:scalario/core/offline/sync/connectivity_listener.dart';
-import 'package:scalario/core/offline/sync/retry_policy.dart';
-import 'package:scalario/core/offline/sync/sync_api_client.dart';
-import 'package:scalario/core/offline/sync/sync_queue_worker.dart';
+import 'package:scalario/core/vault/database.dart';
+import 'package:scalario/core/vault/dao/sync_queue_dao.dart';
+import 'package:scalario/core/sync/connectivity_listener.dart';
+import 'package:scalario/core/sync/retry_policy.dart';
+import 'package:scalario/core/sync/sync_api_client.dart';
+import 'package:scalario/core/sync/sync_queue_worker.dart';
 
 import '../../../test_utils/fake_connectivity.dart';
 import '../../../test_utils/fake_sync_api_client.dart';
@@ -34,7 +34,7 @@ void main() {
   });
 
   // ignore: no_leading_underscores_for_local_identifiers
-  SyncQueueWorker _createWorker(String tenantSlug) => SyncQueueWorker(
+  ScalarioSyncWorker _createWorker(String tenantSlug) => ScalarioSyncWorker(
         queueDao: dao,
         apiClient: fakeApi,
         connectivityListener: ConnectivityListener(

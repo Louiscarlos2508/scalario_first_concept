@@ -1,4 +1,4 @@
-import 'package:scalario/core/offline/sync/sync_api_client.dart';
+import 'package:scalario/core/sync/sync_api_client.dart';
 
 class FakeSyncApiClient extends SyncApiClient {
   FakeSyncApiClient()

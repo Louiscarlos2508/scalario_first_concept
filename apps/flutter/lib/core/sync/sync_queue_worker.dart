@@ -4,13 +4,13 @@ import 'dart:developer' as developer;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-import '../dao/sync_queue_dao.dart';
+import '../vault/dao/sync_queue_dao.dart';
 import 'connectivity_listener.dart';
 import 'retry_policy.dart';
 import 'sync_api_client.dart' show SyncApiClient, SyncApiError, SyncMutationPayload;
 
-class SyncQueueWorker {
-  SyncQueueWorker({
+class ScalarioSyncWorker {
+  ScalarioSyncWorker({
     required SyncQueueDao queueDao,
     required SyncApiClient apiClient,
     required ConnectivityListener connectivityListener,
