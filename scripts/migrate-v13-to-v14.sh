@@ -59,12 +59,17 @@ dry_run_or_exec() {
   fi
 }
 
-# git mv qui crée le dossier parent si besoin
+# git mv qui crée le dossier parent si besoin ; skip si source absente ou vide pour git
 gmv() {
   local src=$1
   local dst=$2
   if [[ ! -e "$src" ]]; then
     warn "skip git mv : $src n'existe pas"
+    return 0
+  fi
+  # Si c'est un répertoire, vérifier qu'il contient au moins un fichier tracké
+  if [[ -d "$src" ]] && [[ -z "$(git ls-files "$src" 2>/dev/null)" ]]; then
+    warn "skip git mv : $src ne contient aucun fichier tracké (dossier vide ou non-versionné)"
     return 0
   fi
   if [[ "$DRY_RUN" -eq 1 ]]; then
