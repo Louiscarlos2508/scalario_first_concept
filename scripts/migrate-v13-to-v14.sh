@@ -229,41 +229,53 @@ batch_canvas() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Batch : vault (Flutter core/offline → core/vault)
+# Batch : vault (Flutter core/offline → core/vault + core/sync)
 #
-# Le concept "offline" de v13 devient "vault" (data layer) en v14. La sous-arbo
-# `sync/` (réplication) part dans un batch séparé (cf batch_sync).
+# Le concept "offline" de v13 se sépare en deux en v14 :
+#   - data layer (dao/tables/migrations/database) → core/vault/
+#   - réplication (sync/) → core/sync/ (avec rename SyncQueueWorker → ScalarioSyncWorker)
 #
-# Avant (v13)                              → Après (v14)
-#   apps/flutter/lib/core/offline/         → apps/flutter/lib/core/vault/
-#   sauf sub-dir sync/ qui reste pour le batch_sync.
+# On fait les deux moves dans le même batch car les fichiers de sync/ importent
+# en relatif `../dao/`, `../database.dart` → ces imports doivent être ajustés
+# en cohérence dans la même transaction.
 # ─────────────────────────────────────────────────────────────────────────────
 
 batch_vault() {
-  log "▶ Batch: vault (Flutter core/offline → core/vault, sauf sync/)"
+  log "▶ Batch: vault (Flutter offline split → vault + sync)"
 
-  # 1) Move whole offline/ tree to vault/, then move sync/ back to offline temporarily
-  #    (sera traité par batch_sync ensuite — c'est plus propre que de move file-by-file)
+  # 1) Move whole offline/ to vault/ (renames in place)
   gmv "$FLUTTER_DIR/lib/core/offline" "$FLUTTER_DIR/lib/core/vault"
 
-  # 2) Re-move sync/ back to offline/sync (sera traité par batch_sync)
-  if [[ -d "$FLUTTER_DIR/lib/core/vault/sync" ]] && [[ "$DRY_RUN" -eq 0 ]]; then
-    mkdir -p "$FLUTTER_DIR/lib/core/offline"
-    git mv "$FLUTTER_DIR/lib/core/vault/sync" "$FLUTTER_DIR/lib/core/offline/sync"
+  # 2) Move vault/sync/ → core/sync/
+  gmv "$FLUTTER_DIR/lib/core/vault/sync" "$FLUTTER_DIR/lib/core/sync"
+
+  # 3) Update path-based imports : core/offline/ → core/vault/ partout
+  sed_inplace "s|core/offline/|core/vault/|g"
+  # Et le sous-arbre /vault/sync/ → /sync/ (car on l'a sorti)
+  sed_inplace "s|core/vault/sync/|core/sync/|g"
+
+  # 4) Update relative imports DANS lib/core/sync/ (anciennement lib/core/offline/sync/) :
+  #    Les fichiers utilisaient `../dao/X`, `../tables/X`, `../database.dart` (siblings dans offline/).
+  #    Maintenant ils doivent pointer vers `../vault/dao/X`, `../vault/tables/X`, etc.
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    find "$FLUTTER_DIR/lib/core/sync" -type f -name "*.dart" -exec sed -i -E "
+      s|'\\.\\./dao/|'../vault/dao/|g
+      s|'\\.\\./tables/|'../vault/tables/|g
+      s|'\\.\\./migrations/|'../vault/migrations/|g
+      s|'\\.\\./database\\.dart|'../vault/database.dart|g
+      s|'\\.\\./database\\.g\\.dart|'../vault/database.g.dart|g
+      s|'\\.\\./bootstrap_service\\.dart|'../vault/bootstrap_service.dart|g
+      s|'\\.\\./auth_storage\\.dart|'../vault/auth_storage.dart|g
+      s|'\\.\\./cache_cleaner\\.dart|'../vault/cache_cleaner.dart|g
+      s|'\\.\\./db_encryption\\.dart|'../vault/db_encryption.dart|g
+      s|'\\.\\./drift_data_source_resolver\\.dart|'../vault/drift_data_source_resolver.dart|g
+      s|'\\.\\./local_store\\.dart|'../vault/local_store.dart|g
+    " {} +
   fi
 
-  # 3) Update imports : core/offline/ → core/vault/ (sauf core/offline/sync/ qui reste)
-  sed_inplace "s|core/offline/dao/|core/vault/dao/|g"
-  sed_inplace "s|core/offline/tables/|core/vault/tables/|g"
-  sed_inplace "s|core/offline/migrations/|core/vault/migrations/|g"
-  sed_inplace "s|core/offline/database\.dart|core/vault/database.dart|g"
-  sed_inplace "s|core/offline/database\.g\.dart|core/vault/database.g.dart|g"
-  sed_inplace "s|core/offline/auth_storage\.dart|core/vault/auth_storage.dart|g"
-  sed_inplace "s|core/offline/bootstrap_service\.dart|core/vault/bootstrap_service.dart|g"
-  sed_inplace "s|core/offline/cache_cleaner\.dart|core/vault/cache_cleaner.dart|g"
-  sed_inplace "s|core/offline/db_encryption\.dart|core/vault/db_encryption.dart|g"
-  sed_inplace "s|core/offline/drift_data_source_resolver\.dart|core/vault/drift_data_source_resolver.dart|g"
-  sed_inplace "s|core/offline/local_store\.dart|core/vault/local_store.dart|g"
+  # 5) Class renames pour la couche sync
+  sed_inplace "s/\\bSyncQueueWorker\\b/ScalarioSyncWorker/g"
+  sed_inplace "s/\\bConflictResolver\\b/ScalarioSyncConflictResolver/g"
 
   if ! validate_flutter; then
     rollback_batch "vault"
