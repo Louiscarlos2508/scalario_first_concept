@@ -1,12 +1,12 @@
 import 'package:meta/meta.dart';
 
-/// Configuration runtime du [BDUIEngine].
+/// Configuration runtime du [ScalarioCanvas].
 ///
 /// STORY-008 — budgets et tailles de cache documentés (NFR-001 architecture).
 /// Toutes les valeurs sont des plafonds, pas des cibles.
 @immutable
-final class BDUIEngineConfig {
-  const BDUIEngineConfig({
+final class ScalarioCanvasConfig {
+  const ScalarioCanvasConfig({
     this.screenCacheSize = 20,
     this.coldRenderBudgetMs = 200,
     this.hotRenderBudgetMs = 50,
@@ -27,5 +27,5 @@ final class BDUIEngineConfig {
   /// `false` en `kReleaseMode` pour zero overhead production.
   final bool enableTimeline;
 
-  static const BDUIEngineConfig defaults = BDUIEngineConfig();
+  static const ScalarioCanvasConfig defaults = ScalarioCanvasConfig();
 }

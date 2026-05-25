@@ -9,7 +9,7 @@ import '../../core/design_system/tokens/tokens.dart';
 ///
 /// **Important :** ce widget **ne se positionne pas lui-même**. Il doit être
 /// placé dans `Scaffold(floatingActionButton: ...)` par le parent (le
-/// `LayoutResolver` BDUI). C'est conforme à l'API Flutter idiomatique :
+/// `ScalarioCanvasLayout` BDUI). C'est conforme à l'API Flutter idiomatique :
 /// le FAB est positionné par le Scaffold, pas par le widget lui-même.
 ///
 /// **États supportés :** Normal, Disabled (`onPressed: null`), Loading
@@ -26,7 +26,7 @@ class ScalarioFAB extends StatelessWidget {
 
   /// Construit un `ScalarioFAB` depuis les props d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
   static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
     try {
       return ScalarioFAB.fromJson(props);

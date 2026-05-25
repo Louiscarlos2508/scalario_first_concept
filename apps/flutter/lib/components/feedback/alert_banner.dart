@@ -35,7 +35,7 @@ class AlertBanner extends StatefulWidget {
 
   /// Construit un `AlertBanner` depuis les props d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
   static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
     try {
       return AlertBanner.fromJson(props);

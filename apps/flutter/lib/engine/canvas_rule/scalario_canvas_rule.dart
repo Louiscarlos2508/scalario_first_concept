@@ -1,4 +1,4 @@
-// SECURITY: Le RuleEvaluator filtre l'UI côté client. Il N'EST PAS une
+// SECURITY: Le ScalarioCanvasRule filtre l'UI côté client. Il N'EST PAS une
 // garantie de sécurité. Toute action protégée par visible_if doit AUSSI
 // être protégée côté backend (FR-010, FR-011, FR-012). Voir architecture
 // ligne 858 (NFR-003 Isolation Multi-tenant).
@@ -21,12 +21,12 @@ export 'user_context.dart';
 
 /// Pure, stateless BDUI rule evaluator.
 ///
-/// A single `const RuleEvaluator()` instance is safe to share across the
+/// A single `const ScalarioCanvasRule()` instance is safe to share across the
 /// entire widget tree — it holds no mutable state (AC-22).
 ///
 /// Usage:
 /// ```dart
-/// const evaluator = RuleEvaluator();
+/// const evaluator = ScalarioCanvasRule();
 ///
 /// // visible_if / enabled_if
 /// final visible = evaluator.evaluate(config.visibleIfRule, userCtx);
@@ -42,8 +42,8 @@ export 'user_context.dart';
 ///   >  <  >=  <=         — numeric comparison (non-numeric → false + warning)
 ///   in  not_in           — membership in a List
 @immutable
-final class RuleEvaluator {
-  const RuleEvaluator();
+final class ScalarioCanvasRule {
+  const ScalarioCanvasRule();
 
   static const _resolver = FieldResolver();
 
@@ -124,7 +124,7 @@ final class RuleEvaluator {
         'Non-numeric operand for operator "$op": '
         'field=${rule.field} resolved to ${fieldValue?.runtimeType}, '
         'rule value is ${ruleValue?.runtimeType} — returning false',
-        name: 'BDUI.RuleEvaluator',
+        name: 'BDUI.ScalarioCanvasRule',
         level: 900, // warning
       );
       return false;
@@ -144,7 +144,7 @@ final class RuleEvaluator {
   bool _logUnknownAndReturnFalse(String op) {
     developer.log(
       'Unknown operator "$op" — evaluating to false (fail-safe)',
-      name: 'BDUI.RuleEvaluator',
+      name: 'BDUI.ScalarioCanvasRule',
       level: 900,
     );
     return false;

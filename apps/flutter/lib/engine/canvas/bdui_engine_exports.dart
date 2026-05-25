@@ -2,13 +2,13 @@
 ///
 /// Consommé par `main.dart`, les tests et les routes Flutter via :
 /// ```dart
-/// import 'package:scalario/engine/bdui_engine/bdui_engine_exports.dart';
+/// import 'package:scalario/engine/canvas/bdui_engine_exports.dart';
 /// ```
 library;
 
-export 'bdui_engine.dart';
-export 'bdui_engine_config.dart';
-export 'bdui_engine_module.dart';
+export 'scalario_canvas.dart';
+export 'scalario_canvas_config.dart';
+export 'scalario_canvas_module.dart';
 export 'bdui_error_screen.dart';
 export 'bdui_invalid_payload_exception.dart';
 export 'bdui_screen.dart';

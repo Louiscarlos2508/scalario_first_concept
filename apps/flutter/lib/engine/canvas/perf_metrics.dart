@@ -2,16 +2,16 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show kReleaseMode;
 
-import 'bdui_engine_config.dart';
+import 'scalario_canvas_config.dart';
 
 /// Wrapper autour de `Timeline.timeSync` qui peut être désactivé via
-/// [BDUIEngineConfig.enableTimeline] (zero overhead en release mode).
+/// [ScalarioCanvasConfig.enableTimeline] (zero overhead en release mode).
 ///
 /// STORY-008 — AC-09. Visible dans Flutter DevTools → Performance.
 final class PerfMetrics {
-  const PerfMetrics({this.config = BDUIEngineConfig.defaults});
+  const PerfMetrics({this.config = ScalarioCanvasConfig.defaults});
 
-  final BDUIEngineConfig config;
+  final ScalarioCanvasConfig config;
 
   /// Exécute [body] sous une `Timeline.timeSync` nommée `BDUI.$name`.
   T timeSync<T>(String name, T Function() body) {

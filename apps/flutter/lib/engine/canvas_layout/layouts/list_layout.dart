@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design_system/tokens/spacing.dart';
-import '../../component_registry/component_config.dart';
-import '../../component_registry/component_registry.dart';
+import '../../canvas_registry/component_config.dart';
+import '../../canvas_registry/scalario_canvas_registry.dart';
 import '../breakpoints.dart';
 import '../screen_config.dart';
 
@@ -25,7 +25,7 @@ class ListLayout extends StatelessWidget {
   });
 
   final ScreenConfig config;
-  final ComponentRegistry registry;
+  final ScalarioCanvasRegistry registry;
 
   @override
   Widget build(BuildContext context) {

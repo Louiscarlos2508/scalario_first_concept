@@ -76,7 +76,7 @@ class ScalarioListTile extends StatelessWidget {
 
   /// Construit un `ScalarioListTile` depuis les props d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005) sous les types
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005) sous les types
   /// `MouvementItem` et `ListTile`. Délègue à [fromJson].
   static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
     try {

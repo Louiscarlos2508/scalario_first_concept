@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/bdui_engine/screen_cache.dart';
-import 'package:scalario/engine/layout_resolver/screen_config.dart';
+import 'package:scalario/engine/canvas/screen_cache.dart';
+import 'package:scalario/engine/canvas_layout/screen_config.dart';
 
 ScreenConfig _stub(String id) => ScreenConfig(
       screen: id,

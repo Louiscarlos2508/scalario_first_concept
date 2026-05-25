@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../error_boundary/bdui_error_boundary.dart';
 
-/// Écran de fallback affiché quand le pipeline `BDUIEngine` échoue
+/// Écran de fallback affiché quand le pipeline `ScalarioCanvas` échoue
 /// au-delà des boundaries par-composant (AC-12, AC-13).
 ///
 /// - Titre i18n "Écran indisponible" (en attendant STORY-042 — placeholder FR).

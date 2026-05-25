@@ -44,7 +44,7 @@ final class FieldResolver {
       if (recordData == null) {
         developer.log(
           'record.* field "$path" accessed without recordData — returning null',
-          name: 'BDUI.RuleEvaluator',
+          name: 'BDUI.ScalarioCanvasRule',
           level: 900,
         );
         return null;

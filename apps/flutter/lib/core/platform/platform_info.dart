@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
-import '../../engine/layout_resolver/breakpoints.dart';
+import '../../engine/canvas_layout/breakpoints.dart';
 
 /// STORY-012 — informations plateforme exposées en un seul point.
 ///

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/component_registry/component_config.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/component_registry/unknown_component.dart';
+import 'package:scalario/engine/canvas_registry/component_config.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_registry/unknown_component.dart';
 
 void main() {
-  late ComponentRegistry registry;
+  late ScalarioCanvasRegistry registry;
 
   setUp(() {
-    registry = ComponentRegistry();
+    registry = ScalarioCanvasRegistry();
   });
 
   group('register + isRegistered', () {

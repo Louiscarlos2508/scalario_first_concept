@@ -102,7 +102,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
   /// Construit un `ScalarioDataTable<Map<String, dynamic>>` depuis les props
   /// d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005) sous le type `DataTable`.
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005) sous le type `DataTable`.
   ///
   /// Format props attendu :
   /// ```json

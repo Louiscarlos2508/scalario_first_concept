@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/core/theme/scalario_theme.dart';
-import 'package:scalario/engine/bdui_engine/bdui_engine.dart';
-import 'package:scalario/engine/bdui_engine/bdui_engine_config.dart';
-import 'package:scalario/engine/bdui_engine/data_source_resolver.dart';
-import 'package:scalario/engine/bdui_engine/json_schema_validator.dart';
-import 'package:scalario/engine/bdui_engine/user_context_provider.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/component_registry/registry_bootstrap.dart';
+import 'package:scalario/engine/canvas/scalario_canvas.dart';
+import 'package:scalario/engine/canvas/scalario_canvas_config.dart';
+import 'package:scalario/engine/canvas/data_source_resolver.dart';
+import 'package:scalario/engine/canvas/json_schema_validator.dart';
+import 'package:scalario/engine/canvas/user_context_provider.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_registry/registry_bootstrap.dart';
 import 'package:scalario/engine/error_boundary/bdui_error_boundary.dart';
-import 'package:scalario/engine/layout_resolver/layout_resolver.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_layout/scalario_canvas_layout.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 class _RoleProvider implements UserContextProvider {
   _RoleProvider(this.role);
@@ -23,21 +23,21 @@ class _RoleProvider implements UserContextProvider {
       );
 }
 
-BDUIEngine _buildEngine({
+ScalarioCanvas _buildEngine({
   required DataSourceResolver resolver,
   required UserContextProvider userCtx,
   int cacheSize = 20,
 }) {
-  final ComponentRegistry registry = ComponentRegistry();
+  final ScalarioCanvasRegistry registry = ScalarioCanvasRegistry();
   RegistryBootstrap.registerPhase1(registry);
-  return BDUIEngine(
+  return ScalarioCanvas(
     registry: registry,
-    evaluator: const RuleEvaluator(),
-    layoutResolver: LayoutResolver(registry: registry),
+    evaluator: const ScalarioCanvasRule(),
+    layoutResolver: ScalarioCanvasLayout(registry: registry),
     dataResolver: resolver,
     userContextProvider: userCtx,
     validator: const StructuralScreenValidator(),
-    config: BDUIEngineConfig(screenCacheSize: cacheSize),
+    config: ScalarioCanvasConfig(screenCacheSize: cacheSize),
   );
 }
 
@@ -61,7 +61,7 @@ void main() {
     int loadCount = 0;
     final InMemoryDataSourceResolver resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('demo', _dashboard());
-    final BDUIEngine engine = _buildEngine(
+    final ScalarioCanvas engine = _buildEngine(
       resolver: _CountingResolver(resolver, () => loadCount++),
       userCtx: _RoleProvider('OWNER'),
     );
@@ -76,7 +76,7 @@ void main() {
       (WidgetTester tester) async {
     final InMemoryDataSourceResolver resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('bad', <String, dynamic>{'screen': 'bad'});
-    final BDUIEngine engine = _buildEngine(
+    final ScalarioCanvas engine = _buildEngine(
       resolver: resolver,
       userCtx: _RoleProvider('OWNER'),
     );
@@ -106,7 +106,7 @@ void main() {
     });
     resolver.registerDataSource('kpi_d', <String, dynamic>{'foo': 1});
 
-    final BDUIEngine engine = _buildEngine(
+    final ScalarioCanvas engine = _buildEngine(
       resolver: resolver,
       userCtx: _RoleProvider('OWNER'),
     );
@@ -136,7 +136,7 @@ void main() {
     ));
 
     final _RoleProvider provider = _RoleProvider('CASHIER');
-    final BDUIEngine engine =
+    final ScalarioCanvas engine =
         _buildEngine(resolver: resolver, userCtx: provider);
     final ScreenConfig screen = await engine.loadScreen('demo');
 
@@ -165,7 +165,7 @@ void main() {
       (WidgetTester tester) async {
     final InMemoryDataSourceResolver resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('demo', _dashboard());
-    final BDUIEngine engine = _buildEngine(
+    final ScalarioCanvas engine = _buildEngine(
       resolver: resolver,
       userCtx: _RoleProvider('OWNER'),
     );
@@ -183,7 +183,7 @@ void main() {
     int loadCount = 0;
     final InMemoryDataSourceResolver resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('demo', _dashboard());
-    final BDUIEngine engine = _buildEngine(
+    final ScalarioCanvas engine = _buildEngine(
       resolver: _CountingResolver(resolver, () => loadCount++),
       userCtx: _RoleProvider('OWNER'),
     );

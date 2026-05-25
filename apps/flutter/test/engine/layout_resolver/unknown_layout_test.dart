@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/components/feedback/alert_banner.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/layout_resolver/layout_resolver.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_layout/scalario_canvas_layout.dart';
 
 import 'helpers.dart';
 
 void main() {
-  late ComponentRegistry registry;
+  late ScalarioCanvasRegistry registry;
 
   setUp(() => registry = buildStubRegistry());
 
   // AC-27 — layout 'foobar' → UnknownLayout rendu
   testWidgets('AC-27 — layout inconnu → UnknownLayout rend DashboardLayout',
       (WidgetTester tester) async {
-    final LayoutResolver resolver = LayoutResolver(registry: registry);
+    final ScalarioCanvasLayout resolver = ScalarioCanvasLayout(registry: registry);
 
     await pumpWithSize(
       tester,
@@ -78,7 +78,7 @@ void main() {
   // Layouts connus ne retournent pas UnknownLayout
   testWidgets('layouts connus ne passent pas par UnknownLayout',
       (WidgetTester tester) async {
-    final LayoutResolver resolver = LayoutResolver(registry: registry);
+    final ScalarioCanvasLayout resolver = ScalarioCanvasLayout(registry: registry);
 
     for (final String layout in <String>['dashboard', 'list', 'form', 'detail']) {
       final config = dashboardConfig();

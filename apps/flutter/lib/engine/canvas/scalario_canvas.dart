@@ -8,14 +8,14 @@ import '../../core/bdui/validation/bdui_type.dart';
 import '../../core/bdui/validation/bdui_validator.dart' as bdui;
 import '../../core/bdui/validation/validation_result.dart';
 import '../../core/bdui/fallback_screen.dart';
-import '../component_registry/component_config.dart';
-import '../component_registry/component_registry.dart';
+import '../canvas_registry/component_config.dart';
+import '../canvas_registry/scalario_canvas_registry.dart';
 import '../error_boundary/bdui_error_boundary.dart';
 import '../error_boundary/error_logger.dart';
 import '../error_boundary/error_payload.dart';
-import '../layout_resolver/layout_resolver.dart';
-import '../rule_evaluator/rule_evaluator.dart';
-import 'bdui_engine_config.dart';
+import '../canvas_layout/scalario_canvas_layout.dart';
+import '../canvas_rule/scalario_canvas_rule.dart';
+import 'scalario_canvas_config.dart';
 import 'bdui_invalid_payload_exception.dart';
 import 'data_source_resolver.dart';
 import 'json_schema_validator.dart';
@@ -27,36 +27,36 @@ import 'user_context_provider.dart';
 ///
 /// Pipeline `render(config, ctx)` (AC-04) — ordre strict :
 ///   1. **Parse + validate** : exécutés à `loadScreen` (cache-aware).
-///   2. **Rules** : `RuleEvaluator` filtre les composants `visible_if = false`.
+///   2. **Rules** : `ScalarioCanvasRule` filtre les composants `visible_if = false`.
 ///   3. **Data** : les sources sont résolues à `loadScreen` (Phase 1) puis
 ///      injectées dans `props['_data']` ; pour Phase 3 (Drift), la résolution
 ///      bascule en runtime via DI sans toucher l'API.
-///   4. **Components** : instanciés à la demande par le `LayoutResolver` via
-///      le `ComponentRegistry`.
-///   5. **Layout** : `LayoutResolver.resolve` structure les zones.
+///   4. **Components** : instanciés à la demande par le `ScalarioCanvasLayout` via
+///      le `ScalarioCanvasRegistry`.
+///   5. **Layout** : `ScalarioCanvasLayout.resolve` structure les zones.
 ///   6. Le tout enveloppé dans un `BDUIErrorBoundary` global (STORY-010).
 ///
 /// Aucune logique métier dans ce package (AC-06).
 @immutable
-final class BDUIEngine {
-  BDUIEngine({
+final class ScalarioCanvas {
+  ScalarioCanvas({
     required this.registry,
     required this.evaluator,
     required this.layoutResolver,
     required this.dataResolver,
     required this.userContextProvider,
     required this.validator,
-    this.config = BDUIEngineConfig.defaults,
+    this.config = ScalarioCanvasConfig.defaults,
   })  : _cache = ScreenCache(maxSize: config.screenCacheSize),
         _metrics = PerfMetrics(config: config);
 
-  final ComponentRegistry registry;
-  final RuleEvaluator evaluator;
-  final LayoutResolver layoutResolver;
+  final ScalarioCanvasRegistry registry;
+  final ScalarioCanvasRule evaluator;
+  final ScalarioCanvasLayout layoutResolver;
   final DataSourceResolver dataResolver;
   final UserContextProvider userContextProvider;
   final JsonSchemaValidator validator;
-  final BDUIEngineConfig config;
+  final ScalarioCanvasConfig config;
 
   final ScreenCache _cache;
   final PerfMetrics _metrics;
@@ -137,7 +137,7 @@ final class BDUIEngine {
         payloadHash: hash,
       ),
       stack: StackTrace.current,
-      componentType: 'BDUIEngine',
+      componentType: 'ScalarioCanvas',
       screenId: screenId,
     ));
   }

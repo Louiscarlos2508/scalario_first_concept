@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/engine/form_validation/form_validation.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
   const messages = ValidationMessages();
@@ -131,5 +131,5 @@ FieldContext _buildCtx() => const FieldContext(
         roles: {'CASHIER'},
       ),
       formData: {},
-      evaluator: RuleEvaluator(),
+      evaluator: ScalarioCanvasRule(),
     );

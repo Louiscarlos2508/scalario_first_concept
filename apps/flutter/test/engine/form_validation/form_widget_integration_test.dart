@@ -3,12 +3,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/component_registry/component_config.dart';
+import 'package:scalario/engine/canvas_registry/component_config.dart';
 import 'package:scalario/engine/form_validation/form_validation.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
-  const evaluator = RuleEvaluator();
+  const evaluator = ScalarioCanvasRule();
   const userCtx = UserContext(
     userId: 'u1',
     tenantId: 't1',

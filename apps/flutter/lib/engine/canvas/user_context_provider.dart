@@ -1,4 +1,4 @@
-import '../rule_evaluator/user_context.dart';
+import '../canvas_rule/user_context.dart';
 
 /// Fournit le [UserContext] courant à l'Engine.
 ///

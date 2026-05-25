@@ -2,7 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/widgets.dart';
 
-import '../component_registry/component_registry.dart';
+import '../canvas_registry/scalario_canvas_registry.dart';
 import 'layouts/dashboard_layout.dart';
 import 'layouts/detail_layout.dart';
 import 'layouts/form_layout.dart';
@@ -26,10 +26,10 @@ export 'screen_config.dart';
 /// Sans état — instance unique enregistrée via `get_it`.
 /// Aucun import `package:scalario/features/...` dans ce package (AC-08).
 @immutable
-final class LayoutResolver {
-  const LayoutResolver({required this.registry});
+final class ScalarioCanvasLayout {
+  const ScalarioCanvasLayout({required this.registry});
 
-  final ComponentRegistry registry;
+  final ScalarioCanvasRegistry registry;
 
   Widget resolve(
     String layoutType,
@@ -48,7 +48,7 @@ final class LayoutResolver {
   Widget _unknown(String layoutType, ScreenConfig config) {
     developer.log(
       'Unknown layout type "$layoutType", falling back to dashboard',
-      name: 'BDUI.LayoutResolver',
+      name: 'BDUI.ScalarioCanvasLayout',
       level: 900,
     );
     return UnknownLayout(

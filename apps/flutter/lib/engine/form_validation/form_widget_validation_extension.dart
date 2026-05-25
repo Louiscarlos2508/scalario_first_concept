@@ -18,7 +18,7 @@ library;
 
 import 'package:flutter/widgets.dart';
 
-import '../component_registry/component_config.dart';
+import '../canvas_registry/component_config.dart';
 import 'field_context.dart';
 import 'validation_messages.dart';
 import 'validation_rule.dart';

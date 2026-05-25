@@ -38,7 +38,7 @@ class FormSection extends StatelessWidget {
 
   /// Construit un `FormSection` depuis les props d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005) sous les types
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005) sous les types
   /// `FormWidget` et `FormSection`. Children vides en Sprint 1 — les champs
   /// data-driven sont câblés par STORY-011.
   static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {

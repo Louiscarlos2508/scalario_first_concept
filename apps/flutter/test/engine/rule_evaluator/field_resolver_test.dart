@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
   const resolver = FieldResolver();
@@ -157,7 +157,7 @@ void main() {
     });
 
     test('null == null comparison via evaluator (AC-19)', () {
-      const evaluator = RuleEvaluator();
+      const evaluator = ScalarioCanvasRule();
       final rule = Rule.fromJson(const {
         'field': 'record.optional',
         'operator': '==',
@@ -168,7 +168,7 @@ void main() {
     });
 
     test('null > 0 returns false (AC-19)', () {
-      const evaluator = RuleEvaluator();
+      const evaluator = ScalarioCanvasRule();
       final rule = Rule.fromJson(const {
         'field': 'record.optional',
         'operator': '>',

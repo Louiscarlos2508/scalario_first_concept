@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/core/theme/scalario_theme.dart';
-import 'package:scalario/engine/component_registry/component_config.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/layout_resolver/screen_config.dart';
+import 'package:scalario/engine/canvas_registry/component_config.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_layout/screen_config.dart';
 
 /// Stub registry — retourne un box coloré 60px de haut avec le type du composant.
-ComponentRegistry buildStubRegistry() {
-  final ComponentRegistry r = ComponentRegistry();
+ScalarioCanvasRegistry buildStubRegistry() {
+  final ScalarioCanvasRegistry r = ScalarioCanvasRegistry();
   // Enregistre un builder générique qui rend un SizedBox étiqueté.
   const List<String> types = <String>[
     'KPICard',

@@ -5,14 +5,14 @@
 // entièrement construit depuis les tokens (STORY-001) ; aucun override local.
 //
 // STORY-005 : RegistryBootstrap.registerPhase1 est appelé avant runApp ;
-// le singleton ComponentRegistry est disponible via GetIt tout au long de
+// le singleton ScalarioCanvasRegistry est disponible via GetIt tout au long de
 // la session. L'ordre est critique : DI d'abord, UI ensuite.
 //
 // STORY-010 : GlobalErrorHandler.install() est appelé avant runApp, et
 // runApp est enveloppé dans runZonedGuarded pour capturer les erreurs async
 // non-attrapées (niveau 3 de la stratégie 3-niveaux).
 //
-// STORY-033 : Drift + SQLCipher initialisé avant le BDUIEngine.
+// STORY-033 : Drift + SQLCipher initialisé avant le ScalarioCanvas.
 // `DriftDataSourceResolver` remplace `FixtureDataSourceResolver`
 // au DI bootstrap pour lecture offline-first des layouts.
 
@@ -34,11 +34,11 @@ import 'core/offline/sync/sync_api_client.dart';
 import 'core/offline/sync/sync_queue_service.dart';
 import 'core/theme/scalario_theme.dart';
 import 'core/theme/theme_extensions.dart';
-import 'engine/bdui_engine/bdui_engine_module.dart';
-import 'engine/component_registry/component_registry.dart';
-import 'engine/component_registry/registry_bootstrap.dart';
+import 'engine/canvas/scalario_canvas_module.dart';
+import 'engine/canvas_registry/scalario_canvas_registry.dart';
+import 'engine/canvas_registry/registry_bootstrap.dart';
 import 'engine/error_boundary/global_error_handler.dart';
-import 'engine/layout_resolver/layout_resolver.dart';
+import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'sandbox/sandbox_screen.dart';
 
 /// Shared navigator key — allows [GlobalErrorHandler] to show SnackBars from
@@ -59,15 +59,15 @@ void main() {
 }
 
 Future<void> _setupDependencies() async {
-  final ComponentRegistry registry = ComponentRegistry();
-  GetIt.I.registerSingleton<ComponentRegistry>(registry);
+  final ScalarioCanvasRegistry registry = ScalarioCanvasRegistry();
+  GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
   RegistryBootstrap.registerPhase1(registry);
 
-  // STORY-007 — LayoutResolver singleton, injecté avec le registry Phase 1.
-  GetIt.I.registerSingleton<LayoutResolver>(LayoutResolver(registry: registry));
+  // STORY-007 — ScalarioCanvasLayout singleton, injecté avec le registry Phase 1.
+  GetIt.I.registerSingleton<ScalarioCanvasLayout>(ScalarioCanvasLayout(registry: registry));
 
   // STORY-033 — Persistance offline-first avec Drift + SQLCipher.
-  // L'ordre est critique : la DB doit être ouverte AVANT le BDUIEngine
+  // L'ordre est critique : la DB doit être ouverte AVANT le ScalarioCanvas
   // pour que le DriftDataSourceResolver soit prêt.
   final AuthStorage authStorage = AuthStorage();
   GetIt.I.registerSingleton<AuthStorage>(authStorage);
@@ -107,10 +107,10 @@ Future<void> _setupDependencies() async {
     ),
   );
 
-  // STORY-008 — BDUIEngine orchestrateur (consomme registry + layoutResolver).
+  // STORY-008 — ScalarioCanvas orchestrateur (consomme registry + layoutResolver).
   // STORY-026 — appelle BduiValidator.init() en interne pour charger les schémas.
   // STORY-033 — DriftDataSourceResolver remplace FixtureDataSourceResolver.
-  await BDUIEngineModule.register(
+  await ScalarioCanvasModule.register(
     GetIt.I,
     dataResolver: driftResolver,
   );

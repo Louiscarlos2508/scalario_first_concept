@@ -6,14 +6,14 @@
 ///  - Rule._deepEquals for non-List non-equal values
 ///  - Rule.toString()
 ///  - FieldResolver unknown prefix + user.roles
-///  - RuleEvaluator._evaluateRole with direct String value
+///  - ScalarioCanvasRule._evaluateRole with direct String value
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
-  const evaluator = RuleEvaluator();
+  const evaluator = ScalarioCanvasRule();
   const resolver = FieldResolver();
   const ctx = UserContext(userId: 'u', tenantId: 't', roles: {'MANAGER'});
 
@@ -165,10 +165,10 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // RuleEvaluator._evaluateRole — String branch (direct Rule construction)
+  // ScalarioCanvasRule._evaluateRole — String branch (direct Rule construction)
   // ---------------------------------------------------------------------------
 
-  group('RuleEvaluator._evaluateRole with direct Rule(value: String)', () {
+  group('ScalarioCanvasRule._evaluateRole with direct Rule(value: String)', () {
     test('String value matching a role returns true', () {
       // Parser normalises 'role' strings to List, but the evaluator also
       // handles raw String values for defensive robustness.

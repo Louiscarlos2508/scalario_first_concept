@@ -1,4 +1,4 @@
-/// Contrat d'entrée du ComponentRegistry — value object immutable.
+/// Contrat d'entrée du ScalarioCanvasRegistry — value object immutable.
 ///
 /// Mappé sur le champ `ComponentConfig` du JSON Schema partagé
 /// (STORY-023). La sérialisation manuelle ci-dessous sera regénérée
@@ -42,7 +42,7 @@ class ComponentConfig {
     );
   }
 
-  /// Type string résolu par le ComponentRegistry (`"KPICard"`, `"DataTable"`, …).
+  /// Type string résolu par le ScalarioCanvasRegistry (`"KPICard"`, `"DataTable"`, …).
   final String type;
 
   /// Identifiant stable du composant dans le screen — utile pour les
@@ -52,11 +52,11 @@ class ComponentConfig {
   /// Props métier passées au builder DS — contenu dépend du `type`.
   final Map<String, dynamic> props;
 
-  /// Règle de visibilité évaluée par RuleEvaluator (STORY-006).
+  /// Règle de visibilité évaluée par ScalarioCanvasRule (STORY-006).
   /// `null` = composant toujours visible.
   final Map<String, dynamic>? visibleIf;
 
-  /// Source de données résolue par le BDUIEngine (STORY-008).
+  /// Source de données résolue par le ScalarioCanvas (STORY-008).
   final Map<String, dynamic>? source;
 
   /// Règles de validation — utilisées par FormWidget (STORY-011).

@@ -2,7 +2,7 @@
 ///
 /// Spec source : STORY-003 (Composants BDUI Métier).
 ///
-/// Les 7 composants ici sont les seuls enregistrés dans le `ComponentRegistry`
+/// Les 7 composants ici sont les seuls enregistrés dans le `ScalarioCanvasRegistry`
 /// (STORY-005) au lancement de Sprint 1. Les autres composants du DS sont
 /// implémentés en cascade — quand une story d'écran les exige.
 library;

@@ -104,7 +104,7 @@ class ChartBar extends StatefulWidget {
 
   /// Construit un `ChartBar` depuis les props d'un `ComponentConfig` BDUI.
   ///
-  /// Utilisé par le `ComponentRegistry` (STORY-005). Délègue à [fromJson].
+  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
   static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
     try {
       return ChartBar.fromJson(props);

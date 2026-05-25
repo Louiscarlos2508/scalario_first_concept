@@ -1,7 +1,7 @@
 /// Immutable snapshot of the authenticated user's runtime context.
 ///
 /// Populated from JWT public claims by the Auth layer (STORY-009).
-/// This class is consumed by [RuleEvaluator] — it knows nothing about
+/// This class is consumed by [ScalarioCanvasRule] — it knows nothing about
 /// network, sessions, or persistence.
 ///
 /// SECURITY: Store only public claims here (roles, tenant, department).

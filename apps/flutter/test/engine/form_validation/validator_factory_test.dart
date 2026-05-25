@@ -1,14 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/engine/form_validation/form_validation.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
   final factory = ValidatorFactory();
   const ctx = FieldContext(
     userCtx: UserContext(userId: 'u1', tenantId: 't1', roles: {'CASHIER'}),
     formData: {},
-    evaluator: RuleEvaluator(),
+    evaluator: ScalarioCanvasRule(),
   );
 
   FormFieldValidator<dynamic> build(Map<String, dynamic> ruleJson) =>

@@ -1,6 +1,6 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/layout_resolver/breakpoints.dart';
+import 'package:scalario/engine/canvas_layout/breakpoints.dart';
 
 void main() {
   group('BreakpointResolver.fromWidth', () {

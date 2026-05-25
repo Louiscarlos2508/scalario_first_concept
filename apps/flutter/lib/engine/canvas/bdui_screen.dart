@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/bdui/fallback_screen.dart';
-import '../layout_resolver/screen_config.dart';
-import 'bdui_engine.dart';
+import '../canvas_layout/screen_config.dart';
+import 'scalario_canvas.dart';
 import 'bdui_error_screen.dart';
 import 'bdui_invalid_payload_exception.dart';
 
@@ -28,20 +28,20 @@ class BDUIScreen extends StatefulWidget {
   final String screenId;
 
   /// Override optionnel pour tests/showcase. Par défaut résolu via `GetIt`.
-  final BDUIEngine? engine;
+  final ScalarioCanvas? engine;
 
   @override
   State<BDUIScreen> createState() => _BDUIScreenState();
 }
 
 class _BDUIScreenState extends State<BDUIScreen> {
-  late BDUIEngine _engine;
+  late ScalarioCanvas _engine;
   late Future<ScreenConfig> _future;
 
   @override
   void initState() {
     super.initState();
-    _engine = widget.engine ?? GetIt.I<BDUIEngine>();
+    _engine = widget.engine ?? GetIt.I<ScalarioCanvas>();
     _future = _engine.loadScreen(widget.screenId);
   }
 

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/component_registry/component_config.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/layout_resolver/layouts/dashboard_layout.dart';
-import 'package:scalario/engine/layout_resolver/screen_config.dart';
+import 'package:scalario/engine/canvas_registry/component_config.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_layout/layouts/dashboard_layout.dart';
+import 'package:scalario/engine/canvas_layout/screen_config.dart';
 
 import 'helpers.dart';
 
 void main() {
-  late ComponentRegistry registry;
+  late ScalarioCanvasRegistry registry;
 
   setUp(() => registry = buildStubRegistry());
 

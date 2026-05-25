@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
 
-/// Widget de fallback pour un type non enregistré dans le ComponentRegistry.
+/// Widget de fallback pour un type non enregistré dans le ScalarioCanvasRegistry.
 ///
 /// AC-14 : affiche un banner warning avec le type inconnu, loggue via
 /// dart:developer, ne crash jamais même si le type est vide.

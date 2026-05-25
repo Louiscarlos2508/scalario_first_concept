@@ -1,4 +1,4 @@
-/// AC-20 & AC-21 — Performance benchmark for RuleEvaluator.
+/// AC-20 & AC-21 — Performance benchmark for ScalarioCanvasRule.
 ///
 /// Ensures that evaluating a 5-level nested Rule against a UserContext
 /// with 10 attributes completes in < 1ms per evaluation on any CI runner.
@@ -10,10 +10,10 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 void main() {
-  const evaluator = RuleEvaluator();
+  const evaluator = ScalarioCanvasRule();
 
   // 5-level deeply nested rule: AND(OR(NOT(AND), role), comparison)
   final deepRule = Rule.fromJson(const {
@@ -101,7 +101,7 @@ void main() {
 
     // ignore: avoid_print
     print(
-      'RuleEvaluator benchmark: avg ${avgMicros.toStringAsFixed(2)}µs '
+      'ScalarioCanvasRule benchmark: avg ${avgMicros.toStringAsFixed(2)}µs '
       '(${avgMs.toStringAsFixed(3)}ms) over $iterations iterations',
     );
 

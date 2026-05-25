@@ -3,16 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/core/bdui/validation/bdui_type.dart';
 import 'package:scalario/core/bdui/validation/bdui_validator.dart';
 import 'package:scalario/core/theme/scalario_theme.dart';
-import 'package:scalario/engine/bdui_engine/bdui_engine.dart';
-import 'package:scalario/engine/bdui_engine/bdui_engine_config.dart';
-import 'package:scalario/engine/bdui_engine/bdui_invalid_payload_exception.dart';
-import 'package:scalario/engine/bdui_engine/data_source_resolver.dart';
-import 'package:scalario/engine/bdui_engine/json_schema_validator.dart';
-import 'package:scalario/engine/bdui_engine/user_context_provider.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/component_registry/registry_bootstrap.dart';
-import 'package:scalario/engine/layout_resolver/layout_resolver.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas/scalario_canvas.dart';
+import 'package:scalario/engine/canvas/scalario_canvas_config.dart';
+import 'package:scalario/engine/canvas/bdui_invalid_payload_exception.dart';
+import 'package:scalario/engine/canvas/data_source_resolver.dart';
+import 'package:scalario/engine/canvas/json_schema_validator.dart';
+import 'package:scalario/engine/canvas/user_context_provider.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_registry/registry_bootstrap.dart';
+import 'package:scalario/engine/canvas_layout/scalario_canvas_layout.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 Map<String, dynamic> _invalidPayload() => <String, dynamic>{
   'screen': 123,
@@ -33,7 +33,7 @@ Map<String, dynamic> _validPayload() => <String, dynamic>{
 };
 
 void main() {
-  late BDUIEngine engine;
+  late ScalarioCanvas engine;
 
   setUp(() async {
     BduiValidator.reset();
@@ -52,16 +52,16 @@ void main() {
       },
     });
 
-    final registry = ComponentRegistry();
+    final registry = ScalarioCanvasRegistry();
     RegistryBootstrap.registerPhase1(registry);
-    engine = BDUIEngine(
+    engine = ScalarioCanvas(
       registry: registry,
-      evaluator: const RuleEvaluator(),
-      layoutResolver: LayoutResolver(registry: registry),
+      evaluator: const ScalarioCanvasRule(),
+      layoutResolver: ScalarioCanvasLayout(registry: registry),
       dataResolver: InMemoryDataSourceResolver(),
       userContextProvider: const _DemoUserCtx(),
       validator: const StructuralScreenValidator(),
-      config: BDUIEngineConfig(screenCacheSize: 20, enableTimeline: false),
+      config: ScalarioCanvasConfig(screenCacheSize: 20, enableTimeline: false),
     );
   });
 
@@ -101,14 +101,14 @@ void main() {
     final resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('bad_json', _invalidPayload());
 
-    final localEngine = BDUIEngine(
+    final localEngine = ScalarioCanvas(
       registry: engine.registry,
       evaluator: engine.evaluator,
       layoutResolver: engine.layoutResolver,
       dataResolver: resolver,
       userContextProvider: const _DemoUserCtx(),
       validator: const StructuralScreenValidator(),
-      config: BDUIEngineConfig(screenCacheSize: 20, enableTimeline: false),
+      config: ScalarioCanvasConfig(screenCacheSize: 20, enableTimeline: false),
     );
 
     expect(
@@ -121,21 +121,21 @@ void main() {
     final resolver = InMemoryDataSourceResolver();
     resolver.registerScreen('valid_json', _validPayload());
 
-    final localEngine = BDUIEngine(
+    final localEngine = ScalarioCanvas(
       registry: engine.registry,
       evaluator: engine.evaluator,
       layoutResolver: engine.layoutResolver,
       dataResolver: resolver,
       userContextProvider: const _DemoUserCtx(),
       validator: const StructuralScreenValidator(),
-      config: BDUIEngineConfig(screenCacheSize: 20, enableTimeline: false),
+      config: ScalarioCanvasConfig(screenCacheSize: 20, enableTimeline: false),
     );
 
     final config = await localEngine.loadScreen('valid_json');
     expect(config.screen, 'demo');
   });
 
-  // AC-19: BDUIEngine.render returns FallbackScreen for invalid payload
+  // AC-19: ScalarioCanvas.render returns FallbackScreen for invalid payload
   testWidgets('AC-19 — renderRaw never throws for invalid JSON', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: ScalarioTheme.light(),

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/bdui_engine/data_source_resolver.dart';
+import 'package:scalario/engine/canvas/data_source_resolver.dart';
 
 void main() {
   group('InMemoryDataSourceResolver', () {

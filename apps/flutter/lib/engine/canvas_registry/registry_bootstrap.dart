@@ -5,20 +5,20 @@ import '../../components/data_display/scalario_data_table.dart';
 import '../../components/feedback/alert_banner.dart';
 import '../../components/inputs/form_section.dart';
 import '../../components/lists/scalario_list_tile.dart';
-import 'component_registry.dart';
+import 'scalario_canvas_registry.dart';
 
 /// Enregistre les composants DS Phase 1 dans [registry].
 ///
 /// Appelé depuis `main()` avant `runApp()` — synchrone, < 1ms.
 ///
 /// **Convention d'extension :** pour ajouter un composant en Sprint 2+,
-/// ajouter **une seule ligne** ici. Ne jamais modifier [ComponentRegistry]
+/// ajouter **une seule ligne** ici. Ne jamais modifier [ScalarioCanvasRegistry]
 /// lui-même pour ajouter un type (AC-18 — zéro logique métier dans engine).
 ///
 /// **Aliases :** certains types JSON historiques (FAB, FormSection, ChartBar)
 /// pointent vers le même builder DS que leur équivalent canonique.
 abstract final class RegistryBootstrap {
-  static void registerPhase1(ComponentRegistry r) {
+  static void registerPhase1(ScalarioCanvasRegistry r) {
     // 02 — Data Display
     r.register('KPICard', (c, ctx) => KPICard.fromConfig(c.props, ctx));
     r.register(

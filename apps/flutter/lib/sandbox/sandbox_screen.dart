@@ -14,12 +14,12 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
-import '../engine/bdui_engine/bdui_engine.dart';
-import '../engine/bdui_engine/data_source_resolver.dart';
-import '../engine/bdui_engine/json_schema_validator.dart';
-import '../engine/component_registry/component_registry.dart';
-import '../engine/layout_resolver/layout_resolver.dart';
-import '../engine/rule_evaluator/rule_evaluator.dart';
+import '../engine/canvas/scalario_canvas.dart';
+import '../engine/canvas/data_source_resolver.dart';
+import '../engine/canvas/json_schema_validator.dart';
+import '../engine/canvas_registry/scalario_canvas_registry.dart';
+import '../engine/canvas_layout/scalario_canvas_layout.dart';
+import '../engine/canvas_rule/scalario_canvas_rule.dart';
 import 'sandbox_breakpoint_overlay.dart';
 import 'sandbox_console.dart';
 import 'sandbox_error_view.dart';
@@ -51,8 +51,8 @@ class SandboxScreen extends StatefulWidget {
 
   final SandboxUserContextProvider? userContext;
   final SandboxConsoleController? console;
-  final ComponentRegistry? componentRegistry;
-  final LayoutResolver? layoutResolver;
+  final ScalarioCanvasRegistry? componentRegistry;
+  final ScalarioCanvasLayout? layoutResolver;
   final String? initialFixtureId;
 
   @override
@@ -64,7 +64,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
   late final SandboxFileWatcher _watcher;
   late final SandboxUserContextProvider _userCtx;
   late final SandboxConsoleController _console;
-  late final BDUIEngine _engine;
+  late final ScalarioCanvas _engine;
 
   String _fixtureId = kSandboxFixtureIds.first;
   SandboxBreakpoint _breakpoint = SandboxBreakpoint.desktop;
@@ -83,10 +83,10 @@ class _SandboxScreenState extends State<SandboxScreen> {
     _console = widget.console ?? SandboxConsoleController();
     _fixtureId = widget.initialFixtureId ?? kSandboxFixtureIds.first;
 
-    final ComponentRegistry registry =
-        widget.componentRegistry ?? GetIt.I<ComponentRegistry>();
-    final LayoutResolver resolver =
-        widget.layoutResolver ?? GetIt.I<LayoutResolver>();
+    final ScalarioCanvasRegistry registry =
+        widget.componentRegistry ?? GetIt.I<ScalarioCanvasRegistry>();
+    final ScalarioCanvasLayout resolver =
+        widget.layoutResolver ?? GetIt.I<ScalarioCanvasLayout>();
     _engine = _SandboxBDUIEngineFactory.build(
       registry: registry,
       layoutResolver: resolver,
@@ -334,19 +334,19 @@ class _SandboxScreenState extends State<SandboxScreen> {
   }
 }
 
-/// Construit un [BDUIEngine] dédié au sandbox qui consulte le
+/// Construit un [ScalarioCanvas] dédié au sandbox qui consulte le
 /// [SandboxUserContextProvider] mutable plutôt que celui de production.
 ///
 /// On évite GetIt pour ce composant car il diffère par instance.
 abstract class _SandboxBDUIEngineFactory {
-  static BDUIEngine build({
-    required ComponentRegistry registry,
-    required LayoutResolver layoutResolver,
+  static ScalarioCanvas build({
+    required ScalarioCanvasRegistry registry,
+    required ScalarioCanvasLayout layoutResolver,
     required SandboxUserContextProvider userContext,
   }) {
-    return BDUIEngine(
+    return ScalarioCanvas(
       registry: registry,
-      evaluator: const RuleEvaluator(),
+      evaluator: const ScalarioCanvasRule(),
       layoutResolver: layoutResolver,
       dataResolver: _UnusedDataResolver(),
       userContextProvider: userContext,

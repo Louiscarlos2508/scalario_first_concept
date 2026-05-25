@@ -1,6 +1,6 @@
-import '../layout_resolver/screen_config.dart';
+import '../canvas_layout/screen_config.dart';
 
-/// Cache mémoire LRU `Map<screenId, ScreenConfig>` du [BDUIEngine].
+/// Cache mémoire LRU `Map<screenId, ScreenConfig>` du [ScalarioCanvas].
 ///
 /// STORY-008 — AC-10 : taille max configurable (défaut 20). Eviction LRU
 /// stricte : la dernière entrée `get` ou `put` est la plus récente.

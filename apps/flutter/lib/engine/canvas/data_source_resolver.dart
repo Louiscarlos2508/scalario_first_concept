@@ -12,7 +12,7 @@ final class DataSourceNotFoundException implements Exception {
   String toString() => 'DataSourceNotFoundException: $message';
 }
 
-/// Interface de résolution des sources de données du [BDUIEngine].
+/// Interface de résolution des sources de données du [ScalarioCanvas].
 ///
 /// STORY-008 Phase 1 — Sprint 2 : implémentation [FixtureDataSourceResolver]
 /// qui lit `assets/sandbox/`. STORY-033 Sprint 3 — `DriftDataSourceResolver`

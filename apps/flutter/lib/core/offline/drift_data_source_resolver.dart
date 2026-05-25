@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
-import '../../engine/bdui_engine/data_source_resolver.dart';
+import '../../engine/canvas/data_source_resolver.dart';
 import 'database.dart';
 import 'dao/cached_layout_dao.dart';
 

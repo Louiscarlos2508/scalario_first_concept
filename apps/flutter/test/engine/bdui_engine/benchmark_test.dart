@@ -10,14 +10,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scalario/core/theme/scalario_theme.dart';
-import 'package:scalario/engine/bdui_engine/bdui_engine.dart';
-import 'package:scalario/engine/bdui_engine/data_source_resolver.dart';
-import 'package:scalario/engine/bdui_engine/json_schema_validator.dart';
-import 'package:scalario/engine/bdui_engine/user_context_provider.dart';
-import 'package:scalario/engine/component_registry/component_registry.dart';
-import 'package:scalario/engine/component_registry/registry_bootstrap.dart';
-import 'package:scalario/engine/layout_resolver/layout_resolver.dart';
-import 'package:scalario/engine/rule_evaluator/rule_evaluator.dart';
+import 'package:scalario/engine/canvas/scalario_canvas.dart';
+import 'package:scalario/engine/canvas/data_source_resolver.dart';
+import 'package:scalario/engine/canvas/json_schema_validator.dart';
+import 'package:scalario/engine/canvas/user_context_provider.dart';
+import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
+import 'package:scalario/engine/canvas_registry/registry_bootstrap.dart';
+import 'package:scalario/engine/canvas_layout/scalario_canvas_layout.dart';
+import 'package:scalario/engine/canvas_rule/scalario_canvas_rule.dart';
 
 class _Provider implements UserContextProvider {
   @override
@@ -61,16 +61,16 @@ Map<String, dynamic> _largeDashboard() {
   };
 }
 
-BDUIEngine _engine() {
-  final ComponentRegistry registry = ComponentRegistry();
+ScalarioCanvas _engine() {
+  final ScalarioCanvasRegistry registry = ScalarioCanvasRegistry();
   RegistryBootstrap.registerPhase1(registry);
   final InMemoryDataSourceResolver resolver = InMemoryDataSourceResolver(
     screens: <String, Map<String, dynamic>>{'bench': _largeDashboard()},
   );
-  return BDUIEngine(
+  return ScalarioCanvas(
     registry: registry,
-    evaluator: const RuleEvaluator(),
-    layoutResolver: LayoutResolver(registry: registry),
+    evaluator: const ScalarioCanvasRule(),
+    layoutResolver: ScalarioCanvasLayout(registry: registry),
     dataResolver: resolver,
     userContextProvider: _Provider(),
     validator: const StructuralScreenValidator(),
@@ -79,7 +79,7 @@ BDUIEngine _engine() {
 
 void main() {
   testWidgets('cold render budget (informational)', (WidgetTester tester) async {
-    final BDUIEngine engine = _engine();
+    final ScalarioCanvas engine = _engine();
     final Stopwatch sw = Stopwatch()..start();
     final config = await engine.loadScreen('bench');
     await tester.pumpWidget(
@@ -99,7 +99,7 @@ void main() {
   });
 
   testWidgets('hot render budget (informational)', (WidgetTester tester) async {
-    final BDUIEngine engine = _engine();
+    final ScalarioCanvas engine = _engine();
     final config = await engine.loadScreen('bench');
     // Warm-up
     await tester.pumpWidget(

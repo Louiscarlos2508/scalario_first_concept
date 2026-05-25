@@ -10,7 +10,7 @@
 ///   maxLength   — string length (runes) <= rule value.
 ///   regex       — string matches RE2-compatible pattern.
 ///   enum        — value is member of allowed list.
-///   required_if — conditionally required via RuleEvaluator (STORY-006).
+///   required_if — conditionally required via ScalarioCanvasRule (STORY-006).
 ///
 /// AC-01: immutable.
 /// AC-02: fromJson handles 9 types; unknown → ValidationParseException.
@@ -19,7 +19,7 @@ library;
 
 import 'package:meta/meta.dart';
 
-import '../rule_evaluator/rule_evaluator.dart';
+import '../canvas_rule/scalario_canvas_rule.dart';
 import 'validation_exception.dart';
 
 @immutable
@@ -50,7 +50,7 @@ final class ValidationRule {
   /// Supports {min}, {max}, {type}, {value} interpolation placeholders.
   final String? errorMessage;
 
-  /// Condition rule for 'required_if' — evaluated by RuleEvaluator (STORY-006).
+  /// Condition rule for 'required_if' — evaluated by ScalarioCanvasRule (STORY-006).
   final Rule? requiredIf;
 
   // ---------------------------------------------------------------------------

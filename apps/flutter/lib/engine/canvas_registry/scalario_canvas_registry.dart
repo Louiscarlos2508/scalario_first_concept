@@ -17,12 +17,12 @@ import 'unknown_component.dart';
 ///
 /// Usage DI (singleton via get_it) :
 /// ```dart
-/// final registry = ComponentRegistry();
-/// GetIt.I.registerSingleton<ComponentRegistry>(registry);
+/// final registry = ScalarioCanvasRegistry();
+/// GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
 /// RegistryBootstrap.registerPhase1(registry);
 /// ```
-class ComponentRegistry {
-  ComponentRegistry();
+class ScalarioCanvasRegistry {
+  ScalarioCanvasRegistry();
 
   final Map<String, ComponentBuilder> _builders = {};
 

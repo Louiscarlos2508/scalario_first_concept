@@ -237,7 +237,7 @@ final class ValidatorFactory {
     return null;
   }
 
-  /// AC-10/11: delegates to [RuleEvaluator]; if condition is true, behaves as required.
+  /// AC-10/11: delegates to [ScalarioCanvasRule]; if condition is true, behaves as required.
   String? _checkRequiredIf(
     dynamic value,
     ValidationRule rule,

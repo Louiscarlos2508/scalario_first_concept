@@ -6,7 +6,7 @@ import 'error_payload.dart';
 import 'error_screen.dart';
 
 // ---------------------------------------------------------------------------
-// BDUI-specific exceptions (consumed by BDUIEngine — STORY-008)
+// BDUI-specific exceptions (consumed by ScalarioCanvas — STORY-008)
 // ---------------------------------------------------------------------------
 
 /// Thrown when the incoming JSON fails structural or semantic validation.
@@ -47,7 +47,7 @@ class BDUIRenderException implements Exception {
 /// BDUIErrorBoundary(
 ///   screenId: config.screenId,
 ///   onRetry: () => ref.invalidate(screenProvider(config.screenId)),
-///   child: BDUIEngine.render(config, context),
+///   child: ScalarioCanvas.render(config, context),
 /// )
 /// ```
 class BDUIErrorBoundary extends StatefulWidget {

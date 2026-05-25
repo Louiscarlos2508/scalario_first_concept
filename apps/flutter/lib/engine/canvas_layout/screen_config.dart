@@ -1,4 +1,4 @@
-import '../component_registry/component_config.dart';
+import '../canvas_registry/component_config.dart';
 
 /// Zones d'un screen BDUI — contrat partagé (architecture ligne 977-984).
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:scalario/engine/bdui_engine/json_schema_validator.dart';
+import 'package:scalario/engine/canvas/json_schema_validator.dart';
 import 'package:scalario/engine/error_boundary/bdui_error_boundary.dart';
 
 void main() {

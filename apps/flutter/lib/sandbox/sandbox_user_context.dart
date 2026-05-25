@@ -7,8 +7,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-import '../engine/bdui_engine/user_context_provider.dart';
-import '../engine/rule_evaluator/user_context.dart';
+import '../engine/canvas/user_context_provider.dart';
+import '../engine/canvas_rule/user_context.dart';
 
 /// Presets de rôles BDUI pour la sandbox (AC-04).
 enum SandboxUserPreset {
