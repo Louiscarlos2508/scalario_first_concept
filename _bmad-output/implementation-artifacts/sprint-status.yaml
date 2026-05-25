@@ -715,10 +715,19 @@ architecture_v14:
           title: "Catalogue v14 — modules génériques + ux_profiles + queries + capabilities"
           epic: "EPIC-V14-003"
           points: 5
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-006.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-25"
+          actual_points: 5
+          commit_sha: "c939030"
+          notes: |
+            Restructure catalog/ en 4 sous-dossiers + _archive_v13/ + 2 schemas v14 + 3 loaders stubs.
+            v13 préservé via git mv vers _archive_v13/, runtime resolvers étendus avec fallback.
+            cloture_caisse migré vers modules/operations/.
+            Tests 616 passed (baseline préservé). Implémentation complète des engines reportée à V14-004/007/024/028.
           sprint: "v14-1"
         - story_id: "V14-007"
           title: "6 moteurs ERP génériques (ModuleList, Form, Detail, Report, Kanban, Dashboard)"
