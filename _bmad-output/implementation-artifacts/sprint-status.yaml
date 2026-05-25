@@ -649,11 +649,20 @@ architecture_v14:
           title: "Migration nomenclature Scalario (script semi-automatique)"
           epic: "EPIC-V14-001"
           points: 2
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-001.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-25"
           sprint: "v14-1"
+          actual_points: 2
+          notes: |
+            Flutter migration appliquée (canvas + vault/sync, 2 commits refactor(v14)).
+            NestJS batches (flow/shield/watch) reportés à V14-005 — splits avec changement
+            de profondeur d'import nécessitent ts-morph AST ou path aliases (hors scope 2pts).
+            Script scripts/migrate-v13-to-v14.sh + migration-log.md livrés.
+            Tests : Flutter 807 passed (1 flaky pré-existant), NestJS 616 passed inchangé.
         - story_id: "V14-002"
           title: "JSON Schema BDUI v1.1.0 — variant + actions + children"
           epic: "EPIC-V14-002"
