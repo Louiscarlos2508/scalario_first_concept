@@ -117,7 +117,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
   describe('AC-04 — 4 Gate 0 functions are covered by the catalogue', () => {
     it('F1 Dashboard owner — module_dashboard_owner declares KPIs + Chart + DataTable', () => {
       const owner = JSON.parse(
-        readFileSync(resolveCatalogPath('modules/module_dashboard_owner.json'), 'utf8'),
+        readFileSync(resolveCatalogPath('_archive_v13/modules/module_dashboard_owner.json'), 'utf8'),
       );
       const screen = owner.screens[0];
       expect(screen.zones.kpis.length).toBeGreaterThanOrEqual(4);
@@ -127,7 +127,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
 
     it('F2 Arrivage validation — module_stock declares arrivages_validation_form', () => {
       const stock = JSON.parse(
-        readFileSync(resolveCatalogPath('modules/module_stock.json'), 'utf8'),
+        readFileSync(resolveCatalogPath('_archive_v13/modules/module_stock.json'), 'utf8'),
       );
       const screens = (stock.screens as Array<{ screen: string }>).map((s) => s.screen);
       expect(screens).toContain('arrivages_validation_form');
@@ -136,7 +136,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
 
     it('F3 Déclaration perte — module_pertes declares perte_create + 5 causes', () => {
       const pertes = JSON.parse(
-        readFileSync(resolveCatalogPath('modules/module_pertes.json'), 'utf8'),
+        readFileSync(resolveCatalogPath('_archive_v13/modules/module_pertes.json'), 'utf8'),
       );
       const screens = (pertes.screens as Array<{ screen: string }>).map((s) => s.screen);
       expect(screens).toContain('perte_create');
@@ -148,7 +148,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
 
     it('F4 Clôture caisse — wf_cloture_caisse workflow has 5 FSM states', () => {
       const wf = JSON.parse(
-        readFileSync(resolveCatalogPath('workflows/wf_cloture_caisse.json'), 'utf8'),
+        readFileSync(resolveCatalogPath('modules/operations/cloture_caisse.json'), 'utf8'),
       );
       expect(Object.keys(wf.states)).toHaveLength(5);
       expect(wf.initial_state).toBe('saisie_fond_restant');
@@ -183,10 +183,10 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
       ]);
       // The modules don't list providers; resolved from tenant config (STORY-042).
       const ventes = JSON.parse(
-        readFileSync(resolveCatalogPath('modules/module_ventes.json'), 'utf8'),
+        readFileSync(resolveCatalogPath('_archive_v13/modules/module_ventes.json'), 'utf8'),
       );
       const venteRaw = readFileSync(
-        resolveCatalogPath('modules/module_ventes.json'),
+        resolveCatalogPath('_archive_v13/modules/module_ventes.json'),
         'utf8',
       );
       // payment_method enum is the only enumeration; no provider literal.
@@ -200,7 +200,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
     it('1. datasets: 6 modules declared in template match modules[] files on disk', () => {
       const tpl = loadDomainTemplate('retail_fresh_produce');
       for (const mod of tpl.modules) {
-        const path = resolveCatalogPath(`modules/${mod.module_id}.json`);
+        const path = resolveCatalogPath(`_archive_v13/modules/${mod.module_id}.json`);
         expect(path).toBeTruthy();
       }
     });
@@ -218,7 +218,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
     it('4-12. integrity: each module passes ModuleConfig Zod + DAG validator', () => {
       for (const moduleId of MODULE_IDS) {
         const result = validator.validateFile(
-          resolveCatalogPath(`modules/${moduleId}.json`),
+          resolveCatalogPath(`_archive_v13/modules/${moduleId}.json`),
           'module',
         );
         if (!result.valid) {
@@ -235,9 +235,9 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
   describe('AC-01/AC-19 — no business logic / no business literals anywhere', () => {
     it('the template + 6 modules + workflow contain NO mention of FCFA / Wave / Burkina', () => {
       const files = [
-        'domains/retail_fresh_produce.json',
-        ...MODULE_IDS.map((id) => `modules/${id}.json`),
-        'workflows/wf_cloture_caisse.json',
+        '_archive_v13/domains/retail_fresh_produce.json',
+        ...MODULE_IDS.map((id) => `_archive_v13/modules/${id}.json`),
+        'modules/operations/cloture_caisse.json',
       ];
       for (const f of files) {
         const raw = readFileSync(resolveCatalogPath(f), 'utf8');
@@ -250,7 +250,7 @@ describe('STORY-043 — Gate 0 multi-role validation', () => {
 
     it('no module hardcodes XOF (currency_source: tenant.config.currency)', () => {
       for (const moduleId of MODULE_IDS) {
-        const raw = readFileSync(resolveCatalogPath(`modules/${moduleId}.json`), 'utf8');
+        const raw = readFileSync(resolveCatalogPath(`_archive_v13/modules/${moduleId}.json`), 'utf8');
         expect(raw).not.toMatch(/"XOF"/);
       }
     });

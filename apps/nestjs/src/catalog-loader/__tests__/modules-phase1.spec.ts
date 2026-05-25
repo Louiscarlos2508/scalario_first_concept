@@ -14,6 +14,9 @@ const MODULE_IDS = [
 
 function resolveModulePath(moduleId: string): string {
   const candidates = [
+    // v14 — modules v13 archivés (STORY-V14-006)
+    resolve(process.cwd(), 'catalog', '_archive_v13', 'modules', `${moduleId}.json`),
+    resolve(process.cwd(), '..', '..', 'catalog', '_archive_v13', 'modules', `${moduleId}.json`),
     resolve(process.cwd(), 'catalog', 'modules', `${moduleId}.json`),
     resolve(process.cwd(), '..', '..', 'catalog', 'modules', `${moduleId}.json`),
   ];

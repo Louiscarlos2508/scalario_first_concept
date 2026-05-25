@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://scalario.app/schemas/capability.schema.json",
+  "title": "Capability (Scalario Sense)",
+  "description": "Hardware / system capability declaration — input (scan/photo/NFC/voice), output (printer/SMS), location (GPS), auth (biometrics), integration (webhook/HTTP), payment (Wave/Orange Money/MoMo).",
+  "type": "object",
+  "required": ["schema_version", "capability_id", "category", "platform_support"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "capability_id": {
+      "type": "string",
+      "description": "Unique capability identifier (kebab/snake_case)",
+      "examples": ["barcode_scan", "gps_position", "wave_pay", "biometrie"]
+    },
+    "category": {
+      "enum": ["input", "output", "location", "auth", "integration", "payment"]
+    },
+    "platform_support": {
+      "type": "object",
+      "required": ["ios", "android"],
+      "properties": {
+        "ios": { "type": "boolean" },
+        "android": { "type": "boolean" },
+        "web": { "type": "boolean" },
+        "desktop": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "permissions_required": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Native permissions needed (e.g., CAMERA, ACCESS_FINE_LOCATION)"
+    },
+    "fallback_strategy": {
+      "enum": ["disable", "manual_input", "skip", "error"],
+      "description": "What happens if capability unavailable on device"
+    },
+    "config_schema": {
+      "type": "object",
+      "description": "JSON Schema for tenant-level config of this capability",
+      "additionalProperties": true
+    },
+    "examples": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "Usage examples for this capability"
+    }
+  },
+  "additionalProperties": false
+}

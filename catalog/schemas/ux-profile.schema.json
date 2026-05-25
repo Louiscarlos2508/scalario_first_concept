@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://scalario.app/schemas/ux-profile.schema.json",
+  "title": "UX Profile (Scalario Profile)",
+  "description": "UX rules per business sector — defines allowed component variants, layout patterns, naming conventions. Consumed by Scalario Canvas at render-time.",
+  "type": "object",
+  "required": ["schema_version", "profile_id", "sector", "variants_allowed"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "profile_id": {
+      "type": "string",
+      "description": "Unique profile identifier",
+      "examples": ["commerce_general", "pharmacie", "btp", "cabinet_medical"]
+    },
+    "sector": {
+      "type": "string",
+      "description": "Business sector this profile targets"
+    },
+    "inherits": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Parent profile IDs to inherit from (resolved at load-time)"
+    },
+    "variants_allowed": {
+      "type": "object",
+      "description": "Per-component-type, the allowed variant keys",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "examples": [
+        {
+          "KPICard": ["compact", "expanded", "auto"],
+          "DataTable": ["dense", "comfortable", "auto"]
+        }
+      ]
+    },
+    "layout_rules": {
+      "type": "object",
+      "description": "Layout patterns: grid breakpoints, max-cards-per-row, etc.",
+      "properties": {
+        "max_kpis_per_row": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "default_density": { "enum": ["compact", "comfortable", "spacious"] },
+        "primary_action_position": { "enum": ["bottom_right_fab", "header_right", "inline"] }
+      },
+      "additionalProperties": true
+    },
+    "naming_conventions": {
+      "type": "object",
+      "description": "Sector-specific terminology (e.g., 'ventes' vs 'consultations' vs 'chantiers')",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

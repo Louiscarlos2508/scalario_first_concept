@@ -1,176 +1,112 @@
-# Catalogue Scalario — Guide Intégrateur
+# `catalog/` — Catalogue Scalario v14
 
-## 1. Qu'est-ce que le catalogue ?
+**Refondu par STORY-V14-006 (2026-05-25).** Documente la structure v14 du catalogue qui alimente Scalario Kit / Profile / Pipe.
 
-Le catalogue est le **produit** de Scalario. C'est un dossier de fichiers JSON qui décrivent des secteurs d'activité (retail, pharmacie, BTP, transport...). Le backend et l'app mobile ne contiennent **aucun code métier** — ils lisent ce dossier et rendent l'expérience correspondante.
+## Principe
 
-> Métaphore : Scalario est un orchestre. Le catalogue est la partition. Sans partition, les musiciens (le code) ne savent pas quoi jouer.
+Le catalogue est le **produit** de Scalario. C'est un dossier de fichiers JSON qui décrivent des secteurs d'activité (commerce, pharmacie, BTP, cabinet médical…). Le backend et l'app mobile ne contiennent **aucun code métier** — ils lisent ce dossier et rendent l'expérience correspondante.
 
-Cela veut dire que pour ajouter un nouveau secteur (ou un nouveau module dans un secteur existant), vous **n'écrivez aucune ligne de TypeScript ni de Dart**. Vous écrivez du JSON.
+> Métaphore : Scalario est un orchestre. Le catalogue est la partition.
 
----
+Pour ajouter un nouveau secteur (ou un module), vous **n'écrivez aucune ligne de TypeScript ni de Dart**. Vous écrivez du JSON.
 
-## 2. Anatomie d'un template
-
-Un template sectoriel (un "domaine") est un fichier JSON dans `catalog/domains/` :
+## Structure v14
 
 ```
 catalog/
-├── domains/                # Templates par secteur (ex: pharmacie_quartier.json)
-├── modules/                # Modules réutilisables (ex: pos.json, stock.json)
-├── fusions/                # Combinaisons multi-domaines (réservé Phase 2)
-└── schemas/                # JSON Schemas (le contrat — ne pas modifier)
+├── README.md                  ← ce fichier
+├── schemas/                   ← JSON Schemas (contrats validés en TS via Zod)
+│   ├── module-config.schema.json
+│   ├── screen-config.schema.json
+│   ├── component-config.schema.json
+│   ├── workflow.schema.json
+│   ├── ux-profile.schema.json     ← NOUVEAU v14
+│   ├── capability.schema.json     ← NOUVEAU v14
+│   └── examples/
+│
+├── modules/                   ← Modules ERP génériques (Scalario Kit)
+│   ├── README.md
+│   ├── gestion/              commandes, stock, clients, fournisseurs
+│   ├── finance/              factures, paiements, rapports_fin
+│   ├── rh/                   employes, conges, paie
+│   ├── operations/           livraisons, planning, chantiers, cloture_caisse
+│   └── _overrides_per_tenant/   Phase 2 : Scalario Forge dépose ici
+│
+├── ux_profiles/              ← UX par métier (Scalario Profile)
+│   ├── README.md
+│   ├── _base/                composants/layout/UX patterns communs
+│   ├── commerce_general/
+│   ├── pharmacie/
+│   ├── btp/
+│   └── cabinet_medical/
+│
+├── capabilities/             ← Hardware/système (Scalario Sense)
+│   ├── README.md
+│   ├── input/                barcode_scan, photo_capture, signature, NFC, voice
+│   ├── output/               printer_bluetooth, sms_send, share_file
+│   ├── location/             gps_position, gps_track
+│   ├── auth/                 biometrie
+│   ├── integration/          webhook_send, http_call
+│   └── payment/              wave_pay, orange_money, mtn_momo (Phase 2)
+│
+├── queries/                  ← SQL nommé (Scalario Vault niveau 3)
+│   ├── README.md             RÈGLE : jamais exposé à l'IA, référencé par query_id
+│   ├── commun/               dashboard_kpis, audit_trail
+│   ├── pharmacie/            rapport_ventes_medicaments, alerte_peremption
+│   ├── btp/                  avancement_chantier, cout_materiaux
+│   └── finance/              balance_comptable, rapprochement_bancaire
+│
+└── _archive_v13/             ← Sauvegarde fichiers v13 (référence audit)
+    ├── README.md
+    ├── domains/              retail_fresh_produce.json
+    └── modules/              module_dashboard_owner, module_stock, etc.
 ```
 
-### Structure d'un fichier domaine
+## Conventions
 
-```json
-{
-  "id": "pharmacie_quartier",
-  "schema_version": "1.0.0",
-  "name": "Pharmacie de quartier",
-  "i18n_key": "domain.pharmacie_quartier",
-  "icon": "package",
-  "entities": [],
-  "actions": {},
-  "rbac_roles": ["OWNER"],
-  "abac_rules": [],
-  "conflict_strategy": "server_wins"
-}
-```
+- **Fichiers JSON** : snake_case (`gestion/commandes.json`, `pharmacie/components.json`)
+- **Dossiers** : snake_case (`ux_profiles/`, `cabinet_medical/`)
+- **Préfixe underscore** `_X` = dossier "système" (pas un secteur) :
+  - `_base/` = règles communes héritées
+  - `_overrides_per_tenant/` = overrides Forge
+  - `_archive_v13/` = archive de la v13
 
-Chaque champ est documenté dans [`catalog/schemas/module-config.schema.json`](./schemas/module-config.schema.json) et expliqué dans [`catalog/schemas/README.md`](./schemas/README.md).
+## Schémas validés
 
----
+Chaque fichier JSON est validé par **deux couches** :
+1. **JSON Schema** dans `schemas/` (contrat externe)
+2. **Zod schema** dans `apps/nestjs/src/catalog-loader/validators/` (runtime TS)
 
-## 3. Checklist en 5 étapes — Créer un nouveau domaine
+Schemas v14 ajoutés :
+- `ux-profile.schema.json` — pour `ux_profiles/<sector>/*.json`
+- `capability.schema.json` — pour `capabilities/<category>/*.json`
 
-### Étape 1 — Scaffold
+## Loaders NestJS
 
-```bash
-bash scripts/scaffold-domain.sh pharmacie_quartier
-```
+`apps/nestjs/src/catalog-loader/loaders/` :
+- `ux-profile-loader.ts` — charge `catalog/ux_profiles/`
+- `capability-loader.ts` — charge `catalog/capabilities/`
+- `query-loader.ts` — charge `catalog/queries/` (RÈGLE : SQL jamais exposé à l'IA)
+- (modules loader existant dans `services/catalogue-loader.service.ts`)
 
-Cela crée `catalog/domains/pharmacie_quartier.json` avec le squelette minimum.
+## Mapping v13 → v14
 
-### Étape 2 — Éditer le JSON
+| v13 | v14 |
+|---|---|
+| `catalog/domains/retail_fresh_produce.json` | `catalog/_archive_v13/domains/` |
+| `catalog/modules/module_*.json` (×6) | `catalog/_archive_v13/modules/` |
+| `catalog/workflows/wf_cloture_caisse.json` | `catalog/modules/operations/cloture_caisse.json` |
+| `catalog/schemas/` | inchangé (+ 2 nouveaux schemas v14) |
 
-Ouvrez `catalog/domains/pharmacie_quartier.json` et remplissez :
-- `name` (ex: "Pharmacie de quartier")
-- `entities` (liste des choses qu'on stocke — ex: ordonnance, medicament)
-- `actions` (les opérations possibles — ex: enregistrer_ordonnance)
-- `rbac_roles` (qui peut faire quoi — ex: ["PHARMACIEN", "PREPARATEUR"])
+## Comment ajouter
 
-Référez-vous à [`catalog/schemas/README.md`](./schemas/README.md) pour la liste exacte des champs.
+- **Un module générique** (Phase 2 — V14-007) → `modules/<gestion|finance|rh|operations>/<name>.json`
+- **Un profile UX sectoriel** → `ux_profiles/<sector>/components.json` + `layouts.json`
+- **Une capability hardware** → `capabilities/<category>/<name>.json`
+- **Une query SQL nommée** (Vault niveau 3) → `queries/<sector>/<name>.sql` avec header `-- @params { … }` + `-- @access [ … ]`
 
-### Étape 3 — Valider localement
+## Liens
 
-```bash
-bun run validate-catalogue
-```
-
-S'il y a des erreurs, elles seront affichées champ par champ.
-
-### Étape 4 — Commit & PR
-
-```bash
-git checkout -b feat/catalog/pharmacie_quartier
-git add catalog/domains/pharmacie_quartier.json
-git commit -m "feat(catalog): add pharmacie_quartier domain"
-git push origin feat/catalog/pharmacie_quartier
-```
-
-Ouvrez la PR sur GitHub. La CI re-valide automatiquement.
-
-### Étape 5 — Review & merge
-
-Un membre de l'équipe Scalario passe en review (≤ 48h). Une fois mergé, le domaine est disponible pour provisionner un nouveau tenant.
-
----
-
-## 4. Validation locale
-
-### Prérequis
-
-```bash
-pnpm install
-```
-
-### Valider tous les fichiers du catalogue
-
-```bash
-pnpm validate-catalogue
-```
-
-### Valider un fichier spécifique
-
-```bash
-bun scripts/validate-catalogue.ts catalog/domains/mon_fichier.json
-```
-
-### Que faire en cas d'erreur ?
-
-Lisez le message : il contient le chemin JSON exact du champ invalide et la raison. Exemple :
-
-```
-catalog/domains/pharmacie_quartier.json: entities[0].type: must match pattern "^[a-z][a-z0-9_]*$"
-```
-
-Corrigez, puis re-validez.
-
----
-
-## 5. FAQ
-
-### Puis-je modifier le code Flutter ou NestJS ?
-
-**Non.** Si votre besoin nécessite un changement de code, c'est un changement plateforme qui passe par un sprint produit Scalario. Le catalogue ne couvre que les domaines exprimables dans le schéma.
-
-### Comment ajouter un module à un domaine existant ?
-
-1. Ouvrez le fichier JSON du domaine dans `catalog/domains/`.
-2. Ajoutez une entrée dans le tableau `entities`.
-3. Ajoutez les `actions` correspondantes.
-4. Validez avec `pnpm validate-catalogue`.
-
-### Que faire si Zod me retourne une erreur ?
-
-Lisez attentivement le chemin indiqué. Les erreurs les plus fréquentes :
-- `must have required property 'schema_version'` → vous avez oublié le champ obligatoire `"schema_version": "1.0.0"`.
-- `must match pattern "^[a-z][a-z0-9_]*$"` → l'identifiant contient des caractères interdits (majuscules, tirets, espaces). Utilisez `snake_case`.
-- `must be equal to const "1.0.0"` → `schema_version` doit être exactement `"1.0.0"`.
-
-### Combien de temps prend une PR review ?
-
-L'équipe Scalario s'engage à reviewer sous **48 heures ouvrées**. Si votre PR est urgente, mentionnez-le dans la description.
-
-### Comment tester localement avant la PR ?
-
-```bash
-# 1. Lancez la stack de validation
-pnpm validate-catalogue
-
-# 2. (Optionnel) Lancez le backend en local
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-# Le volume catalog/ est monté automatiquement — modification = hot-reload
-
-# 3. Vérifiez que votre domaine est chargé
-curl http://localhost:3000/api/v1/{tenant}/layout/{screen}
-```
-
-### Le hot-reload fonctionne-t-il en dev ?
-
-Oui. Le dossier `catalog/` est monté en volume read-only dans le container Docker (`docker-compose.dev.yml`). Une modification d'un fichier JSON côté host est immédiatement visible par le service NestJS (après le délai de cache Redis — jusqu'à 5 min). Pour une invalidation immédiate, contactez l'équipe Scalario.
-
-### Un fichier mal formé peut-il casser le service ?
-
-Non. Le validateur Zod (CI) bloque toute PR contenant un fichier invalide. En local, le service NestJS ignore silencieusement un fichier qui ne passe pas la validation — il logge une erreur mais ne crash pas.
-
----
-
-## Liens utiles
-
-- [Documentation HTML des schémas BDUI](../docs/bdui-schema/index.html)
-- [Règles de contribution](./CONTRIBUTING.md)
-- [Contrat JSON Schema v1.0.0](./schemas/component-config.schema.json)
-- [Exemple complet : retail_fresh_produce.json](./domains/retail_fresh_produce.json)
+- Story : `_bmad-output/stories/STORY-V14-006.md`
+- PRD v14 §16 + §11 + §9 + §12 — catalogues v14
+- Migration log : `_bmad-output/architecture-v14/migration-log.md`

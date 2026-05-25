@@ -115,6 +115,9 @@ export class ModuleResolverService implements OnApplicationBootstrap {
     const paths = [
       resolve(this.baseDir, 'domains', `${slug}.json`),
       resolve(this.baseDir, '..', 'catalog', 'domains', `${slug}.json`),
+      // v14 — domains v13 archivés (STORY-V14-006)
+      resolve(this.baseDir, '_archive_v13', 'domains', `${slug}.json`),
+      resolve(this.baseDir, '..', 'catalog', '_archive_v13', 'domains', `${slug}.json`),
     ];
     for (const p of paths) {
       try {
@@ -133,6 +136,9 @@ export class ModuleResolverService implements OnApplicationBootstrap {
     const paths = [
       resolve(this.baseDir, 'modules', `${moduleId}.json`),
       resolve(this.baseDir, '..', 'catalog', 'modules', `${moduleId}.json`),
+      // v14 — modules v13 archivés (STORY-V14-006)
+      resolve(this.baseDir, '_archive_v13', 'modules', `${moduleId}.json`),
+      resolve(this.baseDir, '..', 'catalog', '_archive_v13', 'modules', `${moduleId}.json`),
     ];
     for (const p of paths) {
       try {
