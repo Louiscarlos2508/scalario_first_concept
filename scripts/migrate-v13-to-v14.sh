@@ -83,7 +83,11 @@ sed_inplace() {
     return 0
   fi
   # Fichiers à traiter : .ts + .dart, hors générés (*.g.dart) et hors node_modules/dist/.dart_tool
-  find "$NESTJS_DIR/src" "$NESTJS_DIR/test" "$FLUTTER_DIR/lib" "$FLUTTER_DIR/test" \
+  local search_dirs=()
+  for d in "$NESTJS_DIR/src" "$NESTJS_DIR/test" "$FLUTTER_DIR/lib" "$FLUTTER_DIR/test"; do
+    [[ -d "$d" ]] && search_dirs+=("$d")
+  done
+  find "${search_dirs[@]}" \
     -type f \( -name "*.ts" -o -name "*.dart" \) \
     ! -name "*.g.dart" \
     ! -path "*/node_modules/*" \
