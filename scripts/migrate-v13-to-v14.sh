@@ -184,11 +184,13 @@ batch_canvas() {
     echo "  [DRY-RUN] git mv bdui_engine.dart → scalario_canvas.dart (et 5 autres fichiers)"
   fi
 
-  # 3) Update imports (path-based)
-  sed_inplace "s|engine/bdui_engine/|engine/canvas/|g"
-  sed_inplace "s|engine/component_registry/|engine/canvas_registry/|g"
-  sed_inplace "s|engine/rule_evaluator/|engine/canvas_rule/|g"
-  sed_inplace "s|engine/layout_resolver/|engine/canvas_layout/|g"
+  # 3) Update imports (path-based — couvre tous les chemins, absolus 'package:…' comme
+  #    relatifs '../X/' '../../engine/X/' 'engine/X/'). Le trailing slash garantit qu'on
+  #    matche un segment de path et pas un identifiant.
+  sed_inplace "s|bdui_engine/|canvas/|g"
+  sed_inplace "s|component_registry/|canvas_registry/|g"
+  sed_inplace "s|rule_evaluator/|canvas_rule/|g"
+  sed_inplace "s|layout_resolver/|canvas_layout/|g"
 
   # 4) Update imports (file-based)
   sed_inplace "s|/bdui_engine\.dart|/scalario_canvas.dart|g"
