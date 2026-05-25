@@ -137,8 +137,10 @@ commit_batch() {
 
 rollback_batch() {
   local batch=$1
-  warn "Rollback batch '$batch' (git reset --hard HEAD)"
+  warn "Rollback batch '$batch' (git reset --hard HEAD + git clean -fd apps/)"
   git reset --hard HEAD
+  # Remove untracked dirs created by mkdir -p (only inside apps/ to limit blast radius)
+  git clean -fd apps/ >/dev/null 2>&1 || true
   fail "Batch '$batch' a échoué — état restauré."
 }
 
