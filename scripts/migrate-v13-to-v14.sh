@@ -192,13 +192,15 @@ batch_canvas() {
   sed_inplace "s|rule_evaluator/|canvas_rule/|g"
   sed_inplace "s|layout_resolver/|canvas_layout/|g"
 
-  # 4) Update imports (file-based)
-  sed_inplace "s|/bdui_engine\.dart|/scalario_canvas.dart|g"
-  sed_inplace "s|/bdui_engine_config\.dart|/scalario_canvas_config.dart|g"
-  sed_inplace "s|/bdui_engine_module\.dart|/scalario_canvas_module.dart|g"
-  sed_inplace "s|/component_registry\.dart|/scalario_canvas_registry.dart|g"
-  sed_inplace "s|/rule_evaluator\.dart|/scalario_canvas_rule.dart|g"
-  sed_inplace "s|/layout_resolver\.dart|/scalario_canvas_layout.dart|g"
+  # 4) Update imports (file-based — couvre les imports `'../path/file.dart'` (avec slash)
+  #    et les imports `'file.dart'` (co-localisés, sans slash). Le .dart final garantit
+  #    qu'on cible des chemins de fichiers, pas des identifiants.
+  sed_inplace "s|bdui_engine\.dart|scalario_canvas.dart|g"
+  sed_inplace "s|bdui_engine_config\.dart|scalario_canvas_config.dart|g"
+  sed_inplace "s|bdui_engine_module\.dart|scalario_canvas_module.dart|g"
+  sed_inplace "s|component_registry\.dart|scalario_canvas_registry.dart|g"
+  sed_inplace "s|rule_evaluator\.dart|scalario_canvas_rule.dart|g"
+  sed_inplace "s|layout_resolver\.dart|scalario_canvas_layout.dart|g"
 
   # 5) Class renames (word-boundary safe)
   sed_inplace "s/\\bBDUIEngine\\b/ScalarioCanvas/g"
