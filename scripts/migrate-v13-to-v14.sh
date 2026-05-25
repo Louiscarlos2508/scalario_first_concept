@@ -294,20 +294,11 @@ batch_vault() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 batch_sync() {
-  log "▶ Batch: sync (Flutter offline/sync → sync)"
-
-  gmv "$FLUTTER_DIR/lib/core/offline/sync" "$FLUTTER_DIR/lib/core/sync"
-
-  sed_inplace "s|core/offline/sync/|core/sync/|g"
-  sed_inplace "s/\\bSyncQueueWorker\\b/ScalarioSyncWorker/g"
-  sed_inplace "s/\\bConflictResolver\\b/ScalarioSyncConflictResolver/g"
-
-  if ! validate_flutter; then
-    rollback_batch "sync"
-  fi
-
-  commit_batch "sync"
-  ok "Batch sync terminé."
+  # MERGED INTO batch_vault — left as no-op for backward compat with `--apply all`.
+  # Le mouvement core/offline/sync/ → core/sync/ + class renames SyncQueueWorker/
+  # ConflictResolver sont fusionnés dans batch_vault car les imports relatifs
+  # `../dao/` doivent être ajustés en même temps que le split offline → vault.
+  log "▶ Batch: sync — déjà fusionné dans batch_vault, no-op."
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
