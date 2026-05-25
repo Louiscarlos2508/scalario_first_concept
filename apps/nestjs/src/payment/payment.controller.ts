@@ -9,10 +9,10 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../core/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
+import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.interface';
 import {
   PaymentInitiateBody,
   PaymentInitiateBodySchema,

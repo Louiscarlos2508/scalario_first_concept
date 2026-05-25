@@ -13,7 +13,7 @@ import { parseBulkScreens } from './dto/get-bulk-layouts.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
-import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
+import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.interface';
 
 @Controller('api/v1/:tenant/layout')
 export class BduiController {

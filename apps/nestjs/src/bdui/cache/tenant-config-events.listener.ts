@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { RedisService } from '../../cache/services/redis.service';
+import { RedisService } from '../../core/cache/services/redis.service';
 import { BduiLayoutCacheService } from './bdui-layout-cache.service';
-import { CHANNEL } from '../../cache/constants';
+import { CHANNEL } from '../../core/cache/constants';
 
 interface InvalidatePayload {
   tenant_id: string;

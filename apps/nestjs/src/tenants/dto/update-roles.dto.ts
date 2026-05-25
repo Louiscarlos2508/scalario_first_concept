@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ROLE_NAME_REGEX, isSystemRole } from '../../security/constants';
+import { ROLE_NAME_REGEX, isSystemRole } from '../../core/security/constants';
 
 const RoleName = z
   .string()

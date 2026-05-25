@@ -15,9 +15,9 @@ import { Roles } from '../common/decorators/roles.decorator';
 import {
   ActionDispatcherService,
   type ActionResponse,
-} from '../module-engine/services/action-dispatcher.service';
-import { MutationInProgressError } from '../module-engine/services/idempotency.service';
-import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
+} from '../engines/action/services/action-dispatcher.service';
+import { MutationInProgressError } from '../engines/action/services/idempotency.service';
+import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.interface';
 import {
   SyncMutationsBatchSchema,
   SyncMutationsBatch,

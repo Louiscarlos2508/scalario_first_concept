@@ -13,12 +13,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Roles } from '../common/decorators/roles.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { Tenant } from '../auth/entities/tenant.entity';
-import { User } from '../auth/entities/user.entity';
-import { RolesService } from '../security/services/roles.service';
-import { SUPER_ADMIN } from '../security/constants';
-import { AuditLogService } from '../audit/services/audit-log.service';
-import { AUDIT_ACTIONS } from '../audit/constants';
+import { Tenant } from '../core/auth/entities/tenant.entity';
+import { User } from '../core/auth/entities/user.entity';
+import { RolesService } from '../core/security/services/roles.service';
+import { SUPER_ADMIN } from '../core/security/constants';
+import { AuditLogService } from '../core/audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../core/audit/constants';
 import { RolesListSchema, UpdateRolesDto, UpdateRolesSchema } from './dto/update-roles.dto';
 
 /**

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 import type { ZodTypeAny } from 'zod';
-import { ValidationErrorFormatter } from '../../catalogue/errors/validation-error.formatter';
+import { ValidationErrorFormatter } from '../../catalog-loader/errors/validation-error.formatter';
 
 @Injectable()
 export class ZodValidationPipe<T extends ZodTypeAny> implements PipeTransform<unknown, any> {

@@ -8,8 +8,8 @@ import {
 } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { tenantContext } from '../context/tenant-context';
-import { AuditLogService } from '../../audit/services/audit-log.service';
-import { AUDIT_ACTIONS } from '../../audit/constants';
+import { AuditLogService } from '../../core/audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../../core/audit/constants';
 
 // PostgreSQL `insufficient_privilege` — emitted when RLS denies a row.
 const PG_INSUFFICIENT_PRIVILEGE = '42501';

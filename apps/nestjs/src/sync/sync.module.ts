@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ModuleEngineModule } from '../module-engine/module-engine.module';
+import { ModuleEngineModule } from '../engines/action/module-engine.module';
 import { SyncController } from './sync.controller';
 
 @Module({

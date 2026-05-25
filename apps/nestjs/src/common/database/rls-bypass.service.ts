@@ -2,8 +2,8 @@ import { ForbiddenException, Inject, Injectable, Logger, Optional } from '@nestj
 import { DataSource, QueryRunner } from 'typeorm';
 import { ADMIN_DATA_SOURCE } from '../database.module';
 import { tenantContext } from '../context/tenant-context';
-import { AuditLogService } from '../../audit/services/audit-log.service';
-import { AUDIT_ACTIONS } from '../../audit/constants';
+import { AuditLogService } from '../../core/audit/services/audit-log.service';
+import { AUDIT_ACTIONS } from '../../core/audit/constants';
 
 /**
  * STORY-017 — `withBypass` is the ONLY legitimate way to read or write

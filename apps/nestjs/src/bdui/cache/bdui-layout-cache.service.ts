@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { BdUiCacheService } from '../../cache/services/bdui-cache.service';
+import { BdUiCacheService } from '../../core/cache/services/bdui-cache.service';
 import type { ScreenConfig } from '../interfaces';
 
 @Injectable()
