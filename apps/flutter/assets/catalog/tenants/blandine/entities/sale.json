@@ -1,0 +1,12 @@
+{
+  "entity": "Sale",
+  "display_name": "Vente",
+  "fields": [
+    {"name": "product_id", "type": "entity_ref", "ref": "Product", "required": true},
+    {"name": "quantity", "type": "number", "required": true},
+    {"name": "amount", "type": "currency", "required": true},
+    {"name": "payment_method", "type": "string", "enum": ["cash", "wave", "orange_money", "mtn_momo"]},
+    {"name": "cashier_id", "type": "entity_ref", "ref": "User"},
+    {"name": "timestamp", "type": "datetime"}
+  ]
+}

@@ -23,12 +23,6 @@ export class CatalogueLoaderService {
     const candidates = [
       resolve(this.baseDir, 'domains', `${tenantSlug}.json`),
       resolve(this.baseDir, '..', 'catalog', 'domains', `${tenantSlug}.json`),
-      resolve(this.baseDir, '..', '..', 'catalog', 'domains', `${tenantSlug}.json`),
-      resolve(this.baseDir, '..', '..', '..', 'catalog', 'domains', `${tenantSlug}.json`),
-      // v14 — domains v13 archivés (STORY-V14-006)
-      resolve(this.baseDir, '_archive_v13', 'domains', `${tenantSlug}.json`),
-      resolve(this.baseDir, '..', 'catalog', '_archive_v13', 'domains', `${tenantSlug}.json`),
-      resolve(this.baseDir, '..', '..', 'catalog', '_archive_v13', 'domains', `${tenantSlug}.json`),
     ];
 
     let raw: string | null = null;

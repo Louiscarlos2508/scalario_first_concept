@@ -1,0 +1,12 @@
+{
+  "mode": "light",
+  "colors": {
+    "primary": "#FFCC00",
+    "danger": "#E74C3C",
+    "success": "#27AE60",
+    "warning": "#E67E22",
+    "bg_page": "#F8F8FC",
+    "bg_card": "#FFFFFF",
+    "text_primary": "#1A1A2E"
+  }
+}

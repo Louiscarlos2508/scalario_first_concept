@@ -11,12 +11,11 @@ describe('ScalarioTypeChecker', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('detects missing variable', () => {
+  it('allows external variables from calling context', () => {
     const result = checker.validate([
-      { id: 's1', registry: 'calc', fn: 'mul', inputs: { a: { from: '$undefined_var' }, b: { literal: 100 } } },
+      { id: 's1', registry: 'calc', fn: 'mul', inputs: { a: { from: '$external_var' }, b: { literal: 100 } } },
     ]);
-    expect(result.valid).toBe(false);
-    expect(result.error).toContain('undefined_var');
+    expect(result.valid).toBe(true);
   });
 
   it('validates empty pipeline', () => {

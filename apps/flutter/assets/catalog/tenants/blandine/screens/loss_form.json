@@ -1,0 +1,18 @@
+{
+  "screen": "loss_form",
+  "title": "Declaration de perte",
+  "layout": "scaffold",
+  "root": {
+    "type": "Scaffold",
+    "props": {"appBar": {"type": "AppBar", "variant": "default", "props": {"title": "Declaration de perte"}}},
+    "children": [
+      {"type": "Column", "props": {"gap": "md"}, "children": [
+        {"type": "FormField", "variant": "select", "props": {"label": "Article", "options": [{"value":"tomates","label":"Tomates"},{"value":"bananes","label":"Bananes"}], "required": true}},
+        {"type": "FormField", "variant": "number", "props": {"label": "Quantite (kg)", "required": true}},
+        {"type": "FormField", "variant": "select", "props": {"label": "Nature", "options": [{"value":"avarie","label":"Avarie"},{"value":"casse","label":"Casse"},{"value":"vol","label":"Vol"}], "required": true}},
+        {"type": "FormField", "variant": "text", "props": {"label": "Note"}},
+        {"type": "Button", "variant": "primary", "props": {"label": "Soumettre"}}
+      ]}
+    ]
+  }
+}
