@@ -2,163 +2,88 @@
   "id": "retail_fresh_produce",
   "schema_version": "1.0.0",
   "name": "Produits Frais Retail — Blandine",
-  "i18n_key": "sectorCommerceGeneral",
   "icon": "store",
   "entities": [
     {"name": "Product", "display_name": "Produit", "fields": [
-      {"name": "name", "type": "string", "required": true}, {"name": "category", "type": "string"},
-      {"name": "stock_quantity", "type": "number"}, {"name": "min_threshold", "type": "number"}, {"name": "price_per_unit", "type": "number"}
+      {"name": "name", "type": "string", "required": true}, {"name": "category", "type": "string"}, {"name": "stock_quantity", "type": "number"}, {"name": "min_threshold", "type": "number"}, {"name": "price_per_unit", "type": "number"}
     ]},
     {"name": "Sale", "display_name": "Vente", "fields": [
-      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true},
-      {"name": "amount", "type": "number", "required": true}, {"name": "payment_method", "type": "string"}, {"name": "timestamp", "type": "date"}
+      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true}, {"name": "amount", "type": "number", "required": true}, {"name": "payment_method", "type": "string"}, {"name": "timestamp", "type": "date"}
     ]},
     {"name": "Loss", "display_name": "Perte", "fields": [
-      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true},
-      {"name": "nature", "type": "string"}, {"name": "note", "type": "string"}
+      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true}, {"name": "nature", "type": "string"}, {"name": "note", "type": "string"}
     ]},
     {"name": "Delivery", "display_name": "Livraison", "fields": [
-      {"name": "supplier", "type": "string", "required": true}, {"name": "reference_bl", "type": "string"},
-      {"name": "items", "type": "array"}, {"name": "status", "type": "string"}
+      {"name": "supplier", "type": "string", "required": true}, {"name": "reference_bl", "type": "string"}, {"name": "items", "type": "array"}, {"name": "status", "type": "string"}
     ]}
   ],
   "rbac_roles": ["OWNER", "MANAGER", "COMMERCIAL"],
-  "conflict_strategy": "server_wins",
-  "actions": {
-    "create_sale": { "handler": "crud.create", "entity_type": "Sale", "label": "Nouvelle vente" },
-    "create_loss": { "handler": "crud.create", "entity_type": "Loss", "label": "Declarer une perte" },
-    "validate_delivery": { "handler": "crud.update", "entity_type": "Delivery", "label": "Valider reception" }
-  },
   "screens": [
     {
       "screen": "dashboard_owner",
-      "schema_version": "1.0.0",
-      "layout": "dashboard",
-      "title": "Boutique Kouame",
-      "zones": {
-        "kpis": [
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "ca", "props": { "label": "CA du jour", "value": "47 500 FCFA", "delta": "+12%", "delta_positive": true } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "marge", "props": { "label": "Marge brute", "value": "14 200 FCFA", "delta": "30%", "delta_positive": true } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "tx", "props": { "label": "Transactions", "value": "18", "delta": "+3", "delta_positive": true } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "crit", "props": { "label": "Stock critique", "value": "2", "delta": "Tomates, Bananes", "delta_positive": false, "status": "critical" } }
-        ],
-        "main": [
-          { "schema_version": "1.0.0", "type": "AlertBanner", "variant": "info", "id": "alert", "props": { "type": "critical", "message": "2 articles en stock critique" } },
-          { "schema_version": "1.0.0", "type": "ChartBar", "variant": "default", "id": "chart", "props": { "title": "CA 7j", "data": [
+      "root": {
+        "type": "Scaffold",
+        "props": {
+          "appBar": {
+            "type": "AppBar",
+            "props": {
+              "title": "SCALARIO",
+              "centerTitle": false,
+              "actions": [
+                {"type": "Button", "variant": "icon-only", "props": {"icon": "notifications"}}
+              ]
+            }
+          },
+          "bottomNav": {
+            "type": "BottomNav",
+            "props": {
+              "currentIndex": 0,
+              "items": [
+                {"icon": "home", "label": "Accueil"},
+                {"icon": "inventory_2", "label": "Stock"},
+                {"icon": "history", "label": "Hist."},
+                {"icon": "group", "label": "Equipe"},
+                {"icon": "settings", "label": "Plus"}
+              ]
+            }
+          }
+        },
+        "children": [
+          {
+            "type": "AlertBanner", "variant": "info",
+            "props": {"type": "critical", "message": "2 articles en stock critique"}
+          },
+          {
+            "type": "Grid",
+            "props": {"columns": [2], "gap": 8, "responsive": {"mobile": {"columns": [2]}, "desktop": {"columns": [4]}}},
+            "children": [
+              {"type": "KPICard", "variant": "default", "props": {"label": "CA du jour", "value": "47 500 FCFA", "delta": "+12%", "delta_positive": true}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Marge brute", "value": "14 200 FCFA", "delta": "30%", "delta_positive": true}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Transactions", "value": "18", "delta": "+3", "delta_positive": true}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Stock critique", "value": "2", "delta": "Tomates, Bananes", "delta_positive": false, "status": "critical"}}
+            ]
+          },
+          {"type": "ChartBar", "variant": "default", "props": {"title": "CA 7 jours", "data": [
             {"label":"Lun","value":32},{"label":"Mar","value":45},{"label":"Mer","value":38},{"label":"Jeu","value":55},{"label":"Ven","value":62},{"label":"Sam","value":47},{"label":"Dim","value":28}
           ]}},
-          { "schema_version": "1.0.0", "type": "DataTable", "variant": "default", "id": "sales", "props": {
-            "columns": [{"key":"produit","label":"Produit"},{"key":"qte","label":"Qte"},{"key":"prix","label":"Prix"},{"key":"heure","label":"Heure"}],
+          {"type": "DataTable", "variant": "default", "props": {
+            "columns": [{"key":"produit","label":"Produit"}, {"key":"qte","label":"Qte"}, {"key":"prix","label":"Prix"}, {"key":"heure","label":"Heure"}],
             "rows": [
               {"produit":"Tomates 2.5kg","qte":"1","prix":"3 750 F","heure":"08h33"},
               {"produit":"Bananes 3kg","qte":"1","prix":"1 500 F","heure":"08h12"},
-              {"produit":"Oignons 5kg","qte":"1","prix":"2 500 F","heure":"07h45"},
-              {"produit":"Riz 5kg x2","qte":"1","prix":"7 000 F","heure":"07h30"}
+              {"produit":"Oignons 5kg","qte":"1","prix":"2 500 F","heure":"07h45"}
             ]
-          }}
-        ],
-        "aside": [],
-        "actions": [
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "btn_r", "props": { "label": "Rapports" } },
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "btn_s", "props": { "label": "Stock" } },
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "btn_e", "props": { "label": "Equipe" } },
-          { "schema_version": "1.0.0", "type": "SyncStatusBar", "variant": "default", "id": "sync", "props": { "status": "synced" } }
-        ]
-      }
-    },
-    {
-      "screen": "stock_list",
-      "schema_version": "1.0.0",
-      "layout": "list",
-      "title": "Stock",
-      "zones": {
-        "kpis": [
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "compact", "id": "st_total", "props": { "label": "Articles", "value": "8" } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "compact", "id": "st_crit", "props": { "label": "En alerte", "value": "2", "status": "critical" } }
-        ],
-        "main": [
-          { "schema_version": "1.0.0", "type": "AlertBanner", "variant": "info", "id": "a2", "props": { "type": "critical", "message": "2 articles sous le seuil" } },
-          { "schema_version": "1.0.0", "type": "DataTable", "variant": "default", "id": "stock_tbl", "props": {
-            "columns": [{"key":"produit","label":"Produit"},{"key":"qte","label":"Qte"},{"key":"seuil","label":"Seuil"},{"key":"statut","label":"Statut"}],
-            "rows": [
-              {"produit":"Tomates cerise","qte":"2kg","seuil":"5kg","statut":"CRITIQUE"},
-              {"produit":"Bananes","qte":"3kg","seuil":"10kg","statut":"CRITIQUE"},
-              {"produit":"Huile 1L","qte":"8","seuil":"10","statut":"ALERTE"},
-              {"produit":"Oignons","qte":"45kg","seuil":"10kg","statut":"OK"},
-              {"produit":"Riz 5kg","qte":"12","seuil":"5","statut":"OK"}
+          }},
+          {
+            "type": "Row",
+            "props": {"gap": 8},
+            "children": [
+              {"type": "Button", "variant": "primary", "props": {"label": "Rapports", "icon": "bar_chart"}},
+              {"type": "Button", "variant": "primary", "props": {"label": "Stock", "icon": "inventory_2"}},
+              {"type": "Button", "variant": "primary", "props": {"label": "Equipe", "icon": "group"}}
             ]
-          }}
-        ],
-        "aside": [],
-        "actions": [
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "b_add", "props": { "label": "Ajouter" } }
-        ]
-      }
-    },
-    {
-      "screen": "loss_form",
-      "schema_version": "1.0.0",
-      "layout": "form",
-      "title": "Declaration de perte",
-      "zones": {
-        "kpis": [],
-        "main": [
-          { "schema_version": "1.0.0", "type": "FormField", "variant": "select", "id": "art", "props": { "label": "Article", "options": [{"value":"t","label":"Tomates"},{"value":"b","label":"Bananes"}], "required": true } },
-          { "schema_version": "1.0.0", "type": "FormField", "variant": "number", "id": "q", "props": { "label": "Quantite (kg)", "required": true } },
-          { "schema_version": "1.0.0", "type": "FormField", "variant": "select", "id": "nat", "props": { "label": "Nature", "options": [{"value":"avarie","label":"Avarie"},{"value":"casse","label":"Casse"},{"value":"vol","label":"Vol"}], "required": true } },
-          { "schema_version": "1.0.0", "type": "FormField", "variant": "text", "id": "n", "props": { "label": "Note" } }
-        ],
-        "aside": [],
-        "actions": [
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "b_sub", "props": { "label": "Soumettre" } }
-        ]
-      }
-    },
-    {
-      "screen": "delivery_validation",
-      "schema_version": "1.0.0",
-      "layout": "form",
-      "title": "Livraison FrutPro",
-      "zones": {
-        "kpis": [],
-        "main": [
-          { "schema_version": "1.0.0", "type": "AlertBanner", "variant": "info", "id": "a_del", "props": { "type": "warning", "message": "Livraison attendue aujourd'hui" } },
-          { "schema_version": "1.0.0", "type": "DataTable", "variant": "default", "id": "items", "props": {
-            "columns": [{"key":"article","label":"Article"},{"key":"attendu","label":"Attendu"},{"key":"recu","label":"Recu"},{"key":"ecart","label":"Ecart"}],
-            "rows": [
-              {"article":"Tomates","attendu":"15kg","recu":"14kg","ecart":"-1kg"},
-              {"article":"Bananes","attendu":"20kg","recu":"20kg","ecart":"OK"},
-              {"article":"Piment","attendu":"5kg","recu":"5kg","ecart":"OK"}
-            ]
-          }}
-        ],
-        "aside": [],
-        "actions": [
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "b_val", "props": { "label": "Valider la reception" } }
-        ]
-      }
-    },
-    {
-      "screen": "daily_report",
-      "schema_version": "1.0.0",
-      "layout": "dashboard",
-      "title": "Rapport",
-      "zones": {
-        "kpis": [
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "rp_ca", "props": { "label": "CA total", "value": "307 000", "unit": "FCFA", "delta": "+12%", "delta_positive": true } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "rp_mar", "props": { "label": "Marge", "value": "119 730", "unit": "FCFA", "delta": "39%", "delta_positive": true } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "rp_per", "props": { "label": "Pertes", "value": "18 500", "unit": "FCFA", "delta": "+15%", "delta_positive": false, "status": "warning" } },
-          { "schema_version": "1.0.0", "type": "KPICard", "variant": "default", "id": "rp_tx", "props": { "label": "Ventes", "value": "87", "delta": "+9", "delta_positive": true } }
-        ],
-        "main": [
-          { "schema_version": "1.0.0", "type": "ChartBar", "variant": "default", "id": "rp_ch", "props": { "title": "CA 7j", "data": [
-            {"label":"Lun","value":32},{"label":"Mar","value":45},{"label":"Mer","value":38},{"label":"Jeu","value":55},{"label":"Ven","value":62},{"label":"Sam","value":47},{"label":"Dim","value":28}
-          ]}}
-        ],
-        "aside": [],
-        "actions": [
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "b_pdf", "props": { "label": "PDF" } },
-          { "schema_version": "1.0.0", "type": "Button", "variant": "default", "id": "b_csv", "props": { "label": "CSV" } }
+          },
+          {"type": "SyncStatusBar", "variant": "default", "props": {"status": "synced"}}
         ]
       }
     }

@@ -34,6 +34,7 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
       GlobalErrorHandler.install(navigatorKey: _navigatorKey);
       await _setupDependencies();
+      ScalarioCanvasRegistry.instance = GetIt.I<ScalarioCanvasRegistry>();
       runApp(const ScalarioApp());
     },
     GlobalErrorHandler.handleZoneError,

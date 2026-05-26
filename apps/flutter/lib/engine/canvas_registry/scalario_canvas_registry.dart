@@ -24,6 +24,8 @@ import 'unknown_component.dart';
 class ScalarioCanvasRegistry {
   ScalarioCanvasRegistry();
 
+  static ScalarioCanvasRegistry? instance;
+
   final Map<String, ComponentBuilder> _builders = {};
 
   /// Enregistre ou override le builder pour [type].
