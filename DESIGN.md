@@ -1,7 +1,53 @@
 # Scalario BDUI — Architecture & Specification
 
 **Version**: 14.0 | **Date**: 2026-05-26
-**Moteur**: Flutter BDUI Canvas Engine
+**Moteur**: Flutter BDUI Canvas Engine + NestJS Backend + PostgreSQL
+
+---
+
+## 0. Philosophy — Database & IA
+
+### Ce qui reste strict en DB
+
+```
+Types de donnees       → NUMERIC pas VARCHAR pour montants
+Transactions ACID      → surtout Mobile Money cross-tenant
+Foreign Keys           → sur entites core (users, tenants), relax sur modules dynamiques
+Index                  → performance a l'echelle
+RLS isolation tenant   → chaque table
+Audit logs             → INSERT-only, immuable, legal
+```
+
+### Ce que l'IA remplace
+
+```
+Stored Procedures metier  → Scalario Flow + Scalario Calc
+Triggers complexes        → Scalario Live events
+Logique metier SQL        → engines configurable par tenant
+```
+
+### Ce que l'IA ne remplace PAS
+
+```
+Transactions financieres → code deterministe (Scalario Calc type strict), pas LLM
+Atomicite                 → ACID garanti par PostgreSQL
+Tracabilite legale        → audit logs en DB, pas en memoire IA
+```
+
+### Les 3 niveaux de contraintes
+
+```
+Niveau 1 — Non negociable en DB
+  Types stricts, ACID, FK, RLS, Audit
+
+Niveau 2 — Gere par les engines Scalario
+  Logique metier (Calc + Flow), Validation (Form),
+  Regles ABAC (Shield), Workflows (Pipe)
+
+Niveau 3 — Gere par Scalario Mind (Phase 2+)
+  Detection d'anomalies, Suggestions intelligentes,
+  Reconciliation, Audit intelligent
+```
 
 ---
 
@@ -333,21 +379,86 @@ page   → PageView (swipe entre sections)
 
 ---
 
-## 18. Registry — Types enregistres (26)
+## 18. Registry — Types enregistres (34)
 
 ```
-Layout (8):  Scaffold, AppBar, BottomNav, Grid, Row, Column, Slots, Stack
-Data (6):    KPICard, DataTable, ChartBar, ChartPie, StatsCard, DocumentPreview
-Feedback (2): AlertBanner, SyncStatusBar
-Actions (4): Button, FAB, ScalarioButton, ActionButton
-Inputs (2):  FormSection, FormWidget
-Lists (2):   MouvementItem, TicketPreview
-State (1):   StateWrapper
+Layout (8):      Scaffold, AppBar, BottomNav, Grid, Row, Column, Slots, Stack
+Data (6):        KPICard, DataTable, ChartBar, ChartPie, StatsCard, DocumentPreview
+Feedback (2):    AlertBanner, SyncStatusBar
+Actions (4):     Button, FAB, ScalarioButton, ActionButton
+Inputs (2):      FormSection, FormWidget
+Lists (2):       MouvementItem, TicketPreview
+State (1):       StateWrapper
+Wrappers (9):    PullToRefresh, Pagination, Semantics, Gesture, SheetDialog,
+                  Transition, ThemeSwitcher, Keyboard, Print
 ```
 
 ---
 
-## 19. Ce qui est HORS scope (jamais dans le JSON)
+## 19. Inter-Engine Contract — ScalarioValue + StepConfig
+
+### ScalarioValue types (16)
+
+```
+Primitive:  string, number, boolean, null
+Temporal:   date, datetime, duration
+Financial:  currency (amount in centimes, never float)
+Media:      file, image, signature
+Geo:        location (lat, lng, accuracy)
+Collection: list, object
+Reference:  entity_ref, tenant_ref
+Special:    error, pending (async Mobile Money)
+```
+
+### StepConfig contract
+
+```json
+{
+  "id": "step_id",
+  "registry": "calc|vault|canvas|sense|flow|live|form",
+  "fn": "function_name",
+  "inputs": {
+    "param": { "from": "$variable" },
+    "const": { "literal": 100 }
+  },
+  "output": { "name": "result", "type": "number" },
+  "execute_if": { "operator": "gt", "field": "$stock", "value": 0 },
+  "on_error": "skip|retry|notify|fail"
+}
+```
+
+### TypeChecker (NestJS deploy-time validation)
+
+Validates variable types across pipeline steps BEFORE production.
+Catches `add($qr.raw, 100)` where `$qr.raw` is a string.
+
+### ConfigMigrator (schema versioning)
+
+```typescript
+// v1.0.0 → v1.1.0: add variant: 'default' to all components
+// v1.1.0 → v1.2.0: (reserved)
+```
+
+---
+
+## 20. Backend Services (10 NestJS services)
+
+| Service | Role |
+|---|---|
+| `TenantThrottlerGuard` | Rate limit par tenant+user+endpoint (AI:20/min, Payments:10/min) |
+| `JobsService` | BullMQ stub: PDF, email, webhook async |
+| `configureVersioning` | API versioning: X-Scalario-Version header, v1/v2 coexist |
+| `CacheStrategiesService` | TTL: config 1h, user_data 30s, llm 5min, permissions 2min |
+| `VaultTransactionService` | Multi-step atomic operations with rollback |
+| `SoftDeleteService` | deleted_at wrapper, exclude from queries, restore |
+| `LlmFallbackService` | DeepSeek → Claude → degraded mode |
+| `ContextWindowService` | System prompt + last 3 messages + summarize older |
+| `TypeChecker` | Pipeline variable type validation |
+| `ConfigMigrator` | Schema migration 1.0→1.1→1.2 |
+
+---
+
+## 21. Ce qui est HORS scope
 
 ```
 ❌ Pixels arbitraires          → tokens semantiques
