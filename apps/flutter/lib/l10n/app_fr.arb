@@ -1,23 +1,159 @@
 {
   "@@locale": "fr",
-  "bdui.error.component_unavailable": "Composant indisponible",
-  "@bdui.error.component_unavailable": {
-    "description": "Fallback affiché lorsqu'un composant BDUI lève une exception lors de son build."
-  },
-  "bdui.error.screen_title": "Écran indisponible",
-  "@bdui.error.screen_title": {
-    "description": "Titre du fallback plein-écran affiché quand tout le pipeline BDUI échoue."
-  },
-  "bdui.error.screen_subtitle": "Une erreur est survenue. Réessayez ou contactez votre administrateur.",
-  "@bdui.error.screen_subtitle": {
-    "description": "Sous-titre du fallback plein-écran."
-  },
-  "bdui.error.retry": "Réessayer",
-  "@bdui.error.retry": {
-    "description": "Label du bouton de retry sur l'écran d'erreur."
-  },
-  "bdui.error.global_snackbar": "Erreur technique signalée",
-  "@bdui.error.global_snackbar": {
-    "description": "Message SnackBar non-bloquant affiché pour les erreurs globales non-attrapées (release uniquement)."
-  }
+  "@@description": "Scalario — Français (langue de reference)",
+
+  "appTitle": "Scalario",
+  "welcomeMessage": "Bienvenue sur Scalario",
+  "loginTitle": "Connexion",
+  "logout": "Deconnexion",
+  "logoutConfirm": "Etes-vous sur de vouloir vous deconnecter ?",
+
+  "navDashboard": "Tableau de bord",
+  "navSales": "Ventes",
+  "navStock": "Stock",
+  "navReports": "Rapports",
+  "navHistory": "Historique",
+  "navTeam": "Equipe",
+  "navOps": "Operations",
+  "navSettings": "Parametres",
+
+  "roleOwner": "Proprietaire",
+  "roleManager": "Gerant",
+  "roleCommercial": "Commercial",
+  "roleSuperAdmin": "Admin Scalario",
+
+  "moduleVentes": "Ventes",
+  "moduleStock": "Stock",
+  "modulePertes": "Pertes",
+  "moduleCloture": "Cloture de caisse",
+  "moduleRapports": "Rapports",
+  "moduleEmployes": "Employes",
+  "moduleLivraisons": "Livraisons",
+  "moduleCommandes": "Commandes",
+  "moduleFactures": "Factures",
+  "moduleClients": "Clients",
+  "moduleFournisseurs": "Fournisseurs",
+  "moduleConges": "Conges",
+  "modulePaie": "Paie",
+
+  "kpiCaJour": "CA du jour",
+  "kpiNbVentes": "Nb ventes",
+  "kpiAlertes": "Alertes stock",
+  "kpiPertes": "Pertes jour",
+  "kpiMarge": "Marge",
+  "kpiStockVal": "Valeur stock",
+
+  "chartTendance": "Tendance des ventes (7j)",
+  "tableDernieresVentes": "Dernieres ventes",
+  "tableProduit": "Produit",
+  "tableQte": "Qte",
+  "tablePrix": "Prix",
+  "tableHeure": "Heure",
+
+  "btnSave": "Enregistrer",
+  "btnCancel": "Annuler",
+  "btnDelete": "Supprimer",
+  "btnAdd": "Ajouter",
+  "btnEdit": "Modifier",
+  "btnSearch": "Rechercher",
+  "btnFilter": "Filtrer",
+  "btnExport": "Exporter",
+  "btnPrint": "Imprimer",
+  "btnValidate": "Valider",
+  "btnReject": "Rejeter",
+  "btnRetry": "Reessayer",
+  "btnConfirm": "Confirmer",
+  "btnClose": "Fermer",
+  "btnBack": "Retour",
+  "btnHelp": "Aide",
+
+  "alertStockBasse": "{count} produits sous le seuil d'alerte stock",
+  "@alertStockBasse": { "placeholders": { "count": { "type": "int" } } },
+  "alertSyncOk": "Synchronisation reussie",
+  "alertSyncError": "Erreur de synchronisation",
+  "alertUpdateAvailable": "Mise a jour disponible",
+  "alertPaymentFailed": "Echec de paiement — verifiez votre compte",
+
+  "syncSynced": "Synchronise",
+  "syncSyncing": "Synchronisation...",
+  "syncConflict": "Conflits a resoudre",
+  "syncOffline": "Hors ligne",
+
+  "formRequired": "Ce champ est obligatoire",
+  "formEmailInvalid": "Email invalide",
+  "formMinLength": "Minimum {length} caracteres",
+  "@formMinLength": { "placeholders": { "length": { "type": "int" } } },
+
+  "dateToday": "Aujourd'hui",
+  "dateYesterday": "Hier",
+  "dateFormat": "DD/MM/YYYY",
+
+  "currencyFCFA": "FCFA",
+  "currencyEuro": "EUR",
+  "currencyDollar": "USD",
+  "amountFcfa": "{amount} FCFA",
+  "@amountFcfa": { "placeholders": { "amount": { "type": "num", "format": "decimalPattern" } } },
+
+  "stockRupture": "Rupture de stock : {produit}",
+  "@stockRupture": { "placeholders": { "produit": { "type": "String" } } },
+  "stockFaible": "Stock faible : {produit} ({qte} restants)",
+  "@stockFaible": { "placeholders": { "produit": { "type": "String" }, "qte": { "type": "int" } } },
+
+  "commandeValidee": "Commande validee",
+  "commandeRejetee": "Commande rejetee",
+  "perteDeclaree": "Perte declaree",
+  "clotureEffectuee": "Cloture de caisse effectuee",
+
+  "causesPerte": "Causes de perte",
+  "causePerissable": "Produit perissable",
+  "causeCasse": "Casse",
+  "causeVol": "Vol",
+  "causeErreur": "Erreur de saisie",
+  "causeAutre": "Autre",
+
+  "paymentCash": "Especes",
+  "paymentMobileMoney": "Mobile Money",
+  "paymentCredit": "Credit",
+
+  "loading": "Chargement...",
+  "emptyList": "Aucune donnee",
+  "errorOccurred": "Une erreur est survenue",
+  "errorRetry": "Veuillez reessayer",
+  "noConnection": "Pas de connexion Internet",
+
+  "confirmDelete": "Supprimer {item} ?",
+  "@confirmDelete": { "placeholders": { "item": { "type": "String" } } },
+  "yes": "Oui",
+  "no": "Non",
+
+  "sandboxTitle": "Sandbox BDUI (dev)",
+  "sandboxFile": "Fichier JSON",
+  "sandboxBreakpoint": "Breakpoint",
+  "sandboxReload": "Recharger",
+
+  "sectorCommerceGeneral": "Commerce general",
+  "sectorPharmacie": "Pharmacie",
+  "sectorBtp": "BTP",
+  "sectorCabinetMedical": "Cabinet medical",
+
+  "monthJan": "Janvier",
+  "monthFeb": "Fevrier",
+  "monthMar": "Mars",
+  "monthApr": "Avril",
+  "monthMay": "Mai",
+  "monthJun": "Juin",
+  "monthJul": "Juillet",
+  "monthAug": "Aout",
+  "monthSep": "Septembre",
+  "monthOct": "Octobre",
+  "monthNov": "Novembre",
+  "monthDec": "Decembre",
+
+  "dayMon": "Lun",
+  "dayTue": "Mar",
+  "dayWed": "Mer",
+  "dayThu": "Jeu",
+  "dayFri": "Ven",
+  "daySat": "Sam",
+  "daySun": "Dim"
 }

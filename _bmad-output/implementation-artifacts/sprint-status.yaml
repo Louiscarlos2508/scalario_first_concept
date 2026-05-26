@@ -771,11 +771,20 @@ architecture_v14:
           title: "i18n complet ARB FR/EN + lint no_hardcoded_strings"
           epic: "EPIC-V14-004"
           points: 5
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-008.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-26"
+          completed_date: "2026-05-26"
           sprint: "v14-3"
+          actual_points: 5
+          notes: |
+            l10n.yaml config + flutter_localizations + intl + generate:true.
+            app_fr.arb (127 keys, 100%) + app_en.arb (127 keys, 100%).
+            MaterialApp wired: S.delegate + fr-BF/en-US locales.
+            S.dart generated. check-i18n-coverage.js script.
+            Dashboard use S.of(context) for hardcoded strings.
         - story_id: "V14-009"
           title: "@nestjs/swagger global + annotations controllers/DTOs"
           epic: "EPIC-V14-005"

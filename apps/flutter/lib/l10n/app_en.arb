@@ -1,23 +1,159 @@
 {
   "@@locale": "en",
-  "bdui.error.component_unavailable": "Component unavailable",
-  "@bdui.error.component_unavailable": {
-    "description": "Fallback shown when a BDUI component throws during build."
-  },
-  "bdui.error.screen_title": "Screen unavailable",
-  "@bdui.error.screen_title": {
-    "description": "Title of the full-screen fallback shown when the entire BDUI pipeline fails."
-  },
-  "bdui.error.screen_subtitle": "An error occurred. Please retry or contact your administrator.",
-  "@bdui.error.screen_subtitle": {
-    "description": "Subtitle of the full-screen fallback."
-  },
-  "bdui.error.retry": "Retry",
-  "@bdui.error.retry": {
-    "description": "Label of the retry button on the error screen."
-  },
-  "bdui.error.global_snackbar": "Technical error reported",
-  "@bdui.error.global_snackbar": {
-    "description": "Non-blocking SnackBar message for unhandled global errors (release only)."
-  }
+  "@@description": "Scalario — English (60%+ coverage)",
+
+  "appTitle": "Scalario",
+  "welcomeMessage": "Welcome to Scalario",
+  "loginTitle": "Login",
+  "logout": "Logout",
+  "logoutConfirm": "Are you sure you want to logout?",
+
+  "navDashboard": "Dashboard",
+  "navSales": "Sales",
+  "navStock": "Stock",
+  "navReports": "Reports",
+  "navHistory": "History",
+  "navTeam": "Team",
+  "navOps": "Operations",
+  "navSettings": "Settings",
+
+  "roleOwner": "Owner",
+  "roleManager": "Manager",
+  "roleCommercial": "Sales Agent",
+  "roleSuperAdmin": "Scalario Admin",
+
+  "moduleVentes": "Sales",
+  "moduleStock": "Inventory",
+  "modulePertes": "Losses",
+  "moduleCloture": "Cash Closing",
+  "moduleRapports": "Reports",
+  "moduleEmployes": "Employees",
+  "moduleLivraisons": "Deliveries",
+  "moduleCommandes": "Orders",
+  "moduleFactures": "Invoices",
+  "moduleClients": "Clients",
+  "moduleFournisseurs": "Suppliers",
+  "moduleConges": "Leave",
+  "modulePaie": "Payroll",
+
+  "kpiCaJour": "Daily Revenue",
+  "kpiNbVentes": "Sales Count",
+  "kpiAlertes": "Stock Alerts",
+  "kpiPertes": "Daily Losses",
+  "kpiMarge": "Margin",
+  "kpiStockVal": "Stock Value",
+
+  "chartTendance": "Sales Trend (7d)",
+  "tableDernieresVentes": "Recent Sales",
+  "tableProduit": "Product",
+  "tableQte": "Qty",
+  "tablePrix": "Price",
+  "tableHeure": "Time",
+
+  "btnSave": "Save",
+  "btnCancel": "Cancel",
+  "btnDelete": "Delete",
+  "btnAdd": "Add",
+  "btnEdit": "Edit",
+  "btnSearch": "Search",
+  "btnFilter": "Filter",
+  "btnExport": "Export",
+  "btnPrint": "Print",
+  "btnValidate": "Validate",
+  "btnReject": "Reject",
+  "btnRetry": "Retry",
+  "btnConfirm": "Confirm",
+  "btnClose": "Close",
+  "btnBack": "Back",
+  "btnHelp": "Help",
+
+  "alertStockBasse": "{count} products below stock alert threshold",
+  "@alertStockBasse": { "placeholders": { "count": { "type": "int" } } },
+  "alertSyncOk": "Sync successful",
+  "alertSyncError": "Sync error",
+  "alertUpdateAvailable": "Update available",
+  "alertPaymentFailed": "Payment failed — check your account",
+
+  "syncSynced": "Synced",
+  "syncSyncing": "Syncing...",
+  "syncConflict": "Conflicts to resolve",
+  "syncOffline": "Offline",
+
+  "formRequired": "This field is required",
+  "formEmailInvalid": "Invalid email",
+  "formMinLength": "Minimum {length} characters",
+  "@formMinLength": { "placeholders": { "length": { "type": "int" } } },
+
+  "dateToday": "Today",
+  "dateYesterday": "Yesterday",
+  "dateFormat": "MM/DD/YYYY",
+
+  "currencyFCFA": "FCFA",
+  "currencyEuro": "EUR",
+  "currencyDollar": "USD",
+  "amountFcfa": "{amount} FCFA",
+  "@amountFcfa": { "placeholders": { "amount": { "type": "num", "format": "decimalPattern" } } },
+
+  "stockRupture": "Out of stock: {produit}",
+  "@stockRupture": { "placeholders": { "produit": { "type": "String" } } },
+  "stockFaible": "Low stock: {produit} ({qte} remaining)",
+  "@stockFaible": { "placeholders": { "produit": { "type": "String" }, "qte": { "type": "int" } } },
+
+  "commandeValidee": "Order validated",
+  "commandeRejetee": "Order rejected",
+  "perteDeclaree": "Loss reported",
+  "clotureEffectuee": "Cash closing completed",
+
+  "causesPerte": "Loss causes",
+  "causePerissable": "Perishable",
+  "causeCasse": "Breakage",
+  "causeVol": "Theft",
+  "causeErreur": "Input error",
+  "causeAutre": "Other",
+
+  "paymentCash": "Cash",
+  "paymentMobileMoney": "Mobile Money",
+  "paymentCredit": "Credit",
+
+  "loading": "Loading...",
+  "emptyList": "No data",
+  "errorOccurred": "An error occurred",
+  "errorRetry": "Please try again",
+  "noConnection": "No Internet connection",
+
+  "confirmDelete": "Delete {item}?",
+  "@confirmDelete": { "placeholders": { "item": { "type": "String" } } },
+  "yes": "Yes",
+  "no": "No",
+
+  "sandboxTitle": "BDUI Sandbox (dev)",
+  "sandboxFile": "JSON File",
+  "sandboxBreakpoint": "Breakpoint",
+  "sandboxReload": "Reload",
+
+  "sectorCommerceGeneral": "General Commerce",
+  "sectorPharmacie": "Pharmacy",
+  "sectorBtp": "Construction",
+  "sectorCabinetMedical": "Medical Practice",
+
+  "monthJan": "January",
+  "monthFeb": "February",
+  "monthMar": "March",
+  "monthApr": "April",
+  "monthMay": "May",
+  "monthJun": "June",
+  "monthJul": "July",
+  "monthAug": "August",
+  "monthSep": "September",
+  "monthOct": "October",
+  "monthNov": "November",
+  "monthDec": "December",
+
+  "dayMon": "Mon",
+  "dayTue": "Tue",
+  "dayWed": "Wed",
+  "dayThu": "Thu",
+  "dayFri": "Fri",
+  "daySat": "Sat",
+  "daySun": "Sun"
 }

@@ -20,8 +20,10 @@ import 'dart:async' show runZonedGuarded;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 
+import 'l10n/s.dart';
 import 'components/components.dart';
 import 'core/design_system/tokens/tokens.dart';
 import 'engine/canvas_registry/component_config.dart';
@@ -130,9 +132,18 @@ class ScalarioApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       theme: ScalarioTheme.light(),
       darkTheme: ScalarioTheme.dark(),
-      // Explicite (= défaut MaterialApp) — AC-21 exige le wiring système.
-      // ignore: avoid_redundant_argument_values
       themeMode: ThemeMode.system,
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('fr', 'BF'),
+        Locale('en', 'US'),
+      ],
+      locale: const Locale('fr', 'BF'),
       home: const _DashboardPage(),
       // STORY-009 — la route sandbox dev-only est enregistrée **uniquement**
       // en `kDebugMode`. En release build, naviguer vers `/dev/sandbox`
