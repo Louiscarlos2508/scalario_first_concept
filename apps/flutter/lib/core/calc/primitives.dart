@@ -173,12 +173,39 @@ final Map<String, AlgoPrimitive> primitives = {
     },
   ),
   'slugify': AlgoPrimitive(
-    name: 'slugify', fn: (args) {
-      return (args[0] as String)
-          .toLowerCase()
-          .replaceAll(RegExp(r'[^a-z0-9]'), '-')
-          .replaceAll(RegExp(r'-+'), '-')
-          .replaceAll(RegExp(r'^-|-$'), '');
-    },
+    name: 'slugify', fn: (args) => (args[0] as String)
+      .toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-').replaceAll(RegExp(r'-+'), '-').replaceAll(RegExp(r'^-|-$'), ''),
   ),
+
+  // --- Extended (V14) ---
+  'days_ouvres': AlgoPrimitive(name: 'days_ouvres', fn: (args) {
+    final s = DateTime.parse(args[0] as String); final e = DateTime.parse(args[1] as String);
+    int count = 0;
+    for (var d = s; d.isBefore(e) || d == e; d = d.add(const Duration(days: 1))) {
+      if (d.weekday != DateTime.sunday && d.weekday != DateTime.saturday) count++;
+    }
+    return count;
+  }),
+  'exercice_fiscal': AlgoPrimitive(name: 'exercice_fiscal', fn: (args) {
+    final d = DateTime.parse(args[0] as String);
+    return d.month >= 4 ? '${d.year}-${d.year + 1}' : '${d.year - 1}-${d.year}';
+  }),
+  'delai_paiement': AlgoPrimitive(name: 'delai_paiement', fn: (args) {
+    final f = DateTime.parse(args[0] as String); final e = DateTime.parse(args[1] as String);
+    final taux = args[2] as num;
+    return e.difference(f).inDays * taux.toDouble();
+  }),
+  'convertir_devise': AlgoPrimitive(name: 'convertir_devise', fn: (args) {
+    final amount = args[0] as num;
+    const rates = {'XOF': 1, 'XAF': 1, 'EUR': 655.96, 'USD': 595, 'GHS': 45, 'NGN': 0.4};
+    final from = rates[args[1] as String] ?? 1;
+    final to = rates[args[2] as String] ?? 1;
+    return ((amount / from) * to).round();
+  }),
+  'formater_monnaie': AlgoPrimitive(name: 'formater_monnaie', fn: (args) {
+    final amount = (args[0] as num) / 100;
+    final currency = args[2] as String;
+    const symbols = {'XOF': 'FCFA', 'EUR': '€', 'USD': '\$'};
+    return '${amount.toStringAsFixed(0)} ${symbols[currency] ?? currency}';
+  }),
 };

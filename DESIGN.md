@@ -371,14 +371,14 @@ State (1):   StateWrapper
 ✅ Responsive 3 breakpoints
 ✅ States (loading, empty, error)
 ✅ Scroll behavior
-⏳ Theme switching (dark/light mode)
-⏳ Transitions + Hero
-⏳ Forms multi-step wizard
-⏳ Sheets / Dialogs / Drawers
-⏳ Gestures (swipe, long press)
-⏳ Pagination infinite scroll
-⏳ Offline UI feedback
-⏳ Keyboard desktop
-⏳ Accessibility (Semantics)
-⏳ Print layout
+✅ Theme switching (dark/light mode)
+✅ Transitions + Hero
+✅ Forms multi-step wizard
+✅ Sheets / Dialogs / Drawers / SnackBars
+✅ Gestures (swipe, long press)
+✅ Pagination infinite scroll
+✅ Offline UI feedback
+✅ Keyboard desktop
+✅ Accessibility (Semantics)
+✅ Print layout
 ```

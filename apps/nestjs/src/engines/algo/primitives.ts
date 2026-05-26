@@ -219,13 +219,64 @@ export const PRIMITIVES: Record<string, AlgoPrimitive> = {
   slugify: {
     name: 'slugify',
     fn: (s: string) =>
-      s
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, ''),
+      s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
     schema: z.tuple([z.string()]),
+  },
+
+  // --- Extended Dates (V14 calc) ---
+  days_ouvres: {
+    name: 'days_ouvres',
+    fn: (start: string, end: string, holidays: string[] = []) => {
+      const s = new Date(start); const e = new Date(end);
+      let count = 0; let d = new Date(s);
+      while (d <= e) {
+        const day = d.getDay();
+        const iso = d.toISOString().split('T')[0];
+        if (day !== 0 && day !== 6 && !holidays.includes(iso)) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    },
+    schema: z.tuple([z.string(), z.string(), z.array(z.string()).optional()]),
+  },
+  exercice_fiscal: {
+    name: 'exercice_fiscal',
+    fn: (date: string, startMonth: number = 1) => {
+      const d = new Date(date);
+      const year = d.getMonth() + 1 >= startMonth ? d.getFullYear() : d.getFullYear() - 1;
+      return `${year}-${year + 1}`;
+    },
+    schema: z.tuple([z.string(), z.number().optional()]),
+  },
+  delai_paiement: {
+    name: 'delai_paiement',
+    fn: (factureDate: string, echeance: string, tauxJournalier: number) => {
+      const f = new Date(factureDate); const e = new Date(echeance);
+      const delay = Math.max(0, Math.ceil((e.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)));
+      return delay * tauxJournalier;
+    },
+    schema: z.tuple([z.string(), z.string(), z.number()]),
+  },
+
+  // --- Extended Currency (V14 calc) ---
+  convertir_devise: {
+    name: 'convertir_devise',
+    fn: (amount: number, fromCurrency: string, toCurrency: string, taux?: number) => {
+      const rates: Record<string, number> = { XOF: 1, XAF: 1, EUR: 655.96, USD: 595, GHS: 45, NGN: 0.4 };
+      if (taux !== undefined) return Math.round(amount * taux);
+      const from = rates[fromCurrency] ?? 1;
+      const to = rates[toCurrency] ?? 1;
+      return Math.round((amount / from) * to);
+    },
+    schema: z.tuple([z.number(), z.string(), z.string(), z.number().optional()]),
+  },
+  formater_monnaie: {
+    name: 'formater_monnaie',
+    fn: (amount: number, locale: string, currency: string) => {
+      try {
+        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount / 100);
+      } catch { return `${amount / 100} ${currency}`; }
+    },
+    schema: z.tuple([z.number(), z.string(), z.string()]),
   },
 };
