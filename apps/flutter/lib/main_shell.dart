@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'modules/catalog_screen.dart';
+import 'features/modules/catalog_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
