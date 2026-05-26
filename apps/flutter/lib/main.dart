@@ -22,7 +22,9 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
+import 'components/components.dart';
 import 'core/design_system/tokens/tokens.dart';
+import 'engine/canvas_registry/component_config.dart';
 import 'core/vault/auth_storage.dart';
 import 'core/vault/cache_cleaner.dart';
 import 'core/vault/database.dart';
@@ -46,11 +48,10 @@ import 'sandbox/sandbox_screen.dart';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  GlobalErrorHandler.install(navigatorKey: _navigatorKey);
-
   runZonedGuarded(
     () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      GlobalErrorHandler.install(navigatorKey: _navigatorKey);
       await _setupDependencies();
       runApp(ScalarioApp(navigatorKey: _navigatorKey));
     },
@@ -132,7 +133,7 @@ class ScalarioApp extends StatelessWidget {
       // Explicite (= défaut MaterialApp) — AC-21 exige le wiring système.
       // ignore: avoid_redundant_argument_values
       themeMode: ThemeMode.system,
-      home: const _ThemeSmokePage(),
+      home: const _DashboardPage(),
       // STORY-009 — la route sandbox dev-only est enregistrée **uniquement**
       // en `kDebugMode`. En release build, naviguer vers `/dev/sandbox`
       // n'expose aucune route (test couvert dans sandbox_release_exclusion_test).
@@ -145,17 +146,14 @@ class ScalarioApp extends StatelessWidget {
 
 /// Page de smoke-test du thème — affiche un échantillon des composants M3
 /// pour valider visuellement le wiring tokens → ThemeData.
-class _ThemeSmokePage extends StatelessWidget {
-  const _ThemeSmokePage();
+class _DashboardPage extends StatelessWidget {
+  const _DashboardPage();
 
   @override
   Widget build(BuildContext context) {
-    final ScalarioColorsExtension semantic =
-        Theme.of(context).extension<ScalarioColorsExtension>()!;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scalario'),
+        title: const Text('Scalario — Blandine Shop'),
         actions: <Widget>[
           if (kDebugMode)
             IconButton(
@@ -172,54 +170,76 @@ class _ThemeSmokePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              'ThemeData Scalario chargé',
-              style: Theme.of(context).textTheme.headlineLarge,
-            ),
+            const AlertBanner(type: AlertType.warning, message: '3 produits sous le seuil d\'alerte stock'),
+            const SizedBox(height: ScalarioSpacing.space3),
+            Text('KPIs', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: ScalarioSpacing.space2),
-            Text(
-              'Material 3 + tokens — light & dark',
-              style: Theme.of(context).textTheme.bodyMedium,
+            Wrap(
+              spacing: ScalarioSpacing.space2,
+              runSpacing: ScalarioSpacing.space2,
+              children: const [
+                SizedBox(width: 180, child: KPICard(label: 'CA du jour', value: '142 500', unit: 'FCFA')),
+                SizedBox(width: 180, child: KPICard(label: 'Nb ventes', value: '47')),
+                SizedBox(width: 180, child: KPICard(label: 'Alertes stock', value: '3', status: KpiStatus.warning)),
+                SizedBox(width: 180, child: KPICard(label: 'Pertes jour', value: '12 000', unit: 'FCFA', status: KpiStatus.critical)),
+              ],
             ),
-            const SizedBox(height: ScalarioSpacing.space6),
-            FilledButton(
-              onPressed: () {},
-              child: const Text('Action primaire'),
-            ),
+            const SizedBox(height: ScalarioSpacing.space4),
+            Text('Tendance des ventes (7j)', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: ScalarioSpacing.space2),
-            OutlinedButton(
-              onPressed: () {},
-              child: const Text('Action secondaire'),
-            ),
-            const SizedBox(height: ScalarioSpacing.space2),
-            TextButton(
-              onPressed: () {},
-              child: const Text('Action ghost'),
-            ),
-            const SizedBox(height: ScalarioSpacing.space6),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(ScalarioSpacing.space4),
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      ScalarioIcons.stateSuccess,
-                      color: semantic.synced,
-                    ),
-                    const SizedBox(width: ScalarioSpacing.space2),
-                    const Expanded(
-                      child: Text('Sync OK · 14:32'),
-                    ),
-                  ],
-                ),
+            SizedBox(
+              height: 150,
+              child: ChartBar(
+                title: 'Ventes',
+                data: [
+                  ChartDataPoint(label: 'Lun', value: 32),
+                  ChartDataPoint(label: 'Mar', value: 45),
+                  ChartDataPoint(label: 'Mer', value: 38),
+                  ChartDataPoint(label: 'Jeu', value: 55),
+                  ChartDataPoint(label: 'Ven', value: 62),
+                  ChartDataPoint(label: 'Sam', value: 47),
+                  ChartDataPoint(label: 'Dim', value: 28),
+                ],
               ),
             ),
             const SizedBox(height: ScalarioSpacing.space4),
-            const TextField(
-              decoration: InputDecoration(
-                labelText: 'Recherche',
-                hintText: 'Tapez pour filtrer…',
-              ),
+            Text('Dernieres ventes', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: ScalarioSpacing.space2),
+            ScalarioDataTable<Map<String, String>>(
+              columns: [
+                DataColumnConfig(key: 'produit', label: 'Produit', cellBuilder: (row) => row['produit']!),
+                DataColumnConfig(key: 'qte', label: 'Qte', cellBuilder: (row) => row['qte']!),
+                DataColumnConfig(key: 'prix', label: 'Prix', cellBuilder: (row) => row['prix']!),
+                DataColumnConfig(key: 'heure', label: 'Heure', cellBuilder: (row) => row['heure']!),
+              ],
+              rows: const [
+                {'produit': 'Tomates', 'qte': '5kg', 'prix': '2 500 F', 'heure': '14:32'},
+                {'produit': 'Oignons', 'qte': '3kg', 'prix': '1 200 F', 'heure': '13:45'},
+                {'produit': 'Riz 5kg', 'qte': '2', 'prix': '7 000 F', 'heure': '12:10'},
+                {'produit': 'Huile 1L', 'qte': '1', 'prix': '1 800 F', 'heure': '11:30'},
+                {'produit': 'Bananes', 'qte': '2kg', 'prix': '800 F', 'heure': '10:15'},
+              ],
+              defaultSortKey: 'heure',
+            ),
+            const SizedBox(height: ScalarioSpacing.space4),
+            Wrap(
+              spacing: ScalarioSpacing.space2,
+              runSpacing: ScalarioSpacing.space2,
+              children: [
+                StatCard.fromConfig(
+                  const ComponentConfig(type: 'StatCard', variant: 'trend-up', props: {'label': 'Marge', 'value': '22 430', 'delta': '+8% vs hier'}),
+                  context,
+                ),
+                StatCard.fromConfig(
+                  const ComponentConfig(type: 'StatCard', variant: 'trend-down', props: {'label': 'Retours', 'value': '3 200', 'delta': '-2 vs hier'}),
+                  context,
+                ),
+              ],
+            ),
+            const SizedBox(height: ScalarioSpacing.space4),
+            SyncStatusBar.fromConfig(
+              const ComponentConfig(type: 'SyncStatusBar', variant: 'synced', props: {}),
+              context,
             ),
           ],
         ),

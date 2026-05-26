@@ -27,7 +27,7 @@ void main() {
     await runZonedGuarded<Future<void>>(() async {
       await tester.pumpWidget(const ScalarioApp());
       expect(find.text('Scalario'), findsWidgets);
-      expect(find.text('ThemeData Scalario chargé'), findsOneWidget);
+      expect(find.text('KPIs'), findsOneWidget);
     }, (Object error, StackTrace stack) {});
   });
 }
