@@ -38,6 +38,9 @@ dependencies:
   drift: ^2.33.0
   drift_flutter: ^0.3.0
   sqlcipher_flutter_libs: ^0.7.0+eol
+
+  # V14-010 — Widgetbook for component catalog + golden tests.
+  widgetbook: ^3.9.0
   sqlite3: ^3.3.1
   path_provider: ^2.1.5
 

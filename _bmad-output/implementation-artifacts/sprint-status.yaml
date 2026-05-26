@@ -786,14 +786,23 @@ architecture_v14:
           defined_date: "2026-05-25"
           sprint: "v14-4"
         - story_id: "V14-010"
-          title: "Widgetbook setup — 12 composants × variantes × états"
+          title: "Widgetbook setup — 12 composants x variantes x etats"
           epic: "EPIC-V14-002"
           points: 5
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-010.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-26"
+          completed_date: "2026-05-26"
           sprint: "v14-2"
+          actual_points: 5
+          notes: |
+            widgetbook 3.9 added to pubspec. lib/widgetbook.dart — 5 folders
+            (Data Display, Feedback, Actions, Inputs, Lists) with 12 components
+            and ~40 use cases. MaterialThemeAddon (Light+Dark) + TextScaleAddon.
+            Docs docs/widgetbook.md. Golden tests deferred (needs physical device).
+            0 regression. Sprint v14-2 complete.
         - story_id: "V14-011"
           title: "Scalario Calc — 30 fonctions atomiques + AlgoEngine.eval (dual runtime TS+Dart)"
           epic: "EPIC-V14-006"
@@ -1058,4 +1067,4 @@ architecture_v14:
     EPIC-V14-020: "Performance"
     EPIC-V14-021: "Infrastructure"
 
-  next_step: "/bmad:dev-story V14-010"
+  next_step: "/bmad:dev-story V14-011"
