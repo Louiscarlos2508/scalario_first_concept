@@ -16,20 +16,31 @@ class CanvasGesture extends StatelessWidget {
 
     Widget wrapped = child;
     if (gestures.containsKey('swipe_left')) {
-      wrapped = Dismissible(key: config.id != null ? ValueKey(config.id) : UniqueKey(), direction: DismissDirection.endToStart, background: Container(color: gestureColors['warning']), onDismissed: (_) {}, child: wrapped);
+      wrapped = Dismissible(
+        key: config.id != null ? ValueKey(config.id) : UniqueKey(),
+        direction: DismissDirection.endToStart,
+        background: Container(color: _colors['warning']),
+        onDismissed: (_) {},
+        child: wrapped,
+      );
     }
     if (gestures.containsKey('swipe_right')) {
-      wrapped = Dismissible(key: config.id != null ? ValueKey('${config.id}_r') : UniqueKey(), direction: DismissDirection.startToEnd, background: Container(color: gestureColors['success']), onDismissed: (_) {}, child: wrapped);
+      wrapped = Dismissible(
+        key: config.id != null ? ValueKey('${config.id}_r') : UniqueKey(),
+        direction: DismissDirection.startToEnd,
+        background: Container(color: _colors['success']),
+        onDismissed: (_) {},
+        child: wrapped,
+      );
     }
     if (gestures.containsKey('long_press')) {
       wrapped = GestureDetector(onLongPress: () {}, child: wrapped);
     }
     return wrapped;
   }
-}
 
   @override
   Widget build(BuildContext context) => child;
-}
 
-const gestureColors = {'warning': Colors.orange, 'success': Colors.green};
+  static const _colors = {'warning': Colors.orange, 'success': Colors.green};
+}
