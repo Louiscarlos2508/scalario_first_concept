@@ -1,5 +1,5 @@
 {
-  "mode": "light",
+  "theme": "blandine",
   "colors": {
     "primary": "#FFCC00",
     "danger": "#E74C3C",
@@ -7,6 +7,15 @@
     "warning": "#E67E22",
     "bg_page": "#F8F8FC",
     "bg_card": "#FFFFFF",
-    "text_primary": "#1A1A2E"
+    "text_primary": "#1A1A2E",
+    "text_secondary": "#5D6D7E",
+    "text_disabled": "#AAB7C4",
+    "white": "#FFFFFF"
+  },
+  "typography": {
+    "kpi_value": 28,
+    "kpi_label": 12,
+    "section_header": 12,
+    "body": 14
   }
 }

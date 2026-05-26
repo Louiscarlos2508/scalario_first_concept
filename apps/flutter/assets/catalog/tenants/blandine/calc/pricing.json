@@ -1,0 +1,30 @@
+{
+  "formulas": {
+    "marge_brute": {
+      "fn": "sub",
+      "args": ["$vente.amount", { "fn": "mul", "args": ["$vente.quantity", "$product.cost_price"] }]
+    },
+    "tva": {
+      "fn": "mul",
+      "args": ["$montant_ht", 0.18],
+      "output": "tva"
+    },
+    "remise": {
+      "fn": "div",
+      "args": [
+        { "fn": "mul", "args": ["$montant_ht", "$remise_pct"] },
+        100
+      ]
+    },
+    "prix_total": {
+      "fn": "sub",
+      "args": [
+        { "fn": "mul", "args": ["$quantite", "$prix_unitaire"] },
+        { "fn": "mul", "args": [
+          { "fn": "mul", "args": ["$quantite", "$prix_unitaire"] },
+          { "fn": "div", "args": ["$remise", 100] }
+        ]}
+      ]
+    }
+  }
+}

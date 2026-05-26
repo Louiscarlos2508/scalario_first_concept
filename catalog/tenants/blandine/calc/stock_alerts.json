@@ -1,0 +1,21 @@
+{
+  "alerts": {
+    "low_stock": {
+      "condition": {
+        "fn": "lt",
+        "args": ["$product.stock_quantity", "$product.min_threshold"]
+      },
+      "severity": "critical",
+      "message_key": "stock_critique",
+      "pipeline": ["notify_owner", "update_dashboard_badge"]
+    },
+    "stock_warning": {
+      "condition": {
+        "fn": "lt",
+        "args": ["$product.stock_quantity", { "fn": "mul", "args": ["$product.min_threshold", 2] }]
+      },
+      "severity": "warning",
+      "message_key": "stock_faible"
+    }
+  }
+}

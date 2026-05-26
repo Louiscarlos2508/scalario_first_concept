@@ -1,0 +1,26 @@
+{
+  "screen": "pos_commercial",
+  "title": "Caisse",
+  "layout": "scaffold",
+  "root": {
+    "type": "Scaffold",
+    "props": {"appBar": {"type": "AppBar", "variant": "default", "props": {"title": "Caisse — Kofi"}}},
+    "children": [
+      {"type": "Grid", "props": {"columns": 1, "gap": "sm"}, "children": [
+        {"type": "KPICard", "variant": "hero", "props": {"label": "Solde caisse", "value": "142 500 FCFA"}},
+        {"type": "KPICard", "variant": "compact", "props": {"label": "Ventes aujourd'hui", "value": "12"}}
+      ]},
+      {"type": "Row", "props": {"gap": "sm"}, "children": [
+        {"type": "Button", "variant": "primary", "props": {"label": "Nouvelle vente"}},
+        {"type": "Button", "variant": "primary", "props": {"label": "Cloture caisse"}}
+      ]},
+      {"type": "DataTable", "variant": "default", "props": {"columns": [
+        {"key":"produit","label":"Produit"},{"key":"qte","label":"Qte"},{"key":"prix","label":"Prix"}
+      ], "rows": [
+        {"produit":"Tomates","qte":"2.5kg","prix":"3 750 F"},
+        {"produit":"Bananes","qte":"3kg","prix":"1 500 F"},
+        {"produit":"Oignons","qte":"5kg","prix":"2 500 F"}
+      ]}}
+    ]
+  }
+}
