@@ -28,12 +28,12 @@ class ScalarioButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = props['label'] as String? ?? '';
     final style = switch (variant) {
-      'primary' => ElevatedButton.styleFrom(backgroundColor: ScalarioColors.primary500),
+      'primary' => ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFCC00), foregroundColor: Colors.black),
       'secondary' => OutlinedButton.styleFrom(),
-      'danger' => ElevatedButton.styleFrom(backgroundColor: ScalarioColors.danger500),
+      'danger' => ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
       'ghost' => TextButton.styleFrom(),
       'icon-only' => null,
-      _ => ElevatedButton.styleFrom(backgroundColor: ScalarioColors.primary500),
+      _ => ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFCC00), foregroundColor: Colors.black),
     };
 
     if (variant == 'icon-only') {
