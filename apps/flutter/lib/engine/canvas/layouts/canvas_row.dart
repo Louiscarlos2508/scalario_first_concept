@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../canvas_registry/component_config.dart';
-import '../canvas_registry/scalario_canvas_registry.dart';
+import '../../canvas_registry/component_config.dart';
+import '../../canvas_registry/scalario_canvas_registry.dart';
 
 class CanvasRow extends StatelessWidget {
   final ComponentConfig config;

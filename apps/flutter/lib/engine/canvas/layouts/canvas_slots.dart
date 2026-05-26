@@ -21,7 +21,7 @@ class CanvasSlots extends StatelessWidget {
     final mainSlot = slots['main'];
     final asideSlot = slots['aside'];
     final hasAside = asideSlot != null;
-    final hideAsideMobile = (asideSlot as Map?)?.case('hide_on_mobile') ?? false;
+    final hideAsideMobile = (asideSlot as Map?)?.containsKey('hide_on_mobile') == true ? (asideSlot as Map)['hide_on_mobile'] as bool? == true : false;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (slots['banner'] != null)
@@ -29,7 +29,7 @@ class CanvasSlots extends StatelessWidget {
       Expanded(child: hasAside ? LayoutBuilder(builder: (context, constraints) {
         final showAside = !hideAsideMobile || constraints.maxWidth >= 600;
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: (mainSlot as Map?)?.case('flex') ?? 1, child: _render(r, mainSlot, context)),
+          Expanded(flex: (mainSlot as Map?)?.containsKey('flex') == true ? (mainSlot as Map)['flex'] as int : 1, child: _render(r, mainSlot, context)),
           if (showAside) SizedBox(width: resolveGap(asideSlot?['width'] ?? 320), child: _render(r, asideSlot, context)),
         ]);
       }) : _render(r, mainSlot ?? slots['main'], context)),
@@ -45,8 +45,4 @@ class CanvasSlots extends StatelessWidget {
     final cc = ComponentConfig.fromJson(slot as Map<String, dynamic>);
     return r.build(cc, ctx);
   }
-}
-
-extension _MapCase on Map {
-  dynamic case$(String key) => this[key];
 }
