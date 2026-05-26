@@ -2,19 +2,32 @@
   "id": "retail_fresh_produce",
   "schema_version": "1.0.0",
   "name": "Produits Frais Retail — Blandine",
-  "icon": "store",
   "entities": [
-    {"name": "Product", "display_name": "Produit", "fields": [
-      {"name": "name", "type": "string", "required": true}, {"name": "category", "type": "string"}, {"name": "stock_quantity", "type": "number"}, {"name": "min_threshold", "type": "number"}, {"name": "price_per_unit", "type": "number"}
+    {"name": "Product", "fields": [
+      {"name": "name", "type": "string", "required": true},
+      {"name": "category", "type": "string"},
+      {"name": "stock_quantity", "type": "number"},
+      {"name": "min_threshold", "type": "number"},
+      {"name": "price_per_unit", "type": "number"}
     ]},
-    {"name": "Sale", "display_name": "Vente", "fields": [
-      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true}, {"name": "amount", "type": "number", "required": true}, {"name": "payment_method", "type": "string"}, {"name": "timestamp", "type": "date"}
+    {"name": "Sale", "fields": [
+      {"name": "product_id", "type": "string", "required": true},
+      {"name": "quantity", "type": "number", "required": true},
+      {"name": "amount", "type": "number", "required": true},
+      {"name": "payment_method", "type": "string"},
+      {"name": "timestamp", "type": "date"}
     ]},
-    {"name": "Loss", "display_name": "Perte", "fields": [
-      {"name": "product_id", "type": "string", "required": true}, {"name": "quantity", "type": "number", "required": true}, {"name": "nature", "type": "string"}, {"name": "note", "type": "string"}
+    {"name": "Loss", "fields": [
+      {"name": "product_id", "type": "string", "required": true},
+      {"name": "quantity", "type": "number", "required": true},
+      {"name": "nature", "type": "string"},
+      {"name": "note", "type": "string"}
     ]},
-    {"name": "Delivery", "display_name": "Livraison", "fields": [
-      {"name": "supplier", "type": "string", "required": true}, {"name": "reference_bl", "type": "string"}, {"name": "items", "type": "array"}, {"name": "status", "type": "string"}
+    {"name": "Delivery", "fields": [
+      {"name": "supplier", "type": "string", "required": true},
+      {"name": "reference_bl", "type": "string"},
+      {"name": "items", "type": "array"},
+      {"name": "status", "type": "string"}
     ]}
   ],
   "rbac_roles": ["OWNER", "MANAGER", "COMMERCIAL"],
@@ -26,9 +39,9 @@
         "props": {
           "appBar": {
             "type": "AppBar",
+            "variant": "default",
             "props": {
               "title": "SCALARIO",
-              "centerTitle": false,
               "actions": [
                 {"type": "Button", "variant": "icon-only", "props": {"icon": "notifications"}}
               ]
@@ -37,7 +50,6 @@
           "bottomNav": {
             "type": "BottomNav",
             "props": {
-              "currentIndex": 0,
               "items": [
                 {"icon": "home", "label": "Accueil"},
                 {"icon": "inventory_2", "label": "Stock"},
@@ -50,33 +62,47 @@
         },
         "children": [
           {
-            "type": "AlertBanner", "variant": "info",
-            "props": {"type": "critical", "message": "2 articles en stock critique"}
+            "type": "Slots",
+            "props": {
+              "slots": {
+                "banner": {
+                  "type": "AlertBanner", "variant": "info",
+                  "props": {"type": "critical", "message": "2 articles en stock critique"},
+                  "visible_if": {"operator": "gt", "field": "$stock_alerts_count", "value": 0}
+                }
+              }
+            }
           },
           {
             "type": "Grid",
-            "props": {"columns": [2], "gap": 8, "responsive": {"mobile": {"columns": [2]}, "desktop": {"columns": [4]}}},
+            "props": {"columns": 2, "gap": "sm", "responsive": {"mobile": {"columns": 2}, "desktop": {"columns": 4}}},
             "children": [
-              {"type": "KPICard", "variant": "default", "props": {"label": "CA du jour", "value": "47 500 FCFA", "delta": "+12%", "delta_positive": true}},
-              {"type": "KPICard", "variant": "default", "props": {"label": "Marge brute", "value": "14 200 FCFA", "delta": "30%", "delta_positive": true}},
-              {"type": "KPICard", "variant": "default", "props": {"label": "Transactions", "value": "18", "delta": "+3", "delta_positive": true}},
-              {"type": "KPICard", "variant": "default", "props": {"label": "Stock critique", "value": "2", "delta": "Tomates, Bananes", "delta_positive": false, "status": "critical"}}
+              {"type": "KPICard", "variant": "default", "props": {"label": "CA du jour", "value": "47 500 FCFA", "delta": "+12%", "delta_positive": true, "span": 1}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Marge brute", "value": "14 200 FCFA", "delta": "30%", "delta_positive": true, "span": 1}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Transactions", "value": "18", "delta": "+3", "delta_positive": true, "span": 1}},
+              {"type": "KPICard", "variant": "default", "props": {"label": "Stock crit.", "value": "2", "delta": "Tomates, Bananes", "delta_positive": false, "status": "critical", "span": 1}}
             ]
           },
-          {"type": "ChartBar", "variant": "default", "props": {"title": "CA 7 jours", "data": [
-            {"label":"Lun","value":32},{"label":"Mar","value":45},{"label":"Mer","value":38},{"label":"Jeu","value":55},{"label":"Ven","value":62},{"label":"Sam","value":47},{"label":"Dim","value":28}
-          ]}},
-          {"type": "DataTable", "variant": "default", "props": {
-            "columns": [{"key":"produit","label":"Produit"}, {"key":"qte","label":"Qte"}, {"key":"prix","label":"Prix"}, {"key":"heure","label":"Heure"}],
-            "rows": [
+          {
+            "type": "ChartBar", "variant": "default",
+            "props": {"title": "CA 7 jours", "span": "full", "data": [
+              {"label":"Lun","value":32},{"label":"Mar","value":45},{"label":"Mer","value":38},
+              {"label":"Jeu","value":55},{"label":"Ven","value":62},{"label":"Sam","value":47},{"label":"Dim","value":28}
+            ]}
+          },
+          {
+            "type": "DataTable", "variant": "default",
+            "props": {"span": "full", "columns": [
+              {"key":"produit","label":"Produit"},{"key":"qte","label":"Qte"},{"key":"prix","label":"Prix"},{"key":"heure","label":"Heure"}
+            ], "rows": [
               {"produit":"Tomates 2.5kg","qte":"1","prix":"3 750 F","heure":"08h33"},
               {"produit":"Bananes 3kg","qte":"1","prix":"1 500 F","heure":"08h12"},
               {"produit":"Oignons 5kg","qte":"1","prix":"2 500 F","heure":"07h45"}
-            ]
-          }},
+            ]}
+          },
           {
             "type": "Row",
-            "props": {"gap": 8},
+            "props": {"gap": "sm"},
             "children": [
               {"type": "Button", "variant": "primary", "props": {"label": "Rapports", "icon": "bar_chart"}},
               {"type": "Button", "variant": "primary", "props": {"label": "Stock", "icon": "inventory_2"}},
@@ -84,6 +110,50 @@
             ]
           },
           {"type": "SyncStatusBar", "variant": "default", "props": {"status": "synced"}}
+        ]
+      }
+    },
+    {
+      "screen": "stock_list",
+      "root": {
+        "type": "Scaffold",
+        "props": {
+          "appBar": {"type": "AppBar", "variant": "search", "props": {"title": "Stock", "hint": "Rechercher un produit..."}},
+          "bottomNav": {"type": "BottomNav", "props": {"items": [
+            {"icon": "home", "label": "Accueil"}, {"icon": "inventory_2", "label": "Stock"}, {"icon": "bar_chart", "label": "Rapports"}
+          ]}}
+        },
+        "children": [
+          {"type": "Grid", "props": {"columns": 2, "gap": "sm"},
+            "children": [
+              {"type": "KPICard", "variant": "compact", "props": {"label": "Articles", "value": "8", "span": 1}},
+              {"type": "KPICard", "variant": "compact", "props": {"label": "En alerte", "value": "2", "status": "critical", "span": 1}}
+            ]
+          },
+          {"type": "AlertBanner", "variant": "info", "props": {"type": "critical", "message": "2 articles sous le seuil"}},
+          {"type": "DataTable", "variant": "default", "props": {"span": "full", "columns": [
+            {"key":"produit","label":"Produit"},{"key":"qte","label":"Qte"},{"key":"seuil","label":"Seuil"},{"key":"statut","label":"Statut"}
+          ], "rows": [
+            {"produit":"Tomates","qte":"2kg","seuil":"5kg","statut":"CRITIQUE"},
+            {"produit":"Bananes","qte":"3kg","seuil":"10kg","statut":"CRITIQUE"},
+            {"produit":"Oignons","qte":"45kg","seuil":"10kg","statut":"OK"}
+          ]}}
+        ]
+      }
+    },
+    {
+      "screen": "loss_form",
+      "root": {
+        "type": "Scaffold",
+        "props": {"appBar": {"type": "AppBar", "variant": "default", "props": {"title": "Declaration de perte"}}},
+        "children": [
+          {"type": "Column", "props": {"gap": "md"}, "children": [
+            {"type": "FormField", "variant": "select", "props": {"label": "Article", "options": [{"value":"tomates","label":"Tomates"},{"value":"bananes","label":"Bananes"}], "required": true}},
+            {"type": "FormField", "variant": "number", "props": {"label": "Quantite (kg)", "required": true}},
+            {"type": "FormField", "variant": "select", "props": {"label": "Nature", "options": [{"value":"avarie","label":"Avarie"},{"value":"casse","label":"Casse"},{"value":"vol","label":"Vol"}], "required": true}},
+            {"type": "FormField", "variant": "text", "props": {"label": "Note"}},
+            {"type": "Button", "variant": "primary", "props": {"label": "Soumettre"}}
+          ]}
         ]
       }
     }

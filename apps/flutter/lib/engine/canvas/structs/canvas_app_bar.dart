@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/design_system/tokens/spacing_resolver.dart';
 import '../../canvas_registry/component_config.dart';
 import '../../canvas_registry/scalario_canvas_registry.dart';
 
@@ -12,24 +13,56 @@ class CanvasAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize {
+    final variant = config.variant;
+    return Size.fromHeight(variant == 'large' ? 112 : variant == 'search' ? 56 : kToolbarHeight);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final variant = config.variant;
     final title = config.props['title'] as String? ?? '';
     final centerTitle = config.props['centerTitle'] as bool? ?? false;
 
-    return AppBar(
-      title: Text(title),
-      centerTitle: centerTitle,
-      actions: _buildActions(context),
-    );
+    return switch (variant) {
+      'large' => _buildLarge(title),
+      'transparent' => _buildTransparent(title),
+      'search' => _buildSearch(title),
+      'minimal' => _buildMinimal(title),
+      _ => _buildDefault(title),
+    };
   }
 
-  List<Widget> _buildActions(BuildContext context) {
+  AppBar _buildDefault(String title) {
+    return AppBar(title: Text(title), centerTitle: config.props['centerTitle'] as bool? ?? false, actions: _buildActions());
+  }
+
+  AppBar _buildLarge(String title) {
+    return AppBar(toolbarHeight: 112, title: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [Text(title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+        if (config.props['subtitle'] != null) Text(config.props['subtitle'] as String, style: const TextStyle(fontSize: 14, color: Colors.white70))],
+    ), actions: _buildActions());
+  }
+
+  AppBar _buildTransparent(String title) {
+    return AppBar(title: Text(title), backgroundColor: Colors.transparent, elevation: 0, actions: _buildActions());
+  }
+
+  AppBar _buildSearch(String title) {
+    return AppBar(title: TextField(decoration: InputDecoration(hintText: config.props['hint'] as String? ?? 'Rechercher...', border: InputBorder.none)), actions: _buildActions());
+  }
+
+  AppBar _buildMinimal(String title) {
+    return AppBar(title: Text(title), automaticallyImplyLeading: false, actions: null);
+  }
+
+  List<Widget>? _buildActions() {
     final r = ScalarioCanvasRegistry.instance;
-    if (r == null) return [];
+    if (r == null) return null;
     final actions = config.props['actions'] as List? ?? [];
-    return actions.map((a) => r!.build(ComponentConfig.fromJson(a as Map<String, dynamic>), context)).toList();
+    if (actions.isEmpty) return null;
+    return actions.map((a) => r!.build(ComponentConfig.fromJson(a as Map<String, dynamic>), ctx)).toList();
   }
 }
