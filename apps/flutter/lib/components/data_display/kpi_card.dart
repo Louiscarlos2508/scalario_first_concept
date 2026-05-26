@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 import '../_internal/shimmer.dart';
 
 /// Statut sémantique d'un `KPICard`.
@@ -90,14 +92,45 @@ class KPICard extends StatelessWidget {
   factory KPICard.error({required String label, String? message}) =>
       KPICard._error(label: label, message: message);
 
-  /// Construit un `KPICard` depuis les props d'un `ComponentConfig` BDUI.
+  /// Construit un `KPICard` depuis un [ComponentConfig] BDUI avec variante.
   ///
-  /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  /// Variantes : default, compact, with-icon, with-chart, hero.
+  /// Utilise par le `ScalarioCanvasRegistry` (STORY-005 / V14-003).
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    final variant = ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'KPICard',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
+
     try {
-      return KPICard.fromJson(props);
+      final props = config.props;
+      final String? label = props['label'] as String?;
+      final String? value = props['value'] as String?;
+      if (label == null) throw const FormatException("KPICard: 'label' requis");
+      if (value == null) throw const FormatException("KPICard: 'value' requis");
+
+      switch (variant) {
+        case 'compact':
+          return _CompactKPICard(props: props, label: label, value: value);
+        case 'with-icon':
+          return _WithIconKPICard(props: props, label: label, value: value);
+        case 'with-chart':
+          return _WithChartKPICard(props: props, label: label, value: value);
+        case 'hero':
+          return _HeroKPICard(props: props, label: label, value: value);
+        default:
+          return KPICard(
+            label: label,
+            value: value,
+            unit: props['unit'] as String?,
+            delta: props['delta'] as String?,
+            deltaPositive: props['delta_positive'] as bool? ?? true,
+            status: _parseStatus(props['status'] as String?),
+          );
+      }
     } on FormatException {
-      return KPICard.error(label: props['label'] as String? ?? 'KPI');
+      return KPICard.error(label: config.props['label'] as String? ?? 'KPI');
     }
   }
 
@@ -370,4 +403,155 @@ class _KpiPalette {
   final Color background;
   final Color value;
   final Color? borderLeft;
+}
+
+// --- Variant widgets (V14-003) ---
+
+class _CompactKPICard extends StatelessWidget {
+  const _CompactKPICard({
+    required this.props,
+    required this.label,
+    required this.value,
+  });
+  final Map<String, dynamic> props;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = props['delta'] as String?;
+    final deltaPos = props['delta_positive'] as bool? ?? true;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: ScalarioSpacing.space2,
+        vertical: ScalarioSpacing.space1,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(label, style: ScalarioTypography.caption),
+          ),
+          const SizedBox(width: ScalarioSpacing.space2),
+          Text(value, style: ScalarioTypography.fontKpiValue),
+          if (delta != null) ...[
+            const SizedBox(width: ScalarioSpacing.space1),
+            Icon(
+              deltaPos ? ScalarioIcons.arrowUp : ScalarioIcons.arrowDown,
+              size: ScalarioIconSize.xs,
+              color: deltaPos ? ScalarioColors.success500 : ScalarioColors.danger500,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WithIconKPICard extends StatelessWidget {
+  const _WithIconKPICard({
+    required this.props,
+    required this.label,
+    required this.value,
+  });
+  final Map<String, dynamic> props;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = props['icon'] as String? ?? 'dashboard';
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space4),
+      decoration: BoxDecoration(
+        color: ScalarioColors.bgCard,
+        borderRadius: BorderRadius.circular(ScalarioRadius.md),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_iconFor(icon), size: ScalarioIconSize.sm, color: ScalarioColors.primary500),
+          const SizedBox(width: ScalarioSpacing.space3),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: ScalarioTypography.fontKpiLabel),
+            Text(value, style: ScalarioTypography.fontKpiValue),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  static IconData _iconFor(String name) {
+    switch (name) {
+      case 'attach_money': return Icons.attach_money;
+      case 'shopping_cart': return Icons.shopping_cart;
+      case 'inventory': return Icons.inventory;
+      default: return Icons.dashboard;
+    }
+  }
+}
+
+class _WithChartKPICard extends StatelessWidget {
+  const _WithChartKPICard({
+    required this.props,
+    required this.label,
+    required this.value,
+  });
+  final Map<String, dynamic> props;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space4),
+      decoration: BoxDecoration(
+        color: ScalarioColors.bgCard,
+        borderRadius: BorderRadius.circular(ScalarioRadius.md),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: ScalarioTypography.fontKpiLabel),
+        const SizedBox(height: ScalarioSpacing.space2),
+        Text(value, style: ScalarioTypography.fontKpiValue),
+        const SizedBox(height: ScalarioSpacing.space3),
+        Container(
+          height: 40,
+          decoration: BoxDecoration(
+            color: ScalarioColors.primary100,
+            borderRadius: BorderRadius.circular(ScalarioRadius.sm),
+          ),
+          child: Center(
+            child: Text('chart placeholder', style: ScalarioTypography.caption),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _HeroKPICard extends StatelessWidget {
+  const _HeroKPICard({
+    required this.props,
+    required this.label,
+    required this.value,
+  });
+  final Map<String, dynamic> props;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space6),
+      decoration: BoxDecoration(
+        color: ScalarioColors.primary500,
+        borderRadius: BorderRadius.circular(ScalarioRadius.lg),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: ScalarioTypography.bodyMedium.copyWith(color: ScalarioColors.white)),
+        const SizedBox(height: ScalarioSpacing.space2),
+        Text(value, style: ScalarioTypography.fontKpiValue.copyWith(color: ScalarioColors.white, fontSize: 36)),
+      ]),
+    );
+  }
 }

@@ -1,4 +1,9 @@
-export { ComponentConfigZod, type ComponentConfig } from './component-config.zod';
+export {
+  ComponentConfigZod,
+  type ComponentConfig,
+  ActionStepZod,
+  type ActionStep,
+} from './component-config.zod';
 export { ScreenConfigZod, type ScreenConfig } from './screen-config.zod';
 export {
   ModuleConfigZod,

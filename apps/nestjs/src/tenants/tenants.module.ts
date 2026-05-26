@@ -7,11 +7,12 @@ import { SecurityModule } from '../core/security/security.module';
 import { TenantMiddleware } from '../core/security/middleware/tenant.middleware';
 import { TenantsProvisionController } from './tenants-provision.controller';
 import { TenantsRolesController } from './tenants-roles.controller';
+import { TenantsHandleController } from './tenants-handle.controller';
 import { TenantsService } from './tenants.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Tenant, User]), AuthModule, SecurityModule],
-  controllers: [TenantsProvisionController, TenantsRolesController],
+  controllers: [TenantsProvisionController, TenantsRolesController, TenantsHandleController],
   providers: [TenantsService, TenantMiddleware],
   exports: [TenantsService, TenantMiddleware],
 })

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 
 /// Type sémantique d'un `AlertBanner`.
 ///
@@ -36,9 +38,23 @@ class AlertBanner extends StatefulWidget {
   /// Construit un `AlertBanner` depuis les props d'un `ComponentConfig` BDUI.
   ///
   /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
     try {
-      return AlertBanner.fromJson(props);
+      final alert = AlertBanner.fromJson(config.props);
+      final variant = ScalarioCanvasResolver.resolveVariant(
+        config.variant,
+        component: 'AlertBanner',
+        screenWidth: MediaQuery.of(ctx).size.width,
+      );
+      if (variant == 'dismissible') {
+        return Dismissible(
+          key: ValueKey(config.id ?? config.props.hashCode),
+          direction: DismissDirection.horizontal,
+          onDismissed: (_) {},
+          child: alert,
+        );
+      }
+      return alert;
     } on FormatException {
       return const AlertBanner(type: AlertType.warning, message: 'Alerte indisponible');
     }

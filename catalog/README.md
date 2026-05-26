@@ -98,6 +98,69 @@ Schemas v14 ajoutés :
 | `catalog/workflows/wf_cloture_caisse.json` | `catalog/modules/operations/cloture_caisse.json` |
 | `catalog/schemas/` | inchangé (+ 2 nouveaux schemas v14) |
 
+## Variantes (v1.1.0)
+
+Chaque `ComponentConfig` expose un champ `variant: string` (default `'default'`).
+
+| Variante | Resolution |
+|---|---|
+| `'default'` | Rendu standard du composant |
+| `'auto'` | Resolution automatique par `ScalarioCanvasResolver` selon taille ecran, role, nb enfants |
+| `'compact'` | Variante reduite (petits ecrans, tableaux denses) |
+| `'hero'` | Variante large (grands ecrans, dashboard OWNER) |
+
+La variante `'auto'` est resolue cote Flutter par `ScalarioCanvasResolver.resolveVariant(variant, ctx)` :
+- `width < 360` ou `(role == 'COMMERCIAL' && childCount > 3)` → `'compact'`
+- `width >= 900 && role in {'OWNER', 'SUPER_ADMIN'}` → `'hero'`
+- Sinon → `'default'`
+
+Le catalogue des variantes autorisees par composant est defini dans `_bmad-output/stories/STORY-V14-004.md`.
+
+## Actions (v1.1.0)
+
+Chaque `ComponentConfig` peut declarer `actions: ActionStep[]` — un pipeline d'actions declenchees
+sur evenement du composant (onTap, onSubmit, onChange…).
+
+```json
+{
+  "actions": [
+    {
+      "registry": "vault",
+      "fn": "save_entity",
+      "inputs": { "entity": "Vente", "data": { "$ref": "$form.values" } },
+      "output": "saved_vente",
+      "on_error": { "network": "notify", "validation": "fail" }
+    }
+  ]
+}
+```
+
+| Champ | Description |
+|---|---|
+| `registry` | Engine cible : `canvas`, `form`, `calc`, `sense`, `vault`, `live` |
+| `fn` | Nom de la fonction dans le registre de l'engine |
+| `inputs` | Parametres libres, variables resolues au runtime (`$user.id`, `$form.values.price`) |
+| `output` | Nom de la variable de sortie dans le contexte du pipeline |
+| `on_error` | Comportement par type d'erreur : `skip`, `retry`, `notify`, `fail` |
+
+L'execution runtime des `actions` est faite par **V14-007** (Scalario Flow refactored).
+
+## Composition recursive (v1.1.0)
+
+`children: ComponentConfig[]` permet la composition recursive (Section > Row > [KPICard, DataTable]).
+Limite de profondeur : **5 niveaux** (anti-abuse).
+
+```json
+{
+  "type": "Section",
+  "children": [
+    { "type": "Row", "children": [
+      { "type": "KPICard", "variant": "compact" }
+    ]}
+  ]
+}
+```
+
 ## Comment ajouter
 
 - **Un module générique** (Phase 2 — V14-007) → `modules/<gestion|finance|rh|operations>/<name>.json`

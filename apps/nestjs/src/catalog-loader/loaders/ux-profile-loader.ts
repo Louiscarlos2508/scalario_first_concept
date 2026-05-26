@@ -1,68 +1,91 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 
-/**
- * STORY-V14-006 — Stub loader pour `catalog/ux_profiles/<sector>/*.json`.
- *
- * À implémenter pleinement dans V14-004 (Catalogue composants × variantes).
- * Pour l'instant : énumère + parse + validation Zod minimale.
- */
-
-const UxProfileZod = z.object({
-  schema_version: z.literal('1.0.0'),
-  profile_id: z.string(),
-  sector: z.string(),
-  inherits: z.array(z.string()).optional(),
-  variants_allowed: z.record(z.array(z.string())).optional(),
-  layout_rules: z.record(z.unknown()).optional(),
-  naming_conventions: z.record(z.string()).optional(),
+const VariantConfigZod = z.object({
+  default_variant: z.string().optional(),
+  mobile_variant: z.string().optional(),
+  desktop_variant: z.string().optional(),
+  allowed_variants: z.array(z.string()),
+  _comment: z.string().optional(),
 });
 
-export type UxProfile = z.infer<typeof UxProfileZod>;
+const ComponentsJsonZod = z.object({
+  $schema_version: z.string(),
+  $inherits: z.string().optional(),
+  sector: z.string().optional(),
+  components: z.record(VariantConfigZod),
+});
+
+type VariantConfig = z.infer<typeof VariantConfigZod>;
+type ComponentsJson = z.infer<typeof ComponentsJsonZod>;
 
 @Injectable()
 export class UxProfileLoader {
   private readonly logger = new Logger(UxProfileLoader.name);
   private readonly baseDir: string;
-  private profiles = new Map<string, UxProfile>();
+  private cache = new Map<string, ComponentsJson>();
 
   constructor() {
-    const root = process.env.CATALOG_DIR ?? resolve(process.cwd(), 'catalog');
+    let root = process.env.CATALOG_DIR ?? resolve(process.cwd(), 'catalog');
+    if (!existsSync(root)) {
+      root = resolve(process.cwd(), '../../catalog');
+    }
     this.baseDir = resolve(root, 'ux_profiles');
   }
 
-  loadAll(): Map<string, UxProfile> {
-    this.profiles.clear();
-    let sectors: string[];
-    try {
-      sectors = readdirSync(this.baseDir, { withFileTypes: true })
-        .filter((e) => e.isDirectory())
-        .map((e) => e.name);
-    } catch {
-      this.logger.warn(`ux_profiles dir not found: ${this.baseDir}`);
-      return this.profiles;
+  load(sector: string): ComponentsJson {
+    const cacheKey = sector;
+    if (this.cache.has(cacheKey)) return this.cache.get(cacheKey)!;
+
+    const base = this.loadFile('_base/components.json');
+    if (sector === '_base') {
+      this.cache.set(cacheKey, base);
+      return base;
     }
 
-    for (const sector of sectors) {
-      const sectorDir = join(this.baseDir, sector);
-      const files = readdirSync(sectorDir).filter((f) => f.endsWith('.json'));
-      for (const file of files) {
-        try {
-          const raw = readFileSync(join(sectorDir, file), 'utf8');
-          const parsed = UxProfileZod.parse(JSON.parse(raw));
-          this.profiles.set(parsed.profile_id, parsed);
-        } catch (err) {
-          this.logger.error(`Failed to load ux_profile ${sector}/${file}: ${(err as Error).message}`);
-        }
-      }
-    }
-    this.logger.log(`ux_profiles loaded: ${this.profiles.size}`);
-    return this.profiles;
+    const sectorData = this.tryLoadFile(`${sector}/components.json`);
+    const merged = this.mergeProfiles(base, sectorData);
+    this.cache.set(cacheKey, merged);
+    return merged;
   }
 
-  get(profileId: string): UxProfile | undefined {
-    return this.profiles.get(profileId);
+  getVariantConfig(sector: string, componentType: string): VariantConfig | undefined {
+    const profile = this.load(sector);
+    return profile.components[componentType];
+  }
+
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  private loadFile(relativePath: string): ComponentsJson {
+    const filePath = resolve(this.baseDir, relativePath);
+    const raw = readFileSync(filePath, 'utf8');
+    return ComponentsJsonZod.parse(JSON.parse(raw));
+  }
+
+  private tryLoadFile(relativePath: string): ComponentsJson | null {
+    try {
+      return this.loadFile(relativePath);
+    } catch {
+      this.logger.warn(`UX profile not found: ${relativePath}, using _base fallback`);
+      return null;
+    }
+  }
+
+  private mergeProfiles(base: ComponentsJson, sector: ComponentsJson | null): ComponentsJson {
+    if (!sector) return base;
+    const mergedComponents = { ...base.components };
+    for (const [key, value] of Object.entries(sector.components)) {
+      mergedComponents[key] = value;
+    }
+    return {
+      $schema_version: sector.$schema_version,
+      $inherits: sector.$inherits,
+      sector: sector.sector,
+      components: mergedComponents,
+    };
   }
 }

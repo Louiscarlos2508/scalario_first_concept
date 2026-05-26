@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 import '../_internal/shimmer.dart';
 
 /// Alignement d'une colonne `DataColumnConfig`.
@@ -111,10 +113,13 @@ class ScalarioDataTable<T> extends StatefulWidget {
   ///   "rows": [{ "nom": "Riz 5kg" }]
   /// }
   /// ```
-  static Widget fromConfig(
-    Map<String, dynamic> props,
-    BuildContext ctx,
-  ) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'DataTable',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
+    final props = config.props;
     final List<dynamic> rawCols =
         props['columns'] as List<dynamic>? ?? <dynamic>[];
     final List<dynamic> rawRows =

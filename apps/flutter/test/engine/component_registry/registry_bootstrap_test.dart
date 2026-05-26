@@ -249,7 +249,7 @@ void main() {
   group('JSON fixture — retail_dashboard_minimal.json', () {
     test('parses 7 ComponentConfigs without error', () {
       final String raw = File(
-        'test/engine/canvas_registry/fixtures/retail_dashboard_minimal.json',
+        'test/engine/component_registry/fixtures/retail_dashboard_minimal.json',
       ).readAsStringSync();
 
       final Map<String, dynamic> json =

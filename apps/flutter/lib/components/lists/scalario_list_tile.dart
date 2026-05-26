@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
 import '../../core/theme/theme_extensions.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 import '../_internal/shimmer.dart';
 
 /// Statut sémantique d'un `ScalarioListTile` — colore la bordure gauche.
@@ -78,11 +80,37 @@ class ScalarioListTile extends StatelessWidget {
   ///
   /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005) sous les types
   /// `MouvementItem` et `ListTile`. Délègue à [fromJson].
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    final variant = ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'ScalarioListTile',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
     try {
-      return ScalarioListTile.fromJson(props);
+      final tile = ScalarioListTile.fromJson(config.props);
+      switch (variant) {
+        case 'with-avatar':
+          return ListTile(
+            leading: CircleAvatar(child: Text((config.props['title'] as String? ?? '?')[0])),
+            title: Text(config.props['title'] as String? ?? ''),
+            subtitle: Text(config.props['subtitle'] as String? ?? ''),
+          );
+        case 'with-badge':
+          return ListTile(
+            title: Text(config.props['title'] as String? ?? ''),
+            trailing: Badge(label: Text(config.props['badge'] as String? ?? '0')),
+          );
+        case 'dense':
+          return ListTile(
+            dense: true,
+            title: Text(config.props['title'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+            subtitle: Text(config.props['subtitle'] as String? ?? '', style: const TextStyle(fontSize: 11)),
+          );
+        default:
+          return tile;
+      }
     } on FormatException {
-      return ScalarioListTile(title: props['title'] as String? ?? '—');
+      return ScalarioListTile(title: config.props['title'] as String? ?? '—');
     }
   }
 

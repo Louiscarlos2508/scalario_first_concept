@@ -20,6 +20,7 @@ import { loadTemplateRoles } from '../catalog-loader/templates.loader';
 import { AuditLogService } from '../core/audit/services/audit-log.service';
 import { AUDIT_ACTIONS } from '../core/audit/constants';
 import { ProvisionTenantDto, ProvisionTenantSchema } from './dto/provision.dto';
+import { generateHandle } from './handle-generator';
 
 /**
  * POST /tenants/provision — bootstrap a tenant with its first OWNER.
@@ -52,12 +53,30 @@ export class TenantsProvisionController {
       const existing = await tenantRepo.findOne({ where: { slug: dto.slug } });
       if (existing) throw new ConflictException('Tenant slug already exists');
 
+      if (dto.handle) {
+        const handleExists = await tenantRepo.findOne({ where: { handle: dto.handle } });
+        if (handleExists) throw new ConflictException('Tenant handle already taken');
+      }
+
+      const handle = dto.handle ?? (await generateHandle(dto.name, tenantRepo));
+
       const tenant = await tenantRepo.save(
         tenantRepo.create({
           name: dto.name,
           slug: dto.slug,
+          handle,
           is_active: true,
-          config: { roles: templateRoles },
+          network_public: false,
+          network_profile: {},
+          config: {
+            roles: templateRoles,
+            network: {
+              public: false,
+              expose_modules: [],
+              allow_inbound_orders: false,
+              allow_inbound_payments: false,
+            },
+          },
         }),
       );
 
@@ -73,7 +92,7 @@ export class TenantsProvisionController {
       );
 
       this.logger.log(
-        `Provisioned tenant slug=${tenant.slug} id=${tenant.id} owner=${user.id} roles=${templateRoles.join(',')}`,
+        `Provisioned tenant slug=${tenant.slug} handle=${tenant.handle} id=${tenant.id} owner=${user.id} roles=${templateRoles.join(',')}`,
       );
       await this.audit.log({
         action: AUDIT_ACTIONS.TENANT_PROVISIONED,
@@ -81,12 +100,13 @@ export class TenantsProvisionController {
         user_id: user.id,
         metadata: {
           slug: tenant.slug,
+          handle: tenant.handle,
           template: dto.template ?? null,
           roles: templateRoles,
         },
       });
       return {
-        tenant: { id: tenant.id, slug: tenant.slug, name: tenant.name, roles: templateRoles },
+        tenant: { id: tenant.id, slug: tenant.slug, handle: tenant.handle, name: tenant.name, roles: templateRoles },
         owner: { id: user.id, email: user.email, roles: user.roles },
       };
     });

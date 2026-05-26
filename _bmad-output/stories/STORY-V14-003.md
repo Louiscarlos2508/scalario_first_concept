@@ -3,7 +3,7 @@
 **Epic :** EPIC-V14-002 — Scalario Canvas (BDUI v14)
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** defined
+**Status :** completed
 **Sprint :** v14-2 (2026-06-09 → 2026-06-22)
 **Dépendances :** V14-002 (schéma variant) ; STORY-005 v13 (ComponentRegistry de base)
 

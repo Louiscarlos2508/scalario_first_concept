@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 
 /// FAB Scalario — wrappe `FloatingActionButton(.extended)` Material 3.
 ///
@@ -27,11 +29,28 @@ class ScalarioFAB extends StatelessWidget {
   /// Construit un `ScalarioFAB` depuis les props d'un `ComponentConfig` BDUI.
   ///
   /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    final variant = ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'ScalarioFAB',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
     try {
-      return ScalarioFAB.fromJson(props);
+      final fab = ScalarioFAB.fromJson(config.props);
+      if (variant == 'mini') {
+        return SizedBox(
+          width: 40, height: 40,
+          child: FloatingActionButton.small(onPressed: fab.onPressed, child: Icon(fab.icon)),
+        );
+      }
+      if (variant == 'extended') {
+        return FloatingActionButton.extended(
+          onPressed: fab.onPressed, icon: Icon(fab.icon), label: Text(config.props['label'] as String? ?? ''),
+        );
+      }
+      return fab;
     } on FormatException {
-      return ScalarioFAB(icon: Icons.add, label: props['label'] as String?);
+      return ScalarioFAB(icon: Icons.add, label: config.props['label'] as String?);
     }
   }
 

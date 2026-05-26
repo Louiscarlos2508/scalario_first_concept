@@ -1,0 +1,21 @@
+{
+  "$schema_version": "1.0.0",
+  "$inherits": "_base",
+  "sector": "btp",
+  "components": {
+    "KPICard": {
+      "default_variant": "hero",
+      "mobile_variant": "compact",
+      "desktop_variant": "hero",
+      "allowed_variants": ["default", "compact", "with-icon", "hero", "with-chart"]
+    },
+    "DataTable": {
+      "default_variant": "default",
+      "allowed_variants": ["default", "compact", "card-list", "timeline"]
+    },
+    "ScalarioButton": {
+      "default_variant": "primary",
+      "allowed_variants": ["primary", "secondary", "ghost", "danger", "icon-only"]
+    }
+  }
+}

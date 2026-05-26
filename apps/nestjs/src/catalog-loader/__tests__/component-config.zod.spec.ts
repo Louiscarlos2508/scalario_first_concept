@@ -1,8 +1,14 @@
-import { ComponentConfigZod, RuleZod, DataSourceZod, ValidationRuleZod } from '../validators/index';
+import { ComponentConfigZod, ActionStepZod, RuleZod, DataSourceZod, ValidationRuleZod } from '../validators/index';
 import { z } from 'zod';
 import validComplete from '../../../../../catalog/schemas/examples/component-config/valid_complete.json';
 import validMinimal from '../../../../../catalog/schemas/examples/component-config/valid_minimal.json';
 import validWithRule from '../../../../../catalog/schemas/examples/component-config/valid_with_rule.json';
+import validVariantDefault from '../../../../../catalog/schemas/examples/component-config/valid_with_variant_default.json';
+import validVariantAuto from '../../../../../catalog/schemas/examples/component-config/valid_with_variant_auto.json';
+import validWithActions from '../../../../../catalog/schemas/examples/component-config/valid_with_actions.json';
+import validWithChildren from '../../../../../catalog/schemas/examples/component-config/valid_with_children_nested.json';
+import invalidVariantNumber from '../../../../../catalog/schemas/examples/component-config/invalid_variant_number.json';
+import invalidActionsShape from '../../../../../catalog/schemas/examples/component-config/invalid_actions_wrong_shape.json';
 
 describe('ComponentConfigZod', () => {
   describe('valid inputs', () => {
@@ -65,6 +71,112 @@ describe('ComponentConfigZod', () => {
       if (result.success) {
         expect(result.data.validation).toEqual([]);
       }
+    });
+
+    // --- v1.1.0 new features (AC-01 → AC-05) ---
+
+    it('AC-01: accepts v1.1.0 with variant default', () => {
+      const result = ComponentConfigZod.safeParse(validVariantDefault);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.schema_version).toBe('1.1.0');
+        expect(result.data.type).toBe('KPICard');
+        expect(result.data.variant).toBe('default');
+      }
+    });
+
+    it('AC-02: accepts v1.1.0 with variant auto', () => {
+      const result = ComponentConfigZod.safeParse(validVariantAuto);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.variant).toBe('auto');
+      }
+    });
+
+    it('AC-03: accepts v1.1.0 with actions pipeline', () => {
+      const result = ComponentConfigZod.safeParse(validWithActions);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.actions).toHaveLength(2);
+        expect(result.data.actions![0].registry).toBe('vault');
+        expect(result.data.actions![0].fn).toBe('save_entity');
+        expect(result.data.actions![1].registry).toBe('canvas');
+        expect(result.data.actions![1].fn).toBe('navigate');
+      }
+    });
+
+    it('AC-04: accepts v1.1.0 with nested children composition', () => {
+      const result = ComponentConfigZod.safeParse(validWithChildren);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.children).toHaveLength(2);
+        const row = result.data.children![0];
+        expect(row.type).toBe('Row');
+        expect(row.children).toHaveLength(2);
+        expect(row.children![0].type).toBe('KPICard');
+        expect(row.children![0].variant).toBe('compact');
+      }
+    });
+
+    // --- Backward compat (AC-09) ---
+
+    it('AC-09: v1.0.0 without variant injects default', () => {
+      const result = ComponentConfigZod.safeParse({
+        schema_version: '1.0.0',
+        type: 'Button',
+        props: { label: 'Click' },
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.variant).toBe('default');
+      }
+    });
+
+    it('AC-09: v1.0.0 valid_complete gets variant default injected', () => {
+      const result = ComponentConfigZod.safeParse(validComplete);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.variant).toBe('default');
+      }
+    });
+
+    // --- Actions edge cases ---
+
+    it('accepts ActionStep with optional fields', () => {
+      const result = ActionStepZod.safeParse({
+        registry: 'calc',
+        fn: 'multiply',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts ActionStep with full fields', () => {
+      const result = ActionStepZod.safeParse({
+        registry: 'vault',
+        fn: 'save_entity',
+        inputs: { entity: 'Vente' },
+        output: 'result',
+        on_error: { network: 'notify', validation: 'fail' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    // --- Children depth guard ---
+
+    it('rejects children exceeding max depth of 5', () => {
+      function deepNest(depth: number): any {
+        const config = {
+          schema_version: '1.1.0',
+          type: 'Section',
+          props: {},
+        };
+        if (depth > 1) {
+          (config as any).children = [deepNest(depth - 1)];
+        }
+        return config;
+      }
+      const result = ComponentConfigZod.safeParse(deepNest(7));
+      expect(result.success).toBe(false);
     });
   });
 
@@ -135,6 +247,44 @@ describe('ComponentConfigZod', () => {
         type: 'Button',
         props: {},
         source: { type: 'static', extra_field: 'nope' },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    // --- v1.1.0 invalid cases (AC-05) ---
+
+    it('AC-05: rejects variant as number', () => {
+      const result = ComponentConfigZod.safeParse(invalidVariantNumber);
+      expect(result.success).toBe(false);
+    });
+
+    it('AC-05: rejects actions with wrong shape (invalid registry + empty fn)', () => {
+      const result = ComponentConfigZod.safeParse(invalidActionsShape);
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects variant as empty string', () => {
+      const result = ComponentConfigZod.safeParse({
+        schema_version: '1.1.0',
+        type: 'Button',
+        variant: '',
+        props: {},
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects ActionStep with unknown registry', () => {
+      const result = ActionStepZod.safeParse({
+        registry: 'unknown',
+        fn: 'test',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects ActionStep with empty fn', () => {
+      const result = ActionStepZod.safeParse({
+        registry: 'canvas',
+        fn: '',
       });
       expect(result.success).toBe(false);
     });

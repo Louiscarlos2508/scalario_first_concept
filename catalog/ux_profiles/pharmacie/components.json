@@ -1,0 +1,25 @@
+{
+  "$schema_version": "1.0.0",
+  "$inherits": "_base",
+  "sector": "pharmacie",
+  "components": {
+    "KPICard": {
+      "default_variant": "with-icon",
+      "mobile_variant": "compact",
+      "desktop_variant": "hero",
+      "allowed_variants": ["default", "compact", "with-icon", "hero"],
+      "_comment": "with-chart desactive en pharmacie — trop complexe"
+    },
+    "DataTable": {
+      "default_variant": "default",
+      "mobile_variant": "card-list",
+      "desktop_variant": "default",
+      "allowed_variants": ["default", "compact", "card-list"],
+      "_comment": "timeline non pertinent en pharmacie"
+    },
+    "ScalarioButton": {
+      "default_variant": "primary",
+      "allowed_variants": ["primary", "secondary", "ghost", "danger", "icon-only"]
+    }
+  }
+}

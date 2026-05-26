@@ -1,10 +1,11 @@
 import 'dart:math' as math;
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 import '../_internal/shimmer.dart';
 
 /// Point de donnée d'un `ChartBar` — un label, une valeur, une clé optionnelle.
@@ -105,13 +106,24 @@ class ChartBar extends StatefulWidget {
   /// Construit un `ChartBar` depuis les props d'un `ComponentConfig` BDUI.
   ///
   /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005). Délègue à [fromJson].
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    final variant = ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'ChartBar',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
     try {
-      return ChartBar.fromJson(props);
+      if (variant == 'horizontal') {
+        return _HorizontalChartBar(props: config.props);
+      }
+      if (variant == 'mini') {
+        return _MiniChartBar(props: config.props);
+      }
+      return ChartBar.fromJson(config.props);
     } on FormatException {
       return ChartBar(
         data: const <ChartDataPoint>[],
-        title: props['title'] as String? ?? 'Chart',
+        title: config.props['title'] as String? ?? 'Chart',
       );
     }
   }
@@ -403,3 +415,35 @@ class _ChartBarState extends State<ChartBar> {
 }
 
 enum _ChartVariant { normal, loading, error }
+
+// --- Variant stubs (V14-003) ---
+
+class _HorizontalChartBar extends StatelessWidget {
+  const _HorizontalChartBar({required this.props});
+  final Map<String, dynamic> props;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space4),
+      child: Center(
+        child: Text('HorizontalChart',
+          style: ScalarioTypography.caption.copyWith(color: ScalarioColors.textDisabled)),
+      ),
+    );
+  }
+}
+
+class _MiniChartBar extends StatelessWidget {
+  const _MiniChartBar({required this.props});
+  final Map<String, dynamic> props;
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 80,
+      child: Center(
+        child: Text('MiniChart',
+          style: ScalarioTypography.caption.copyWith(color: ScalarioColors.textDisabled)),
+      ),
+    );
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema_version": "1.0.0",
+  "components": {
+    "KPICard": {
+      "default_variant": "default",
+      "mobile_variant": "compact",
+      "desktop_variant": "hero",
+      "allowed_variants": ["default", "compact", "with-icon", "hero", "with-chart"]
+    },
+    "DataTable": {
+      "default_variant": "default",
+      "mobile_variant": "compact",
+      "desktop_variant": "default",
+      "allowed_variants": ["default", "compact", "card-list", "timeline"]
+    },
+    "ScalarioListTile": {
+      "default_variant": "default",
+      "mobile_variant": "dense",
+      "desktop_variant": "default",
+      "allowed_variants": ["default", "with-avatar", "with-badge", "dense"]
+    },
+    "AlertBanner": {
+      "default_variant": "info",
+      "mobile_variant": "dismissible",
+      "desktop_variant": "info",
+      "allowed_variants": ["info", "success", "warning", "danger", "dismissible"]
+    },
+    "ChartBar": {
+      "default_variant": "default",
+      "mobile_variant": "mini",
+      "desktop_variant": "default",
+      "allowed_variants": ["default", "stacked", "horizontal", "mini"]
+    },
+    "ChartPie": {
+      "default_variant": "default",
+      "mobile_variant": "mini-legend",
+      "desktop_variant": "default",
+      "allowed_variants": ["default", "donut", "mini-legend"]
+    },
+    "ScalarioButton": {
+      "default_variant": "primary",
+      "mobile_variant": "secondary",
+      "desktop_variant": "primary",
+      "allowed_variants": ["primary", "secondary", "ghost", "danger", "icon-only"]
+    },
+    "ScalarioFAB": {
+      "default_variant": "default",
+      "mobile_variant": "default",
+      "desktop_variant": "extended",
+      "allowed_variants": ["default", "extended", "mini"]
+    },
+    "FormField": {
+      "default_variant": "text",
+      "mobile_variant": "text",
+      "desktop_variant": "text",
+      "allowed_variants": ["text", "number", "date", "select", "search", "scan"]
+    },
+    "StatCard": {
+      "default_variant": "default",
+      "mobile_variant": "default",
+      "desktop_variant": "trend-up",
+      "allowed_variants": ["default", "trend-up", "trend-down", "flat"]
+    },
+    "SyncStatusBar": {
+      "default_variant": "synced",
+      "mobile_variant": "offline",
+      "desktop_variant": "synced",
+      "allowed_variants": ["syncing", "synced", "conflict", "offline"]
+    },
+    "DocumentPreview": {
+      "default_variant": "inline",
+      "mobile_variant": "card",
+      "desktop_variant": "card",
+      "allowed_variants": ["inline", "card", "fullscreen", "thumbnail"]
+    }
+  }
+}

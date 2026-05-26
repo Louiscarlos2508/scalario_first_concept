@@ -667,29 +667,58 @@ architecture_v14:
           title: "JSON Schema BDUI v1.1.0 — variant + actions + children"
           epic: "EPIC-V14-002"
           points: 3
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-002.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-25"
           sprint: "v14-1"
+          actual_points: 3
+          notes: |
+            Schema JSON v1.1.0 (variant + actions + children). Zod NestJS (ActionStepZod,
+            backward-compat variant default, children depth guard 5). Dart Flutter
+            (ComponentConfig with variant/actions/children, ScalarioCanvasResolver auto-resolve,
+            VariantContext). 6 examples files (4 valid + 2 invalid). Docs catalog/README
+            + memory feedback_scalario_variants.md. Pre-existing bug fix (registry_bootstrap_test
+            path). Tests: NestJS 55 (+11 new), Flutter 18 new, 0 regression.
         - story_id: "V14-003"
           title: "ComponentRegistry dispatch par variante"
           epic: "EPIC-V14-002"
           points: 5
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-003.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-26"
           sprint: "v14-2"
+          actual_points: 5
+          notes: |
+            ScalarioCanvasResolver with per-component hooks. All 7 existing components
+            refactored (fromConfig takes ComponentConfig, variant dispatch via
+            resolveVariant). 5 new stubs (ChartPie, ScalarioButton, StatCard,
+            SyncStatusBar, DocumentPreview). RegistryBootstrap updated (+5 types).
+            No regression (827 Flutter, 646 NestJS).
         - story_id: "V14-004"
-          title: "Catalogue composants × variantes (Scalario Profile)"
+          title: "Catalogue composants x variantes (Scalario Profile)"
           epic: "EPIC-V14-002"
           points: 5
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-004.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-26"
+          completed_date: "2026-05-26"
           sprint: "v14-2"
+          actual_points: 5
+          notes: |
+            4 UX Profiles (_base, commerce_general, pharmacie, btp) with
+            default_variant, mobile_variant, desktop_variant, allowed_variants
+            per component. UxProfileLoader with _inherits merge + fallback.
+            UxProfileValidator.assertVariantAllowed + VariantNotAllowedException.
+            BduiVariantValidator hook for ScreenConfig validation. E2E tests
+            for pharmacie restrictions. 12 new tests. 0 regression.
         - story_id: "V14-005"
           title: "Restructure NestJS (src/core/ + engines/ + bdui/ + config-agent/ + modules/ + ai/)"
           epic: "EPIC-V14-001"
@@ -787,11 +816,20 @@ architecture_v14:
           title: "tenant_handle + network_public columns (anticipation Phase 4)"
           epic: "EPIC-V14-008"
           points: 2
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-013.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-25"
+          completed_date: "2026-05-25"
           sprint: "v14-1"
+          actual_points: 2
+          notes: |
+            Migration 1700000000009 (handle UNIQUE partial + network_public + network_profile).
+            Tenant entity extended (optional fields for backward compat). handle-generator
+            (slugify + deduplication). ProvisionTenantSchema + UpdateTenantHandleSchema Zod.
+            PATCH /:slug/handle (OWNER+SUPER_ADMIN, 409 conflict). tenant.config.network
+            defaults. Docs anticipation-phase4-scalario-network.md. 16 new tests. 0 regression.
       total_points: 56
 
     phase_2:
@@ -1020,4 +1058,4 @@ architecture_v14:
     EPIC-V14-020: "Performance"
     EPIC-V14-021: "Infrastructure"
 
-  next_step: "/bmad:dev-story V14-001"
+  next_step: "/bmad:dev-story V14-010"

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design_system/tokens/tokens.dart';
+import '../../engine/canvas_registry/component_config.dart';
+import '../../engine/canvas_registry/scalario_canvas_resolver.dart';
 import '../feedback/alert_banner.dart';
 
 /// Erreur de validation d'un champ d'un `FormSection`.
@@ -41,12 +43,17 @@ class FormSection extends StatelessWidget {
   /// Utilisé par le `ScalarioCanvasRegistry` (STORY-005) sous les types
   /// `FormWidget` et `FormSection`. Children vides en Sprint 1 — les champs
   /// data-driven sont câblés par STORY-011.
-  static Widget fromConfig(Map<String, dynamic> props, BuildContext ctx) {
+  static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
+    ScalarioCanvasResolver.resolveVariant(
+      config.variant,
+      component: 'FormField',
+      screenWidth: MediaQuery.of(ctx).size.width,
+    );
     try {
-      return FormSection.fromJson(props, children: const <Widget>[]);
+      return FormSection.fromJson(config.props, children: const <Widget>[]);
     } on FormatException {
       return FormSection(
-        title: props['title'] as String? ?? 'Formulaire',
+        title: config.props['title'] as String? ?? 'Formulaire',
         children: const <Widget>[],
       );
     }

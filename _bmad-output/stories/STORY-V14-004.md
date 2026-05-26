@@ -3,7 +3,7 @@
 **Epic :** EPIC-V14-002 — Scalario Canvas
 **Priorité :** Must Have
 **Story Points :** 5
-**Status :** defined
+**Status :** completed
 **Sprint :** v14-2 (2026-06-09 → 2026-06-22)
 **Dépendances :** V14-003 (Dispatch par variante)
 
