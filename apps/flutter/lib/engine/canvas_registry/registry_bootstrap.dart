@@ -19,6 +19,9 @@ import '../canvas/structs/canvas_scaffold.dart';
 import '../canvas/structs/canvas_app_bar.dart';
 import '../canvas/structs/canvas_bottom_nav.dart';
 import '../canvas/state/canvas_state_wrapper.dart';
+import '../canvas/wrappers/pull_to_refresh.dart';
+import '../canvas/wrappers/canvas_pagination.dart';
+import '../canvas/wrappers/canvas_semantics.dart';
 import 'scalario_canvas_registry.dart';
 
 abstract final class RegistryBootstrap {
@@ -33,6 +36,9 @@ abstract final class RegistryBootstrap {
     r.register('Slots', (c, ctx) => CanvasSlots.fromConfig(c, ctx));
     r.register('Stack', (c, ctx) => CanvasStack.fromConfig(c, ctx));
     r.register('StateWrapper', (c, ctx) => CanvasStateWrapper.fromConfig(c, ctx));
+    r.register('PullToRefresh', (c, ctx) => CanvasPullToRefresh.fromConfig(c, ctx));
+    r.register('Pagination', (c, ctx) => CanvasPagination.fromConfig(c, ctx));
+    r.register('Semantics', (c, ctx) => CanvasSemantics.fromConfig(c, ctx));
 
     // Data Display
     r.register('KPICard', (c, ctx) => KPICard.fromConfig(c, ctx));
