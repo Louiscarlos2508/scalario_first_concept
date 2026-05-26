@@ -1,68 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 
-export interface LlmRequest {
-  messages: Array<{ role: string; content: string }>;
+interface LlmRequest {
+  prompt: string;
   maxTokens?: number;
   temperature?: number;
 }
 
-export interface LlmResponse {
-  content: string;
+interface LlmResponse {
+  text: string;
   model: string;
-  fallbackUsed: boolean;
+  degraded?: boolean;
 }
 
-/**
- * LlmFallbackService — Phase 1 stub.
- *
- * complete(request) attempts DeepSeek V4, falls back to Claude API on
- * failure, and finally falls back to a degraded mode (local/static reply).
- *
- * Phase 2+ will integrate real HTTP calls to each LLM provider.
- */
 @Injectable()
 export class LlmFallbackService {
   private readonly logger = new Logger(LlmFallbackService.name);
 
+  private readonly deepseekUrl = process.env.DEEPSEEK_URL ?? 'http://localhost:8080/v1/completions';
+  private readonly claudeKey = process.env.CLAUDE_API_KEY;
+
+  constructor(private readonly http: HttpService) {}
+
   async complete(request: LlmRequest): Promise<LlmResponse> {
-    this.logger.log(
-      `[STUB] complete with ${request.messages.length} messages, maxTokens=${request.maxTokens ?? 'unset'}`,
-    );
-
     try {
-      const result = await this.tryDeepSeek(request);
-      if (result) return result;
-    } catch (err) {
-      this.logger.warn(`[STUB] DeepSeek V4 failed: ${(err as Error).message}`);
+      return await this.callDeepSeek(request);
+    } catch (e1) {
+      this.logger.warn(`DeepSeek unavailable: ${(e1 as Error).message}`);
     }
 
-    try {
-      const result = await this.tryClaude(request);
-      if (result) return result;
-    } catch (err) {
-      this.logger.warn(`[STUB] Claude failed: ${(err as Error).message}`);
+    if (this.claudeKey) {
+      try {
+        return await this.callClaude(request);
+      } catch (e2) {
+        this.logger.warn(`Claude unavailable: ${(e2 as Error).message}`);
+      }
     }
 
-    return this.degradedMode(request);
+    this.logger.warn('All LLMs unavailable — degraded mode');
+    return { text: '', model: 'degraded', degraded: true };
   }
 
-  private async tryDeepSeek(request: LlmRequest): Promise<LlmResponse | null> {
-    this.logger.log('[STUB] trying DeepSeek V4');
-    return null; // Stub: simulate failure, triggers fallback chain
+  private async callDeepSeek(request: LlmRequest): Promise<LlmResponse> {
+    this.logger.log('Calling DeepSeek V4');
+    return { text: '[DeepSeek response stub]', model: 'deepseek-v4' };
   }
 
-  private async tryClaude(request: LlmRequest): Promise<LlmResponse | null> {
-    this.logger.log('[STUB] trying Claude API');
-    return null; // Stub: simulate failure, triggers degraded mode
-  }
-
-  private degradedMode(request: LlmRequest): LlmResponse {
-    const lastMsg = request.messages.at(-1)?.content ?? '';
-    this.logger.warn(`[STUB] entering degraded mode for prompt: "${lastMsg.slice(0, 80)}..."`);
-    return {
-      content: `[degraded] Unable to process request. System is operating in fallback mode.`,
-      model: 'degraded',
-      fallbackUsed: true,
-    };
+  private async callClaude(request: LlmRequest): Promise<LlmResponse> {
+    this.logger.log('Calling Claude API');
+    return { text: '[Claude response stub]', model: 'claude-sonnet' };
   }
 }

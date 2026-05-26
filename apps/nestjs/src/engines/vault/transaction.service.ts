@@ -1,45 +1,80 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 
-export type VaultStep = () => Promise<void>;
+interface VaultStep {
+  fn: string;
+  source: string;
+  where?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+  output?: string;
+}
 
-/**
- * VaultTransactionService — Phase 1 stub.
- *
- * execute(steps) runs steps sequentially. If any step throws, previously
- * completed steps are rolled back in reverse order.
- *
- * Phase 2+ will wrap steps in a database transaction or saga pattern.
- */
 @Injectable()
 export class VaultTransactionService {
   private readonly logger = new Logger(VaultTransactionService.name);
 
-  async execute(steps: VaultStep[]): Promise<void> {
-    const completed: VaultStep[] = [];
+  constructor(@InjectDataSource() private readonly ds: DataSource) {}
 
-    for (const [i, step] of steps.entries()) {
-      try {
-        this.logger.log(`[STUB] running step ${i + 1}/${steps.length}`);
-        await step();
-        completed.push(step);
-      } catch (err) {
-        this.logger.error(`[STUB] step ${i + 1} failed: ${(err as Error).message}`);
-        await this.rollback(completed);
-        throw err;
+  async execute(steps: VaultStep[], rollbackOnError = true): Promise<Record<string, unknown>> {
+    const queryRunner = this.ds.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const outputs: Record<string, unknown> = {};
+    const executedSteps: Array<{ step: VaultStep; query: string }> = [];
+
+    try {
+      for (const step of steps) {
+        const result = await this.executeStep(queryRunner, step);
+        if (step.output) {
+          outputs[step.output] = result;
+        }
+        executedSteps.push({ step, query: step.fn });
       }
-    }
 
-    this.logger.log(`[STUB] all ${steps.length} steps completed`);
+      await queryRunner.commitTransaction();
+      this.logger.log(`Transaction committed: ${steps.length} steps`);
+      return outputs;
+    } catch (err) {
+      this.logger.error(`Transaction failed, rolling back: ${(err as Error).message}`);
+      if (rollbackOnError) {
+        await queryRunner.rollbackTransaction();
+      }
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
-  private async rollback(completed: VaultStep[]): Promise<void> {
-    for (const step of completed.reverse()) {
-      try {
-        this.logger.warn(`[STUB] rolling back step`);
-        await step();
-      } catch (rollbackErr) {
-        this.logger.error(`[STUB] rollback failed: ${(rollbackErr as Error).message}`);
+  private async executeStep(qr: QueryRunner, step: VaultStep): Promise<unknown> {
+    switch (step.fn) {
+      case 'create': {
+        const columns = Object.keys(step.data ?? {});
+        const values = Object.values(step.data ?? {});
+        const placeholders = values.map((_, i) => `$${i + 1}`);
+        const query = `INSERT INTO ${step.source} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+        const result = await qr.query(query, values);
+        return result[0];
       }
+      case 'update': {
+        if (!step.where || !step.data) throw new Error('update requires where and data');
+        const sets = Object.keys(step.data).map((k, i) => `${k} = $${i + 1}`);
+        const whereClauses = Object.keys(step.where).map((k, i) => `${k} = $${sets.length + i + 1}`);
+        const params = [...Object.values(step.data), ...Object.values(step.where)];
+        const query = `UPDATE ${step.source} SET ${sets.join(', ')} WHERE ${whereClauses.join(' AND ')} RETURNING *`;
+        const result = await qr.query(query, params);
+        return result[0];
+      }
+      case 'delete': {
+        if (!step.where) throw new Error('delete requires where');
+        const whereClauses = Object.keys(step.where).map((k, i) => `${k} = $${i + 1}`);
+        const query = `DELETE FROM ${step.source} WHERE ${whereClauses.join(' AND ')}`;
+        await qr.query(query, Object.values(step.where));
+        return { deleted: true };
+      }
+      default:
+        throw new Error(`Unknown step fn: ${step.fn}`);
     }
   }
 }
