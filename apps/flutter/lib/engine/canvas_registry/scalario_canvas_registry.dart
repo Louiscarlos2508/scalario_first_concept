@@ -60,10 +60,6 @@ class ScalarioCanvasRegistry {
     if (builder == null) {
       return UnknownComponent(config.type);
     }
-    return ErrorBoundary(
-      componentType: config.type,
-      componentId: config.id,
-      child: builder(config, ctx),
-    );
+    return builder(config, ctx);
   }
 }
