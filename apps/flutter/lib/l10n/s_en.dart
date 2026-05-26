@@ -334,7 +334,7 @@ class SEn extends S {
   String get sandboxBreakpoint => 'Breakpoint';
 
   @override
-  String get sandboxReload => 'Recharger';
+  String get sandboxReload => 'Reload';
 
   @override
   String get sectorCommerceGeneral => 'General Commerce';
