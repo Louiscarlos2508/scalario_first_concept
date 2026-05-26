@@ -46,7 +46,7 @@ import 'sandbox/sandbox_screen.dart';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  // Level 3 error hooks must be installed before runApp (AC-09).
+  WidgetsFlutterBinding.ensureInitialized();
   GlobalErrorHandler.install(navigatorKey: _navigatorKey);
 
   runZonedGuarded(
