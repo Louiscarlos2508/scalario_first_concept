@@ -83,7 +83,7 @@ class ScalarioApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const CatalogScreen(jsonAssetPath: 'assets/catalog/modules/gestion/dashboard_owner.json'),
+      home: const CatalogScreen(jsonAssetPath: 'assets/catalog/modules/gestion/retail_fresh_produce.json'),
       routes: { if (kDebugMode) kSandboxRouteName: (_) => const SandboxScreen() },
     );
   }

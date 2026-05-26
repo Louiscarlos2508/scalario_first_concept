@@ -74,7 +74,7 @@ flutter:
     - assets/icons/
     - assets/sandbox/
     - assets/bdui-schemas/
-    - assets/catalog/modules/gestion/dashboard_owner.json
+    - assets/catalog/modules/gestion/retail_fresh_produce.json
 
   # Inter et Roboto Mono sont chargées via google_fonts (runtime cache).
   # Voir lib/core/design_system/tokens/typography.dart.
