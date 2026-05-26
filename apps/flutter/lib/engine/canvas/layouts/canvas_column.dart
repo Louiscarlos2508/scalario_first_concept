@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../canvas_registry/component_config.dart';
 import '../../canvas_registry/scalario_canvas_registry.dart';
+import '../../../core/design_system/tokens/spacing_resolver.dart';
 
 class CanvasColumn extends StatelessWidget {
   final ComponentConfig config;
@@ -14,7 +15,7 @@ class CanvasColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gap = (config.props['gap'] as num?)?.toDouble() ?? 8;
+    final gap = resolveGap(config.props['gap'] ?? 8);
     final children = config.children ?? [];
 
     return Column(
