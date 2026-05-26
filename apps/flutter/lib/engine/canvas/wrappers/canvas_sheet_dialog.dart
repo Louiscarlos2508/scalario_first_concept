@@ -13,30 +13,30 @@ class CanvasSheetDialog extends StatelessWidget {
 
   static void showSheet(BuildContext context, ComponentConfig config) {
     final r = ScalarioCanvasRegistry.instance;
-    showModalBottomSheet(context: context, builder: (ctx) => r?.build(config, ctx) ?? const SizedBox.shrink());
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => r?.build(config, ctx) ?? const SizedBox.shrink(),
+    );
   }
 
-  static Future<String?> showDialog(BuildContext context, ComponentConfig config) {
-    return showDialog<String>(context: context, builder: (ctx) => AlertDialog(
-      title: Text(config.props['title'] as String? ?? ''),
-      content: Text(config.props['message'] as String? ?? ''),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Annuler')),
-        TextButton(onPressed: () => Navigator.pop(ctx, 'confirm'), child: const Text('Confirmer')),
-      ],
-    ));
+  static Future<String?> showDialogResult(BuildContext context, ComponentConfig config) {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(config.props['title'] as String? ?? ''),
+        content: Text(config.props['message'] as String? ?? ''),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'confirm'), child: const Text('Confirmer')),
+        ],
+      ),
+    );
   }
 
   static void showSnackBar(BuildContext context, ComponentConfig config) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(config.props['message'] as String? ?? '')));
-  }
-
-  static Future<String?> showDrawer(BuildContext context, ComponentConfig config) {
-    final r = ScalarioCanvasRegistry.instance;
-    return showModalBottomSheet(context: context, isScrollControlled: true, builder: (ctx) => SizedBox(
-      height: MediaQuery.of(context).size.height * 0.85,
-      child: r?.build(config, ctx) ?? const SizedBox.shrink(),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(config.props['message'] as String? ?? '')),
+    );
   }
 
   @override

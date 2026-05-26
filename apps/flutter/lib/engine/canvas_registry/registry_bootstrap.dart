@@ -22,6 +22,11 @@ import '../canvas/state/canvas_state_wrapper.dart';
 import '../canvas/wrappers/pull_to_refresh.dart';
 import '../canvas/wrappers/canvas_pagination.dart';
 import '../canvas/wrappers/canvas_semantics.dart';
+import '../canvas/wrappers/canvas_gesture.dart';
+import '../canvas/wrappers/canvas_sheet_dialog.dart';
+import '../canvas/wrappers/canvas_transition.dart';
+import '../canvas/wrappers/canvas_theme_switcher.dart';
+import '../canvas/wrappers/canvas_offline_keyboard_print.dart';
 import 'scalario_canvas_registry.dart';
 
 abstract final class RegistryBootstrap {
@@ -39,6 +44,10 @@ abstract final class RegistryBootstrap {
     r.register('PullToRefresh', (c, ctx) => CanvasPullToRefresh.fromConfig(c, ctx));
     r.register('Pagination', (c, ctx) => CanvasPagination.fromConfig(c, ctx));
     r.register('Semantics', (c, ctx) => CanvasSemantics.fromConfig(c, ctx));
+    r.register('Gesture', (c, ctx) => CanvasGesture.fromConfig(c, ctx));
+    r.register('SheetDialog', (c, ctx) => CanvasSheetDialog.fromConfig(c, ctx));
+    r.register('Transition', (c, ctx) => CanvasTransition.fromConfig(c, ctx));
+    r.register('Print', (c, ctx) => CanvasPrint.fromConfig(c, ctx));
 
     // Data Display
     r.register('KPICard', (c, ctx) => KPICard.fromConfig(c, ctx));
