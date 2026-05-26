@@ -759,14 +759,22 @@ architecture_v14:
             Tests 616 passed (baseline préservé). Implémentation complète des engines reportée à V14-004/007/024/028.
           sprint: "v14-1"
         - story_id: "V14-007"
-          title: "6 moteurs ERP génériques (ModuleList, Form, Detail, Report, Kanban, Dashboard)"
+          title: "6 moteurs ERP generiques (ModuleList, Form, Detail, Report, Kanban, Dashboard)"
           epic: "EPIC-V14-003"
           points: 8
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-007.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-26"
+          completed_date: "2026-05-26"
           sprint: "v14-4"
+          actual_points: 8
+          notes: |
+            6 Flutter screens: ModuleListScreen (DataTable), ModuleFormScreen (TextFormFields),
+            ModuleDetailScreen (tabs+header), ModuleReportScreen (ChartBar+export),
+            ModuleKanbanScreen (columns+cards), ModuleDashboardScreen (KPIs+alerts+chart).
+            All accept Map<String, dynamic> config, use DS components + i18n keys.
         - story_id: "V14-008"
           title: "i18n complet ARB FR/EN + lint no_hardcoded_strings"
           epic: "EPIC-V14-004"
@@ -789,11 +797,18 @@ architecture_v14:
           title: "@nestjs/swagger global + annotations controllers/DTOs"
           epic: "EPIC-V14-005"
           points: 3
-          status: "defined"
+          status: "completed"
           priority: "must_have"
           story_doc: "_bmad-output/stories/STORY-V14-009.md"
           defined_date: "2026-05-25"
+          started_date: "2026-05-26"
+          completed_date: "2026-05-26"
           sprint: "v14-4"
+          actual_points: 3
+          notes: |
+            @nestjs/swagger installed. DocumentBuilder in main.ts: BearerAuth,
+            X-Tenant-ID, X-Client-Mutation-Id. SwaggerModule.setup /api/docs.
+            BduiController annotated. persistAuthorization enabled.
         - story_id: "V14-010"
           title: "Widgetbook setup — 12 composants x variantes x etats"
           epic: "EPIC-V14-002"

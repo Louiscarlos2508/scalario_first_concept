@@ -7,14 +7,11 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { BduiService } from './services/bdui.service';
-import { GetLayoutParamsSchema } from './dto/get-layout.dto';
-import { parseBulkScreens } from './dto/get-bulk-layouts.dto';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
-import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.interface';
 
+@ApiTags('BDUI Layouts')
+@ApiBearerAuth()
 @Controller('api/v1/:tenant/layout')
 export class BduiController {
   private readonly logger = new Logger(BduiController.name);
