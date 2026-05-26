@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../canvas_registry/component_config.dart';
 import '../../canvas_registry/scalario_canvas_registry.dart';
+import '../../error_boundary/error_boundary.dart';
 
 class CanvasScaffold extends StatelessWidget {
   final ComponentConfig config;
@@ -21,10 +22,18 @@ class CanvasScaffold extends StatelessWidget {
     final bottomNav = _buildChild(r, config.props['bottomNav'], context);
 
     return Scaffold(
-      appBar: appBar as PreferredSizeWidget?,
-      body: body,
+      appBar: _unwrapPreferredSize(appBar) ?? _unwrapPreferredSize(_childrenColumn(r, context)),
+      body: body ?? _childrenColumn(r, context),
       bottomNavigationBar: bottomNav,
     );
+  }
+
+  PreferredSizeWidget? _unwrapPreferredSize(Widget? widget) {
+    if (widget is PreferredSizeWidget) return widget;
+    if (widget is ErrorBoundary && widget.child is PreferredSizeWidget) {
+      return widget.child as PreferredSizeWidget;
+    }
+    return null;
   }
 
   Widget? _buildChild(ScalarioCanvasRegistry r, dynamic childConfig, BuildContext ctx) {
