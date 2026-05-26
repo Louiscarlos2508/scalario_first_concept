@@ -50,6 +50,6 @@ class CanvasSlots extends StatelessWidget {
   Widget _render(ScalarioCanvasRegistry r, dynamic slot, BuildContext ctx) {
     if (slot == null || slot is! Map) return const SizedBox.shrink();
     final cc = ComponentConfig.fromJson(slot as Map<String, dynamic>);
-    return r.build(cc, ctx);
+    return RepaintBoundary(child: r.build(cc, ctx));
   }
 }

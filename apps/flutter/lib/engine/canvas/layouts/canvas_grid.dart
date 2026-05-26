@@ -43,7 +43,7 @@ class CanvasGrid extends StatelessWidget {
         }
         return SizedBox(
           width: ((screenWidth - (gap * (colCount + 1))) / colCount) * effectiveSpan + (gap * (effectiveSpan - 1)),
-          child: r.build(item, ctx),
+          child: RepaintBoundary(child: r.build(item, ctx)),
         );
       }),
     );

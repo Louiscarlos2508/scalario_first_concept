@@ -30,7 +30,7 @@ class CanvasScaffold extends StatelessWidget {
   Widget? _buildChild(ScalarioCanvasRegistry r, dynamic childConfig, BuildContext ctx) {
     if (childConfig == null || childConfig is! Map) return null;
     final cc = ComponentConfig.fromJson(childConfig as Map<String, dynamic>);
-    return r.build(cc, ctx);
+    return RepaintBoundary(child: r.build(cc, ctx));
   }
 
   Widget _childrenColumn(ScalarioCanvasRegistry r, BuildContext ctx) {
@@ -42,7 +42,7 @@ class CanvasScaffold extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children.map((c) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: r.build(c, ctx),
+          child: RepaintBoundary(child: r.build(c, ctx)),
         )).toList(),
       ),
     );

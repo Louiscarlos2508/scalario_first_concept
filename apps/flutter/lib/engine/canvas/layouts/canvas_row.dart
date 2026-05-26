@@ -23,7 +23,7 @@ class CanvasRow extends StatelessWidget {
       child: Row(
         children: children.map((c) => Padding(
           padding: EdgeInsets.only(right: gap),
-          child: ScalarioCanvasRegistry.instance?.build(c, context) ?? const SizedBox.shrink(),
+          child: RepaintBoundary(child: ScalarioCanvasRegistry.instance?.build(c, context) ?? const SizedBox.shrink()),
         )).toList(),
       ),
     );
