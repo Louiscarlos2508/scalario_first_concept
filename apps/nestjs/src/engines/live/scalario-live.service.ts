@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 export interface LiveEvent {
-  type: 'validation_required' | 'stock_critical' | 'data_updated' | 'config_updated' | 'alert_triggered' | 'session_expired';
+  type: 'validation_required' | 'stock_critical' | 'data_updated' | 'config_updated' | 'alert_triggered' | 'session_expired' | 'a2ui_message';
   data: Record<string, unknown>;
   timestamp: string;
 }

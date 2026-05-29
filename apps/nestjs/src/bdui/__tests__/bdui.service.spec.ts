@@ -3,6 +3,7 @@ import { BduiLayoutCacheService } from '../cache/bdui-layout-cache.service';
 import { ScreenConfigRepository } from '../repositories/screen-config.repository';
 import { CatalogueLoaderService } from '../services/catalogue-loader.service';
 import { RbacComponentFilter } from '../filters/rbac-component-filter';
+import { A2uiToScreenConfigService } from '../services/a2ui-to-screen-config.service';
 import type { ScreenConfig } from '../interfaces';
 
 describe('BduiService', () => {
@@ -11,6 +12,7 @@ describe('BduiService', () => {
   let screenConfigRepo: jest.Mocked<ScreenConfigRepository>;
   let catalogueLoader: jest.Mocked<CatalogueLoaderService>;
   let rbacFilter: RbacComponentFilter;
+  let a2uiBridge: jest.Mocked<A2uiToScreenConfigService>;
 
   const dashboardConfig: ScreenConfig = {
     schema_version: '1.0.0',
@@ -52,7 +54,11 @@ describe('BduiService', () => {
 
     rbacFilter = new RbacComponentFilter();
 
-    service = new BduiService(cacheService, screenConfigRepo, catalogueLoader, rbacFilter);
+    a2uiBridge = {
+      generateScreenConfig: jest.fn(),
+    } as unknown as jest.Mocked<A2uiToScreenConfigService>;
+
+    service = new BduiService(cacheService, screenConfigRepo, catalogueLoader, rbacFilter, a2uiBridge);
   });
 
   describe('getLayout', () => {
@@ -91,10 +97,24 @@ describe('BduiService', () => {
       expect(cacheService.set).toHaveBeenCalled();
     });
 
-    it('throws NotFoundException when neither DB nor filesystem has the screen', async () => {
+    it('falls back to MindEngine when neither DB nor filesystem has the screen', async () => {
       cacheService.get.mockResolvedValue(null);
       screenConfigRepo.findByTenantAndScreen.mockResolvedValue(null);
       catalogueLoader.loadScreenConfig.mockReturnValue(null);
+      a2uiBridge.generateScreenConfig.mockResolvedValue(dashboardConfig);
+
+      const result = await service.getLayout('tenant-A', 'generated-screen', ['OWNER']);
+
+      expect(result.screen).toBe('dashboard');
+      expect(a2uiBridge.generateScreenConfig).toHaveBeenCalledWith('tenant-A', 'generated-screen');
+      expect(cacheService.set).toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when MindEngine also fails', async () => {
+      cacheService.get.mockResolvedValue(null);
+      screenConfigRepo.findByTenantAndScreen.mockResolvedValue(null);
+      catalogueLoader.loadScreenConfig.mockReturnValue(null);
+      a2uiBridge.generateScreenConfig.mockResolvedValue(null);
 
       await expect(service.getLayout('tenant-A', 'nonexistent', ['OWNER'])).rejects.toThrow(
         'Screen "nonexistent" not found',

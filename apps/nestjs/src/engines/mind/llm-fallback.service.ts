@@ -1,13 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
 
-interface LlmRequest {
+export interface LlmRequest {
   prompt: string;
   maxTokens?: number;
   temperature?: number;
 }
 
-interface LlmResponse {
+export interface LlmResponse {
   text: string;
   model: string;
   degraded?: boolean;
@@ -19,8 +18,6 @@ export class LlmFallbackService {
 
   private readonly deepseekUrl = process.env.DEEPSEEK_URL ?? 'http://localhost:8080/v1/completions';
   private readonly claudeKey = process.env.CLAUDE_API_KEY;
-
-  constructor(private readonly http: HttpService) {}
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
     try {

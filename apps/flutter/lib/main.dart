@@ -23,7 +23,6 @@ import 'engine/canvas/scalario_canvas_module.dart';
 import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'engine/error_boundary/global_error_handler.dart';
 import 'sandbox/sandbox_screen.dart';
-import 'main_shell.dart';
 
 const kSandboxRouteName = '/dev/sandbox';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
@@ -84,7 +83,7 @@ class ScalarioApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const MainShell(),
+      home: const Scaffold(body: Center(child: Text('Scalario — à connecter au MindEngine via A2UI'))),
       routes: { if (kDebugMode) kSandboxRouteName: (_) => const SandboxScreen() },
     );
   }

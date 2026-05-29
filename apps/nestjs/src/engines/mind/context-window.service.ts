@@ -3,62 +3,151 @@ import { Injectable, Logger } from '@nestjs/common';
 export interface ContextMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+  tokenCount?: number;
 }
 
-/**
- * ContextWindowService — Phase 1 stub.
- *
- * buildContext(messages, maxTokens) keeps the system prompt intact and
- * preserves the last 3 messages. Older messages beyond that are summarized
- * into a single "context_summary" system message appended after the
- * original system prompt.
- *
- * Tokens are estimated as chars/3 (rough estimator). Phase 2+ will use
- * a proper tokenizer (tiktoken or similar).
- */
+export interface ConversationStore {
+  surfaceId: string;
+  messages: ContextMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 @Injectable()
 export class ContextWindowService {
   private readonly logger = new Logger(ContextWindowService.name);
 
-  buildContext(messages: ContextMessage[], maxTokens: number): ContextMessage[] {
-    this.logger.log(
-      `[STUB] buildContext ${messages.length} messages, maxTokens=${maxTokens}`,
-    );
+  private readonly stores = new Map<string, ConversationStore>();
 
-    if (messages.length === 0) return [];
+  private readonly SYSTEM_PROMPT_TOKENS = 2000;
+  private readonly MAX_TOKENS = 32000;
+  private readonly RESPONSE_TOKENS = 4000;
 
-    const system = messages.filter((m) => m.role === 'system');
-    const nonSystem = messages.filter((m) => m.role !== 'system');
+  private readonly SUMMARY_THRESHOLD = 0.7;
 
-    // Keep last 3 non-system messages
-    const recent = nonSystem.slice(-3);
-    const older = nonSystem.slice(0, -3);
+  getOrCreateStore(surfaceId: string): ConversationStore {
+    let store = this.stores.get(surfaceId);
+    if (!store) {
+      store = {
+        surfaceId,
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.stores.set(surfaceId, store);
+    }
+    return store;
+  }
 
-    const result: ContextMessage[] = [...system];
+  addMessage(surfaceId: string, message: ContextMessage): void {
+    const store = this.getOrCreateStore(surfaceId);
+    message.tokenCount = this.estimateTokens(message.content);
+    store.messages.push(message);
+    store.updatedAt = new Date();
+  }
 
-    if (older.length > 0) {
-      const summary = this.summarize(older);
-      result.push({ role: 'system', content: summary });
-      this.logger.log(`[STUB] summarized ${older.length} older messages`);
+  addMessages(surfaceId: string, messages: ContextMessage[]): void {
+    for (const msg of messages) {
+      this.addMessage(surfaceId, msg);
+    }
+  }
+
+  prune(surfaceId: string): void {
+    const store = this.stores.get(surfaceId);
+    if (!store || store.messages.length === 0) return;
+
+    const estimatedTotal = this.estimateContextTokens(store.messages);
+    const limit = this.MAX_TOKENS - this.SYSTEM_PROMPT_TOKENS - this.RESPONSE_TOKENS;
+
+    if (estimatedTotal <= limit) return;
+
+    const system = store.messages.filter((m) => m.role === 'system');
+    const nonSystem = store.messages.filter((m) => m.role !== 'system');
+
+    const summaryThreshold = Math.floor(nonSystem.length * this.SUMMARY_THRESHOLD);
+    const toSummarize = nonSystem.slice(0, summaryThreshold);
+    const toKeep = nonSystem.slice(summaryThreshold);
+
+    if (toSummarize.length > 1) {
+      const summary = this.buildSummary(toSummarize);
+      store.messages = [
+        ...system,
+        { role: 'system', content: summary },
+        ...toKeep,
+      ];
+      this.logger.log(
+        `Pruned ${toSummarize.length} messages into summary for surface=${surfaceId}`,
+      );
+    }
+  }
+
+  buildWindow(surfaceId: string, systemPrompt: string): ContextMessage[] {
+    const store = this.getOrCreateStore(surfaceId);
+    this.prune(surfaceId);
+
+    const window: ContextMessage[] = [
+      { role: 'system', content: systemPrompt },
+    ];
+
+    for (const msg of store.messages) {
+      if (msg.role === 'system') continue;
+      window.push(msg);
     }
 
-    result.push(...recent);
+    const totalTokens = this.estimateContextTokens(window) + this.RESPONSE_TOKENS;
+    if (totalTokens <= this.MAX_TOKENS) return window;
 
-    const estimatedTokens = this.estimateTokens(result);
-    this.logger.log(
-      `[STUB] final context: ${result.length} messages, ~${estimatedTokens} tokens`,
+    while (this.estimateContextTokens(window) + this.RESPONSE_TOKENS > this.MAX_TOKENS && window.length > 1) {
+      const removed = window.pop();
+      if (removed) {
+        this.logger.debug(`Dropped message from context window: ${removed.content.slice(0, 50)}`);
+      }
+    }
+
+    return window;
+  }
+
+  clear(surfaceId: string): void {
+    this.stores.delete(surfaceId);
+    this.logger.log(`Cleared conversation store for surface=${surfaceId}`);
+  }
+
+  toPrompt(messages: ContextMessage[]): string {
+    return messages.map((m) => {
+      switch (m.role) {
+        case 'system':
+          return `[System]\n${m.content}`;
+        case 'user':
+          return `[User]\n${m.content}`;
+        case 'assistant':
+          return `[Assistant]\n${m.content}`;
+      }
+    }).join('\n\n---\n\n');
+  }
+
+  estimateTokens(text: string): number {
+    const charCount = text.length;
+    const wordCount = text.split(/\s+/).length;
+    return Math.max(
+      Math.ceil(charCount / 4),
+      Math.ceil(wordCount * 1.5),
     );
-
-    return result;
   }
 
-  private summarize(messages: ContextMessage[]): string {
-    const content = messages.map((m) => `[${m.role}]: ${m.content.slice(0, 100)}`).join('; ');
-    return `[context_summary] ${content}`;
+  private estimateContextTokens(messages: ContextMessage[]): number {
+    let total = 0;
+    for (const msg of messages) {
+      total += msg.tokenCount ?? this.estimateTokens(msg.content);
+    }
+    return total;
   }
 
-  private estimateTokens(messages: ContextMessage[]): number {
-    const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
-    return Math.ceil(totalChars / 3);
+  private buildSummary(messages: ContextMessage[]): string {
+    const condensed = messages.map((m) => {
+      const preview = m.content.replace(/\s+/g, ' ').slice(0, 150);
+      return `[${m.role}]: ${preview}`;
+    });
+
+    return `[context_summary] Previous conversation:\n${condensed.join('\n')}`;
   }
 }

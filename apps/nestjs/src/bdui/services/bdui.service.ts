@@ -3,6 +3,7 @@ import { BduiLayoutCacheService } from '../cache/bdui-layout-cache.service';
 import { ScreenConfigRepository } from '../repositories/screen-config.repository';
 import { CatalogueLoaderService } from './catalogue-loader.service';
 import { RbacComponentFilter } from '../filters/rbac-component-filter';
+import { A2uiToScreenConfigService } from './a2ui-to-screen-config.service';
 import type { ScreenConfig } from '../interfaces';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class BduiService {
     private readonly screenConfigRepo: ScreenConfigRepository,
     private readonly catalogueLoader: CatalogueLoaderService,
     private readonly filter: RbacComponentFilter,
+    private readonly a2uiBridge: A2uiToScreenConfigService,
   ) {}
 
   async getLayout(tenantId: string, screenId: string, roles: string[]): Promise<ScreenConfig> {
@@ -33,6 +35,16 @@ export class BduiService {
       this.catalogueLoader.loadScreenConfig(tenantId, screenId);
 
     if (!raw) {
+      const generated = await this.a2uiBridge.generateScreenConfig(tenantId, screenId);
+      if (generated) {
+        this.logger.log(
+          `bdui.layout.generated tenant_id=${tenantId} screen_id=${screenId} source=mind_engine`,
+        );
+        const filtered = this.filter.apply(generated, roles);
+        await this.cache.set(tenantId, screenId, roles, filtered);
+        return filtered;
+      }
+
       throw new NotFoundException(`Screen "${screenId}" not found for tenant "${tenantId}"`);
     }
 

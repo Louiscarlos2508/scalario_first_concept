@@ -74,10 +74,6 @@ flutter:
     - assets/icons/
     - assets/sandbox/
     - assets/bdui-schemas/
-    - assets/catalog/tenants/blandine/module.json
-    - assets/catalog/tenants/blandine/theme.json
-    - assets/catalog/tenants/blandine/entities/
-    - assets/catalog/tenants/blandine/screens/
 
   # Inter et Roboto Mono sont chargées via google_fonts (runtime cache).
   # Voir lib/core/design_system/tokens/typography.dart.

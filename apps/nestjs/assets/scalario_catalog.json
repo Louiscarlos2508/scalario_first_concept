@@ -1,0 +1,503 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Scalario Catalog",
+  "description": "Catalogue des composants Scalario exposés via le protocole A2UI v0.9.",
+  "version": "1.0.0",
+  "catalogId": "scalario-v1",
+
+  "messages": {
+    "createSurface": {
+      "type": "object",
+      "description": "Crée une nouvelle surface de rendu avec un data model vide.",
+      "properties": {
+        "surfaceId": { "type": "string", "description": "Identifiant unique de la surface" },
+        "catalogId": { "type": "string", "const": "scalario-v1", "description": "Identifiant du catalogue à utiliser" },
+        "theme": { "type": "object", "description": "Surcharges de thème optionnelles" }
+      },
+      "required": ["surfaceId", "catalogId"]
+    },
+    "updateComponents": {
+      "type": "object",
+      "description": "Remplace les composants d'une surface par une nouvelle liste plate.",
+      "properties": {
+        "surfaceId": { "type": "string" },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/A2UIComponent" },
+          "description": "Liste plate de composants. Le root est identifié par 'id: root'. Les enfants sont résolus par refs 'children'."
+        }
+      },
+      "required": ["surfaceId", "components"]
+    },
+    "updateDataModel": {
+      "type": "object",
+      "description": "Met à jour les données interrogables par path.",
+      "properties": {
+        "surfaceId": { "type": "string" },
+        "path": { "type": "string", "pattern": "^/", "description": "Chemin hiérarchique (ex: /kpi/ca_jour). Optionnel: si absent, remplace tout le data model." },
+        "value": { "description": "Valeur à stocker au path indiqué." }
+      },
+      "required": ["surfaceId", "value"]
+    },
+    "deleteSurface": {
+      "type": "object",
+      "properties": {
+        "surfaceId": { "type": "string" }
+      },
+      "required": ["surfaceId"]
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "surfaceId": { "type": "string" }
+      },
+      "required": []
+    }
+  },
+
+  "$defs": {
+    "A2UIComponent": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Identifiant unique du composant dans la surface. 'root' pour le composant racine." },
+        "component": {
+          "type": "string",
+          "enum": [
+            "KPICard", "StatCard", "ChartBar", "ChartPie", "DataTable",
+            "Text", "Button", "FAB", "ActionButton", "ScalarioButton",
+            "Card", "Image", "Icon", "Divider",
+            "Row", "Column", "Grid", "Stack", "Slots", "Scaffold", "AppBar", "BottomNav",
+            "FormSection", "FormWidget",
+            "AlertBanner", "SyncStatusBar",
+            "MouvementItem", "TicketPreview", "DocumentPreview",
+            "SheetDialog", "Transition", "Pagination", "StateWrapper", "PullToRefresh",
+            "Semantics", "Gesture", "Print", "Tabs",
+            "TextField", "CheckBox", "ChoicePicker", "Slider", "DateTimeInput",
+            "Modal", "Video", "AudioPlayer"
+          ]
+        },
+        "variant": {
+          "type": "string",
+          "description": "Variante d'affichage. 'default' par défaut."
+        },
+        "text": { "type": "string", "description": "Texte d'affichage principal." },
+        "value": { "$ref": "#/$defs/DynamicValue", "description": "Valeur affichée ou data binding." },
+        "children": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IDs des composants enfants (références dans la flat list)."
+        },
+        "action": {
+          "type": "object",
+          "description": "Action à déclencher sur interaction.",
+          "properties": {
+            "name": { "type": "string" },
+            "event": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "context": { "type": "object" }
+              }
+            }
+          }
+        }
+      },
+      "required": ["id", "component"]
+    },
+
+    "DynamicValue": {
+      "oneOf": [
+        { "type": "string", "description": "Valeur littérale string" },
+        { "type": "number", "description": "Valeur littérale numérique" },
+        { "type": "boolean", "description": "Valeur littérale booléenne" },
+        {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "pattern": "^/", "description": "Chemin vers une valeur dans le data model (ex: /kpi/ca_jour)" }
+          },
+          "required": ["path"],
+          "description": "Data binding — la valeur est résolue depuis le data model."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "call": { "type": "string", "description": "Nom de la fonction à appeler" },
+            "args": { "type": "object", "description": "Arguments de la fonction" }
+          },
+          "required": ["call"],
+          "description": "FunctionCall — valeur transformée par une fonction (formatCurrency, etc.)."
+        }
+      ]
+    },
+
+    "ComponentSchemas": {
+      "KPICard": {
+        "description": "Carte de KPI métier. Variantes: default, compact, with-icon, with-chart, hero.",
+        "props": {
+          "label": { "type": "string", "description": "Libellé du KPI" },
+          "value": { "$ref": "#/$defs/DynamicValue", "description": "Valeur numérique ou data binding" },
+          "unit": { "type": "string", "description": "Unité (ex: FCFA)" },
+          "delta": { "type": "string", "description": "Variation (ex: +12%)" },
+          "delta_positive": { "type": "boolean", "default": true },
+          "status": { "type": "string", "enum": ["nominal", "warning", "critical"], "default": "nominal" }
+        },
+        "required": ["label", "value"]
+      },
+      "StatCard": {
+        "description": "Carte de statistique générique.",
+        "props": {
+          "label": { "type": "string" },
+          "value": { "$ref": "#/$defs/DynamicValue" },
+          "unit": { "type": "string" }
+        },
+        "required": ["label", "value"]
+      },
+      "ChartBar": {
+        "description": "Diagramme en barres.",
+        "props": {
+          "title": { "type": "string" },
+          "data": { "type": "array", "items": { "type": "object" }, "description": "Données du graphique" },
+          "x_key": { "type": "string" },
+          "y_key": { "type": "string" }
+        }
+      },
+      "ChartPie": {
+        "description": "Diagramme circulaire.",
+        "props": {
+          "title": { "type": "string" },
+          "data": { "type": "array", "items": { "type": "object" } },
+          "label_key": { "type": "string" },
+          "value_key": { "type": "string" }
+        }
+      },
+      "DataTable": {
+        "description": "Tableau de données interactif.",
+        "props": {
+          "title": { "type": "string" },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": { "type": "string" },
+                "label": { "type": "string" },
+                "type": { "type": "string", "enum": ["text", "number", "currency", "date", "status"] }
+              }
+            }
+          },
+          "rows": { "type": "array", "items": { "type": "object" } },
+          "page_size": { "type": "integer", "default": 20 }
+        }
+      },
+      "Text": {
+        "description": "Texte statique. Use style for typography.",
+        "props": {
+          "text": { "type": "string" },
+          "style": { "type": "string", "enum": ["body", "heading", "caption", "overline", "kpi_label", "kpi_value"] }
+        },
+        "required": ["text"]
+      },
+      "Button": {
+        "description": "Bouton d'action. Variantes: primary, secondary, danger, ghost, icon-only.",
+        "props": {
+          "label": { "type": "string" },
+          "icon": { "type": "string" }
+        }
+      },
+      "FAB": {
+        "description": "Floating Action Button — action rapide.",
+        "props": {
+          "icon": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      },
+      "Card": {
+        "description": "Carte conteneur avec padding et bord arrondi.",
+        "props": {
+          "title": { "type": "string" }
+        }
+      },
+      "Divider": {
+        "description": "Séparateur horizontal.",
+        "props": {}
+      },
+      "Row": {
+        "description": "Layout horizontal (Row Flutter). Les enfants sont dans children refs.",
+        "props": {
+          "gap": { "type": "string", "enum": ["xs", "sm", "md", "lg"], "default": "sm" }
+        }
+      },
+      "Column": {
+        "description": "Layout vertical (Column Flutter). Les enfants sont dans children refs.",
+        "props": {
+          "gap": { "type": "string", "enum": ["xs", "sm", "md", "lg"], "default": "sm" }
+        }
+      },
+      "Grid": {
+        "description": "Grille responsive. Les items sont dans children refs.",
+        "props": {
+          "columns": { "type": "integer", "default": 2 },
+          "gap": { "type": "string", "enum": ["xs", "sm", "md", "lg"], "default": "sm" },
+          "responsive": {
+            "type": "object",
+            "properties": {
+              "mobile": { "type": "object", "properties": { "columns": { "type": "integer" } } },
+              "tablet": { "type": "object", "properties": { "columns": { "type": "integer" } } },
+              "desktop": { "type": "object", "properties": { "columns": { "type": "integer" } } }
+            }
+          }
+        }
+      },
+      "Stack": {
+        "description": "Superposition de composants (Stack Flutter). Les enfants sont empilés.",
+        "props": {}
+      },
+      "Slots": {
+        "description": "Layout par slots nommés. Chaque slot contient un enfant.",
+        "props": {
+          "slots": {
+            "type": "object",
+            "description": "Map slotName → componentId"
+          }
+        }
+      },
+      "Scaffold": {
+        "description": "Structure de page complète avec AppBar, body et BottomNav. Les enfants sont dans props (appBar, body, bottomNav) et children.",
+        "props": {
+          "appBar": { "type": "object", "description": "ComponentConfig pour AppBar" },
+          "body": { "type": "object", "description": "ComponentConfig pour le corps" },
+          "bottomNav": { "type": "object", "description": "ComponentConfig pour BottomNav" }
+        }
+      },
+      "AppBar": {
+        "description": "Barre de navigation supérieure.",
+        "props": {
+          "title": { "type": "string" },
+          "show_back": { "type": "boolean", "default": false },
+          "actions": { "type": "array", "description": "IDs des composants d'action" }
+        },
+        "required": ["title"]
+      },
+      "BottomNav": {
+        "description": "Barre de navigation inférieure.",
+        "props": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "icon": { "type": "string" },
+                "active": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      },
+      "FormSection": {
+        "description": "Section de formulaire avec titre et champs.",
+        "props": {
+          "title": { "type": "string", "description": "Titre overline" },
+          "hint": { "type": "string", "description": "Texte d'aide" },
+          "loading": { "type": "boolean", "default": false }
+        },
+        "required": ["title"]
+      },
+      "FormWidget": {
+        "description": "Champ de formulaire (alias pour FormSection).",
+        "props": {
+          "title": { "type": "string" },
+          "hint": { "type": "string" }
+        },
+        "required": ["title"]
+      },
+      "AlertBanner": {
+        "description": "Bannière d'alerte / notification.",
+        "props": {
+          "type": { "type": "string", "enum": ["info", "success", "warning", "danger"] },
+          "message": { "type": "string" }
+        },
+        "required": ["type", "message"]
+      },
+      "SyncStatusBar": {
+        "description": "Barre de statut de synchronisation.",
+        "props": {
+          "status": { "type": "string", "enum": ["synced", "syncing", "pending", "error"] },
+          "message": { "type": "string" }
+        },
+        "required": ["status"]
+      },
+      "MouvementItem": {
+        "description": "Élément de liste de mouvement (vente, achat,…).",
+        "props": {
+          "title": { "type": "string" },
+          "subtitle": { "type": "string" },
+          "amount": { "$ref": "#/$defs/DynamicValue" },
+          "date": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "TicketPreview": {
+        "description": "Prévisualisation de ticket.",
+        "props": {
+          "title": { "type": "string" },
+          "subtitle": { "type": "string" },
+          "amount": { "$ref": "#/$defs/DynamicValue" },
+          "status": { "type": "string" }
+        }
+      },
+      "DocumentPreview": {
+        "description": "Prévisualisation de document (facture, BL,…).",
+        "props": {
+          "title": { "type": "string" },
+          "reference": { "type": "string" },
+          "date": { "type": "string" },
+          "amount": { "$ref": "#/$defs/DynamicValue" },
+          "status": { "type": "string" }
+        }
+      },
+      "SheetDialog": {
+        "description": "Bottom sheet modal ou AlertDialog.",
+        "props": {
+          "type": { "type": "string", "enum": ["sheet", "dialog", "snackbar"] },
+          "title": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["type"]
+      },
+      "StateWrapper": {
+        "description": "Wrapper conditionnel — n'affiche les enfants que si la state condition est remplie.",
+        "props": {
+          "state": { "type": "string", "description": "Nom de la state à vérifier" },
+          "value": { "description": "Valeur attendue" }
+        }
+      },
+      "PullToRefresh": {
+        "description": "Wrapper Pull-to-Refresh — les enfants sont scrollables avec refresh.",
+        "props": {}
+      },
+      "Pagination": {
+        "description": "Wrapper de pagination.",
+        "props": {
+          "page_size": { "type": "integer", "default": 20 },
+          "total": { "type": "integer" }
+        }
+      },
+      "Tabs": {
+        "description": "Onglets de navigation.",
+        "props": {
+          "tabs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "content_id": { "type": "string", "description": "ID du composant contenu dans l'onglet" }
+              }
+            }
+          }
+        }
+      },
+      "TextField": {
+        "description": "Champ de texte de formulaire.",
+        "props": {
+          "label": { "type": "string" },
+          "placeholder": { "type": "string" },
+          "type": { "type": "string", "enum": ["text", "number", "email", "password"] },
+          "required": { "type": "boolean" }
+        }
+      },
+      "CheckBox": {
+        "description": "Case à cocher.",
+        "props": {
+          "label": { "type": "string" },
+          "checked": { "type": "boolean", "default": false }
+        }
+      },
+      "Image": {
+        "description": "Image statique.",
+        "props": {
+          "src": { "type": "string" },
+          "alt": { "type": "string" },
+          "height": { "type": "number" }
+        }
+      },
+      "Icon": {
+        "description": "Icône simple.",
+        "props": {
+          "icon": { "type": "string" },
+          "size": { "type": "string", "enum": ["xs", "sm", "md", "lg"] }
+        }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "version": "v0.9",
+      "createSurface": {
+        "surfaceId": "dashboard-ventes",
+        "catalogId": "scalario-v1"
+      }
+    },
+    {
+      "version": "v0.9",
+      "updateComponents": {
+        "surfaceId": "dashboard-ventes",
+        "components": [
+          {
+            "id": "root",
+            "component": "Column",
+            "children": ["kpi-row", "chart-section"]
+          },
+          {
+            "id": "kpi-row",
+            "component": "Row",
+            "children": ["ca-jour", "ca-mois", "marge"]
+          },
+          {
+            "id": "ca-jour",
+            "component": "KPICard",
+            "variant": "default",
+            "label": "CA du jour",
+            "value": { "path": "/kpi/ca_jour" },
+            "unit": "FCFA",
+            "delta": "+12% vs hier",
+            "delta_positive": true,
+            "status": "nominal"
+          },
+          {
+            "id": "ca-mois",
+            "component": "KPICard",
+            "variant": "default",
+            "label": "CA du mois",
+            "value": { "path": "/kpi/ca_mois" },
+            "unit": "FCFA",
+            "status": "nominal"
+          },
+          {
+            "id": "marge",
+            "component": "StatCard",
+            "label": "Marge brute",
+            "value": { "path": "/kpi/marge" },
+            "unit": "%"
+          }
+        ]
+      }
+    },
+    {
+      "version": "v0.9",
+      "updateDataModel": {
+        "surfaceId": "dashboard-ventes",
+        "path": "/kpi",
+        "value": {
+          "ca_jour": 47500,
+          "ca_mois": 1250000,
+          "marge": 32.5
+        }
+      }
+    }
+  ]
+}
