@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 
 /// Niveau de log capturé par la [SandboxConsole].
-enum SandboxLogLevel { info, warning, error }
+enum SandboxLogLevel { info, warning, error, action }
 
 @immutable
 class SandboxLogEntry {
@@ -89,6 +89,7 @@ class SandboxConsole extends StatelessWidget {
               SandboxLogLevel.error => Colors.red.shade700,
               SandboxLogLevel.warning => Colors.orange.shade700,
               SandboxLogLevel.info => Colors.blueGrey.shade700,
+              SandboxLogLevel.action => Colors.green.shade700,
             };
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),

@@ -29,26 +29,34 @@ class A2UICanvas extends StatefulWidget {
 
 class _A2UICanvasState extends State<A2UICanvas> {
   final _surfaces = <String, _SurfaceState>{};
-  final _translator = A2UIComponentTranslator(ScalarioCanvasRegistry.instance!);
+  late final A2UIComponentTranslator _translator;
   String? _activeSurface;
   StreamSubscription<Map<String, dynamic>>? _streamSub;
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialMessages != null) {
-      for (final raw in widget.initialMessages!) {
-        _processMessage(A2UIMessage.fromJson(raw));
-      }
-    }
+    _translator = A2UIComponentTranslator(widget.registry);
+    _initMessages();
     _streamSub = widget.messageStream?.listen(
       (raw) => processMessage(raw),
     );
   }
 
+  void _initMessages() {
+    if (widget.initialMessages != null) {
+      for (final raw in widget.initialMessages!) {
+        _processMessage(A2UIMessage.fromJson(raw));
+      }
+    }
+  }
+
   @override
   void didUpdateWidget(A2UICanvas old) {
     super.didUpdateWidget(old);
+    if (widget.registry != old.registry) {
+      _translator.updateRegistry(widget.registry);
+    }
     if (widget.messageStream != old.messageStream) {
       _streamSub?.cancel();
       _streamSub = widget.messageStream?.listen(

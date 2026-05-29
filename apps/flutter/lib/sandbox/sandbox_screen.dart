@@ -1,25 +1,30 @@
-// STORY-009 — Sandbox dev-only (kDebugMode).
+// Sandbox dev-only (kDebugMode).
 //
-// Écran principal de la sandbox BDUI. Compose :
-//  - Header : 3 sélecteurs (fichier, UserContext, breakpoint) + Reload/Reset.
-//  - Body   : rendu BDUI dans un viewport breakpoint contraint.
-//  - Footer : console structurée (logs sandbox).
+// Supporte deux modes de rendu :
+//   BDUI — charge des fixtures ScreenConfig et les rend via ScalarioCanvas
+//   A2UI — charge des messages A2UI et les rend via A2UICanvas
 //
-// Accessible uniquement quand `kDebugMode` est vrai (cf. route conditionnelle
-// dans `main.dart`).
+// Header : sélecteur de fixture + UserContext + breakpoint + mode.
+// Body   : rendu BDUI ou A2UI dans un viewport breakpoint contraint.
+// Footer : console structurée (logs sandbox).
 
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
+import '../components/actions/scalario_button.dart';
 import '../engine/canvas/scalario_canvas.dart';
 import '../engine/canvas/data_source_resolver.dart';
 import '../engine/canvas/json_schema_validator.dart';
 import '../engine/canvas_registry/scalario_canvas_registry.dart';
 import '../engine/canvas_layout/scalario_canvas_layout.dart';
 import '../engine/canvas_rule/scalario_canvas_rule.dart';
+import '../engine/a2ui/a2ui_canvas.dart';
+import 'sandbox_a2ui_loader.dart';
+import 'sandbox_action_dispatcher.dart';
 import 'sandbox_breakpoint_overlay.dart';
 import 'sandbox_console.dart';
 import 'sandbox_error_view.dart';
@@ -29,6 +34,12 @@ import 'sandbox_user_context.dart';
 
 /// Route canonique du sandbox (enregistrée seulement en `kDebugMode`).
 const String kSandboxRouteName = '/dev/sandbox';
+
+enum _SandboxMode { bdui, a2ui }
+
+/// IDs de toutes les fixtures disponibles (BDUI + A2UI).
+List<String> get _allFixtureIds =>
+    [...kSandboxFixtureIds, ...kA2uiFixtureIds];
 
 class SandboxScreen extends StatefulWidget {
   const SandboxScreen({
@@ -42,13 +53,8 @@ class SandboxScreen extends StatefulWidget {
     this.initialFixtureId,
   });
 
-  /// Override pour tests (par défaut [BundleJsonSource]).
   final SandboxJsonLoader? loader;
-
-  /// Override pour tests (par défaut [NoopFileWatcher] — le file watcher
-  /// natif requiert un path filesystem, non disponible avec rootBundle).
   final SandboxFileWatcher? watcher;
-
   final SandboxUserContextProvider? userContext;
   final SandboxConsoleController? console;
   final ScalarioCanvasRegistry? componentRegistry;
@@ -61,16 +67,26 @@ class SandboxScreen extends StatefulWidget {
 
 class _SandboxScreenState extends State<SandboxScreen> {
   late final SandboxJsonLoader _loader;
+  late final A2uiSandboxLoader _a2uiLoader;
   late final SandboxFileWatcher _watcher;
   late final SandboxUserContextProvider _userCtx;
   late final SandboxConsoleController _console;
   late final ScalarioCanvas _engine;
+  late final ScalarioCanvasRegistry _registry;
 
-  String _fixtureId = kSandboxFixtureIds.first;
+  String _fixtureId = _allFixtureIds.first;
+  _SandboxMode _mode = _SandboxMode.bdui;
   SandboxBreakpoint _breakpoint = SandboxBreakpoint.desktop;
-  Future<ScreenConfig>? _future;
   bool _reloading = false;
   Timer? _reloadIndicatorTimer;
+
+  // BDUI state
+  Future<ScreenConfig>? _bduiFuture;
+
+  // A2UI state
+  List<Map<String, dynamic>>? _a2uiMessages;
+
+  bool get _isBduiMode => _mode == _SandboxMode.bdui;
 
   final TextEditingController _customCtxController = TextEditingController();
 
@@ -78,17 +94,19 @@ class _SandboxScreenState extends State<SandboxScreen> {
   void initState() {
     super.initState();
     _loader = widget.loader ?? const SandboxJsonLoader();
+    _a2uiLoader = const A2uiSandboxLoader();
     _watcher = widget.watcher ?? const NoopFileWatcher();
     _userCtx = widget.userContext ?? SandboxUserContextProvider();
     _console = widget.console ?? SandboxConsoleController();
-    _fixtureId = widget.initialFixtureId ?? kSandboxFixtureIds.first;
+    _fixtureId = widget.initialFixtureId ?? _allFixtureIds.first;
+    _mode = _detectMode(_fixtureId);
 
-    final ScalarioCanvasRegistry registry =
+    _registry =
         widget.componentRegistry ?? GetIt.I<ScalarioCanvasRegistry>();
     final ScalarioCanvasLayout resolver =
         widget.layoutResolver ?? GetIt.I<ScalarioCanvasLayout>();
     _engine = _SandboxBDUIEngineFactory.build(
-      registry: registry,
+      registry: _registry,
       layoutResolver: resolver,
       userContext: _userCtx,
     );
@@ -106,22 +124,39 @@ class _SandboxScreenState extends State<SandboxScreen> {
     super.dispose();
   }
 
+  _SandboxMode _detectMode(String fixtureId) =>
+      fixtureId.startsWith('a2ui_') ? _SandboxMode.a2ui : _SandboxMode.bdui;
+
   void _onUserCtxChanged() {
     _console.log(
       SandboxLogLevel.info,
       'UserContext',
       'preset=${_userCtx.preset.name} roles=${_userCtx.current.roles}',
     );
-    // Re-render via setState — `engine.render` consultera `userContext.current`.
     if (mounted) setState(() {});
   }
 
   Future<void> _loadFixture(String fixtureId) async {
     _watcher.stop();
-    setState(() {
-      _fixtureId = fixtureId;
-      _future = _loadAndParse(fixtureId);
-    });
+    final mode = _detectMode(fixtureId);
+
+    if (mode == _SandboxMode.bdui) {
+      final future = _loadBdui(fixtureId);
+      setState(() {
+        _fixtureId = fixtureId;
+        _mode = mode;
+        _a2uiMessages = null;
+        _bduiFuture = future;
+      });
+    } else {
+      setState(() {
+        _fixtureId = fixtureId;
+        _mode = mode;
+        _a2uiMessages = null;
+        _bduiFuture = null;
+      });
+    }
+
     unawaited(_attachWatcher(fixtureId));
   }
 
@@ -133,23 +168,21 @@ class _SandboxScreenState extends State<SandboxScreen> {
     }
   }
 
-  Future<ScreenConfig> _loadAndParse(String fixtureId) async {
-    final Map<String, dynamic> raw = await _loader.load(fixtureId);
-    // Validation structurelle minimaliste : reproduit ce que fait l'engine
-    // mais on garde la maîtrise sur le message d'erreur pour le sandbox.
-    final ScreenConfig config = ScreenConfig.fromJson(raw);
-    return config;
+  Future<ScreenConfig> _loadBdui(String fixtureId) async {
+    final raw = await _loader.load(fixtureId);
+    return ScreenConfig.fromJson(raw);
   }
 
   void _reload() {
     if (!mounted) return;
-    setState(() {
-      _reloading = true;
-      _future = _loadAndParse(_fixtureId);
-    });
-    _reloadIndicatorTimer?.cancel();
-    _reloadIndicatorTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _reloading = false);
+    setState(() => _reloading = true);
+    _loadFixture(_fixtureId).then((_) {
+      if (mounted) {
+        _reloadIndicatorTimer?.cancel();
+        _reloadIndicatorTimer = Timer(const Duration(milliseconds: 300), () {
+          if (mounted) setState(() => _reloading = false);
+        });
+      }
     });
     _console.log(SandboxLogLevel.info, 'Sandbox', 'reload $_fixtureId');
   }
@@ -157,10 +190,13 @@ class _SandboxScreenState extends State<SandboxScreen> {
   void _reset() {
     _customCtxController.clear();
     _userCtx.selectPreset(SandboxUserPreset.owner);
+    final firstId = _allFixtureIds.first;
     setState(() {
       _breakpoint = SandboxBreakpoint.desktop;
-      _fixtureId = kSandboxFixtureIds.first;
-      _future = _loadAndParse(_fixtureId);
+      _fixtureId = firstId;
+      _mode = _detectMode(firstId);
+      _a2uiMessages = null;
+      _bduiFuture = _loadBdui(firstId);
     });
   }
 
@@ -168,7 +204,11 @@ class _SandboxScreenState extends State<SandboxScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BDUI Sandbox (dev)'),
+        title: Text(
+          _mode == _SandboxMode.a2ui
+              ? 'A2UI Sandbox (dev)'
+              : 'BDUI Sandbox (dev)',
+        ),
         actions: <Widget>[
           IconButton(
             tooltip: 'Reload',
@@ -189,7 +229,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
           Expanded(
             child: Stack(
               children: <Widget>[
-                _buildBody(),
+                _buildBody(context),
                 if (_reloading)
                   const Positioned(
                     top: 12,
@@ -222,6 +262,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: <Widget>[
           _fixtureDropdown(),
+          _modeIndicator(),
           _userContextDropdown(),
           _breakpointDropdown(),
           if (_userCtx.preset == SandboxUserPreset.custom)
@@ -243,7 +284,33 @@ class _SandboxScreenState extends State<SandboxScreen> {
     );
   }
 
+  Widget _modeIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: _mode == _SandboxMode.a2ui
+            ? Colors.blue.shade50
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _mode == _SandboxMode.a2ui
+              ? Colors.blue.shade300
+              : Colors.grey.shade300,
+        ),
+      ),
+      child: Text(
+        _mode == _SandboxMode.a2ui ? 'A2UI' : 'BDUI',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: _mode == _SandboxMode.a2ui ? Colors.blue.shade700 : null,
+        ),
+      ),
+    );
+  }
+
   Widget _fixtureDropdown() {
+    final ids = _allFixtureIds;
     return DropdownButton<String>(
       key: const Key('sandbox.dropdown.fixture'),
       value: _fixtureId,
@@ -251,8 +318,21 @@ class _SandboxScreenState extends State<SandboxScreen> {
         if (v != null) _loadFixture(v);
       },
       items: <DropdownMenuItem<String>>[
-        for (final String id in kSandboxFixtureIds)
-          DropdownMenuItem<String>(value: id, child: Text(id)),
+        for (final String id in ids) //
+          DropdownMenuItem<String>(
+            value: id,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (id.startsWith('a2ui_'))
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(Icons.auto_awesome, size: 16, color: Colors.blue.shade400),
+                  ),
+                Text(id),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -285,33 +365,96 @@ class _SandboxScreenState extends State<SandboxScreen> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
+    if (_mode == _SandboxMode.a2ui) {
+      return _buildA2uiBody(context);
+    }
+    return _buildBduiBody();
+  }
+
+  Widget _buildBduiBody() {
     return FutureBuilder<ScreenConfig>(
-      future: _future,
+      future: _bduiFuture,
       builder: (BuildContext ctx, AsyncSnapshot<ScreenConfig> snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snap.hasError) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _console.log(
-              SandboxLogLevel.error,
-              'Sandbox',
-              'load failure for $_fixtureId',
-              error: snap.error,
-            );
-          });
+          _postError(snap.error);
           return SandboxErrorView(error: snap.error!, onRetry: _reload);
         }
         return SandboxBreakpointOverlay(
           breakpoint: _breakpoint,
-          child: _renderSafe(snap.data!, ctx),
+          child: _renderBduiSafe(snap.data!, ctx),
         );
       },
     );
   }
 
-  Widget _renderSafe(ScreenConfig config, BuildContext ctx) {
+  Widget _buildA2uiBody(BuildContext context) {
+    final messages = _a2uiMessages;
+    if (messages == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_a2uiMessages!.isEmpty) {
+      return const Center(child: Text('No A2UI messages'));
+    }
+
+    final dispatcher = SandboxActionDispatcher(
+      console: _console,
+      scaffoldMessenger: ScaffoldMessenger.of(context),
+    );
+
+    // Hook le dispatcher dans ScalarioButton pour les actions
+    ScalarioButton.onAction = dispatcher.dispatch;
+
+    // Simule des mises à jour temps réel (Live Engine)
+    final liveStream = _createSimulatedLiveStream();
+
+    return SandboxBreakpointOverlay(
+      breakpoint: _breakpoint,
+      child: A2UICanvas(
+        registry: _registry,
+        initialMessages: _a2uiMessages,
+        messageStream: liveStream,
+        onAction: dispatcher.dispatch,
+      ),
+    );
+  }
+
+  /// Crée un stream simulé qui émet des updates dataModel toutes les 5s.
+  Stream<Map<String, dynamic>> _createSimulatedLiveStream() {
+    final rng = math.Random(42);
+    return Stream.periodic(
+      const Duration(seconds: 5),
+      (_) => <String, dynamic>{
+        'version': 'v0.9',
+        'updateDataModel': <String, dynamic>{
+          'surfaceId': 'dashboard',
+          'value': <String, dynamic>{
+            'kpi': <String, dynamic>{
+              'ca_jour': 145000 + rng.nextInt(30000),
+              'commandes_jour': 28 + rng.nextInt(6),
+            },
+          },
+        },
+      },
+    );
+  }
+
+  void _postError(Object? error) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _console.log(
+        SandboxLogLevel.error,
+        'Sandbox',
+        'load failure for $_fixtureId',
+        error: error,
+      );
+    });
+  }
+
+  Widget _renderBduiSafe(ScreenConfig config, BuildContext ctx) {
     try {
       return _engine.render(config, ctx);
     } catch (e, st) {
@@ -336,8 +479,6 @@ class _SandboxScreenState extends State<SandboxScreen> {
 
 /// Construit un [ScalarioCanvas] dédié au sandbox qui consulte le
 /// [SandboxUserContextProvider] mutable plutôt que celui de production.
-///
-/// On évite GetIt pour ce composant car il diffère par instance.
 abstract class _SandboxBDUIEngineFactory {
   static ScalarioCanvas build({
     required ScalarioCanvasRegistry registry,
@@ -355,9 +496,6 @@ abstract class _SandboxBDUIEngineFactory {
   }
 }
 
-/// Stub — la sandbox parse le JSON elle-même via [SandboxJsonLoader] ; cette
-/// implémentation ne devrait jamais être appelée. Si elle l'est, on émet une
-/// erreur explicite pour faciliter le debug.
 class _UnusedDataResolver implements DataSourceResolver {
   @override
   Future<Map<String, dynamic>> loadScreenJson(String screenId) =>
@@ -370,8 +508,5 @@ class _UnusedDataResolver implements DataSourceResolver {
 class _PassthroughValidator implements JsonSchemaValidator {
   const _PassthroughValidator();
   @override
-  void validateScreen(Map<String, dynamic> json) {
-    // Pas de validation supplémentaire ; le `ScreenConfig.fromJson` détecte
-    // déjà les mismatches structurels majeurs.
-  }
+  void validateScreen(Map<String, dynamic> json) {}
 }

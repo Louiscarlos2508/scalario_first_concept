@@ -1,0 +1,63 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"dashboard","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"dashboard",
+    "components":[
+      {"id":"root","component":"Column","children":["header_row","kpi_row","charts_section","recent_table","action_row"]},
+      {"id":"header_row","component":"Row","children":["page_title","sync_status"]},
+      {"id":"page_title","component":"Text","text":"Tableau de Bord","props":{"style":"headlineMedium"}},
+      {"id":"sync_status","component":"SyncStatusBar","variant":"inline","props":{"label":"Synced","status":"ok"}},
+      {"id":"kpi_row","component":"Row","children":["ca_jour","ca_mois","stock_total","commandes_jour"]},
+      {"id":"ca_jour","component":"KPICard","variant":"default","text":"CA Jour","value":{"path":"/kpi/ca_jour"},"props":{"icon":"trending_up","unit":"FCFA"}},
+      {"id":"ca_mois","component":"KPICard","variant":"default","text":"CA Mois","value":{"path":"/kpi/ca_mois"},"props":{"icon":"calendar_month","unit":"FCFA"}},
+      {"id":"stock_total","component":"KPICard","variant":"default","text":"Stock Total","value":{"path":"/kpi/stock_total"},"props":{"icon":"inventory","unit":"articles"}},
+      {"id":"commandes_jour","component":"KPICard","variant":"default","text":"Commandes","value":{"path":"/kpi/commandes_jour"},"props":{"icon":"receipt","unit":"auj."}},
+      {"id":"charts_section","component":"Column","children":["ventes_chart","top_products"]},
+      {"id":"ventes_chart","component":"ChartBar","variant":"default","text":"Ventes 7 jours","props":{"title":"Évolution des ventes (7 jours)"}},
+      {"id":"top_products","component":"DataTable","variant":"default","text":"Top Produits","props":{"title":"Top 5 Produits","columns":["Produit","Quantité","Montant"]}},
+      {"id":"recent_table","component":"Column","children":["table_header","table_data"]},
+      {"id":"table_header","component":"Text","text":"Dernières Transactions","props":{"style":"titleMedium"}},
+      {"id":"table_data","component":"DataTable","variant":"compact","text":"Transactions","props":{"columns":["Date","Client","Montant","Statut"]}},
+      {"id":"action_row","component":"Row","children":["btn_nouvelle_vente","btn_approvisionnement","btn_rapport"]},
+      {"id":"btn_nouvelle_vente","component":"ScalarioButton","variant":"primary","text":"Nouvelle Vente","action":{"name":"flow.execute","event":{"name":"nouvelle_vente","context":{"type":"vente"}}}},
+      {"id":"btn_approvisionnement","component":"ScalarioButton","variant":"secondary","text":"Approvisionnement","action":{"name":"flow.execute","event":{"name":"approvisionnement","context":{"type":"stock"}}}},
+      {"id":"btn_rapport","component":"ScalarioButton","variant":"ghost","text":"Rapport complet","action":{"name":"flow.execute","event":{"name":"rapport","context":{"type":"pdf"}}}}
+    ]
+  }},
+  {"version":"v0.9","updateDataModel":{"surfaceId":"dashboard","value":{
+    "kpi":{
+      "ca_jour":145000,
+      "ca_mois":3450000,
+      "stock_total":23450,
+      "commandes_jour":28
+    },
+    "ventes7j":[
+      {"jour":"Lun","montant":85000},
+      {"jour":"Mar","montant":92000},
+      {"jour":"Mer","montant":78000},
+      {"jour":"Jeu","montant":102000},
+      {"jour":"Ven","montant":115000},
+      {"jour":"Sam","montant":145000},
+      {"jour":"Dim","montant":"—"}
+    ],
+    "top_produits":[
+      {"produit":"Riz 5kg","quantite":340,"montant":442000},
+      {"produit":"Huile 1L","quantite":215,"montant":322500},
+      {"produit":"Sucre 1kg","quantite":180,"montant":126000},
+      {"produit":"Farine 5kg","quantite":120,"montant":96000},
+      {"produit":"Lait 1L","quantite":95,"montant":71250}
+    ],
+    "transactions":[
+      {"date":"28/05","client":"SARL Dupont","montant":12500,"statut":"payé"},
+      {"date":"28/05","client":"ETS Martin","montant":8900,"statut":"en_attente"},
+      {"date":"27/05","client":"Mme Koné","montant":34500,"statut":"payé"},
+      {"date":"27/05","client":"Sté Traoré","montant":6700,"statut":"annulé"},
+      {"date":"26/05","client":"Coopérative","montant":28000,"statut":"payé"}
+    ],
+    "meta":{
+      "shop_name":"Supérette du Centre",
+      "date":"2026-05-29",
+      "cashier":"Carlos"
+    }
+  }}}
+]

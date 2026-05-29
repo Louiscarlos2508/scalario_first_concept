@@ -12,7 +12,11 @@ import 'a2ui_message.dart';
 class A2UIComponentTranslator {
   A2UIComponentTranslator(this.registry);
 
-  final ScalarioCanvasRegistry registry;
+  ScalarioCanvasRegistry registry;
+
+  void updateRegistry(ScalarioCanvasRegistry newRegistry) {
+    registry = newRegistry;
+  }
 
   /// Traduit un message [UpdateComponents] en [ScreenConfig].
   ///

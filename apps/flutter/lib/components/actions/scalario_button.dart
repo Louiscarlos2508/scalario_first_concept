@@ -15,18 +15,34 @@ class ScalarioButton extends StatelessWidget {
   final String variant;
   final VoidCallback? onPressed;
 
+  /// Hook global pour dispatcher les actions A2UI.
+  /// Sera appelé quand un bouton avec `config.actions` est pressé.
+  static void Function(Map<String, dynamic> action)? onAction;
+
   static Widget fromConfig(ComponentConfig config, BuildContext ctx) {
     ScalarioCanvasResolver.resolveVariant(
       config.variant,
       component: 'ScalarioButton',
       screenWidth: MediaQuery.of(ctx).size.width,
     );
-    return ScalarioButton._(props: config.props, variant: config.variant);
+
+    VoidCallback? onPressed;
+    final actions = config.actions;
+    if (actions != null && actions.isNotEmpty && onAction != null) {
+      final action = actions.first;
+      onPressed = () => onAction!(action);
+    }
+
+    return ScalarioButton._(
+      props: config.props,
+      variant: config.variant,
+      onPressed: onPressed,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final label = props['label'] as String? ?? '';
+    final label = (props['label'] ?? props['text'] ?? '') as String;
     final style = switch (variant) {
       'primary' => ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFCC00), foregroundColor: Colors.black),
       'secondary' => OutlinedButton.styleFrom(),
