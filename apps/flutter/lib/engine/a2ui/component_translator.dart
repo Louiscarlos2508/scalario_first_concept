@@ -92,7 +92,7 @@ class A2UIComponentTranslator {
     if (props['props'] is Map<String, dynamic>) {
       final nested = props.remove('props') as Map<String, dynamic>;
       for (final entry in nested.entries) {
-        props.putIfAbsent(entry.key, () => _resolveValue(entry.value));
+        props.putIfAbsent(entry.key, () => _translateNestedProp(entry.value, allComponents));
       }
     }
     // Binding auto : si un composant data (DataTable, ChartBar, KPICard) n'a pas
