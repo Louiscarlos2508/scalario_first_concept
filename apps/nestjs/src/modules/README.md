@@ -4,7 +4,7 @@
 
 ## Rôle (cf PRD v14 §10)
 
-Les 6 modules génériques de Scalario : `ModuleList`, `ModuleForm`, `ModuleDetail`, `ModuleReport`, `ModuleKanban`, `ModuleDashboard`. Chacun est un **engine paramétrable** (pas du code hardcodé) qui consomme le catalogue `catalog/modules/<sector>/*.json` pour produire un module ERP fonctionnel.
+Les 6 modules génériques de Scalario : `ModuleList`, `ModuleForm`, `ModuleDetail`, `ModuleReport`, `ModuleKanban`, `ModuleDashboard`. Chacun est un **engine paramétrable** (pas du code hardcodé) qui consomme le catalogue pour produire un module ERP fonctionnel.
 
 ## Contenu attendu (Phase 2)
 

@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import '../components/actions/scalario_button.dart';
+import '../core/ai_relay/ai_relay_client.dart';
 import '../engine/canvas/scalario_canvas.dart';
 import '../engine/canvas/data_source_resolver.dart';
 import '../engine/canvas/json_schema_validator.dart';
@@ -36,6 +37,8 @@ import 'sandbox_user_context.dart';
 const String kSandboxRouteName = '/dev/sandbox';
 
 enum _SandboxMode { bdui, a2ui }
+
+enum _SandboxSource { static, live }
 
 /// IDs de toutes les fixtures disponibles (BDUI + A2UI).
 List<String> get _allFixtureIds =>
@@ -76,6 +79,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
 
   String _fixtureId = _allFixtureIds.first;
   _SandboxMode _mode = _SandboxMode.bdui;
+  _SandboxSource _source = _SandboxSource.static;
   SandboxBreakpoint _breakpoint = SandboxBreakpoint.desktop;
   bool _reloading = false;
   Timer? _reloadIndicatorTimer;
@@ -85,6 +89,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
 
   // A2UI state
   List<Map<String, dynamic>>? _a2uiMessages;
+  String? _a2uiErrorMessage;
 
   bool get _isBduiMode => _mode == _SandboxMode.bdui;
 
@@ -146,18 +151,56 @@ class _SandboxScreenState extends State<SandboxScreen> {
         _fixtureId = fixtureId;
         _mode = mode;
         _a2uiMessages = null;
+        _a2uiErrorMessage = null;
         _bduiFuture = future;
       });
+    } else if (_source == _SandboxSource.live) {
+      _loadLiveA2ui(fixtureId);
+      return;
     } else {
       setState(() {
         _fixtureId = fixtureId;
         _mode = mode;
         _a2uiMessages = null;
+        _a2uiErrorMessage = null;
         _bduiFuture = null;
       });
     }
 
     unawaited(_attachWatcher(fixtureId));
+  }
+
+  Future<void> _loadLiveA2ui(String fixtureId) async {
+    setState(() {
+      _fixtureId = fixtureId;
+      _mode = _SandboxMode.a2ui;
+      _a2uiMessages = null;
+      _a2uiErrorMessage = null;
+      _bduiFuture = null;
+    });
+
+    try {
+      final client = GetIt.I<AiRelayClient>();
+      final response = await client.generate(
+        tenantId: 'dev',
+        surfaceId: fixtureId,
+        intent: 'Show $fixtureId dashboard with KPIs and actions',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _a2uiMessages = response.messages;
+        _console.log(
+          SandboxLogLevel.info,
+          'MindEngine',
+          'generated surface=${response.surfaceId} model=${response.model} degraded=${response.degraded} messages=${response.messages.length}',
+        );
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _a2uiErrorMessage = e.toString());
+      _console.log(SandboxLogLevel.error, 'MindEngine', 'generation failed', error: e);
+    }
   }
 
   Future<void> _attachWatcher(String fixtureId) async {
@@ -195,7 +238,9 @@ class _SandboxScreenState extends State<SandboxScreen> {
       _breakpoint = SandboxBreakpoint.desktop;
       _fixtureId = firstId;
       _mode = _detectMode(firstId);
+      _source = _SandboxSource.static;
       _a2uiMessages = null;
+      _a2uiErrorMessage = null;
       _bduiFuture = _loadBdui(firstId);
     });
   }
@@ -263,6 +308,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
         children: <Widget>[
           _fixtureDropdown(),
           _modeIndicator(),
+          if (_mode == _SandboxMode.a2ui) _sourceDropdown(),
           _userContextDropdown(),
           _breakpointDropdown(),
           if (_userCtx.preset == SandboxUserPreset.custom)
@@ -306,6 +352,24 @@ class _SandboxScreenState extends State<SandboxScreen> {
           color: _mode == _SandboxMode.a2ui ? Colors.blue.shade700 : null,
         ),
       ),
+    );
+  }
+
+  Widget _sourceDropdown() {
+    return DropdownButton<_SandboxSource>(
+      key: const Key('sandbox.dropdown.source'),
+      value: _source,
+      onChanged: (_source == _SandboxSource.live && _a2uiMessages == null)
+          ? null
+          : (_SandboxSource? v) {
+              if (v == null || v == _source) return;
+              setState(() => _source = v);
+              if (_mode == _SandboxMode.a2ui) _loadFixture(_fixtureId);
+            },
+      items: const [
+        DropdownMenuItem(value: _SandboxSource.static, child: Text('Static')),
+        DropdownMenuItem(value: _SandboxSource.live, child: Text('Live')),
+      ],
     );
   }
 
@@ -393,11 +457,47 @@ class _SandboxScreenState extends State<SandboxScreen> {
 
   Widget _buildA2uiBody(BuildContext context) {
     final messages = _a2uiMessages;
-    if (messages == null) {
-      return const Center(child: CircularProgressIndicator());
+    if (messages == null && _a2uiErrorMessage == null) {
+      final label = _source == _SandboxSource.live ? 'Contacting MindEngine...' : null;
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (label != null) ...[
+              const SizedBox(height: 12),
+              Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ],
+        ),
+      );
     }
 
-    if (_a2uiMessages!.isEmpty) {
+    if (_a2uiErrorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 12),
+            Text('MindEngine error', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _a2uiErrorMessage!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonal(onPressed: _reload, child: const Text('Retry')),
+          ],
+        ),
+      );
+    }
+
+    if (messages == null || messages.isEmpty) {
       return const Center(child: Text('No A2UI messages'));
     }
 
@@ -406,17 +506,15 @@ class _SandboxScreenState extends State<SandboxScreen> {
       scaffoldMessenger: ScaffoldMessenger.of(context),
     );
 
-    // Hook le dispatcher dans ScalarioButton pour les actions
     ScalarioButton.onAction = dispatcher.dispatch;
 
-    // Simule des mises à jour temps réel (Live Engine)
     final liveStream = _createSimulatedLiveStream();
 
     return SandboxBreakpointOverlay(
       breakpoint: _breakpoint,
       child: A2UICanvas(
         registry: _registry,
-        initialMessages: _a2uiMessages,
+        initialMessages: messages,
         messageStream: liveStream,
         onAction: dispatcher.dispatch,
       ),

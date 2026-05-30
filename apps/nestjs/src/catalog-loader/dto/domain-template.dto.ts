@@ -7,7 +7,7 @@ import { ROLE_NAME_REGEX, isSystemRole } from '../../core/security/constants';
  * Represents the structural envelope of `catalog/domains/<id>.json`:
  * metadata, roles (with full RBAC matrix), modules referenced, navigation
  * per role, dashboard layouts per role. Module bodies (entities, screens,
- * actions) live in `catalog/modules/<module_id>.json` — STORY-040.
+ * actions) are generated dynamically via A2UI.
  */
 
 const RoleId = z

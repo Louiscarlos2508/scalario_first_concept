@@ -1,0 +1,12 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["tog1","tog2","tog3"],"props":{"gap":4}},
+      {"id":"tog1","component":"Toggle","props":{"label":"Notifications push","value":true}},
+      {"id":"tog2","component":"Switch","props":{"label":"Mode hors ligne","value":false}},
+      {"id":"tog3","component":"Toggle","props":{"label":"Sauvegarde automatique"}}
+    ]
+  }}
+]

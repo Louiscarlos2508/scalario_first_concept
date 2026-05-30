@@ -1,0 +1,12 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["cb1","cb2","cb3"],"props":{"gap":4}},
+      {"id":"cb1","component":"Checkbox","props":{"label":"Inclure les taxes","value":true}},
+      {"id":"cb2","component":"Checkbox","props":{"label":"Appliquer la remise","value":false}},
+      {"id":"cb3","component":"Checkbox","props":{"label":"Envoyer par email"}}
+    ]
+  }}
+]

@@ -15,11 +15,6 @@ function readTemplateFile(template: string): string {
     resolve(root, '..', 'catalog', 'domains', `${template}.json`),
     resolve(root, '..', '..', 'catalog', 'domains', `${template}.json`),
     resolve(root, '..', '..', '..', 'catalog', 'domains', `${template}.json`),
-    // v14 — domains v13 archivés (STORY-V14-006)
-    resolve(root, '_archive_v13', 'domains', `${template}.json`),
-    resolve(root, '..', 'catalog', '_archive_v13', 'domains', `${template}.json`),
-    resolve(root, '..', '..', 'catalog', '_archive_v13', 'domains', `${template}.json`),
-    resolve(root, '..', '..', '..', 'catalog', '_archive_v13', 'domains', `${template}.json`),
   ];
   for (const p of candidates) {
     try {

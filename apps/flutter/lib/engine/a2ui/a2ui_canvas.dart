@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 
+import '../canvas_registry/component_config.dart';
 import '../canvas_registry/scalario_canvas_registry.dart';
 import '../canvas_layout/screen_config.dart';
 import 'a2ui_component.dart';
@@ -99,7 +100,7 @@ class _A2UICanvasState extends State<A2UICanvas> {
           final config = _translator.translate(
             uc,
             surface.layout,
-            surface.surfaceId,
+            null,
           );
           _surfaces[uc.surfaceId] = surface.copyWith(config: config);
           _activeSurface ??= uc.surfaceId;
@@ -133,6 +134,53 @@ class _A2UICanvasState extends State<A2UICanvas> {
     }
   }
 
+  /// Résout tous les marqueurs `_a2ui_path` dans les props d'un
+  /// [ComponentConfig] contre le [dataModel], récursivement dans les enfants.
+  ComponentConfig _resolveConfig(ComponentConfig config, A2UIDataModel dataModel) {
+    Map<String, dynamic> resolvedProps = {};
+    for (final entry in config.props.entries) {
+      resolvedProps[entry.key] = _resolveDataBinding(entry.value, dataModel);
+    }
+
+    List<ComponentConfig>? resolvedChildren;
+    if (config.children != null) {
+      resolvedChildren = config.children!
+          .map((c) => _resolveConfig(c, dataModel))
+          .toList();
+    }
+
+    return config.copyWith(props: resolvedProps, children: resolvedChildren);
+  }
+
+  /// Résout une valeur qui pourrait être un marqueur de data binding.
+  dynamic _resolveDataBinding(dynamic value, A2UIDataModel dataModel) {
+    if (value is Map<String, dynamic> && value.containsKey('_a2ui_path')) {
+      final path = value['_a2ui_path'] as String;
+      final result = dataModel.resolve(path);
+      if (result == null) return null;
+      if (result is num) {
+        if (result == result.roundToDouble()) {
+          return result.toInt().toString();
+        }
+        return result.toString();
+      }
+      if (result is String) return result;
+      if (result is List || result is Map) return result;
+      return result.toString();
+    }
+    if (value is Map<String, dynamic>) {
+      Map<String, dynamic> resolved = {};
+      for (final entry in value.entries) {
+        resolved[entry.key] = _resolveDataBinding(entry.value, dataModel);
+      }
+      return resolved;
+    }
+    if (value is List) {
+      return value.map((e) => _resolveDataBinding(e, dataModel)).toList();
+    }
+    return value;
+  }
+
   @override
   Widget build(BuildContext context) {
     final surface = _activeSurface != null
@@ -146,22 +194,30 @@ class _A2UICanvasState extends State<A2UICanvas> {
     final registry = widget.registry;
     final config = surface.config!;
     final zones = config.zones;
+    final dataModel = surface.dataModel;
 
     final kpis = zones.kpis
-        ?.map((c) => registry.build(c, context))
+        ?.map((c) => registry.build(_resolveConfig(c, dataModel), context))
         .toList();
     final main = zones.main
-        ?.map((c) => registry.build(c, context))
+        ?.map((c) => registry.build(_resolveConfig(c, dataModel), context))
         .toList();
 
-    return Scaffold(
-      appBar: config.title != null ? AppBar(title: Text(config.title!)) : null,
-      body: Column(
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (config.title != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(config.title!, style: Theme.of(context).textTheme.titleLarge),
+            ),
           if (kpis != null && kpis.isNotEmpty)
-            Wrap(spacing: 8, runSpacing: 8, children: kpis),
-          if (main != null && main.isNotEmpty)
-            Expanded(child: ListView(children: main)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(children: kpis.map((k) => Padding(padding: const EdgeInsets.only(bottom: 8), child: k)).toList()),
+            ),
+          if (main != null && main.isNotEmpty) ...main,
         ],
       ),
     );

@@ -99,10 +99,6 @@ describe('CatalogueValidatorService', () => {
       expect(service.inferTypeFromPath('/catalog/domains/retail.json')).toBe('domain');
     });
 
-    it('infers module type from path', () => {
-      expect(service.inferTypeFromPath('/catalog/modules/inventory.json')).toBe('module');
-    });
-
     it('infers fusion type from path', () => {
       expect(service.inferTypeFromPath('/catalog/fusions/main.json')).toBe('fusion');
     });

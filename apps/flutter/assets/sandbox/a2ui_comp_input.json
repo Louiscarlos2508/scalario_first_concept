@@ -1,0 +1,13 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["demo_text","demo_number","demo_money","demo_password"],"props":{"gap":8}},
+      {"id":"demo_text","component":"Input","props":{"label":"Nom du produit","hint":"Ex: Riz 5 kg","required":true}},
+      {"id":"demo_number","component":"Input","props":{"label":"Quantité","variant":"number","required":true}},
+      {"id":"demo_money","component":"Input","props":{"label":"Prix unitaire","variant":"money","suffix":"FCFA"}},
+      {"id":"demo_password","component":"Input","props":{"label":"Mot de passe","variant":"password","hint":"8 caractères min"}}
+    ]
+  }}
+]

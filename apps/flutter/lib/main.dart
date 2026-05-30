@@ -6,7 +6,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
 
 import 'l10n/s.dart';
-import 'core/design_system/tokens/tokens.dart';
 import 'core/vault/auth_storage.dart';
 import 'core/vault/cache_cleaner.dart';
 import 'core/vault/database.dart';
@@ -14,6 +13,7 @@ import 'core/vault/db_encryption.dart';
 import 'core/vault/drift_data_source_resolver.dart';
 import 'core/vault/local_store.dart';
 import 'core/sync/connectivity_listener.dart';
+import 'core/ai_relay/ai_relay_client.dart';
 import 'core/sync/sync_api_client.dart';
 import 'core/sync/sync_queue_service.dart';
 import 'core/theme/scalario_theme.dart';
@@ -22,10 +22,12 @@ import 'engine/canvas_registry/registry_bootstrap.dart';
 import 'engine/canvas/scalario_canvas_module.dart';
 import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'engine/error_boundary/global_error_handler.dart';
+import 'home_screen.dart';
 import 'sandbox/sandbox_screen.dart';
 
 const kSandboxRouteName = '/dev/sandbox';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.system);
 
 void main() {
   runZonedGuarded(
@@ -56,15 +58,39 @@ Future<void> _setupDependencies() async {
     tenantConfigDao: store.tenantConfigDao, cachedLayoutDao: store.cachedLayoutDao, localDataDao: store.localDataDao));
   GetIt.I.registerSingleton(ConnectivityListener());
   GetIt.I.registerSingleton(SyncQueueService(queueDao: store.syncQueueDao, localDataDao: store.localDataDao));
-  GetIt.I.registerSingleton(SyncApiClient(
-    baseUrl: const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000'),
-    tokenProvider: () => authStorage.readAccessToken()));
+  final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000');
+  final SyncApiClient syncApi = SyncApiClient(
+    baseUrl: baseUrl,
+    tokenProvider: () => authStorage.readAccessToken());
+  GetIt.I.registerSingleton(syncApi);
+  GetIt.I.registerSingleton(AiRelayClient(baseUrl: baseUrl));
 
   await ScalarioCanvasModule.register(GetIt.I, dataResolver: DriftDataSourceResolver(layoutDao: store.cachedLayoutDao));
 }
 
-class ScalarioApp extends StatelessWidget {
+class ScalarioApp extends StatefulWidget {
   const ScalarioApp({super.key});
+
+  @override
+  State<ScalarioApp> createState() => _ScalarioAppState();
+}
+
+class _ScalarioAppState extends State<ScalarioApp> {
+  @override
+  void initState() {
+    super.initState();
+    themeModeNotifier.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    themeModeNotifier.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +100,7 @@ class ScalarioApp extends StatelessWidget {
       navigatorKey: _navigatorKey,
       theme: ScalarioTheme.light(),
       darkTheme: ScalarioTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: themeModeNotifier.value,
       localizationsDelegates: const [
         S.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -83,7 +109,7 @@ class ScalarioApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const Scaffold(body: Center(child: Text('Scalario — à connecter au MindEngine via A2UI'))),
+      home: const HomeScreen(),
       routes: { if (kDebugMode) kSandboxRouteName: (_) => const SandboxScreen() },
     );
   }

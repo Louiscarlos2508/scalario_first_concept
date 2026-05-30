@@ -31,4 +31,16 @@ class A2uiSandboxLoader {
 /// Préfixées par "a2ui_" pour les distinguer des fixtures BDUI.
 const List<String> kA2uiFixtureIds = <String>[
   'a2ui_dashboard',
+  'a2ui_comp_heading',
+  'a2ui_comp_card',
+  'a2ui_comp_gauge',
+  'a2ui_comp_input',
+  'a2ui_comp_media',
+  'a2ui_comp_accordion',
+  'a2ui_comp_badge',
+  'a2ui_comp_dropdown',
+  'a2ui_comp_checkbox',
+  'a2ui_comp_toggle',
+  'a2ui_comp_slider',
+  'a2ui_comp_tabs',
 ];

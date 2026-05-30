@@ -75,7 +75,7 @@ src/
 
 ## Comment naviguer
 
-- **Une nouvelle feature métier ?** → `engines/action/handlers/` (handler) + `catalog/modules/...json` (config)
+- **Une nouvelle feature métier ?** → `engines/action/handlers/` (handler) + config dynamique A2UI
 - **Une nouvelle règle d'accès ?** → `core/security/abac/rules/`
 - **Un nouvel endpoint utilisateur ?** → `engines/{action,workflow}/X.controller.ts`
 - **Un nouveau provider OAuth ?** → `core/auth/strategies/`

@@ -78,6 +78,12 @@ class A2UIDataModel {
   }
 
   void update(String path, dynamic value) {
+    if (path == '/') {
+      if (value is Map<String, dynamic>) {
+        _data.addAll(value);
+      }
+      return;
+    }
     if (!path.startsWith('/')) return;
     final parts = path.split('/').skip(1).toList();
     if (parts.isEmpty) {

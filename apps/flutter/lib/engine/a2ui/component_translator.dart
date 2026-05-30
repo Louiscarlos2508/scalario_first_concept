@@ -27,7 +27,7 @@ class A2UIComponentTranslator {
   ScreenConfig translate(
     UpdateComponents msg,
     String layout,
-    String title,
+    String? title,
   ) {
     final map = <String, A2UIComponent>{};
     for (final c in msg.components) {
@@ -75,6 +75,7 @@ class A2UIComponentTranslator {
     final props = <String, dynamic>{};
 
     // Copie toutes les props A2UI, en traduisant les data bindings
+    // et les sous-composants imbriqués (ex: Card → header/body/footer).
     for (final entry in a2ui.props.entries) {
       if (entry.key == 'id' ||
           entry.key == 'component' ||
@@ -82,7 +83,29 @@ class A2UIComponentTranslator {
           entry.key == 'action') {
         continue;
       }
-      props[entry.key] = _resolveValue(entry.value);
+      props[entry.key] = _translateNestedProp(entry.value, allComponents);
+    }
+    // Fusionne le bloc `props` imbriqué A2UI dans les props racines
+    // ex: {"text":"CA Jour","props":{"icon":"trending_up","data":{"path":"/ventes7j"}}}
+    //     → props['icon'] = 'trending_up', props['data'] = {'_a2ui_path': '/ventes7j'}
+    // Les data bindings dans les props imbriquées sont résolus via _resolveValue.
+    if (props['props'] is Map<String, dynamic>) {
+      final nested = props.remove('props') as Map<String, dynamic>;
+      for (final entry in nested.entries) {
+        props.putIfAbsent(entry.key, () => _resolveValue(entry.value));
+      }
+    }
+    // Binding auto : si un composant data (DataTable, ChartBar, KPICard) n'a pas
+    // de binding explicite pour ses données, on le dérive du `text` ou de l'`id`.
+    // ex: DataTable(text:"Top Produits") → rows:{_a2ui_path:/top_produits}
+    // ex: ChartBar(text:"Ventes 7 jours")  → data:{_a2ui_path:/ventes_7_jours}
+    if (scalarioType == 'DataTable' && !props.containsKey('rows')) {
+      final derived = _derivePath(a2ui.text ?? a2ui.id);
+      if (derived != null) props['rows'] = {'_a2ui_path': derived};
+    }
+    if (scalarioType == 'ChartBar' && !props.containsKey('data')) {
+      final derived = _derivePath(a2ui.text ?? a2ui.id);
+      if (derived != null) props['data'] = {'_a2ui_path': derived};
     }
 
     // Traduit les children
@@ -123,6 +146,19 @@ class A2UIComponentTranslator {
     );
   }
 
+  /// Dérive un path data model depuis le `text` ou l'`id` d'un composant.
+  /// "Top Produits" → "/top_produits", "ventes_chart" → "/ventes_chart"
+  String? _derivePath(String? source) {
+    if (source == null || source.isEmpty) return null;
+    String result = source.toLowerCase();
+    result = result.replaceAll(RegExp(r'[^a-z0-9\s]'), '');
+    result = result.replaceAll(RegExp(r'\s+'), '_');
+    result = result.replaceAll(RegExp(r'_+'), '_');
+    result = result.replaceAll(RegExp(r'^_|_$'), '');
+    if (result.isEmpty) return null;
+    return '/$result';
+  }
+
   /// Résout une valeur A2UI (literal, DataBinding ou FunctionCall).
   dynamic _resolveValue(dynamic value) {
     if (value is Map<String, dynamic>) {
@@ -141,6 +177,43 @@ class A2UIComponentTranslator {
     }
     return value;
   }
+
+  /// Traduit une valeur de prop qui peut contenir un sous-composant inline
+  /// (ex : Card → props.body/header/footer).
+  ///
+  /// Un sous-composant inline est un Map avec une clé `"component"`.
+  /// Ses `children` peuvent être des String IDs référençant la flat list A2UI.
+  dynamic _translateNestedProp(
+    dynamic value,
+    Map<String, A2UIComponent> allComponents,
+  ) {
+    if (value is Map<String, dynamic> && value.containsKey('component')) {
+      final pseudo = A2UIComponent(
+        id: value['id'] as String? ?? _generateId(),
+        component: value['component'] as String,
+        variant: value['variant'] as String?,
+        text: value['text'] as String?,
+        value: value['value'],
+        children: value['children'] != null
+            ? (value['children'] as List<dynamic>).cast<String>()
+            : null,
+        action: value['action'] != null
+            ? Map<String, dynamic>.from(value['action'] as Map)
+            : null,
+        props: value,
+      );
+      return _translateComponent(pseudo, allComponents);
+    }
+    if (value is List) {
+      return value
+          .map((e) => _translateNestedProp(e, allComponents))
+          .toList();
+    }
+    return _resolveValue(value);
+  }
+
+  int _idCounter = 0;
+  String _generateId() => '_inline_${_idCounter++}';
 
   /// Distribue les composants dans les zones Scalario.
   ScreenZones _distributeZones(List<ComponentConfig> components) {
@@ -171,9 +244,7 @@ class A2UIComponentTranslator {
 
   bool _isKPI(ComponentConfig c) =>
       c.type == 'KPICard' ||
-      c.type == 'StatsCard' ||
-      c.type == 'ChartBar' ||
-      c.type == 'ChartPie';
+      c.type == 'StatsCard';
 
   bool _isAction(ComponentConfig c) =>
       c.type == 'Button' ||

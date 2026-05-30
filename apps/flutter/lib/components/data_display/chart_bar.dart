@@ -133,7 +133,10 @@ class ChartBar extends StatefulWidget {
     if (title == null) {
       throw const FormatException("ChartBar: 'title' requis");
     }
-    final List<dynamic>? rawData = json['data'] as List<dynamic>?;
+    final List<dynamic>? rawData = switch (json['data']) {
+      List<dynamic> l => l,
+      _ => null,
+    };
     final List<ChartDataPoint> data = rawData == null
         ? const <ChartDataPoint>[]
         : <ChartDataPoint>[

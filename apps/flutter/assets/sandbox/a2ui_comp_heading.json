@@ -1,0 +1,13 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["demo1","demo2","demo3","demo4"],"props":{"gap":8}},
+      {"id":"demo1","component":"Heading","props":{"icon":"dashboard","title":"Vue d'ensemble","subtitle":"Indicateurs clés du jour","divider":true}},
+      {"id":"demo2","component":"Heading","props":{"icon":"show_chart","title":"Évolution des ventes","subtitle":"7 derniers jours","divider":true}},
+      {"id":"demo3","component":"Heading","props":{"icon":"star","title":"Top 5 Produits","divider":false}},
+      {"id":"demo4","component":"Heading","props":{"title":"Sans icône ni sous-titre","divider":false}}
+    ]
+  }}
+]

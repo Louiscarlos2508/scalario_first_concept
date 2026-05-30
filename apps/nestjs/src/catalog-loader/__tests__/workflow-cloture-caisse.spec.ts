@@ -34,11 +34,7 @@ interface CatalogueWorkflowJson {
 }
 
 function resolveWorkflowPath(): string {
-  // v14 — workflow déplacé vers catalog/modules/operations/cloture_caisse.json (STORY-V14-006)
   const candidates = [
-    resolve(process.cwd(), 'catalog', 'modules', 'operations', 'cloture_caisse.json'),
-    resolve(process.cwd(), '..', '..', 'catalog', 'modules', 'operations', 'cloture_caisse.json'),
-    // Legacy fallback (au cas où)
     resolve(process.cwd(), 'catalog', 'workflows', `${WF_ID}.json`),
     resolve(process.cwd(), '..', '..', 'catalog', 'workflows', `${WF_ID}.json`),
   ];

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/design_system/tokens/spacing_resolver.dart';
 import '../../canvas_registry/component_config.dart';
 import '../../canvas_registry/scalario_canvas_registry.dart';
 
@@ -22,7 +21,6 @@ class CanvasAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final variant = config.variant;
     final title = config.props['title'] as String? ?? '';
-    final centerTitle = config.props['centerTitle'] as bool? ?? false;
 
     return switch (variant) {
       'large' => _buildLarge(title),
@@ -42,7 +40,7 @@ class CanvasAppBar extends StatelessWidget implements PreferredSizeWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [Text(title, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-        if (config.props['subtitle'] != null) Text(config.props['subtitle'] as String, style: const TextStyle(fontSize: 14, color: Colors.white70))],
+        if (config.props['subtitle'] != null) Text(config.props['subtitle'] as String, style: TextStyle(fontSize: 14, color: Theme.of(ctx).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)))],
     ), actions: _buildActions());
   }
 
@@ -63,6 +61,6 @@ class CanvasAppBar extends StatelessWidget implements PreferredSizeWidget {
     if (r == null) return null;
     final actions = config.props['actions'] as List? ?? [];
     if (actions.isEmpty) return null;
-    return actions.map((a) => r!.build(ComponentConfig.fromJson(a as Map<String, dynamic>), ctx)).toList();
+    return actions.map((a) => r.build(ComponentConfig.fromJson(a as Map<String, dynamic>), ctx)).toList();
   }
 }

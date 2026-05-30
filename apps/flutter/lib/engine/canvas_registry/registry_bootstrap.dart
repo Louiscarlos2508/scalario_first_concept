@@ -15,6 +15,19 @@ import '../canvas/layouts/canvas_row.dart';
 import '../canvas/layouts/canvas_column.dart';
 import '../canvas/layouts/canvas_slots.dart';
 import '../canvas/layouts/canvas_stack.dart';
+import '../canvas/structs/canvas_accordion.dart';
+import '../canvas/structs/canvas_badge.dart';
+import '../canvas/structs/canvas_card.dart';
+import '../canvas/structs/canvas_checkbox.dart';
+import '../canvas/structs/canvas_dropdown.dart';
+import '../canvas/structs/canvas_gauge.dart';
+import '../canvas/structs/canvas_heading.dart';
+import '../canvas/structs/canvas_input.dart';
+import '../canvas/structs/canvas_media.dart';
+import '../canvas/structs/canvas_slider.dart';
+import '../canvas/structs/canvas_tabs.dart';
+import '../canvas/structs/canvas_text.dart';
+import '../canvas/structs/canvas_toggle.dart';
 import '../canvas/structs/canvas_scaffold.dart';
 import '../canvas/structs/canvas_app_bar.dart';
 import '../canvas/structs/canvas_bottom_nav.dart';
@@ -25,7 +38,6 @@ import '../canvas/wrappers/canvas_semantics.dart';
 import '../canvas/wrappers/canvas_gesture.dart';
 import '../canvas/wrappers/canvas_sheet_dialog.dart';
 import '../canvas/wrappers/canvas_transition.dart';
-import '../canvas/wrappers/canvas_theme_switcher.dart';
 import '../canvas/wrappers/canvas_offline_keyboard_print.dart';
 import 'scalario_canvas_registry.dart';
 
@@ -38,8 +50,12 @@ abstract final class RegistryBootstrap {
     r.register('Grid', (c, ctx) => CanvasGrid.fromConfig(c, ctx));
     r.register('Row', (c, ctx) => CanvasRow.fromConfig(c, ctx));
     r.register('Column', (c, ctx) => CanvasColumn.fromConfig(c, ctx));
+    r.register('Card', (c, ctx) => CanvasCard.fromConfig(c, ctx));
+    r.register('Text', (c, ctx) => CanvasText.fromConfig(c, ctx));
     r.register('Slots', (c, ctx) => CanvasSlots.fromConfig(c, ctx));
     r.register('Stack', (c, ctx) => CanvasStack.fromConfig(c, ctx));
+    r.register('Accordion', (c, ctx) => CanvasAccordion.fromConfig(c, ctx));
+    r.register('Tabs', (c, ctx) => CanvasTabs.fromConfig(c, ctx));
     r.register('StateWrapper', (c, ctx) => CanvasStateWrapper.fromConfig(c, ctx));
     r.register('PullToRefresh', (c, ctx) => CanvasPullToRefresh.fromConfig(c, ctx));
     r.register('Pagination', (c, ctx) => CanvasPagination.fromConfig(c, ctx));
@@ -56,6 +72,10 @@ abstract final class RegistryBootstrap {
     r.register('ChartBar', (c, ctx) => ChartBar.fromConfig(c, ctx));
     r.register('ChartPie', (c, ctx) => ChartPie.fromConfig(c, ctx));
     r.register('StatCard', (c, ctx) => StatCard.fromConfig(c, ctx));
+    r.register('Gauge', (c, ctx) => CanvasGauge.fromConfig(c, ctx));
+    r.register('Heading', (c, ctx) => CanvasHeading.fromConfig(c, ctx));
+    r.register('Media', (c, ctx) => CanvasMedia.fromConfig(c, ctx));
+    r.register('Badge', (c, ctx) => CanvasBadge.fromConfig(c, ctx));
 
     // Feedback
     r.register('AlertBanner', (c, ctx) => AlertBanner.fromConfig(c, ctx));
@@ -70,6 +90,15 @@ abstract final class RegistryBootstrap {
     // Inputs
     r.register('FormWidget', (c, ctx) => FormSection.fromConfig(c, ctx));
     r.register('FormSection', (c, ctx) => FormSection.fromConfig(c, ctx));
+    r.register('Input', (c, ctx) => CanvasInput.fromConfig(c, ctx));
+    r.register('TextInput', (c, ctx) => CanvasInput.fromConfig(c, ctx));
+    r.register('NumberInput', (c, ctx) => CanvasInput.fromConfig(c, ctx));
+    r.register('Dropdown', (c, ctx) => CanvasDropdown.fromConfig(c, ctx));
+    r.register('Select', (c, ctx) => CanvasDropdown.fromConfig(c, ctx));
+    r.register('Checkbox', (c, ctx) => CanvasCheckbox.fromConfig(c, ctx));
+    r.register('Toggle', (c, ctx) => CanvasToggle.fromConfig(c, ctx));
+    r.register('Switch', (c, ctx) => CanvasToggle.fromConfig(c, ctx));
+    r.register('Slider', (c, ctx) => CanvasSlider.fromConfig(c, ctx));
 
     // Lists
     r.register('MouvementItem', (c, ctx) => ScalarioListTile.fromConfig(c, ctx));

@@ -1,0 +1,28 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["filled","outlined","dot","sizes"],"props":{"gap":12}},
+      {"id":"filled","component":"Row","props":{"gap":8},"children":[
+        {"component":"Badge","props":{"label":"Actif","color":"success"}},
+        {"component":"Badge","props":{"label":"En attente","color":"warning"}},
+        {"component":"Badge","props":{"label":"Bloqué","color":"danger"}},
+        {"component":"Badge","props":{"label":"Info","color":"info"}}
+      ]},
+      {"id":"outlined","component":"Row","props":{"gap":8},"children":[
+        {"component":"Badge","props":{"label":"Brouillon","variant":"outlined","color":"default"}},
+        {"component":"Badge","props":{"label":"Archivé","variant":"outlined","color":"danger"}}
+      ]},
+      {"id":"dot","component":"Row","props":{"gap":8},"children":[
+        {"component":"Badge","props":{"label":"En ligne","variant":"dot","color":"success"}},
+        {"component":"Badge","props":{"label":"Hors ligne","variant":"dot","color":"danger"}}
+      ]},
+      {"id":"sizes","component":"Row","props":{"gap":8},"children":[
+        {"component":"Badge","props":{"label":"Petit","size":"sm"}},
+        {"component":"Badge","props":{"label":"Moyen","size":"md"}},
+        {"component":"Badge","props":{"label":"Grand","size":"lg"}}
+      ]}
+    ]
+  }}
+]

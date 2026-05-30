@@ -22,7 +22,7 @@ class CanvasColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children.map((c) => Padding(
         padding: EdgeInsets.only(bottom: gap),
-        child: RepaintBoundary(child: ScalarioCanvasRegistry.instance?.build(c, context) ?? const SizedBox.shrink()),
+        child: ScalarioCanvasRegistry.instance?.build(c, context) ?? const SizedBox.shrink(),
       )).toList(),
     );
   }

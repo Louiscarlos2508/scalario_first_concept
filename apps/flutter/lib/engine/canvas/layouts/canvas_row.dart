@@ -18,14 +18,16 @@ class CanvasRow extends StatelessWidget {
     final gap = resolveGap(config.props['gap'] ?? 8);
     final children = config.children ?? [];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: children.map((c) => Padding(
-          padding: EdgeInsets.only(right: gap),
-          child: RepaintBoundary(child: ScalarioCanvasRegistry.instance?.build(c, context) ?? const SizedBox.shrink()),
-        )).toList(),
-      ),
+    return Row(
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) SizedBox(width: gap),
+          Flexible(
+            fit: FlexFit.tight,
+            child: ScalarioCanvasRegistry.instance?.build(children[i], context) ?? const SizedBox.shrink(),
+          ),
+        ],
+      ],
     );
   }
 }

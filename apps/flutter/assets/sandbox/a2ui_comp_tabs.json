@@ -1,0 +1,24 @@
+[
+  {"version":"v0.9","createSurface":{"surfaceId":"preview","catalogId":"scalario"}},
+  {"version":"v0.9","updateComponents":{
+    "surfaceId":"preview",
+    "components":[
+      {"id":"root","component":"Column","children":["tab_demo"],"props":{"gap":8}},
+      {"id":"tab_demo","component":"Tabs","props":{"tabs":[
+        {"label":"Produits","icon":"inventory"},
+        {"label":"Ventes","icon":"trending_up"},
+        {"label":"Clients","icon":"people"}
+      ]},"children":[
+        {"component":"Column","children":[
+          {"component":"Text","text":"Contenu de l'onglet Produits","props":{"style":"body"}},
+          {"component":"Badge","props":{"label":"45 articles en stock","color":"success"}}
+        ]},
+        {"component":"Column","children":[
+          {"component":"Text","text":"Contenu de l'onglet Ventes","props":{"style":"body"}},
+          {"component":"Gauge","props":{"label":"Objectif journalier","value":78,"min":0,"max":100,"suffix":"%","height":16}}
+        ]},
+        {"component":"Text","text":"Contenu de l'onglet Clients","props":{"style":"body"}}
+      ]}
+    ]
+  }}
+]

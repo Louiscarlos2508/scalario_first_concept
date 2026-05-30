@@ -59,10 +59,12 @@ class ScalarioButton extends StatelessWidget {
       );
     }
 
-    return ElevatedButton(
-      style: style,
-      onPressed: onPressed,
-      child: Text(label),
+    return IntrinsicWidth(
+      child: ElevatedButton(
+        style: style,
+        onPressed: onPressed,
+        child: Text(label, softWrap: false, overflow: TextOverflow.ellipsis),
+      ),
     );
   }
 }

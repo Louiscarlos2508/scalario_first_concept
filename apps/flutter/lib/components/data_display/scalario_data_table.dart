@@ -120,13 +120,26 @@ class ScalarioDataTable<T> extends StatefulWidget {
       screenWidth: MediaQuery.of(ctx).size.width,
     );
     final props = config.props;
-    final List<dynamic> rawCols =
-        props['columns'] as List<dynamic>? ?? <dynamic>[];
-    final List<dynamic> rawRows =
-        props['rows'] as List<dynamic>? ?? <dynamic>[];
+    final List<dynamic> rawCols = switch (props['columns']) {
+      List<dynamic> l => l,
+      _ => <dynamic>[],
+    };
+    final List<dynamic> rawRows = switch (props['rows']) {
+      List<dynamic> l => l,
+      _ => <dynamic>[],
+    };
 
     final List<DataColumnConfig<Map<String, dynamic>>> columns =
         rawCols.map((dynamic c) {
+      if (c is String) {
+        return DataColumnConfig<Map<String, dynamic>>(
+          key: c,
+          label: c,
+          cellBuilder: (Map<String, dynamic> row) =>
+              row[c]?.toString() ?? '—',
+          align: DataColumnAlign.left,
+        );
+      }
       final Map<String, dynamic> col = c as Map<String, dynamic>;
       final String key = col['key'] as String? ?? '';
       final String label = col['label'] as String? ?? key;
