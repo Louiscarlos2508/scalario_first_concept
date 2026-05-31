@@ -35,19 +35,34 @@ class A2UIComponentTranslator {
     }
 
     final root = map['root'];
-    final children = <ComponentConfig>[];
-    if (root != null) {
+    Map<String, dynamic>? scaffoldConfig;
+    List<ComponentConfig> children;
+
+    if (root != null && root.component == 'Scaffold') {
+      scaffoldConfig = _extractScaffoldConfig(root, map);
+      children = [];
       if (root.children != null) {
         for (final childId in root.children!) {
           final child = map[childId];
           if (child != null) {
-            children.add(_translateComponent(child, map));
+            children.addAll(_translateSubtree(child, map));
+          }
+        }
+      }
+    } else if (root != null) {
+      children = [];
+      if (root.children != null) {
+        for (final childId in root.children!) {
+          final child = map[childId];
+          if (child != null) {
+            children.addAll(_translateSubtree(child, map));
           }
         }
       } else {
-        children.add(_translateComponent(root, map));
+        children = [_translateComponent(root, map)];
       }
     } else {
+      children = [];
       for (final c in msg.components) {
         if (c.id != 'root') {
           children.add(_translateComponent(c, map));
@@ -63,7 +78,37 @@ class A2UIComponentTranslator {
       layout: layout,
       title: title,
       zones: zones,
+      scaffoldConfig: scaffoldConfig,
     );
+  }
+
+  /// Extrait la config chrome d'un composant Scaffold A2UI.
+  Map<String, dynamic> _extractScaffoldConfig(
+    A2UIComponent scaffold,
+    Map<String, A2UIComponent> allComponents,
+  ) {
+    final config = <String, dynamic>{};
+    for (final key in ['appBar', 'sidebar', 'drawer', 'bottomNav']) {
+      final val = scaffold.props[key];
+      if (val != null) {
+        config[key] = _translateNestedProp(val, allComponents);
+      }
+    }
+    return config;
+  }
+
+  List<ComponentConfig> _translateSubtree(
+    A2UIComponent a2ui,
+    Map<String, A2UIComponent> allComponents,
+  ) {
+    if (a2ui.children != null && a2ui.children!.isNotEmpty) {
+      return a2ui.children!
+          .map((id) => allComponents[id])
+          .whereType<A2UIComponent>()
+          .map((c) => _translateComponent(c, allComponents))
+          .toList();
+    }
+    return [_translateComponent(a2ui, allComponents)];
   }
 
   /// Traduit un composant A2UI récursivement en ComponentConfig Scalario.
@@ -320,6 +365,8 @@ class A2UIComponentTranslator {
       // Layout
       case 'AppBar':
         return 'AppBar';
+      case 'Sidebar':
+        return 'Sidebar';
       case 'BottomNav':
         return 'BottomNav';
       case 'Grid':

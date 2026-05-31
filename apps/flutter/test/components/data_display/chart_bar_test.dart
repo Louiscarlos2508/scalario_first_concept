@@ -102,11 +102,11 @@ void main() {
       expect(c.data[1].value, 20);
     });
 
-    test('title manquant → FormatException', () {
-      expect(
-        () => ChartBar.fromJson(const <String, dynamic>{}),
-        throwsFormatException,
-      );
+    test('title manquant → title null (pas d\'exception)', () {
+      final ChartBar c = ChartBar.fromJson(const <String, dynamic>{
+        'data': <Map<String, dynamic>>[],
+      });
+      expect(c.title, isNull);
     });
 
     test('ChartDataPoint label manquant → FormatException', () {

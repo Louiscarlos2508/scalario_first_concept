@@ -250,66 +250,74 @@ class _ScalarioDataTableState<T> extends State<ScalarioDataTable<T>> {
   Widget _buildTable(BuildContext context) {
     final List<T> sorted = _sortedRows();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        sortColumnIndex: _sortColumnIndex,
-        sortAscending: _sortAsc,
-        showCheckboxColumn: false,
-        headingTextStyle: ScalarioTypography.captionMedium.copyWith(
-          color: ScalarioColors.textSecondary,
-        ),
-        dataTextStyle: ScalarioTypography.body,
-        dataRowColor: WidgetStateProperty.resolveWith<Color?>(
-          (Set<WidgetState> states) {
-            if (states.contains(WidgetState.hovered)) {
-              return Theme.of(context).colorScheme.surfaceContainerHighest;
-            }
-            return null;
-          },
-        ),
-        columns: <DataColumn>[
-          for (int i = 0; i < widget.columns.length; i++)
-            DataColumn(
-              label: Flexible(
-                child: Text(
-                  widget.columns[i].label,
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: DataTable(
+              sortColumnIndex: _sortColumnIndex,
+              sortAscending: _sortAsc,
+              showCheckboxColumn: false,
+              headingTextStyle: ScalarioTypography.captionMedium.copyWith(
+                color: ScalarioColors.textSecondary,
               ),
-              numeric: widget.columns[i].align == DataColumnAlign.right,
-              onSort: widget.columns[i].sortable
-                  ? (int columnIndex, bool asc) {
-                      setState(() {
-                        _sortColumnIndex = columnIndex;
-                        _sortAsc = asc;
-                      });
-                    }
-                  : null,
-            ),
-        ],
-        rows: <DataRow>[
-          for (final T row in sorted)
-            DataRow(
-              onSelectChanged:
-                  widget.onRowTap != null ? (_) => widget.onRowTap!(row) : null,
-              cells: <DataCell>[
-                for (final DataColumnConfig<T> col in widget.columns)
-                  DataCell(
-                    Align(
-                      alignment: _alignmentFor(col.align),
+              dataTextStyle: ScalarioTypography.body,
+              dataRowColor: WidgetStateProperty.resolveWith<Color?>(
+                (Set<WidgetState> states) {
+                  if (states.contains(WidgetState.hovered)) {
+                    return Theme.of(context).colorScheme.surfaceContainerHighest;
+                  }
+                  return null;
+                },
+              ),
+              columns: <DataColumn>[
+                for (int i = 0; i < widget.columns.length; i++)
+                  DataColumn(
+                    label: Flexible(
                       child: Text(
-                        col.cellBuilder(row),
-                        style: col.align == DataColumnAlign.right
-                            ? ScalarioTypography.bodyMono
-                            : null,
+                        widget.columns[i].label,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    numeric: widget.columns[i].align == DataColumnAlign.right,
+                    onSort: widget.columns[i].sortable
+                        ? (int columnIndex, bool asc) {
+                            setState(() {
+                              _sortColumnIndex = columnIndex;
+                              _sortAsc = asc;
+                            });
+                          }
+                        : null,
+                  ),
+              ],
+              rows: <DataRow>[
+                for (final T row in sorted)
+                  DataRow(
+                    onSelectChanged: widget.onRowTap != null
+                        ? (_) => widget.onRowTap!(row)
+                        : null,
+                    cells: <DataCell>[
+                      for (final DataColumnConfig<T> col in widget.columns)
+                        DataCell(
+                          Align(
+                            alignment: _alignmentFor(col.align),
+                            child: Text(
+                              col.cellBuilder(row),
+                              style: col.align == DataColumnAlign.right
+                                  ? ScalarioTypography.bodyMono
+                                  : null,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 

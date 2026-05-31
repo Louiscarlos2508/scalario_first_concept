@@ -4,7 +4,38 @@
   {"version":"v0.9","updateComponents":{
     "surfaceId":"dashboard",
     "components":[
-      {"id":"root","component":"Column","children":["kpi_heading","kpi_grid","ventes_heading","ventes_chart","bottom_row"]},
+      {"id":"root","component":"Scaffold","props":{
+        "appBar":{"component":"AppBar","variant":"brand","props":{"title":"SCALARIO","actions":[
+          {"icon":"notifications","badge":3},
+          {"icon":"light_mode"},
+          {"icon":"account_circle"}
+        ]}},
+        "sidebar":{"component":"Sidebar","props":{"items":[
+          {"label":"Accueil","icon":"home","selected":true},
+          {"label":"Stock","icon":"inventory_2"},
+          {"label":"Ventes","icon":"shopping_cart"},
+          {"label":"Rapports","icon":"bar_chart"},
+          {"label":"Équipe","icon":"group"},
+          {"label":"Paramètres","icon":"settings"}
+        ]}},
+        "drawer":{"component":"Sidebar","props":{"items":[
+          {"label":"Accueil","icon":"home","selected":true},
+          {"label":"Stock","icon":"inventory_2"},
+          {"label":"Ventes","icon":"shopping_cart"},
+          {"label":"Rapports","icon":"bar_chart"},
+          {"label":"Équipe","icon":"group"},
+          {"label":"Paramètres","icon":"settings"}
+        ]}},
+        "bottomNav":{"component":"BottomNav","props":{"items":[
+          {"label":"Accueil","icon":"home"},
+          {"label":"Stock","icon":"inventory_2"},
+          {"label":"Hist.","icon":"history"},
+          {"label":"Équipe","icon":"group"},
+          {"label":"Plus","icon":"settings"}
+        ]}}
+      },"children":["dashboard_content"]},
+
+      {"id":"dashboard_content","component":"Column","children":["kpi_heading","kpi_grid","ventes_heading","ventes_chart","bottom_row"]},
 
       {"id":"kpi_heading","component":"Heading","props":{"icon":"dashboard","title":"Vue d'ensemble","subtitle":"Indicateurs clés du jour","divider":true}},
 
@@ -16,7 +47,7 @@
 
       {"id":"ventes_heading","component":"Heading","props":{"icon":"show_chart","title":"Évolution des ventes","subtitle":"7 derniers jours","divider":true}},
 
-      {"id":"ventes_chart","component":"ChartBar","text":"Ventes 7 jours","props":{"title":"Évolution des ventes (7 jours)","data":{"path":"/ventes7j"}}},
+      {"id":"ventes_chart","component":"ChartBar","text":"Ventes 7 jours","props":{"data":{"path":"/ventes7j"}}},
 
       {"id":"bottom_row","component":"Row","props":{"gap":16},"children":["top_produits_section","cloture_card"]},
 

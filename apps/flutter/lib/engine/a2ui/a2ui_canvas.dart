@@ -203,7 +203,7 @@ class _A2UICanvasState extends State<A2UICanvas> {
         ?.map((c) => registry.build(_resolveConfig(c, dataModel), context))
         .toList();
 
-    return SingleChildScrollView(
+    final bodyContent = SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -220,6 +220,54 @@ class _A2UICanvasState extends State<A2UICanvas> {
           if (main != null && main.isNotEmpty) ...main,
         ],
       ),
+    );
+
+    final sc = config.scaffoldConfig;
+    if (sc == null) return bodyContent;
+
+    return _buildScaffold(context, registry, sc, bodyContent);
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    ScalarioCanvasRegistry registry,
+    Map<String, dynamic> sc,
+    Widget body,
+  ) {
+    Widget? buildSub(dynamic childConfig) {
+      if (childConfig == null) return null;
+      if (childConfig is ComponentConfig) {
+        return registry.build(childConfig, context);
+      }
+      if (childConfig is Map<String, dynamic>) {
+        return registry.build(ComponentConfig.fromJson(childConfig), context);
+      }
+      return null;
+    }
+
+    final appBar = buildSub(sc['appBar']);
+    final sidebar = buildSub(sc['sidebar']);
+    final drawer = buildSub(sc['drawer']);
+    final bottomNav = buildSub(sc['bottomNav']);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 900;
+
+    Widget bodyWidget = body;
+    if (sidebar != null && isDesktop) {
+      bodyWidget = Row(
+        children: [
+          SizedBox(width: 240, child: sidebar),
+          Expanded(child: body),
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: appBar is PreferredSizeWidget ? appBar : null,
+      body: bodyWidget,
+      bottomNavigationBar: bottomNav,
+      drawer: drawer != null && !isDesktop ? Drawer(child: drawer) : null,
     );
   }
 }

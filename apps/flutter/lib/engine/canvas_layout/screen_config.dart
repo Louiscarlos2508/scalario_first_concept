@@ -50,6 +50,7 @@ class ScreenConfig {
     this.title,
     this.i18nKey,
     this.zones = const ScreenZones(),
+    this.scaffoldConfig,
   });
 
   factory ScreenConfig.fromJson(Map<String, dynamic> json) {
@@ -71,4 +72,8 @@ class ScreenConfig {
   final String? title;
   final String? i18nKey;
   final ScreenZones zones;
+
+  /// Configuration optionnelle du Scaffold (appBar, sidebar, drawer, bottomNav)
+  /// utilisée par A2UICanvas pour envelopper le contenu.
+  final Map<String, dynamic>? scaffoldConfig;
 }

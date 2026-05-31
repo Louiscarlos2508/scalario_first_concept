@@ -19,18 +19,40 @@ class CanvasScaffold extends StatelessWidget {
     final appBar = _buildChild(r, config.props['appBar'], context);
     final body = _buildChild(r, config.props['body'], context) ?? _childrenColumn(r, context);
     final bottomNav = _buildChild(r, config.props['bottomNav'], context);
+    final sidebar = _buildChild(r, config.props['sidebar'], context);
+    final drawer = _buildChild(r, config.props['drawer'], context);
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 900;
+
+    Widget bodyWidget = body;
+    if (sidebar != null && isDesktop) {
+      bodyWidget = Row(
+        children: [
+          SizedBox(width: 240, child: sidebar),
+          Expanded(child: body),
+        ],
+      );
+    }
 
     return Scaffold(
       appBar: appBar is PreferredSizeWidget ? appBar : null,
-      body: body,
+      body: bodyWidget,
       bottomNavigationBar: bottomNav,
+      drawer: drawer != null && !isDesktop ? Drawer(child: drawer) : null,
     );
   }
 
   Widget? _buildChild(ScalarioCanvasRegistry r, dynamic childConfig, BuildContext ctx) {
-    if (childConfig == null || childConfig is! Map) return null;
-    final cc = ComponentConfig.fromJson(childConfig as Map<String, dynamic>);
-    return RepaintBoundary(child: r.build(cc, ctx));
+    if (childConfig == null) return null;
+    if (childConfig is ComponentConfig) {
+      return RepaintBoundary(child: r.build(childConfig, ctx));
+    }
+    if (childConfig is Map<String, dynamic>) {
+      final cc = ComponentConfig.fromJson(childConfig);
+      return RepaintBoundary(child: r.build(cc, ctx));
+    }
+    return null;
   }
 
   Widget _childrenColumn(ScalarioCanvasRegistry r, BuildContext ctx) {

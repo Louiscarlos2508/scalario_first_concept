@@ -55,7 +55,7 @@ class ChartDataPoint {
 class ChartBar extends StatefulWidget {
   const ChartBar({
     super.key,
-    required this.title,
+    this.title,
     required this.data,
     this.unit,
     this.period,
@@ -65,7 +65,7 @@ class ChartBar extends StatefulWidget {
         _errorMessage = null,
         _onRetry = null;
 
-  const ChartBar._loading({required this.title, this.height = 220})
+  const ChartBar._loading({this.title, this.height = 220})
       : data = const <ChartDataPoint>[],
         unit = null,
         period = null,
@@ -75,7 +75,7 @@ class ChartBar extends StatefulWidget {
         _onRetry = null;
 
   const ChartBar._error({
-    required this.title,
+    this.title,
     required String message,
     VoidCallback? onRetry,
     this.height = 220,
@@ -87,11 +87,11 @@ class ChartBar extends StatefulWidget {
         _errorMessage = message,
         _onRetry = onRetry;
 
-  factory ChartBar.loading({required String title, double height = 220}) =>
+  factory ChartBar.loading({String? title, double height = 220}) =>
       ChartBar._loading(title: title, height: height);
 
   factory ChartBar.error({
-    required String title,
+    String? title,
     required String message,
     VoidCallback? onRetry,
     double height = 220,
@@ -123,16 +123,13 @@ class ChartBar extends StatefulWidget {
     } on FormatException {
       return ChartBar(
         data: const <ChartDataPoint>[],
-        title: config.props['title'] as String? ?? 'Chart',
+        title: config.props['title'] as String?,
       );
     }
   }
 
   factory ChartBar.fromJson(Map<String, dynamic> json) {
     final String? title = json['title'] as String?;
-    if (title == null) {
-      throw const FormatException("ChartBar: 'title' requis");
-    }
     final List<dynamic>? rawData = switch (json['data']) {
       List<dynamic> l => l,
       _ => null,
@@ -151,7 +148,7 @@ class ChartBar extends StatefulWidget {
     );
   }
 
-  final String title;
+  final String? title;
   final List<ChartDataPoint> data;
   final String? unit;
   final String? period;
@@ -179,7 +176,9 @@ class _ChartBarState extends State<ChartBar> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Text(widget.title, style: ScalarioTypography.fontSectionTitle),
+        if (widget.title != null && widget.title!.isNotEmpty) ...<Widget>[
+          Text(widget.title!, style: ScalarioTypography.fontSectionTitle),
+        ],
         if (widget.period != null) ...<Widget>[
           const SizedBox(height: ScalarioSpacing.space1),
           Text(widget.period!, style: ScalarioTypography.caption),
