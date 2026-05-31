@@ -46,6 +46,7 @@ Future<void> _setupDependencies() async {
   final registry = ScalarioCanvasRegistry();
   GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
   RegistryBootstrap.registerPhase1(registry);
+  RegistryBootstrap.registerAliases(registry);
   GetIt.I.registerSingleton<ScalarioCanvasLayout>(ScalarioCanvasLayout(registry: registry));
 
   final authStorage = AuthStorage();

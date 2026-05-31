@@ -1,5 +1,7 @@
 import 'package:meta/meta.dart';
 
+import '../canvas_registry/component_schema.dart';
+
 /// Configuration runtime du [ScalarioCanvas].
 ///
 /// STORY-008 — budgets et tailles de cache documentés (NFR-001 architecture).
@@ -11,6 +13,7 @@ final class ScalarioCanvasConfig {
     this.coldRenderBudgetMs = 200,
     this.hotRenderBudgetMs = 50,
     this.enableTimeline = true,
+    this.schemaValidationMode = SchemaValidationMode.lenient,
   });
 
   /// Nombre max d'entries dans le cache mémoire LRU `Map<screenId, ScreenConfig>`.
@@ -26,6 +29,12 @@ final class ScalarioCanvasConfig {
   /// Active `Timeline.timeSync` pour profiling Flutter DevTools — AC-09.
   /// `false` en `kReleaseMode` pour zero overhead production.
   final bool enableTimeline;
+
+  /// Mode de validation des schémas de composants.
+  ///
+  /// - [SchemaValidationMode.strict] : throw au premier échec.
+  /// - [SchemaValidationMode.lenient] : log les erreurs, continue le rendu.
+  final SchemaValidationMode schemaValidationMode;
 
   static const ScalarioCanvasConfig defaults = ScalarioCanvasConfig();
 }

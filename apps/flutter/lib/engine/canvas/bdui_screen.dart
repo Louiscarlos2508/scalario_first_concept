@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../core/bdui/fallback_screen.dart';
 import '../canvas_layout/screen_config.dart';
+import '../debug/debug_overlay.dart';
 import 'scalario_canvas.dart';
 import 'bdui_error_screen.dart';
 import 'bdui_invalid_payload_exception.dart';
@@ -79,12 +81,16 @@ class _BDUIScreenState extends State<BDUIScreen> {
         }
         final ScreenConfig config = snap.data!;
         try {
-          // Wrap layout output in a Scaffold so widgets that require a
-          // Material ancestor (ListTile-based, ink splashes…) work without
-          // each layout having to duplicate the shell.
+          Widget body = _engine.render(config, ctx);
+          if (kDebugMode) {
+            body = SchemaDebugOverlay(
+              screenId: widget.screenId,
+              child: body,
+            );
+          }
           return Scaffold(
             appBar: config.title != null ? AppBar(title: Text(config.title!)) : null,
-            body: _engine.render(config, ctx),
+            body: body,
           );
         } catch (e) {
           return BDUIErrorScreen(

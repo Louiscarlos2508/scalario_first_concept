@@ -1,0 +1,1806 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Scalario BDUI Component Schema",
+  "description": "Schémas de validation des composants BDUI Scalario",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "Scaffold": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Scaffold"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "appBar": {
+                  "type": "object",
+                  "description": "AppBar child config"
+                },
+                "body": {
+                  "type": "object",
+                  "description": "Body child config"
+                },
+                "bottomNav": {
+                  "type": "object",
+                  "description": "Bottom navigation child config"
+                },
+                "sidebar": {
+                  "type": "object",
+                  "description": "Sidebar child config (desktop)"
+                },
+                "drawer": {
+                  "type": "object",
+                  "description": "Drawer child config (mobile)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "AppBar": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "AppBar"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "AppBar title text",
+                  "optional": false
+                },
+                "actions": {
+                  "type": "array",
+                  "description": "List of action widget configs"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Sidebar": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Sidebar"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "description": "List of {label, icon} navigation items",
+                  "optional": false
+                },
+                "currentIndex": {
+                  "type": "number",
+                  "description": "Index of the active navigation item"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "BottomNav": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "BottomNav"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "description": "List of {icon, label} navigation items",
+                  "optional": false
+                },
+                "currentIndex": {
+                  "type": "number",
+                  "description": "Index of the active tab"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Grid": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Grid"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "gap": {
+                  "type": "number",
+                  "description": "Spacing between grid items"
+                },
+                "columns": {
+                  "type": "number",
+                  "description": "Number of columns"
+                },
+                "responsive": {
+                  "type": "object",
+                  "description": "Responsive breakpoint overrides {mobile, tablet, desktop → {columns}}"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Row": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Row"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "gap": {
+                  "type": "number",
+                  "description": "Spacing between children"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Column": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Column"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "gap": {
+                  "type": "number",
+                  "description": "Spacing between children"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Card": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Card"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "header": {
+                  "type": "object",
+                  "description": "Header child config"
+                },
+                "footer": {
+                  "type": "object",
+                  "description": "Footer child config"
+                },
+                "body": {
+                  "type": "object",
+                  "description": "Body child config"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Text": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Text"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "Text content (alias for label)"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Text content"
+                },
+                "style": {
+                  "type": "string",
+                  "description": "Typography style key (body, h1, h2, caption, kpi, kpiLabel)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Slots": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Slots"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "slots": {
+                  "type": "object",
+                  "description": "Named slots map {main, aside, banner}",
+                  "optional": false
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Stack": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Stack"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "position": {
+                  "type": "string",
+                  "description": "Stack alignment (topLeft, center, bottomRight, etc.)"
+                },
+                "padding": {
+                  "type": "number",
+                  "description": "Padding around children"
+                },
+                "margin": {
+                  "type": "number",
+                  "description": "Margin around children"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Accordion": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Accordion"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "expanded": {
+                  "type": "boolean",
+                  "description": "Whether the accordion is initially expanded"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Accordion header title"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Accordion header text"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Icon name for the header"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Tabs": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Tabs"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "current": {
+                  "type": "number",
+                  "description": "Index of the active tab"
+                },
+                "tabs": {
+                  "type": "array",
+                  "description": "List of {label, icon} tab definitions",
+                  "optional": false
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "StateWrapper": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "StateWrapper"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "states": {
+                  "type": "object",
+                  "description": "Named child configs for each state: {loading, empty, error}",
+                  "optional": false
+                },
+                "_source_data": {
+                  "type": "string",
+                  "description": "Data source path for state resolution"
+                },
+                "_loading": {
+                  "type": "boolean",
+                  "description": "When true renders the loading state"
+                },
+                "_error": {
+                  "type": "string",
+                  "description": "Error message — when non-null renders the error state"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "PullToRefresh": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "PullToRefresh"
+            },
+            "props": {
+              "type": "object",
+              "properties": {}
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Pagination": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Pagination"
+            },
+            "props": {
+              "type": "object",
+              "properties": {}
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Semantics": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Semantics"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Accessibility label"
+                },
+                "hint": {
+                  "type": "string",
+                  "description": "Accessibility hint"
+                },
+                "button": {
+                  "type": "boolean",
+                  "description": "Whether this is a button"
+                },
+                "header": {
+                  "type": "boolean",
+                  "description": "Whether this is a header"
+                },
+                "exclude_semantics": {
+                  "type": "boolean",
+                  "description": "Exclude from accessibility"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Gesture": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Gesture"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "gestures": {
+                  "type": "object",
+                  "description": "Gesture action map {swipe_left, swipe_right, long_press → action}"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "SheetDialog": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "SheetDialog"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Dialog title"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Dialog message body"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Transition": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Transition"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "transition": {
+                  "type": "string",
+                  "description": "Transition animation type"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Print": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Print"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "show_stale_badge": {
+                  "type": "boolean",
+                  "description": "Show stale data indicator"
+                },
+                "disable_actions": {
+                  "type": "boolean",
+                  "description": "Disable all interactive actions"
+                },
+                "keyboard": {
+                  "type": "string",
+                  "description": "Keyboard visibility hint"
+                },
+                "sync_action": {
+                  "type": "string",
+                  "description": "Action triggered on sync request"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "KPICard": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "KPICard"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "KPI label text"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Primary value"
+                },
+                "unit": {
+                  "type": "string",
+                  "description": "Unit suffix (FCFA, %, etc.)"
+                },
+                "delta": {
+                  "type": "number",
+                  "description": "Change indicator value"
+                },
+                "delta_positive": {
+                  "type": "boolean",
+                  "description": "Whether delta direction is positive"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Visual status variant"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Icon name"
+                },
+                "variant": {
+                  "type": "string",
+                  "description": "Visual variant key"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Descriptive text"
+                },
+                "action": {
+                  "type": "string",
+                  "description": "Tap action"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "DataTable": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "DataTable"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "columns": {
+                  "type": "array",
+                  "description": "Column definitions with header, width, alignment",
+                  "optional": false
+                },
+                "rows": {
+                  "type": "array",
+                  "description": "Row data — list of data path references or inline values",
+                  "optional": false
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "ChartBar": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "ChartBar"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Chart title"
+                },
+                "data": {
+                  "type": "array",
+                  "description": "Bar data points"
+                },
+                "unit": {
+                  "type": "string",
+                  "description": "Unit label"
+                },
+                "period": {
+                  "type": "string",
+                  "description": "Time period label"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "ChartPie": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "ChartPie"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Chart title"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "StatCard": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "StatCard"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Stat label"
+                },
+                "value": {
+                  "type": "string",
+                  "description": "Stat value"
+                },
+                "delta": {
+                  "type": "number",
+                  "description": "Change indicator"
+                },
+                "delta_positive": {
+                  "type": "boolean",
+                  "description": "Whether delta is positive"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Gauge": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Gauge"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Gauge label"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Display text inside gauge"
+                },
+                "value": {
+                  "type": "number",
+                  "description": "Current value",
+                  "optional": false
+                },
+                "min": {
+                  "type": "number",
+                  "description": "Minimum value"
+                },
+                "max": {
+                  "type": "number",
+                  "description": "Maximum value"
+                },
+                "suffix": {
+                  "type": "string",
+                  "description": "Value suffix"
+                },
+                "variant": {
+                  "type": "string",
+                  "description": "Color variant"
+                },
+                "color": {
+                  "type": "string",
+                  "description": "Specific color override"
+                },
+                "height": {
+                  "type": "number",
+                  "description": "Gauge height"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Heading": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Heading"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Heading title text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Subtitle or secondary text"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "description": "Subtitle text"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Leading icon name"
+                },
+                "divider": {
+                  "type": "boolean",
+                  "description": "Show divider below heading"
+                },
+                "level": {
+                  "type": "number",
+                  "description": "Heading level (1-3)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Media": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Media"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Media type hint (image, avatar, icon, placeholder)"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Icon name"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Label / alt text"
+                },
+                "size": {
+                  "type": "number",
+                  "description": "Media size"
+                },
+                "color": {
+                  "type": "string",
+                  "description": "Color override"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Badge": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Badge"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Badge label content"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Badge text"
+                },
+                "color": {
+                  "type": "string",
+                  "description": "Background color"
+                },
+                "variant": {
+                  "type": "string",
+                  "description": "Visual variant (filled, outline, subtle)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "DocumentPreview": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "DocumentPreview"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Document title"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "AlertBanner": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "AlertBanner"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Alert severity type",
+                  "optional": false
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Alert message text",
+                  "optional": false
+                },
+                "action_label": {
+                  "type": "string",
+                  "description": "Call-to-action button label"
+                },
+                "auto_dismiss_ms": {
+                  "type": "number",
+                  "description": "Auto-dismiss after milliseconds"
+                },
+                "on_dismiss": {
+                  "type": "string",
+                  "description": "Action triggered on dismiss"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "SyncStatusBar": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "SyncStatusBar"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "variant": {
+                  "type": "string",
+                  "description": "Status variant (syncing, online, offline, error)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Button": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Button"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "Button label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Button text (alias for label)"
+                },
+                "variant": {
+                  "type": "string",
+                  "description": "Button variant"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Leading icon name"
+                },
+                "action": {
+                  "type": "string",
+                  "description": "Tap action"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the button is interactive"
+                },
+                "loading": {
+                  "type": "boolean",
+                  "description": "Show loading spinner"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "FAB": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "FAB"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "icon": {
+                  "type": "string",
+                  "description": "FAB icon name"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Extended FAB label"
+                },
+                "action": {
+                  "type": "string",
+                  "description": "Tap action"
+                },
+                "loading": {
+                  "type": "boolean",
+                  "description": "Show loading state"
+                },
+                "hero_tag": {
+                  "type": "string",
+                  "description": "Hero animation tag for page transitions"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "FormSection": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "FormSection"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Form section title"
+                },
+                "hint": {
+                  "type": "string",
+                  "description": "Form section hint text"
+                },
+                "errors": {
+                  "type": "array",
+                  "description": "List of validation error strings"
+                },
+                "loading": {
+                  "type": "boolean",
+                  "description": "Show loading state"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Input": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Input"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Current input value"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Input label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Input text (alias for label)"
+                },
+                "hint": {
+                  "type": "string",
+                  "description": "Placeholder hint text"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Input type variant"
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "Mark as required with asterisk"
+                },
+                "prefix": {
+                  "type": "string",
+                  "description": "Prefix text"
+                },
+                "suffix": {
+                  "type": "string",
+                  "description": "Suffix text"
+                },
+                "readonly": {
+                  "type": "boolean",
+                  "description": "Read-only mode"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Dropdown": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Dropdown"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "Selected value"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Dropdown label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Dropdown text (alias for label)"
+                },
+                "hint": {
+                  "type": "string",
+                  "description": "Placeholder hint"
+                },
+                "options": {
+                  "type": "array",
+                  "description": "List of {value, label} option objects",
+                  "optional": false
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Checkbox": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Checkbox"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "checked": {
+                  "type": "boolean",
+                  "description": "Whether the checkbox is checked"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Checkbox label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Checkbox text (alias for label)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Toggle": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Toggle"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "active": {
+                  "type": "boolean",
+                  "description": "Whether the toggle is active"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Toggle label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Toggle text (alias for label)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "Slider": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "Slider"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "number",
+                  "description": "Current slider value"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Slider label text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Slider text (alias for label)"
+                },
+                "min": {
+                  "type": "number",
+                  "description": "Minimum value"
+                },
+                "max": {
+                  "type": "number",
+                  "description": "Maximum value"
+                },
+                "divisions": {
+                  "type": "number",
+                  "description": "Number of discrete divisions"
+                },
+                "showValue": {
+                  "type": "boolean",
+                  "description": "Display current value next to slider"
+                },
+                "suffix": {
+                  "type": "string",
+                  "description": "Value suffix text"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "ListTile": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "ListTile"
+            },
+            "props": {
+              "type": "object",
+              "properties": {
+                "leading": {
+                  "type": "object",
+                  "description": "Leading widget config (icon, avatar, etc.)"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Primary title text"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "description": "Secondary subtitle text"
+                },
+                "trailing": {
+                  "type": "object",
+                  "description": "Trailing widget config (badge, icon, etc.)"
+                },
+                "on_tap": {
+                  "type": "string",
+                  "description": "Tap action"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the tile is interactive"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Status indicator (success, warning, danger, info)"
+                }
+              }
+            },
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "children": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "type"
+          ]
+        }
+      }
+    }
+  ]
+}

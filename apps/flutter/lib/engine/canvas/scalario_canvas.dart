@@ -9,6 +9,7 @@ import '../../core/bdui/validation/bdui_validator.dart' as bdui;
 import '../../core/bdui/validation/validation_result.dart';
 import '../../core/bdui/fallback_screen.dart';
 import '../canvas_registry/component_config.dart';
+import '../canvas_registry/component_schema.dart';
 import '../canvas_registry/scalario_canvas_registry.dart';
 import '../error_boundary/bdui_error_boundary.dart';
 import '../error_boundary/error_logger.dart';
@@ -85,6 +86,7 @@ final class ScalarioCanvas {
       final ScreenConfig parsed = ScreenConfig.fromJson(raw);
       final ScreenConfig enriched =
           await _metrics.timeSyncAsync('data', () => _resolveData(parsed));
+      _metrics.timeSync('schema-validate', () => _validateSchemas(enriched, screenId));
       _cache.put(screenId, enriched);
       return enriched;
     });
@@ -187,6 +189,7 @@ final class ScalarioCanvas {
       }
       try {
         final config = ScreenConfig.fromJson(rawJson);
+        _metrics.timeSync('schema-validate', () => _validateSchemas(config, _safeScreenId(rawJson)));
         return render(config, ctx);
       } catch (e, st) {
         _logRenderError(_safeScreenId(rawJson), e, st);
@@ -204,6 +207,37 @@ final class ScalarioCanvas {
   // ---------------------------------------------------------------------------
   // Internals
   // ---------------------------------------------------------------------------
+
+  void _validateSchemas(ScreenConfig screen, String screenId) {
+    final errors = <SchemaValidationError>[];
+    final mode = config.schemaValidationMode;
+
+    void walk(List<ComponentConfig>? components) {
+      if (components == null) return;
+      for (final c in components) {
+        errors.addAll(registry.validate(c, mode: mode));
+        if (c.children != null) walk(c.children!);
+      }
+    }
+
+    walk(screen.zones.kpis);
+    walk(screen.zones.main);
+    walk(screen.zones.aside);
+    walk(screen.zones.actions);
+
+    registry.recordValidationErrors(screenId, errors);
+
+    if (errors.isNotEmpty) {
+      developer.log(
+        '[SchemaValidation] screen=$screenId errors=${errors.length} mode=$mode',
+        name: 'BDUI.Validation',
+        level: mode == SchemaValidationMode.strict ? 1000 : 900,
+      );
+      for (final e in errors) {
+        developer.log(e.toString(), name: 'BDUI.Validation', level: 900);
+      }
+    }
+  }
 
   Future<ScreenConfig> _resolveData(ScreenConfig parsed) async {
     final ScreenZones zones = parsed.zones;
