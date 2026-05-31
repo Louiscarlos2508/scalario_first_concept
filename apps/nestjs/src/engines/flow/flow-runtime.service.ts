@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import type { EngineRuntime, ExecutionContext, ExecutionResult } from '../shared/engine-core';
 import type { CompiledFlow, CompiledStep } from './flow.types';
 import { FlowResumeService } from './flow-resume.service';
+import { FlowWebhookService } from './flow-webhook.service';
 
 @Injectable()
 export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
@@ -9,6 +10,7 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
 
   constructor(
     @Optional() private readonly resumeService?: FlowResumeService,
+    @Optional() private readonly webhookService?: FlowWebhookService,
   ) {}
 
   async execute(config: CompiledFlow, context: ExecutionContext): Promise<ExecutionResult> {
@@ -219,7 +221,12 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     return { success: true };
   }
 
-  private async callWebhook(config: Record<string, unknown>): Promise<{ success: boolean }> {
+  private async callWebhook(
+    config: Record<string, unknown>,
+  ): Promise<{ success: boolean; status?: number; body?: string; duration?: number }> {
+    if (this.webhookService) {
+      return this.webhookService.call(config);
+    }
     const url = config.url as string;
     this.logger.log(`Webhook: ${config.method as string} ${url}`);
     return { success: true };
