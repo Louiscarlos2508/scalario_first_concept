@@ -1,10 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import type { EngineRuntime, ExecutionContext, ExecutionResult } from '../shared/engine-core';
 import type { CompiledFlow, CompiledStep } from './flow.types';
+import { FlowResumeService } from './flow-resume.service';
 
 @Injectable()
 export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
   private readonly logger = new Logger(FlowRuntimeService.name);
+
+  constructor(
+    @Optional() private readonly resumeService?: FlowResumeService,
+  ) {}
 
   async execute(config: CompiledFlow, context: ExecutionContext): Promise<ExecutionResult> {
     this.logger.log(`Executing flow ${config.id}`);
@@ -30,7 +35,7 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     };
   }
 
-  private async executeStep(
+  async executeStep(
     stepId: string,
     flow: CompiledFlow,
     context: ExecutionContext,
@@ -51,12 +56,20 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     let status = 'success';
     let output: unknown;
     let conditionMet: boolean | undefined;
+    let pendingDelay = false;
 
     try {
-      const result = await this.dispatchStep(step, context);
-      status = result.success ? 'success' : 'failure';
-      output = result.output;
-      conditionMet = result.conditionMet;
+      if (step.type === 'loop') {
+        const loopResult = await this.executeLoop(step, flow, context, results);
+        status = loopResult.success ? 'success' : 'failure';
+        output = loopResult.output;
+      } else {
+        const result = await this.dispatchStep(step, context, flow);
+        status = result.success ? 'success' : 'failure';
+        output = result.output;
+        conditionMet = result.conditionMet;
+        pendingDelay = result.pendingDelay ?? false;
+      }
     } catch (e) {
       status = 'error';
       output = (e as Error).message;
@@ -66,6 +79,15 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     results.push({ stepId: step.id, status, output });
 
     if (!adj) return;
+
+    if (step.type === 'loop') {
+      for (const childId of adj.onSuccess) {
+        visited.add(childId);
+      }
+      return;
+    }
+
+    if (pendingDelay) return;
 
     if (step.type === 'condition' && conditionMet !== undefined) {
       const branch = conditionMet ? adj.onSuccess : (adj.onFailure ?? []);
@@ -86,12 +108,13 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
   private async dispatchStep(
     step: CompiledStep,
     context: ExecutionContext,
-  ): Promise<{ success: boolean; output?: unknown; conditionMet?: boolean }> {
+    flow?: CompiledFlow,
+  ): Promise<{ success: boolean; output?: unknown; conditionMet?: boolean; pendingDelay?: boolean }> {
     switch (step.type) {
       case 'condition':
         return this.evaluateCondition(step.config, context);
       case 'delay':
-        return this.executeDelay(step.config);
+        return this.executeDelay(step, context, flow);
       case 'approval':
         return this.requestApproval(step.config, context);
       case 'notify':
@@ -134,11 +157,30 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     return { success: true, conditionMet, output: `/${field} ${operator} ${rawValue} → ${conditionMet}` };
   }
 
-  private async executeDelay(config: Record<string, unknown>): Promise<{ success: boolean }> {
-    const duration = (config.duration as number) ?? 0;
+  private async executeDelay(
+    step: CompiledStep,
+    context: ExecutionContext,
+    flow?: CompiledFlow,
+  ): Promise<{ success: boolean; output?: unknown; pendingDelay?: boolean }> {
+    const duration = (step.config.duration as number) ?? 0;
+
+    if (duration > 0 && this.resumeService && flow) {
+      await this.resumeService.enqueueDelay(
+        flow.id,
+        step.id,
+        context.tenantId,
+        context.userId,
+        context,
+        flow,
+        duration,
+      );
+      return { success: true, output: { status: 'pending', duration }, pendingDelay: true };
+    }
+
     if (duration > 0) {
       await new Promise((resolve) => setTimeout(resolve, Math.min(duration * 1000, 30000)));
     }
+
     return { success: true };
   }
 
@@ -181,6 +223,56 @@ export class FlowRuntimeService implements EngineRuntime<CompiledFlow> {
     const url = config.url as string;
     this.logger.log(`Webhook: ${config.method as string} ${url}`);
     return { success: true };
+  }
+
+  private async executeLoop(
+    step: CompiledStep,
+    flow: CompiledFlow,
+    context: ExecutionContext,
+    results: Array<{ stepId: string; status: string; output?: unknown }>,
+  ): Promise<{ success: boolean; output?: unknown }> {
+    const config = step.config;
+    const collection = this.resolvePath(config.over as string, context);
+
+    if (!Array.isArray(collection)) {
+      return { success: false, output: `Loop step ${step.id}: '${config.over}' is not an array` };
+    }
+
+    const loopResults: Array<{ item: unknown; status: string; output?: unknown }> = [];
+    const varName = config.as as string | undefined;
+    const subEntrySteps = (config.stepIds as string[]) ?? [];
+
+    for (let i = 0; i < collection.length; i++) {
+      const item = collection[i];
+      if (varName) {
+        (context.data as Record<string, unknown>)[varName] = item;
+      }
+
+      const iterVisited = new Set<string>();
+      for (const subId of subEntrySteps) {
+        await this.executeStep(subId, flow, context, results, iterVisited);
+      }
+
+      loopResults.push({ item, status: 'success' });
+    }
+
+    if (varName) {
+      delete (context.data as Record<string, unknown>)[varName];
+    }
+
+    return { success: true, output: loopResults };
+  }
+
+  private resolvePath(path: string, context: ExecutionContext): unknown {
+    const match = path?.match(/^\/data\/(.+)/);
+    if (!match) return undefined;
+    const keys = match[1].split('/');
+    let current: unknown = context.data;
+    for (const key of keys) {
+      if (current == null || typeof current !== 'object') return undefined;
+      current = (current as Record<string, unknown>)[key];
+    }
+    return current;
   }
 
   private findEntrySteps(flow: CompiledFlow): string[] {

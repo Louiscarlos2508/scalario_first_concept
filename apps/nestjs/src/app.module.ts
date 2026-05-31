@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { CacheModule } from './core/cache/cache.module';
 import { DatabaseModule } from './common/database.module';
@@ -30,6 +31,7 @@ import { PaymentModule } from './payment/payment.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 1000 }]),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     CacheModule,
     HealthModule,
