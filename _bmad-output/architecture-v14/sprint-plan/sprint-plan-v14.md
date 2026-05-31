@@ -105,6 +105,27 @@ L'objectif Phase 1 v14 = **livrer manuellement les premiers ERP à des vrais cli
 
 ---
 
+## Sprint v14-4b (Juillet 14 - Juillet 20) — Flow Engine Hardening
+
+**Goal** : boucher les 3 gaps du Flow Engine avant le premier client réel.
+
+| Story | Pts | Bloc |
+|---|---|---|
+| V14-FLOW-001 | Loop runtime réel (itération collection + variable as) | 5 |
+| V14-FLOW-002 | Persistance delays (table PostgreSQL + cron resume) | 3 |
+| V14-FLOW-003 | Webhook sortant fonctionnel (fetch + retry + HMAC) | 5 |
+
+**Total** : 13 pts.
+
+**Livrables sprint** :
+- `dispatchStep` case `loop` : itération réelle sur collection avec variable `as`
+- Table `flow_pending_delays` + cron toutes les 5s pour reprise des delays après crash
+- `FlowWebhookService` : fetch HTTP avec retry 3x, HMAC SHA-256, timeout 10s
+- Tests : 17+ nouveaux tests (5 loop, 5 delays, 7 webhooks)
+- Tous les tests existants flow verts (0 régression)
+
+---
+
 ## Sprint v14-5 (Juillet 21 - Août 3) — Premier client réel (Scalario Forge manuel)
 
 **Goal** : configurer le premier client réel **manuellement** (sans IA encore — Scalario Labs opère).
@@ -148,17 +169,18 @@ L'objectif Phase 1 v14 = **livrer manuellement les premiers ERP à des vrais cli
 
 ---
 
-## Récap Phase 1 — 6 sprints (3 mois)
+## Récap Phase 1 — 7 sprints (3 mois + 1 semaine)
 
 | Sprint | Dates | Goal | Pts |
 |---|---|---|---|
 | v14-1 | 26 mai → 8 juin | Migration nomenclature + restructure catalogue | 13 |
 | v14-2 | 9 juin → 22 juin | Variantes + Widgetbook | 15 |
 | v14-3 | 23 juin → 6 juillet | Scalario Calc + Live + i18n | 15 |
-| v14-4 | 7 juillet → 20 juillet | 6 moteurs ERP génériques + Swagger | 13 |
+| v14-4 | 7 juillet → 13 juillet | 6 moteurs ERP génériques + Swagger | 13 |
+| v14-4b | 14 juillet → 20 juillet | **Flow Engine Hardening** (loop + delays + webhook) | 13 |
 | v14-5 | 21 juillet → 3 août | **Premier client réel** (manuel) | 28 |
 | v14-6 | 4 août → 17 août | Stabilisation + clients 2-3 | 31 |
-| **Total** | **3 mois** | **3 clients réels actifs** | **115 pts** |
+| **Total** | **~3 mois** | **3 clients réels actifs** | **128 pts** |
 
 ---
 
@@ -167,6 +189,7 @@ L'objectif Phase 1 v14 = **livrer manuellement les premiers ERP à des vrais cli
 - [ ] Code Sprint 1-4 v13 entièrement renommé en nomenclature v14
 - [ ] Variantes opérationnelles dans Widgetbook
 - [ ] Scalario Calc + Scalario Live livrés
+- [ ] Flow Engine hardened (loop réel, delays persistants, webhook sortant)
 - [ ] i18n FR/EN complet, lint `no_hardcoded_strings` actif en CI
 - [ ] 6 moteurs ERP génériques rendent n'importe quelle entité depuis JSON
 - [ ] Catalogue démarrage : ≥ 8 modules standards committés
@@ -185,5 +208,6 @@ L'objectif Phase 1 v14 = **livrer manuellement les premiers ERP à des vrais cli
 | Variantes système plus complexe que prévu | Limiter Phase 1 à 12 composants × 3-4 variantes moyennes ; auto resolution simple |
 | i18n extraction massive bloque le sprint | Faire ARB FR à 100% en Phase 1, EN à 40% (Phase 2 ARB Africaines) |
 | 6 moteurs génériques pas assez flexibles | Documenter patterns d'override deep-merge, prévoir module custom Phase 2 |
+| Flow Engine loop non testé sur collections réelles | V14-FLOW-001 ajoute 5+ tests couvrant edge cases (vide, inexistant, nested) |
 | Trouver le premier client réel | Carlos doit prospecter en parallèle dès sprint v14-1 |
 | Hallucinations LLM (mais pas de LLM Phase 1) | Phase 1 = Scalario Labs opère manuellement, pas de risque LLM |

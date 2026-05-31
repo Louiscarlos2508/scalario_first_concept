@@ -5,8 +5,8 @@ version: "6.0.0"
 project_name: "scalario"
 project_level: 4
 current_sprint: 3
-sprint_plan_path: "_bmad-output/sprint-plan-scalario-2026-05-09.md"
-gate_0: "2026-07-08"  # Blandine live — date non-négociable
+sprint_plan_path: "_bmad-output/architecture-v14/sprint-plan/sprint-plan-v14.md"
+gate_0: "2026-08-03"  # Premier client réel — v14-5 (post Flow Engine hardening)
 
 # 2026-05-10 : Toutes les 43 stories rédigées (STORY-001 manuelle via /bmad:create-story,
 # STORY-002 à STORY-043 batch parallèle 7 agents). Statut = defined, prêt pour /bmad:dev-story.
@@ -643,7 +643,7 @@ architecture_v14:
       name: "Fondations Scalario"
       duration: "Mois 1-3 (Mai-Août 2026)"
       goal: "Livrer manuellement les 3 premiers ERP à des vrais clients (Scalario Labs opère Forge à la main)"
-      sprints: ["v14-1", "v14-2", "v14-3", "v14-4", "v14-5", "v14-6"]
+      sprints: ["v14-1", "v14-2", "v14-3", "v14-4", "v14-4b", "v14-5", "v14-6"]
       stories:
         - story_id: "V14-001"
           title: "Migration nomenclature Scalario (script semi-automatique)"
@@ -884,6 +884,38 @@ architecture_v14:
             defaults. Docs anticipation-phase4-scalario-network.md. 16 new tests. 0 regression.
       total_points: 56
 
+    phase_1b:
+      name: "Flow Engine Hardening"
+      duration: "1 semaine (14-20 Juillet 2026)"
+      goal: "Boucher les 3 gaps du Flow Engine avant le premier client réel (loop, delays, webhook)"
+      sprints: ["v14-4b"]
+      stories:
+        - story_id: "V14-FLOW-001"
+          title: "Loop runtime réel (itération collection + variable as)"
+          epic: "EPIC-V14-022"
+          points: 5
+          status: "defined"
+          priority: "must_have"
+          story_doc: "_bmad-output/stories/STORY-V14-FLOW-001.md"
+          sprint: "v14-4b"
+        - story_id: "V14-FLOW-002"
+          title: "Persistance delays (table PostgreSQL + cron resume)"
+          epic: "EPIC-V14-022"
+          points: 3
+          status: "defined"
+          priority: "must_have"
+          story_doc: "_bmad-output/stories/STORY-V14-FLOW-002.md"
+          sprint: "v14-4b"
+        - story_id: "V14-FLOW-003"
+          title: "Webhook sortant fonctionnel (fetch + retry + HMAC)"
+          epic: "EPIC-V14-022"
+          points: 5
+          status: "defined"
+          priority: "must_have"
+          story_doc: "_bmad-output/stories/STORY-V14-FLOW-003.md"
+          sprint: "v14-4b"
+      total_points: 13
+
     phase_2:
       name: "Engines & IA"
       duration: "Mois 4-6 (Sept-Nov 2026)"
@@ -1084,8 +1116,8 @@ architecture_v14:
           sprint: "v14-16"
       total_points: 62
 
-  total_stories_v14: 36
-  total_points_v14: 231  # 56 + 113 + 62
+  total_stories_v14: 39
+  total_points_v14: 244  # 56 + 13 + 113 + 62
 
   epics_v14:
     EPIC-V14-001: "Migration v13→v14"
@@ -1109,5 +1141,6 @@ architecture_v14:
     EPIC-V14-019: "Scalario Vault"
     EPIC-V14-020: "Performance"
     EPIC-V14-021: "Infrastructure"
+    EPIC-V14-022: "Scalario Flow Engine (Hardening)"
 
-  next_step: "/bmad:dev-story V14-011"
+  next_step: "/bmad:dev-story STORY-V14-FLOW-001"
