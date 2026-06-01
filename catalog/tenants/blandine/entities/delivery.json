@@ -2,11 +2,12 @@
   "entity": "Delivery",
   "display_name": "Livraison",
   "fields": [
-    {"name": "supplier", "type": "string", "required": true},
-    {"name": "reference_bl", "type": "string"},
-    {"name": "expected_date", "type": "date"},
-    {"name": "items", "type": "array", "item_type": "DeliveryItem"},
-    {"name": "status", "type": "string", "enum": ["pending", "partial", "validated", "rejected"]},
-    {"name": "received_by", "type": "entity_ref", "ref": "User"}
+    { "name": "id", "type": "string", "required": true },
+    { "name": "supplier_name", "type": "string" },
+    { "name": "items", "type": "array", "required": true },
+    { "name": "notes", "type": "string" },
+    { "name": "received_by", "type": "string", "required": true },
+    { "name": "received_at", "type": "date", "required": true },
+    { "name": "status", "type": "string" }
   ]
 }

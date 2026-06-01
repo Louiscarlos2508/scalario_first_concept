@@ -1,21 +1,17 @@
 {
-  "theme": "blandine",
-  "colors": {
-    "primary": "#FFCC00",
-    "danger": "#E74C3C",
-    "success": "#27AE60",
-    "warning": "#E67E22",
-    "bg_page": "#F8F8FC",
-    "bg_card": "#FFFFFF",
-    "text_primary": "#1A1A2E",
-    "text_secondary": "#5D6D7E",
-    "text_disabled": "#AAB7C4",
-    "white": "#FFFFFF"
-  },
-  "typography": {
-    "kpi_value": 28,
-    "kpi_label": 12,
-    "section_header": 12,
-    "body": 14
+  "theme": {
+    "primary": "#2E7D32",
+    "primary_light": "#60AD5E",
+    "primary_dark": "#005005",
+    "secondary": "#FF6F00",
+    "surface": "#FFFFFF",
+    "background": "#F5F5F5",
+    "error": "#D32F2F",
+    "warning": "#F57C00",
+    "critical": "#C62828",
+    "success": "#388E3C",
+    "font_family": "Inter",
+    "border_radius": 12,
+    "spacing_unit": 8
   }
 }

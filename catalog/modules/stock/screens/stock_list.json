@@ -1,0 +1,14 @@
+{
+  "screen": "stock_list",
+  "schema_version": "1.0.0",
+  "layout": "list",
+  "title": "Stock",
+  "zones": {
+    "main": [
+      { "type": "DataTable", "variant": "default", "props": { "columns": [ { "key": "name", "label": "Produit" }, { "key": "category", "label": "Catégorie" }, { "key": "stock_quantity", "label": "Stock" }, { "key": "min_threshold", "label": "Seuil" }, { "key": "status", "label": "Statut" } ], "rows": [] } }
+    ],
+    "actions": [
+      { "type": "ActionButton", "variant": "floating", "props": { "label": "Ajouter", "icon": "add" } }
+    ]
+  }
+}

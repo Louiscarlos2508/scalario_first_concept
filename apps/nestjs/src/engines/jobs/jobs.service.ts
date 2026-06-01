@@ -1,12 +1,11 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Queue, Worker, QueueScheduler } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import { RedisService } from '../../core/cache/services/redis.service';
 
 @Injectable()
 export class JobsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(JobsService.name);
   private queue: Queue | null = null;
-  private scheduler: QueueScheduler | null = null;
 
   constructor(private readonly redis: RedisService) {}
 
@@ -18,7 +17,6 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
 
     const connection = { host: 'redis', port: 6379 };
     this.queue = new Queue('scalario-jobs', { connection });
-    this.scheduler = new QueueScheduler('scalario-jobs', { connection });
 
     new Worker('scalario-jobs', async (job) => {
       this.logger.log(`Processing job ${job.id}: ${job.name}`);
@@ -42,7 +40,6 @@ export class JobsService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.queue?.close();
-    await this.scheduler?.close();
   }
 
   async enqueue(name: string, data: Record<string, unknown>): Promise<string> {

@@ -1,0 +1,15 @@
+{
+  "screen": "product_history",
+  "schema_version": "1.0.0",
+  "layout": "detail",
+  "title": "Historique produit",
+  "zones": {
+    "kpis": [
+      { "type": "KPICard", "variant": "compact", "props": { "label": "Stock", "value": "--" } },
+      { "type": "KPICard", "variant": "compact", "props": { "label": "Seuil", "value": "--" } }
+    ],
+    "main": [
+      { "type": "DataTable", "variant": "compact", "props": { "columns": [ { "key": "date", "label": "Date" }, { "key": "type", "label": "Type" }, { "key": "qte", "label": "Qté" } ], "rows": [] } }
+    ]
+  }
+}

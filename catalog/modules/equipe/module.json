@@ -1,0 +1,29 @@
+{
+  "id": "equipe",
+  "schema_version": "1.0.0",
+  "name": "Équipe",
+  "icon": "people",
+  "entities": [
+    {
+      "name": "Employee",
+      "display_name": "Employé",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "role", "type": "string", "required": true },
+        { "name": "phone", "type": "string" },
+        { "name": "email", "type": "string" },
+        { "name": "active", "type": "boolean" },
+        { "name": "last_login", "type": "date" },
+        { "name": "created_by", "type": "string" },
+        { "name": "created_at", "type": "date" }
+      ]
+    }
+  ],
+  "actions": {
+    "list_employees": { "handler": "crud.read", "entity_type": "Employee", "label": "Équipe" },
+    "invite_employee": { "handler": "crud.create", "entity_type": "Employee", "label": "Inviter" },
+    "deactivate_employee": { "handler": "crud.update", "entity_type": "Employee", "label": "Désactiver" }
+  },
+  "rbac_roles": ["OWNER"]
+}

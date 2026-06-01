@@ -40,12 +40,14 @@
   </style>
 </head>
 <body>
-  <div id="splash">Scalario</div>
+  <div id="splash">Scalario Sandbox</div>
   <script>
-    window.addEventListener('flutter-first-frame', function () {
+    function removeSplash() {
       var el = document.getElementById('splash');
       if (el) { el.classList.add('hidden'); setTimeout(function(){ el.remove(); }, 250); }
-    });
+    }
+    window.addEventListener('flutter-first-frame', removeSplash);
+    window.addEventListener('load', function () { setTimeout(removeSplash, 8000); });
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

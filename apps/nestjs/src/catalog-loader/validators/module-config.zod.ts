@@ -57,10 +57,10 @@ export const ModuleConfigZod = z
             .optional(),
         })
         .passthrough(),
-    ),
-    screens: z.array(ScreenConfigZod).optional(),
+    ).optional(),
+    screens: z.array(z.union([ScreenConfigZod, z.string()])).optional(),
     actions: z.record(ActionDefinitionZod).optional(),
-    workflows: z.record(WorkflowDefinitionZod).optional(),
+    workflows: z.union([z.record(z.any()), z.array(z.string())]).optional(),
     rbac_roles: z.array(z.string()).default([]),
     abac_rules: z.array(abacRuleSchema).default([]),
     conflict_strategy: z.enum(['server_wins', 'client_wins', 'manual']).default('server_wins'),

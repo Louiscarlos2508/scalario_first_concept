@@ -67,7 +67,7 @@ export class ScalarioLiveGateway
       }
       client.join(`user_${client.userId}`);
 
-      this.liveService.addUserConnection(client.userId, client.id);
+      this.liveService.addUserConnection(client.userId ?? 'unknown', client.id);
       this.logger.log(
         `User ${client.userId} authenticated on WS, tenant ${client.tenantId}`,
       );

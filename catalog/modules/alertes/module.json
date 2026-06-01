@@ -1,0 +1,32 @@
+{
+  "id": "alertes",
+  "schema_version": "1.0.0",
+  "name": "Alertes",
+  "icon": "notifications",
+  "entities": [
+    {
+      "name": "AlertRule",
+      "display_name": "Règle d'alerte",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "metric", "type": "string", "required": true },
+        { "name": "condition", "type": "string", "required": true },
+        { "name": "threshold", "type": "number", "required": true },
+        { "name": "channel", "type": "string" },
+        { "name": "night_silence", "type": "boolean" },
+        { "name": "silence_start", "type": "string" },
+        { "name": "silence_end", "type": "string" },
+        { "name": "active", "type": "boolean" },
+        { "name": "created_by", "type": "string" }
+      ]
+    }
+  ],
+  "actions": {
+    "list_alerts": { "handler": "crud.read", "entity_type": "AlertRule", "label": "Alertes" },
+    "configure_alert": { "handler": "crud.update", "entity_type": "AlertRule", "label": "Configurer" }
+  },
+  "screens": [
+    "screens/alert_detail.json"
+  ],
+  "rbac_roles": ["OWNER"]
+}

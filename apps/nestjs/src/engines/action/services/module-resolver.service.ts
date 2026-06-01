@@ -132,6 +132,7 @@ export class ModuleResolverService implements OnApplicationBootstrap {
 
   private loadModuleFile(moduleId: string): DomainFile | null {
     const paths = [
+      resolve(this.baseDir, 'modules', moduleId, 'module.json'),
       resolve(this.baseDir, 'modules', `${moduleId}.json`),
       resolve(this.baseDir, '..', 'catalog', 'modules', `${moduleId}.json`),
       resolve(this.baseDir, '..', '..', 'catalog', 'modules', `${moduleId}.json`),

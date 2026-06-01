@@ -252,7 +252,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
         title: Text(
           _mode == _SandboxMode.a2ui
               ? 'A2UI Sandbox (dev)'
-              : 'BDUI Sandbox (dev)',
+              : 'Scalario Sandbox (dev)',
         ),
         actions: <Widget>[
           IconButton(

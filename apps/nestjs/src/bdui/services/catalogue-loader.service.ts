@@ -34,24 +34,44 @@ export class CatalogueLoaderService {
         /* try next */
       }
     }
-    if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as {
-      screens?: Record<string, CatalogueScreenEntry>;
-    };
+    if (raw) {
+      const parsed = JSON.parse(raw) as {
+        screens?: Record<string, CatalogueScreenEntry>;
+      };
 
-    const screen = parsed.screens?.[screenId];
-    if (!screen) return null;
+      const screen = parsed.screens?.[screenId];
+      if (screen) {
+        this.logger.debug(`catalogue filesystem hit: tenant=${tenantSlug} screen=${screenId}`);
+        const { schema_version, screen: screenName, zones, ...rest } = screen;
+        return {
+          schema_version: schema_version ?? '1.0.0',
+          screen: screenName ?? screenId,
+          zones: zones ?? { kpis: [], main: [], aside: [], actions: [] },
+          ...rest,
+        };
+      }
+    }
 
-    this.logger.debug(`catalogue filesystem hit: tenant=${tenantSlug} screen=${screenId}`);
+    const tenantDir = resolve(this.baseDir, 'tenants', tenantSlug);
+    try {
+      const tenantScreen = readFileSync(resolve(tenantDir, 'screens', `${screenId}.json`), 'utf8');
+      const parsed = JSON.parse(tenantScreen) as Record<string, unknown>;
+      this.logger.debug(`tenant v2 filesystem hit: tenant=${tenantSlug} screen=${screenId}`);
+      return {
+        schema_version: (parsed.schema_version as string) ?? '1.0.0',
+        screen: screenId,
+        zones: (parsed.zones as ScreenConfig['zones']) ?? {
+          kpis: [],
+          main: [],
+          aside: [],
+          actions: [],
+        },
+      };
+    } catch {
+      /* screen not in tenant dir */
+    }
 
-    const { schema_version, screen: screenName, zones, ...rest } = screen;
-
-    return {
-      schema_version: schema_version ?? '1.0.0',
-      screen: screenName ?? screenId,
-      zones: zones ?? { kpis: [], main: [], aside: [], actions: [] },
-      ...rest,
-    };
+    return null;
   }
 }

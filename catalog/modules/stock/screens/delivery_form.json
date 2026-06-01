@@ -1,0 +1,16 @@
+{
+  "screen": "delivery_form",
+  "schema_version": "1.0.0",
+  "layout": "form",
+  "title": "Réception livraison",
+  "zones": {
+    "main": [
+      { "type": "FormSection", "variant": "default", "props": { "title": "Articles reçus" }, "children": [
+        { "type": "DataTable", "variant": "compact", "props": { "columns": [ { "key": "product", "label": "Article" }, { "key": "qty_ordered", "label": "Commandé" }, { "key": "qty_received", "label": "Reçu" } ], "rows": [] } }
+      ] }
+    ],
+    "actions": [
+      { "type": "ActionButton", "variant": "primary", "props": { "label": "Valider la réception" } }
+    ]
+  }
+}

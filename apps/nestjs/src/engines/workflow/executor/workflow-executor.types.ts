@@ -102,6 +102,9 @@ export class WorkflowAlreadyRunningError extends Error {
   }
 }
 
+export const ACTION_DISPATCHER = 'ACTION_DISPATCHER';
+export const NOTIFICATION_QUEUE = 'NOTIFICATION_QUEUE';
+
 export interface ActionDispatcherPort {
   executeAction(
     tenantId: string,

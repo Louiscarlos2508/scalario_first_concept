@@ -1,0 +1,39 @@
+{
+  "id": "commandes",
+  "schema_version": "1.0.0",
+  "name": "Commandes",
+  "icon": "local_shipping",
+  "entities": [
+    {
+      "name": "Supplier",
+      "display_name": "Fournisseur",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "contact", "type": "string" },
+        { "name": "phone", "type": "string" },
+        { "name": "products_supplied", "type": "array" }
+      ]
+    },
+    {
+      "name": "PurchaseOrder",
+      "display_name": "Commande fournisseur",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "supplier_id", "type": "string", "required": true },
+        { "name": "items", "type": "array", "required": true },
+        { "name": "total_amount", "type": "number" },
+        { "name": "status", "type": "string" },
+        { "name": "ordered_by", "type": "string" },
+        { "name": "ordered_at", "type": "date" },
+        { "name": "delivery_date", "type": "date" }
+      ]
+    }
+  ],
+  "actions": {
+    "list_suppliers": { "handler": "crud.read", "entity_type": "Supplier", "label": "Fournisseurs" },
+    "list_orders": { "handler": "crud.read", "entity_type": "PurchaseOrder", "label": "Commandes" },
+    "create_order": { "handler": "crud.create", "entity_type": "PurchaseOrder", "label": "Nouvelle commande" }
+  },
+  "rbac_roles": ["OWNER"]
+}

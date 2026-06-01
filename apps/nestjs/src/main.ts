@@ -9,6 +9,11 @@ async function bootstrap() {
   }
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
 
   // Swagger setup — AC-01 to AC-04

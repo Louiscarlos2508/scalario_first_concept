@@ -1,0 +1,30 @@
+{
+  "id": "caisse",
+  "schema_version": "1.0.0",
+  "name": "Caisse",
+  "icon": "payments",
+  "entities": [
+    {
+      "name": "CashSession",
+      "display_name": "Session caisse",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "opened_by", "type": "string", "required": true },
+        { "name": "opened_at", "type": "date", "required": true },
+        { "name": "initial_balance", "type": "number", "required": true },
+        { "name": "closed_by", "type": "string" },
+        { "name": "closed_at", "type": "date" },
+        { "name": "expected_balance", "type": "number" },
+        { "name": "actual_balance", "type": "number" },
+        { "name": "difference", "type": "number" },
+        { "name": "status", "type": "string" }
+      ]
+    }
+  ],
+  "actions": {
+    "open_session": { "handler": "crud.create", "entity_type": "CashSession", "label": "Ouverture caisse" },
+    "close_session": { "handler": "crud.update", "entity_type": "CashSession", "label": "Fermeture caisse" },
+    "list_sessions": { "handler": "crud.read", "entity_type": "CashSession", "label": "Sessions" }
+  },
+  "rbac_roles": ["COMMERCIAL", "MANAGER", "OWNER"]
+}

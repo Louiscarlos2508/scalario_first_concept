@@ -161,28 +161,28 @@ export class CatalogueValidatorService {
 
   inferTypeFromPath(filePath: string): CatalogueType | null {
     const normalized = filePath.replace(/\\/g, '/');
+    if (normalized.includes('/screens/') || normalized.includes('/screen/')) return 'screen';
+    if (normalized.includes('/workflows/') || normalized.includes('/workflow/')) return 'workflow';
     if (normalized.includes('/domains/') || normalized.includes('/domain/')) return 'domain';
     if (normalized.includes('/modules/') || normalized.includes('/module/')) return 'module';
     if (normalized.includes('/fusions/') || normalized.includes('/fusion/')) return 'fusion';
-    if (normalized.includes('/screens/') || normalized.includes('/screen/')) return 'screen';
-    if (normalized.includes('/workflows/') || normalized.includes('/workflow/')) return 'workflow';
     return null;
   }
 
   validateDirectory(rootDir: string): CatalogueValidationResult[] {
     const results: CatalogueValidationResult[] = [];
-    const dirs: [CatalogueType, string][] = [
-      ['domain', join(rootDir, 'domains')],
-      ['module', join(rootDir, 'modules')],
-      ['fusion', join(rootDir, 'fusions')],
-    ];
 
-    for (const [type, dir] of dirs) {
-      if (!existsSync(dir)) continue;
-      const files = this.listJsonFiles(dir);
-      for (const file of files) {
-        results.push(this.validateFile(file, type));
-      }
+    // Walk every JSON file under rootDir and infer type from its path.
+    // Skip domains/ (legacy v13), schemas/ (test fixtures), tenants/ (runtime tenant data).
+    const allFiles = this.listJsonFiles(rootDir);
+    for (const file of allFiles) {
+      const normalized = file.replace(/\\/g, '/');
+      if (normalized.includes('/domains/') || normalized.includes('/domain/')) continue;
+      if (normalized.includes('/schemas/') || normalized.includes('/schema/')) continue;
+      if (normalized.includes('/tenants/') || normalized.includes('/tenant/')) continue;
+      const type = this.inferTypeFromPath(normalized);
+      if (!type) continue;
+      results.push(this.validateFile(file, type));
     }
 
     return results;

@@ -24,7 +24,7 @@ const MAX_CHILDREN_DEPTH = 5;
 
 export const ComponentConfigZod: z.ZodType<any, z.ZodTypeDef, any> = z
   .object({
-    schema_version: z.enum(['1.0.0', '1.1.0']),
+    schema_version: z.enum(['1.0.0', '1.1.0']).optional(),
     type: z.string().min(1),
     variant: z.string().min(1).default('default'),
     id: z.string().optional(),

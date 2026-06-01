@@ -1,0 +1,54 @@
+{
+  "id": "stock",
+  "schema_version": "1.0.0",
+  "name": "Stock",
+  "icon": "inventory_2",
+  "entities": [
+    {
+      "name": "Product",
+      "display_name": "Produit",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "name", "type": "string", "required": true },
+        { "name": "category", "type": "string" },
+        { "name": "unit", "type": "string", "default": "kg" },
+        { "name": "stock_quantity", "type": "number" },
+        { "name": "min_threshold", "type": "number" },
+        { "name": "price_per_unit", "type": "number" },
+        { "name": "input_type", "type": "string" },
+        { "name": "fraicheur_jours", "type": "number" },
+        { "name": "taux_perte_pct", "type": "number" }
+      ]
+    },
+    {
+      "name": "StockMovement",
+      "display_name": "Mouvement de stock",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": true },
+        { "name": "type", "type": "string", "required": true },
+        { "name": "quantity", "type": "number", "required": true },
+        { "name": "before", "type": "number" },
+        { "name": "after", "type": "number" },
+        { "name": "reference_type", "type": "string" },
+        { "name": "reference_id", "type": "string" },
+        { "name": "created_by", "type": "string", "required": true },
+        { "name": "created_at", "type": "date", "required": true }
+      ]
+    }
+  ],
+  "actions": {
+    "list_products": { "handler": "crud.read", "entity_type": "Product", "label": "Produits" },
+    "create_product": { "handler": "crud.create", "entity_type": "Product", "label": "Nouveau produit" },
+    "update_product": { "handler": "crud.update", "entity_type": "Product", "label": "Modifier" },
+    "inventory_count": { "handler": "crud.create", "entity_type": "StockMovement", "label": "Inventaire" },
+    "receive_delivery": { "handler": "crud.create", "entity_type": "StockMovement", "label": "Réception livraison" }
+  },
+  "screens": [
+    "screens/stock_list.json",
+    "screens/product_history.json",
+    "screens/inventory_count.json",
+    "screens/delivery_form.json"
+  ],
+  "rbac_roles": ["MANAGER", "OWNER"]
+}

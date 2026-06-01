@@ -1,0 +1,15 @@
+{
+  "id": "rapports",
+  "schema_version": "1.0.0",
+  "name": "Rapports",
+  "icon": "bar_chart",
+  "actions": {
+    "daily_report": { "handler": "crud.read", "label": "Rapport du jour" },
+    "weekly_report": { "handler": "crud.read", "label": "Rapport hebdo" },
+    "export_csv": { "handler": "crud.read", "label": "Export CSV" }
+  },
+  "screens": [
+    "screens/daily_report.json"
+  ],
+  "rbac_roles": ["OWNER"]
+}

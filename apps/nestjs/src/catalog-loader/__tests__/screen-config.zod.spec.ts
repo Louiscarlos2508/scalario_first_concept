@@ -101,7 +101,7 @@ describe('ScreenConfigZod', () => {
       expect(result.success).toBe(false);
     });
 
-    it('rejects invalid component in zone', () => {
+    it('accepts component without schema_version (optional)', () => {
       const result = ScreenConfigZod.safeParse({
         screen: 'test',
         schema_version: '1.0.0',
@@ -110,7 +110,7 @@ describe('ScreenConfigZod', () => {
           main: [{ type: 'Button' }],
         },
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('rejects invalid zone keys', () => {

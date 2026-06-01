@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../../core/cache/services/redis.service';
+import { RedisService } from '../services/redis.service';
 
 export type CacheType = 'config' | 'user_data' | 'llm_response' | 'permissions';
 

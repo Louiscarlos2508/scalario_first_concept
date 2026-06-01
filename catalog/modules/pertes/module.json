@@ -1,0 +1,34 @@
+{
+  "id": "pertes",
+  "schema_version": "1.0.0",
+  "name": "Pertes",
+  "icon": "warning",
+  "entities": [
+    {
+      "name": "Loss",
+      "display_name": "Perte",
+      "fields": [
+        { "name": "id", "type": "string", "required": true },
+        { "name": "product_id", "type": "string", "required": true },
+        { "name": "product_name", "type": "string", "required": true },
+        { "name": "quantity", "type": "number", "required": true },
+        { "name": "cause", "type": "string", "required": true },
+        { "name": "notes", "type": "string" },
+        { "name": "created_by", "type": "string", "required": true },
+        { "name": "created_at", "type": "date", "required": true },
+        { "name": "status", "type": "string" }
+      ]
+    }
+  ],
+  "actions": {
+    "create_loss": { "handler": "crud.create", "entity_type": "Loss", "label": "Déclarer une perte" },
+    "list_losses": { "handler": "crud.read", "entity_type": "Loss", "label": "Pertes" },
+    "validate_loss": { "handler": "crud.update", "entity_type": "Loss", "label": "Valider" }
+  },
+  "screens": [
+    "screens/loss_form.json",
+    "screens/loss_list.json"
+  ],
+  "conflict_strategy": "manual",
+  "rbac_roles": ["MANAGER", "OWNER"]
+}

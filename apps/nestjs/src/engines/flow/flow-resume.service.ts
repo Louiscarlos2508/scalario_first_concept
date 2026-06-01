@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
@@ -14,6 +14,7 @@ export class FlowResumeService {
   constructor(
     @InjectRepository(FlowPendingDelay)
     private readonly repo: Repository<FlowPendingDelay>,
+    @Inject(forwardRef(() => FlowRuntimeService))
     private readonly runtime: FlowRuntimeService,
   ) {}
 

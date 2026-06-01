@@ -1,6 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler';
-import { ExecutionContext } from '@nestjs/common';
+import { Injectable, Logger, ExecutionContext } from '@nestjs/common';
+import { ThrottlerGuard, ThrottlerModuleOptions, ThrottlerStorage, ThrottlerRequest } from '@nestjs/throttler';
 import { Reflector } from '@nestjs/core';
 import { RedisService } from '../../cache/services/redis.service';
 
@@ -17,12 +16,8 @@ export class TenantThrottlerGuard extends ThrottlerGuard {
     super(options, storageService, reflector);
   }
 
-  async handleRequest(
-    context: ExecutionContext,
-    limit: number,
-    ttl: number,
-    throttler: { name: string },
-  ): Promise<boolean> {
+  async handleRequest(requestProps: ThrottlerRequest): Promise<boolean> {
+    const { context, limit, ttl, throttler } = requestProps;
     const req = context.switchToHttp().getRequest();
     const tenantId = req.tenantId ?? 'anonymous';
     const userId = req.user?.id ?? 'anonymous';
@@ -38,25 +33,25 @@ export class TenantThrottlerGuard extends ThrottlerGuard {
 
     const key = `ratelimit:${tenantId}:${userId}:${endpoint}`;
 
-    if (!this.redis.isAvailable()) {
-      return super.handleRequest(context, effective.limit, effective.ttl, throttler);
+    if (this.redis.isAvailable()) {
+      const client = this.redis.getClient();
+      const current = await client.incr(key);
+      if (current === 1) {
+        await client.expire(key, effective.ttl);
+      }
+
+      if (current > effective.limit) {
+        this.logger.warn(`Rate limit exceeded: ${key} (${current}/${effective.limit})`);
+        return false;
+      }
+
+      return true;
     }
 
-    const client = this.redis.getClient();
-    const current = await client.incr(key);
-    if (current === 1) {
-      await client.expire(key, effective.ttl);
-    }
-
-    if (current > effective.limit) {
-      this.logger.warn(`Rate limit exceeded: ${key} (${current}/${effective.limit})`);
-      return false;
-    }
-
-    return true;
-  }
-
-  protected getTracker(req: Record<string, any>): string {
-    return `${req.tenantId ?? 'anon'}:${req.user?.id ?? 'anon'}:${req.path}`;
+    return super.handleRequest({
+      ...requestProps,
+      limit: effective.limit,
+      ttl: effective.ttl,
+    });
   }
 }

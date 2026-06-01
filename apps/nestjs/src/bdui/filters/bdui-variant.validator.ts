@@ -20,7 +20,7 @@ export class BduiVariantValidator {
       const zone = screenConfig.zones?.[zoneKey];
       if (!Array.isArray(zone)) continue;
       for (const component of zone) {
-        this.validateComponent(sector, component as Record<string, unknown>);
+        this.validateComponent(sector, component as unknown as Record<string, unknown>);
       }
     }
   }

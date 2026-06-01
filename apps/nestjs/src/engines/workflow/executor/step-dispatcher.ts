@@ -1,13 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import type {
   ExecutableWorkflowStep,
   ExecutionContext,
-  ActionDispatcherPort,
-  NotificationQueuePort,
 } from './workflow-executor.types';
-import { WorkflowExecutionError } from './workflow-executor.types';
+import { WorkflowExecutionError, ACTION_DISPATCHER, NOTIFICATION_QUEUE } from './workflow-executor.types';
 import { ConditionEvaluator } from './condition-evaluator';
 import { RetryPolicy } from './retry-policy';
+import type { ActionDispatcherPort, NotificationQueuePort } from './workflow-executor.types';
 
 export interface StepDispatchResult {
   status: 'success' | 'skipped' | 'failed';
@@ -21,8 +20,8 @@ export class StepDispatcher {
 
   constructor(
     private readonly conditionEvaluator: ConditionEvaluator,
-    private readonly actionDispatcher: ActionDispatcherPort,
-    private readonly notificationQueue: NotificationQueuePort,
+    @Inject(ACTION_DISPATCHER) private readonly actionDispatcher: ActionDispatcherPort,
+    @Inject(NOTIFICATION_QUEUE) private readonly notificationQueue: NotificationQueuePort,
     private readonly retryPolicy: RetryPolicy,
   ) {}
 

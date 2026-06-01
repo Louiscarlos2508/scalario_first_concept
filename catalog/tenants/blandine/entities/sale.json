@@ -2,11 +2,14 @@
   "entity": "Sale",
   "display_name": "Vente",
   "fields": [
-    {"name": "product_id", "type": "entity_ref", "ref": "Product", "required": true},
-    {"name": "quantity", "type": "number", "required": true},
-    {"name": "amount", "type": "currency", "required": true},
-    {"name": "payment_method", "type": "string", "enum": ["cash", "wave", "orange_money", "mtn_momo"]},
-    {"name": "cashier_id", "type": "entity_ref", "ref": "User"},
-    {"name": "timestamp", "type": "datetime"}
+    { "name": "id", "type": "string", "required": true },
+    { "name": "items", "type": "array", "required": true },
+    { "name": "total_amount", "type": "number", "required": true },
+    { "name": "payment_method", "type": "string", "required": true },
+    { "name": "payment_provider", "type": "string" },
+    { "name": "created_by", "type": "string", "required": true },
+    { "name": "created_at", "type": "date", "required": true },
+    { "name": "session_id", "type": "string" },
+    { "name": "status", "type": "string" }
   ]
 }

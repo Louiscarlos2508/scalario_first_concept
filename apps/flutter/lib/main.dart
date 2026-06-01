@@ -1,6 +1,6 @@
 import 'dart:async' show runZonedGuarded;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get_it/get_it.dart';
@@ -12,6 +12,10 @@ import 'core/vault/database.dart';
 import 'core/vault/db_encryption.dart';
 import 'core/vault/drift_data_source_resolver.dart';
 import 'core/vault/local_store.dart';
+import 'core/vault/dao/tenant_config_dao.dart';
+import 'core/vault/dao/cached_layout_dao.dart';
+import 'core/vault/dao/local_data_dao.dart';
+import 'core/vault/dao/sync_queue_dao.dart';
 import 'core/sync/connectivity_listener.dart';
 import 'core/ai_relay/ai_relay_client.dart';
 import 'core/sync/sync_api_client.dart';
@@ -22,7 +26,6 @@ import 'engine/canvas_registry/registry_bootstrap.dart';
 import 'engine/canvas/scalario_canvas_module.dart';
 import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'engine/error_boundary/global_error_handler.dart';
-import 'home_screen.dart';
 import 'sandbox/sandbox_screen.dart';
 
 const kSandboxRouteName = '/dev/sandbox';
@@ -49,6 +52,12 @@ Future<void> _setupDependencies() async {
   RegistryBootstrap.registerAliases(registry);
   GetIt.I.registerSingleton<ScalarioCanvasLayout>(ScalarioCanvasLayout(registry: registry));
 
+  if (kIsWeb) {
+    GetIt.I.registerSingleton<AuthStorage>(AuthStorage());
+    GetIt.I.registerSingleton<ConnectivityListener>(ConnectivityListener());
+    return;
+  }
+
   final authStorage = AuthStorage();
   GetIt.I.registerSingleton<AuthStorage>(authStorage);
   final db = ScalarioDatabase(executor: await DbEncryption(authStorage).openEncrypted());
@@ -59,14 +68,13 @@ Future<void> _setupDependencies() async {
     tenantConfigDao: store.tenantConfigDao, cachedLayoutDao: store.cachedLayoutDao, localDataDao: store.localDataDao));
   GetIt.I.registerSingleton(ConnectivityListener());
   GetIt.I.registerSingleton(SyncQueueService(queueDao: store.syncQueueDao, localDataDao: store.localDataDao));
-  final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000');
-  final SyncApiClient syncApi = SyncApiClient(
-    baseUrl: baseUrl,
-    tokenProvider: () => authStorage.readAccessToken());
-  GetIt.I.registerSingleton(syncApi);
-  GetIt.I.registerSingleton(AiRelayClient(baseUrl: baseUrl));
-
   await ScalarioCanvasModule.register(GetIt.I, dataResolver: DriftDataSourceResolver(layoutDao: store.cachedLayoutDao));
+
+  final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000');
+  GetIt.I.registerSingleton(SyncApiClient(
+    baseUrl: baseUrl,
+    tokenProvider: () => authStorage.readAccessToken()));
+  GetIt.I.registerSingleton(AiRelayClient(baseUrl: baseUrl));
 }
 
 class ScalarioApp extends StatefulWidget {
@@ -110,7 +118,7 @@ class _ScalarioAppState extends State<ScalarioApp> {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const HomeScreen(),
+      home: const SandboxScreen(),
       routes: { if (kDebugMode) kSandboxRouteName: (_) => const SandboxScreen() },
     );
   }

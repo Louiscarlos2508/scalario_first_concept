@@ -22,6 +22,15 @@ const List<String> kSandboxFixtureIds = <String>[
   'transactions_list',
   'empty_screen',
   'error_state',
+  // Blandine tenant screens (BDUI zones format)
+  'dashboard_owner',
+  'pos_commercial',
+  'stock_list',
+  'loss_form',
+  'delivery_validation',
+  'daily_report',
+  'inventory_count',
+  'alert_detail',
 ];
 
 /// Erreur de parsing JSON enrichie avec ligne/colonne pour [SandboxErrorView].

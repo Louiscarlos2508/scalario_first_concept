@@ -2,11 +2,14 @@
   "entity": "Loss",
   "display_name": "Perte",
   "fields": [
-    {"name": "product_id", "type": "entity_ref", "ref": "Product", "required": true},
-    {"name": "quantity", "type": "number", "required": true},
-    {"name": "nature", "type": "string", "enum": ["avarie", "casse", "vol", "autre"]},
-    {"name": "note", "type": "string"},
-    {"name": "reporter_id", "type": "entity_ref", "ref": "User"},
-    {"name": "timestamp", "type": "datetime"}
+    { "name": "id", "type": "string", "required": true },
+    { "name": "product_id", "type": "string", "required": true },
+    { "name": "product_name", "type": "string", "required": true },
+    { "name": "quantity", "type": "number", "required": true },
+    { "name": "cause", "type": "string", "required": true },
+    { "name": "notes", "type": "string" },
+    { "name": "created_by", "type": "string", "required": true },
+    { "name": "created_at", "type": "date", "required": true },
+    { "name": "status", "type": "string" }
   ]
 }

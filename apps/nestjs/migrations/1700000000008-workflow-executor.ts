@@ -31,7 +31,13 @@ export class WorkflowExecutor1700000000008 implements MigrationInterface {
     if (historyType.length > 0 && historyType[0].data_type === 'ARRAY') {
       await queryRunner.query(`
         ALTER TABLE workflow_states
+          ALTER COLUMN history DROP DEFAULT;
+      `);
+      await queryRunner.query(`
+        ALTER TABLE workflow_states
           ALTER COLUMN history TYPE JSONB USING to_jsonb(history);
+      `);
+      await queryRunner.query(`
         ALTER TABLE workflow_states
           ALTER COLUMN history SET DEFAULT '[]'::jsonb;
       `);
