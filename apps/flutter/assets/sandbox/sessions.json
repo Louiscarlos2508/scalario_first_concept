@@ -1,0 +1,14 @@
+{
+  "screen": "sessions",
+  "schema_version": "1.0.0",
+  "layout": "list",
+  "title": "Sessions caisse",
+  "zones": {
+    "main": [
+      { "type": "DataTable", "variant": "default", "props": { "columns": [ { "key": "opened_at", "label": "Ouverture" }, { "key": "opened_by", "label": "Par" }, { "key": "expected", "label": "Attendu" }, { "key": "actual", "label": "Réel" }, { "key": "ecart", "label": "Écart" }, { "key": "status", "label": "Statut" } ], "rows": [] } }
+    ],
+    "actions": [
+      { "type": "ActionButton", "variant": "floating", "props": { "label": "Nouvelle session", "icon": "add" } }
+    ]
+  }
+}

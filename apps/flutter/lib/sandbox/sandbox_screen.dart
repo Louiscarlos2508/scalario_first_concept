@@ -249,6 +249,8 @@ class _SandboxScreenState extends State<SandboxScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         title: Text(
           _mode == _SandboxMode.a2ui
               ? 'A2UI Sandbox (dev)'

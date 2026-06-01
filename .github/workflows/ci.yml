@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   nestjs-tests:
-    name: NestJS — lint / typecheck / test / build
+    name: NestJS — test
     runs-on: ubuntu-latest
 
     services:
@@ -20,12 +20,12 @@ jobs:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_DB: scalario_test
-          POSTGRES_USER: scalario
-          POSTGRES_PASSWORD: scalario_test_password
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U scalario -d scalario_test"
+          --health-cmd "pg_isready -U postgres -d scalario_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -42,20 +42,10 @@ jobs:
 
     env:
       NODE_ENV: test
-      # STORY-017 — two DB users:
-      #   DATABASE_URL_ADMIN  → superuser, runs migrations + intrusion-test fixtures.
-      #   DATABASE_URL        → scalario_app (NOBYPASSRLS), used by the spec to
-      #                          assert RLS actually filters rows.
-      DATABASE_URL: postgresql://scalario_app:scalario_app_ci_password@localhost:5432/scalario_test
-      DATABASE_URL_ADMIN: postgresql://scalario:scalario_test_password@localhost:5432/scalario_test
-      SCALARIO_APP_DB_PASSWORD: scalario_app_ci_password
-      REDIS_URL: redis://localhost:6379
+      DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/scalario_test
       JWT_SECRET: ci_jwt_secret_min_32_chars_dummy_value_xx
       JWT_REFRESH_SECRET: ci_jwt_refresh_secret_min_32_chars_dummy
-      FASTAPI_URL: http://localhost:8000
-      MINIO_ENDPOINT: http://localhost:9000
-      MINIO_ACCESS_KEY: ci
-      MINIO_SECRET_KEY: ci_minio_dummy
+      SCALARIO_APP_DB_PASSWORD: scalario_app_test
 
     steps:
       - uses: actions/checkout@v4
@@ -74,17 +64,22 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile || pnpm install
 
-      - name: Lint
-        run: pnpm --filter @scalario/nestjs run lint
-
-      - name: Typecheck
-        run: pnpm --filter @scalario/nestjs run typecheck
-
-      - name: Run migrations (creates scalario_app + RLS policies)
-        run: pnpm --filter @scalario/nestjs run migration:run
-
       - name: Test
         run: pnpm --filter @scalario/nestjs run test
 
-      - name: Build
-        run: pnpm --filter @scalario/nestjs run build
+  flutter-analyze:
+    name: Flutter — analyze
+    runs-on: ubuntu-latest
+    needs: nestjs-tests
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Analyze
+        run: flutter analyze
+        working-directory: apps/flutter

@@ -33,14 +33,17 @@ abstract final class ScalarioColors {
   // ---------------------------------------------------------------------------
   // Sémantiques — Danger
   // ---------------------------------------------------------------------------
+  static const Color danger50 = Color(0xFFFEF5F5);
   static const Color danger100 = Color(0xFFFADBD8);
+  static const Color danger300 = Color(0xFFF1948A);
   static const Color danger500 = Color(0xFFE74C3C);
   static const Color danger700 = Color(0xFF922B21);
+  static const Color danger900 = Color(0xFF6B1A14);
 
   // ---------------------------------------------------------------------------
   // Sémantiques — Info
   // ---------------------------------------------------------------------------
-  static const Color info100 = Color(0xFFD6EAF8);
+static const Color info100 = Color(0xFFD6EAF8);
   static const Color info500 = Color(0xFF2471A3);
 
   // ---------------------------------------------------------------------------
@@ -48,16 +51,20 @@ abstract final class ScalarioColors {
   // ---------------------------------------------------------------------------
   static const Color neutral50 = Color(0xFFF8F8FC);
   static const Color neutral100 = Color(0xFFF0F0F8);
+  static const Color neutral200 = Color(0xFFE0E0F0);
   static const Color neutral300 = Color(0xFFC8C8E0);
   static const Color neutral500 = Color(0xFF7A7A9A);
+  static const Color neutral600 = Color(0xFF5A5A7A);
   static const Color neutral700 = Color(0xFF4A4A6A);
+  static const Color neutral750 = Color(0xFF3A3A5A);
+  static const Color neutral800 = Color(0xFF2A2A44);
+  static const Color neutral850 = Color(0xFF22223A);
   static const Color neutral900 = Color(0xFF1A1A2E);
   static const Color white = Color(0xFFFFFFFF);
 
   // ---------------------------------------------------------------------------
   // Tokens d'application — Light (mode par défaut)
   // ---------------------------------------------------------------------------
-  // TODO STORY-002: bind via ThemeExtensions; définir le miroir dark-mode.
   static const Color bgPage = neutral50;
   static const Color bgCard = white;
   static const Color bgOverlay = Color(0x80000000); // rgba(0,0,0,0.5)

@@ -44,7 +44,8 @@ class _ScalarioAppState extends State<ScalarioApp> {
       title: 'Scalario',
       debugShowCheckedModeBanner: false,
       theme: ScalarioTheme.light(),
-      darkTheme: ScalarioTheme.dark(),
+      darkTheme: ScalarioTheme.light(),
+      themeMode: ThemeMode.light,
       localizationsDelegates: const [
         S.delegate,
         GlobalMaterialLocalizations.delegate,

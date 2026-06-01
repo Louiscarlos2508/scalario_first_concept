@@ -17,20 +17,25 @@ import 'sandbox_file_source_stub.dart'
 /// Liste fixe des fixtures sandbox (AC-15). Stable, vérifiée à la
 /// construction. Permet de remplir un Dropdown sans `AssetManifest`.
 const List<String> kSandboxFixtureIds = <String>[
-  'retail_dashboard',
-  'simple_form',
-  'transactions_list',
+  'alert_detail',
+  'daily_report',
+  'dashboard_owner',
+  'delivery_form',
+  'delivery_validation',
   'empty_screen',
   'error_state',
-  // Blandine tenant screens (BDUI zones format)
-  'dashboard_owner',
-  'pos_commercial',
-  'stock_list',
-  'loss_form',
-  'delivery_validation',
-  'daily_report',
   'inventory_count',
-  'alert_detail',
+  'loss_form',
+  'loss_list',
+  'pos',
+  'pos_commercial',
+  'product_history',
+  'retail_dashboard',
+  'sale_list',
+  'sessions',
+  'simple_form',
+  'stock_list',
+  'transactions_list',
 ];
 
 /// Erreur de parsing JSON enrichie avec ligne/colonne pour [SandboxErrorView].
