@@ -9,9 +9,10 @@
 // Footer : console structurée (logs sandbox).
 
 import 'dart:async';
-import 'dart:developer' as developer;
+import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 
@@ -91,6 +92,12 @@ class _SandboxScreenState extends State<SandboxScreen> {
   List<Map<String, dynamic>>? _a2uiMessages;
   String? _a2uiErrorMessage;
 
+  // Live mode state
+  String _token = '';
+  String _loginEmail = 'owner@blandine.bf';
+  String _loginPassword = 'owner123';
+  String? _loginError;
+
   bool get _isBduiMode => _mode == _SandboxMode.bdui;
 
   final TextEditingController _customCtxController = TextEditingController();
@@ -146,14 +153,18 @@ class _SandboxScreenState extends State<SandboxScreen> {
     final mode = _detectMode(fixtureId);
 
     if (mode == _SandboxMode.bdui) {
-      final future = _loadBdui(fixtureId);
-      setState(() {
-        _fixtureId = fixtureId;
-        _mode = mode;
-        _a2uiMessages = null;
-        _a2uiErrorMessage = null;
-        _bduiFuture = future;
-      });
+      if (_source == _SandboxSource.live && _token.isNotEmpty) {
+        _loadLiveBdui(fixtureId);
+      } else {
+        final future = _loadBdui(fixtureId);
+        setState(() {
+          _fixtureId = fixtureId;
+          _mode = mode;
+          _a2uiMessages = null;
+          _a2uiErrorMessage = null;
+          _bduiFuture = future;
+        });
+      }
     } else if (_source == _SandboxSource.live) {
       _loadLiveA2ui(fixtureId);
       return;
@@ -200,6 +211,43 @@ class _SandboxScreenState extends State<SandboxScreen> {
       if (!mounted) return;
       setState(() => _a2uiErrorMessage = e.toString());
       _console.log(SandboxLogLevel.error, 'MindEngine', 'generation failed', error: e);
+    }
+  }
+
+  Future<void> _loadLiveBdui(String fixtureId) async {
+    setState(() {
+      _fixtureId = fixtureId;
+      _mode = _SandboxMode.bdui;
+      _bduiFuture = _fetchBduiScreen(fixtureId);
+    });
+  }
+
+  Future<ScreenConfig> _fetchBduiScreen(String screenId) async {
+    final dio = Dio(BaseOptions(
+      baseUrl: 'http://localhost:3000',
+      headers: {'Authorization': 'Bearer $_token'},
+    ));
+    final resp = await dio.get('/api/v1/api/v1/blandine/layout/$screenId');
+    _console.log(SandboxLogLevel.info, 'API', 'loaded $screenId (${resp.statusCode})');
+    return ScreenConfig.fromJson(resp.data as Map<String, dynamic>);
+  }
+
+  Future<void> _login() async {
+    setState(() => _loginError = null);
+    try {
+      final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
+      final resp = await dio.post('/api/v1/auth/login', data: {
+        'email': _loginEmail,
+        'password': _loginPassword,
+        'tenant_slug': 'blandine',
+      });
+      _token = resp.data['access_token'] as String;
+      _console.log(SandboxLogLevel.info, 'API', 'login OK');
+      setState(() {});
+    } catch (e) {
+      final msg = e is DioException ? (e.response?.data?['message'] as String? ?? e.message ?? '') : e.toString();
+      setState(() => _loginError = msg);
+      _console.log(SandboxLogLevel.error, 'API', 'login failed $msg');
     }
   }
 
@@ -310,7 +358,8 @@ class _SandboxScreenState extends State<SandboxScreen> {
         children: <Widget>[
           _fixtureDropdown(),
           _modeIndicator(),
-          if (_mode == _SandboxMode.a2ui) _sourceDropdown(),
+          if (_mode == _SandboxMode.a2ui || _mode == _SandboxMode.bdui) _sourceDropdown(),
+          if (_source == _SandboxSource.live) _loginPanel(),
           _userContextDropdown(),
           _breakpointDropdown(),
           if (_userCtx.preset == SandboxUserPreset.custom)
@@ -361,17 +410,60 @@ class _SandboxScreenState extends State<SandboxScreen> {
     return DropdownButton<_SandboxSource>(
       key: const Key('sandbox.dropdown.source'),
       value: _source,
-      onChanged: (_source == _SandboxSource.live && _a2uiMessages == null)
-          ? null
-          : (_SandboxSource? v) {
-              if (v == null || v == _source) return;
-              setState(() => _source = v);
-              if (_mode == _SandboxMode.a2ui) _loadFixture(_fixtureId);
-            },
+      onChanged: (_SandboxSource? v) {
+        if (v == null || v == _source) return;
+        setState(() => _source = v);
+        _loadFixture(_fixtureId);
+      },
       items: const [
         DropdownMenuItem(value: _SandboxSource.static, child: Text('Static')),
         DropdownMenuItem(value: _SandboxSource.live, child: Text('Live')),
       ],
+    );
+  }
+
+  Widget _loginPanel() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: _token.isEmpty
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(
+                width: 150,
+                child: TextField(
+                  decoration: const InputDecoration(labelText: 'Email', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4)),
+                  controller: TextEditingController(text: _loginEmail),
+                  onChanged: (v) => _loginEmail = v,
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 120,
+                child: TextField(
+                  decoration: const InputDecoration(labelText: 'Password', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 4)),
+                  obscureText: true,
+                  controller: TextEditingController(text: _loginPassword),
+                  onChanged: (v) => _loginPassword = v,
+                ),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(onPressed: _login, child: const Text('Login')),
+              if (_loginError != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Text(_loginError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                ),
+            ])
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.check_circle, size: 14, color: Colors.green.shade600),
+              const SizedBox(width: 4),
+              Text('JWT ${_token.substring(0, 12)}...', style: const TextStyle(fontSize: 11)),
+              const SizedBox(width: 6),
+              TextButton(onPressed: () => setState(() => _token = ''), child: const Text('Logout', style: TextStyle(fontSize: 11))),
+            ]),
     );
   }
 
@@ -566,12 +658,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
           error: e,
         );
       });
-      developer.log(
-        'Sandbox render failure',
-        name: 'BDUI.Sandbox',
-        error: e,
-        stackTrace: st,
-      );
+      debugPrint('Sandbox render failure: $e');
       return SandboxErrorView(error: e, onRetry: _reload);
     }
   }

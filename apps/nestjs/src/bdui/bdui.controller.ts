@@ -14,6 +14,7 @@ import { parseBulkScreens } from './dto/get-bulk-layouts.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CurrentTenant } from '../common/decorators/current-tenant.decorator';
+import { TenantsService } from '../tenants/tenants.service';
 import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.interface';
 
 @ApiTags('BDUI Layouts')
@@ -22,7 +23,10 @@ import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.inte
 export class BduiController {
   private readonly logger = new Logger(BduiController.name);
 
-  constructor(private readonly bduiService: BduiService) {}
+  constructor(
+    private readonly bduiService: BduiService,
+    private readonly tenantsService: TenantsService,
+  ) {}
 
   @Get(':screenId')
   async getLayout(
@@ -31,14 +35,8 @@ export class BduiController {
     @CurrentUser() user: AuthenticatedUser,
     @CurrentTenant() tenantId: string,
   ) {
-    if (params.tenant !== tenantId) {
-      this.logger.warn(
-        `Cross-tenant access denied: param tenant=${params.tenant}, JWT tenant=${tenantId}`,
-      );
-      throw new ForbiddenException('Cross-tenant access denied');
-    }
-
-    return this.bduiService.getLayout(tenantId, params.screenId, user.roles);
+    const resolvedId = await this.resolveTenantId(params.tenant, tenantId);
+    return this.bduiService.getLayout(resolvedId, params.screenId, user.roles);
   }
 
   @Get()
@@ -48,9 +46,7 @@ export class BduiController {
     @CurrentUser() user: AuthenticatedUser,
     @CurrentTenant() tenantId: string,
   ) {
-    if (tenant !== tenantId) {
-      throw new ForbiddenException('Cross-tenant access denied');
-    }
+    const resolvedId = await this.resolveTenantId(tenant, tenantId);
 
     let screens: string[];
     try {
@@ -62,6 +58,18 @@ export class BduiController {
       });
     }
 
-    return this.bduiService.getBulkLayouts(tenantId, screens, user.roles);
+    return this.bduiService.getBulkLayouts(resolvedId, screens, user.roles);
+  }
+
+  private async resolveTenantId(slugOrId: string, jwtTenantId: string): Promise<string> {
+    if (slugOrId === jwtTenantId) return jwtTenantId;
+    const resolved = await this.tenantsService.getActiveBySlug(slugOrId);
+    if (!resolved || resolved !== jwtTenantId) {
+      this.logger.warn(
+        `Cross-tenant access denied: param=${slugOrId}, JWT tenant=${jwtTenantId}`,
+      );
+      throw new ForbiddenException('Cross-tenant access denied');
+    }
+    return resolved;
   }
 }

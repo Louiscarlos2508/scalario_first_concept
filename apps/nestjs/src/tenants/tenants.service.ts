@@ -35,6 +35,14 @@ export class TenantsService {
     return is_active ? tenant_id : null;
   }
 
+  async getActiveBySlug(slug: string): Promise<string | null> {
+    const tenant = await this.tenantRepo.findOne({
+      where: { slug, is_active: true },
+      select: ['id'],
+    });
+    return tenant?.id ?? null;
+  }
+
   invalidate(tenant_id: string): void {
     this.cache.delete(tenant_id);
     this.logger.debug(`tenant-active cache invalidated tenant_id=${tenant_id}`);

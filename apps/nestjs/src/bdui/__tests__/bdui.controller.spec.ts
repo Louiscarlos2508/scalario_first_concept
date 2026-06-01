@@ -14,34 +14,46 @@ describe('BduiController', () => {
     zones: { kpis: [], main: [], aside: [], actions: [] },
   };
 
+  const mockTenantsService = {
+    getActiveBySlug: jest.fn(),
+  };
+
   beforeEach(() => {
     bduiService = {
       getLayout: jest.fn(),
       getBulkLayouts: jest.fn(),
     } as unknown as jest.Mocked<BduiService>;
 
-    controller = new BduiController(bduiService);
+    mockTenantsService.getActiveBySlug.mockReset();
+    controller = new BduiController(bduiService, mockTenantsService as any);
   });
 
   describe('getLayout', () => {
-    it('returns layout from service for matching tenant', async () => {
+    it('returns layout from service using matching uuid tenant', async () => {
       bduiService.getLayout.mockResolvedValue(dashboardConfig);
 
       const result = await controller.getLayout(
-        { tenant: 'acme', screenId: 'dashboard' },
-        {
-          user_id: 'u1',
-          tenant_id: 'acme',
-          roles: ['OWNER'],
-          department_id: null,
-          jti: 'x',
-          exp: 0,
-        },
-        'acme',
+        { tenant: 'tenant-uuid-123', screenId: 'dashboard' },
+        { user_id: 'user1', tenant_id: 'tenant-uuid-123', roles: ['OWNER'], jti: '', iat: 0, department_id: null } as any,
+        'tenant-uuid-123',
       );
 
       expect(result).toEqual(dashboardConfig);
-      expect(bduiService.getLayout).toHaveBeenCalledWith('acme', 'dashboard', ['OWNER']);
+      expect(bduiService.getLayout).toHaveBeenCalledWith('tenant-uuid-123', 'dashboard', ['OWNER']);
+    });
+
+    it('resolves slug and delegates to service', async () => {
+      bduiService.getLayout.mockResolvedValue(dashboardConfig);
+      mockTenantsService.getActiveBySlug.mockResolvedValue('tenant-uuid-456');
+
+      const result = await controller.getLayout(
+        { tenant: 'blandine', screenId: 'dashboard_owner' },
+        { user_id: 'user1', tenant_id: 'tenant-uuid-456', roles: ['OWNER'], jti: '', iat: 0, department_id: null } as any,
+        'tenant-uuid-456',
+      );
+
+      expect(result).toEqual(dashboardConfig);
+      expect(mockTenantsService.getActiveBySlug).toHaveBeenCalledWith('blandine');
     });
 
     it('throws ForbiddenException when tenant mismatch', async () => {

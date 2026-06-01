@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MindModule } from '../engines/mind/mind.module';
+import { TenantsModule } from '../tenants/tenants.module';
 import { BduiController } from './bdui.controller';
 import { BduiService } from './services/bdui.service';
 import { CatalogueLoaderService } from './services/catalogue-loader.service';
@@ -12,7 +13,7 @@ import { ScreenConfigRepository } from './repositories/screen-config.repository'
 import { ScreenConfigEntity } from './entities/screen-config.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ScreenConfigEntity]), MindModule],
+  imports: [TypeOrmModule.forFeature([ScreenConfigEntity]), MindModule, TenantsModule],
   controllers: [BduiController],
   providers: [
     BduiService,

@@ -12,6 +12,7 @@ abstract final class ScalarioColors {
   static const Color primary50 = Color(0xFFEBF5FB);
   static const Color primary100 = Color(0xFFD6EAF8);
   static const Color primary300 = Color(0xFF85C1E9);
+  static const Color primary400 = Color(0xFF5DADE2);
   static const Color primary500 = Color(0xFF2980B9);
   static const Color primary700 = Color(0xFF1E5F8E);
   static const Color primary900 = Color(0xFF1A3A5C);
@@ -43,8 +44,11 @@ abstract final class ScalarioColors {
   // ---------------------------------------------------------------------------
   // Sémantiques — Info
   // ---------------------------------------------------------------------------
-static const Color info100 = Color(0xFFD6EAF8);
+  static const Color info50 = Color(0xFFF4F9FC);
+  static const Color info100 = Color(0xFFD6EAF8);
+  static const Color info300 = Color(0xFF7FBADA);
   static const Color info500 = Color(0xFF2471A3);
+  static const Color info900 = Color(0xFF154360);
 
   // ---------------------------------------------------------------------------
   // Neutres
