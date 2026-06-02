@@ -1,0 +1,49 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Nouvelle commande",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "SearchBar",
+      "props": {
+        "placeholder_key": "supplier.search",
+        "debounce_ms": 300
+      }
+    },
+    {
+      "type": "FormWidget",
+      "props": {
+        "title": "Détails commande",
+        "fields": [
+          {
+            "name": "fournisseur",
+            "type": "text",
+            "label": "Fournisseur"
+          },
+          {
+            "name": "date_livraison",
+            "type": "date",
+            "label": "Date livraison souhaitée"
+          },
+          {
+            "name": "notes",
+            "type": "text",
+            "label": "Notes"
+          }
+        ]
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Total estimé",
+        "value": "0",
+        "unit": "FCFA"
+      }
+    }
+  ]
+}

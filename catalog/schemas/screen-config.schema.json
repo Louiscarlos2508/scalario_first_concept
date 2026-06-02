@@ -1,59 +1,163 @@
 {
-  "$id": "https://scalario.io/schemas/v1.0.0/screen-config.schema.json",
+  "$id": "https://scalario.io/schemas/v2.0.0/screen-config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ScreenConfig",
-  "description": "Configuration d'un écran BDUI. Définit le layout, les zones de contenu, et les composants à afficher. Chaque écran est identifié par son champ 'screen' et versionné via schema_version.",
+  "title": "ScreenConfig v2",
+  "description": "Configuration d'un écran BDUI v2. Organisation en dossier avec références $ref. Validation bloquante.",
   "type": "object",
   "properties": {
     "screen": {
       "type": "string",
-      "description": "Identifiant unique de l'écran dans le module (ex: 'dashboard', 'order_list', 'product_detail').",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Identifiant unique de l'écran (ex: 'pos_caisse', 'dashboard_owner')."
     },
     "schema_version": {
-      "const": "1.0.0",
-      "description": "Version du schéma BDUI. Figé à '1.0.0' pour cette version du contrat. Permet au runtime de router vers le bon validateur."
+      "const": "2.0.0",
+      "description": "Version du schéma BDUI. v2.0.0 = dossier avec $ref, contrat strict, actions typées."
     },
     "layout": {
-      "enum": ["dashboard", "list", "form", "detail"],
-      "description": "Type de layout de l'écran. dashboard = grille de KPIs + widgets ; list = tableau + filtres ; form = formulaire de saisie ; detail = vue détail avec aside."
+      "oneOf": [
+        { "$ref": "#/$defs/Ref" },
+        { "$ref": "#/$defs/LayoutConfig" }
+      ],
+      "description": "Configuration du layout. Peut être une référence $ref vers layout.json ou un objet inline."
     },
     "title": {
       "type": "string",
-      "description": "Titre affiché de l'écran. Peut être une clé i18n si i18n_key est défini."
+      "description": "Titre affiché de l'écran."
     },
-    "i18n_key": {
-      "type": "string",
-      "description": "Clé i18n pour le titre de l'écran. Si défini, le titre affiché est la traduction de cette clé."
+    "roles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Rôles autorisés à voir cet écran. ['*'] = tous les rôles."
     },
     "zones": {
       "type": "object",
-      "description": "Zones de l'écran. Chaque zone contient une liste de ComponentConfig. Un screen doit avoir au moins la zone 'main'.",
-      "properties": {
-        "kpis": {
-          "type": "array",
-          "description": "Zone KPIs — cartes d'indicateurs en haut de l'écran (layout dashboard).",
-          "items": { "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json" }
-        },
-        "main": {
-          "type": "array",
-          "description": "Zone principale — contenu central de l'écran.",
-          "items": { "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json" }
-        },
-        "aside": {
-          "type": "array",
-          "description": "Zone latérale — informations complémentaires, actions secondaires.",
-          "items": { "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json" }
-        },
-        "actions": {
-          "type": "array",
-          "description": "Zone actions — boutons d'action, menus contextuels.",
-          "items": { "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json" }
-        }
+      "description": "Zones de l'écran. Chaque clé = nom du slot, chaque valeur = $ref vers le fichier zone ou un tableau de composants.",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/$defs/Ref" },
+          { "type": "array", "items": { "$ref": "https://scalario.io/schemas/v2.0.0/component-config.schema.json" } }
+        ]
       },
-      "additionalProperties": false
+      "minProperties": 1
+    },
+    "capabilities": {
+      "oneOf": [
+        { "$ref": "#/$defs/Ref" },
+        { "type": "object" }
+      ],
+      "description": "Capacités spécifiques à l'écran (scan, offline, paiement, etc.)."
+    },
+    "components": {
+      "type": "object",
+      "description": "Définition des composants spécifiques à l'écran. Chaque clé = nom du composant, valeur = $ref ou définition inline.",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "#/$defs/Ref" },
+          { "$ref": "https://scalario.io/schemas/v2.0.0/component-config.schema.json" }
+        ]
+      }
+    },
+    "data": {
+      "oneOf": [
+        { "$ref": "#/$defs/Ref" },
+        { "type": "object" }
+      ],
+      "description": "Sources de données utilisées par l'écran (endpoints, fixtures, cache)."
+    },
+    "rules": {
+      "oneOf": [
+        { "$ref": "#/$defs/Ref" },
+        { "type": "array", "items": { "$ref": "#/$defs/Rule" } }
+      ],
+      "description": "Règles globales de l'écran (RBAC, visibilité, state machine)."
+    },
+    "states": {
+      "type": "object",
+      "description": "États visuels de l'écran (loading, empty, error, offline).",
+      "properties": {
+        "loading": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] },
+        "empty": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] },
+        "error": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] },
+        "offline": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] }
+      }
+    },
+    "i18n": {
+      "oneOf": [
+        { "$ref": "#/$defs/Ref" },
+        { "type": "object" }
+      ],
+      "description": "Traductions pour l'écran."
+    },
+    "ux": {
+      "type": "object",
+      "description": "Spécifications UX dédiées (typographie, espacement, animations).",
+      "properties": {
+        "typography": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] },
+        "spacing": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] },
+        "animations": { "oneOf": [{ "$ref": "#/$defs/Ref" }, { "type": "object" }] }
+      }
+    },
+    "order": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Ordre d'affichage dans la navigation du module."
     }
   },
   "required": ["screen", "schema_version", "layout", "zones"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "Ref": {
+      "type": "object",
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "pattern": "^(.+)\\.json(#/.*)?$",
+          "description": "Chemin relatif vers le fichier référencé. Peut inclure un JSON pointer après #."
+        }
+      },
+      "required": ["$ref"],
+      "additionalProperties": false
+    },
+    "LayoutConfig": {
+      "type": "object",
+      "properties": {
+        "version": { "const": "2.0.0" },
+        "layout": { "type": "string" },
+        "responsive": { "type": "object" },
+        "slots": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "zone": { "type": "string" },
+              "position": { "type": "string" },
+              "sticky": { "type": "boolean" },
+              "scroll": { "type": "boolean" },
+              "visible_on": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["zone", "position"]
+          }
+        },
+        "fallback": { "type": "object" }
+      },
+      "required": ["version", "layout", "slots"]
+    },
+    "Rule": {
+      "type": "object",
+      "properties": {
+        "field": { "type": "string" },
+        "operator": { "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "AND", "OR"] },
+        "value": {},
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Rule" }
+        },
+        "allow": { "type": "boolean" },
+        "state": { "type": "string" },
+        "capabilities": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["field", "operator"]
+    }
+  }
 }

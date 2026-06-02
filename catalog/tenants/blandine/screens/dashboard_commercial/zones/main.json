@@ -1,0 +1,43 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Nouvelle vente",
+        "icon": "add_shopping_cart",
+        "variant": "primary",
+        "size": "large",
+        "action": {
+          "type": "navigate",
+          "screen": "pos_caisse"
+        }
+      }
+    },
+    {
+      "type": "Text",
+      "props": {
+        "text": "Dernières ventes",
+        "style": "titleMedium"
+      }
+    },
+    {
+      "type": "TransactionList",
+      "props": {
+        "title": "",
+        "show_status": true
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Clôturer la caisse",
+        "icon": "payments",
+        "variant": "secondary",
+        "action": {
+          "type": "navigate",
+          "screen": "cloture_caisse"
+        }
+      }
+    }
+  ]
+}

@@ -95,12 +95,12 @@ export class A2uiToScreenConfigService {
       }
 
       return {
-        schema_version: '1.0.0',
+        schema_version: '2.0.0',
         screen: screenId,
+        layout: {},
         zones: {
           kpis,
           main,
-          aside: [],
           actions,
         },
       };

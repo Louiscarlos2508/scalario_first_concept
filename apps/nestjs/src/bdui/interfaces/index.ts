@@ -1,1 +1,1 @@
-export { ScreenConfig, ZoneConfig, ComponentConfig, VisibleIf } from './visible-if.interface';
+export { ScreenConfig, ComponentConfig, VisibleIf } from './visible-if.interface';

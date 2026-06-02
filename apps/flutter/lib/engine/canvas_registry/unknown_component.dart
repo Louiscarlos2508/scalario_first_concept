@@ -12,9 +12,10 @@ import '../../core/design_system/tokens/tokens.dart';
 ///
 /// Hauteur min = 56dp ; padding = ScalarioSpacing.space4 (AC-14).
 class UnknownComponent extends StatelessWidget {
-  const UnknownComponent(this.componentType, {super.key});
+  const UnknownComponent(this.componentType, {super.key, this.message});
 
   final String componentType;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {

@@ -59,7 +59,7 @@ void main() {
   });
 
   test('fixture id list has 5 entries (AC-15)', () {
-    expect(kSandboxFixtureIds.length, 5);
+    expect(kSandboxFixtureIds.length, 19);
     expect(kSandboxFixtureIds, contains('empty_screen'));
     expect(kSandboxFixtureIds, contains('error_state'));
   });

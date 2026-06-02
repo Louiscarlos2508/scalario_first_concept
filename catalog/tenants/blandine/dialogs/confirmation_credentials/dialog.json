@@ -1,0 +1,15 @@
+{
+  "dialog": "confirmation_credentials",
+  "version": "2.0.0",
+  "scenario": "10.3",
+  "title": "Compte créé",
+  "size": "md",
+  "dismissable": true,
+  "actions": [
+    { "label": "Partager via WhatsApp", "variant": "primary", "icon": "whatsapp", "action": { "type": "local", "cmd": "share_whatsapp" } },
+    { "label": "Fermer", "variant": "secondary", "action": { "type": "local", "cmd": "close" } }
+  ],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

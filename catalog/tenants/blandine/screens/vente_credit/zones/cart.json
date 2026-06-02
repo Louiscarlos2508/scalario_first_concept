@@ -1,0 +1,26 @@
+{
+  "components": [
+    {
+      "type": "CartSummary",
+      "props": {
+        "title_key": "cart.title"
+      }
+    },
+    {
+      "type": "NumberInput",
+      "props": {
+        "label": "Montant payé",
+        "min": 0
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Reste dû",
+        "value": "",
+        "unit": "FCFA",
+        "status": "warning"
+      }
+    }
+  ]
+}

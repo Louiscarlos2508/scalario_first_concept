@@ -1,14 +1,7 @@
-/// Contrat d'entree du ScalarioCanvasRegistry — value object immutable.
-///
-/// Mappe sur le champ `ComponentConfig` du JSON Schema partage
-/// (STORY-023 v1.0.0, STORY-V14-002 v1.1.0). La serialisation manuelle
-/// ci-dessous sera regeneree par quicktype quand le schema sera fige.
-///
-/// AC-01: POJO immutable, fromJson/toJson, champs optionnels nullable.
-/// AC-02: copyWith disponible.
-/// v1.1.0: variant, actions[], children[].
-///
-/// VariantContext et ScalarioCanvasResolver sont dans scalario_canvas_resolver.dart.
+import 'props/props_factory.dart';
+import 'props/typed_props.dart';
+import 'bdui_action.dart';
+
 class ComponentConfig {
   const ComponentConfig({
     required this.type,
@@ -23,10 +16,6 @@ class ComponentConfig {
     this.i18nKey,
   });
 
-  /// Construit depuis un map JSON brut.
-  ///
-  /// Si `type` est absent ou vide, retourne un config avec `type == ""` —
-  /// le registry le traitera comme un type inconnu (UnknownComponent).
   factory ComponentConfig.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic> toStringMap(dynamic raw) {
       if (raw == null) return <String, dynamic>{};
@@ -59,51 +48,32 @@ class ComponentConfig {
       variant: json['variant'] is String ? json['variant'] as String : 'default',
       id: json['id'] as String?,
       props: toStringMap(json['props']),
-      visibleIf: json['visible_if'] == null
-          ? null
-          : toStringMap(json['visible_if']),
+      visibleIf: json['visible_if'] == null ? null : toStringMap(json['visible_if']),
       source: json['source'] == null ? null : toStringMap(json['source']),
-      validation: (json['validation'] as List<dynamic>?)
-          ?.cast<Map<String, dynamic>>(),
+      validation: (json['validation'] as List<dynamic>?)?.cast<Map<String, dynamic>>(),
       actions: toActionList(json['actions']),
       children: toChildrenList(json['children']),
       i18nKey: json['i18n_key'] as String?,
     );
   }
 
-  /// Type string resolu par le ScalarioCanvasRegistry (`"KPICard"`, `"DataTable"`, …).
   final String type;
-
-  /// Variante d'affichage. 'default' = rendu standard. 'auto' = resolution
-  /// automatique par le Canvas. Autres = variantes nommees du catalogue DS.
   final String variant;
-
-  /// Identifiant stable du composant dans le screen — utile pour les
-  /// animations de transition et l'audit log.
   final String? id;
-
-  /// Props metier passees au builder DS — contenu depend du `type`.
   final Map<String, dynamic> props;
-
-  /// Regle de visibilite evaluee par ScalarioCanvasRule (STORY-006).
-  /// `null` = composant toujours visible.
   final Map<String, dynamic>? visibleIf;
-
-  /// Source de donnees resolue par le ScalarioCanvas (STORY-008).
   final Map<String, dynamic>? source;
-
-  /// Regles de validation — utilisees par FormWidget (STORY-011).
   final List<Map<String, dynamic>>? validation;
-
-  /// Actions pipeline (v1.1.0) — declenchees sur evenements du composant.
-  /// Route vers les engines Scalario (canvas, form, calc, sense, vault, live).
   final List<Map<String, dynamic>>? actions;
-
-  /// Composants enfants (v1.1.0) — composition recursive.
   final List<ComponentConfig>? children;
-
-  /// Cle i18n pour la localisation (STORY-042).
   final String? i18nKey;
+
+  TypedProps get typedProps => PropsFactory.resolve(type, props);
+
+  List<BduiAction> get parsedActions {
+    if (actions == null || actions!.isEmpty) return [];
+    return actions!.map((a) => BduiAction.fromJson(a)).whereType<BduiAction>().toList();
+  }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'type': type,
@@ -157,6 +127,5 @@ class ComponentConfig {
   int get hashCode => Object.hash(type, variant, id);
 
   @override
-  String toString() =>
-      'ComponentConfig(type: $type, variant: $variant, id: $id)';
+  String toString() => 'ComponentConfig(type: $type, variant: $variant, id: $id)';
 }

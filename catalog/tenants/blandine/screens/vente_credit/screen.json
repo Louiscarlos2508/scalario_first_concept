@@ -1,0 +1,38 @@
+{
+  "screen": "vente_credit",
+  "schema_version": "2.0.0",
+  "layout": {
+    "$ref": "layout/layout.json"
+  },
+  "zones": {
+    "header": {
+      "$ref": "zones/header.json"
+    },
+    "product_grid": {
+      "$ref": "zones/product_grid.json"
+    },
+    "cart": {
+      "$ref": "zones/cart.json"
+    },
+    "actions": {
+      "$ref": "zones/actions.json"
+    }
+  },
+  "rules": {
+    "$ref": "rules/rules.json"
+  },
+  "states": {
+    "loading": {
+      "$ref": "states/loading.json"
+    },
+    "empty": {
+      "$ref": "states/empty.json"
+    }
+  },
+  "i18n": {
+    "$ref": "i18n/fr.json"
+  },
+  "data": {
+    "$ref": "data/sources.json"
+  }
+}

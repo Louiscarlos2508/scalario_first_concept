@@ -1,0 +1,10 @@
+{
+  "sheet": "period_picker",
+  "version": "2.0.0",
+  "scenario": "12.1",
+  "title": "Choisir une période",
+  "snap_points": [0.4],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

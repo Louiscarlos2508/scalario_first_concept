@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Ouverture de caisse",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "AlertBanner",
+      "props": {
+        "message": "Aucune session active",
+        "variant": "warning"
+      }
+    },
+    {
+      "type": "NumberInput",
+      "props": {
+        "label": "Fond de caisse (FCFA)",
+        "min": 0
+      }
+    },
+    {
+      "type": "TextInput",
+      "props": {
+        "label": "Note (optionnelle)",
+        "placeholder": "..."
+      }
+    }
+  ]
+}

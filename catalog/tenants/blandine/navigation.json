@@ -1,0 +1,98 @@
+{
+  "version": "2.0.0",
+  "sidebar": {
+    "groups": [
+      {
+        "module": "dashboard",
+        "label": "Tableau de bord",
+        "icon": "dashboard",
+        "screens": [
+          { "screen": "dashboard_owner", "roles": ["OWNER"] },
+          { "screen": "dashboard_commercial", "roles": ["COMMERCIAL"] },
+          { "screen": "dashboard_manager", "roles": ["MANAGER"] }
+        ]
+      },
+      {
+        "module": "ventes",
+        "label": "Ventes",
+        "icon": "point_of_sale",
+        "screens": [
+          { "screen": "pos_caisse", "roles": ["COMMERCIAL", "MANAGER"] },
+          { "screen": "retour_vente", "roles": ["COMMERCIAL", "MANAGER"] },
+          { "screen": "vente_credit", "roles": ["COMMERCIAL"] }
+        ]
+      },
+      {
+        "module": "stock",
+        "label": "Stock",
+        "icon": "inventory_2",
+        "screens": [
+          { "screen": "historique_stock", "roles": ["OWNER", "MANAGER"] },
+          { "screen": "inventaire", "roles": ["MANAGER"] },
+          { "screen": "reception_livraison", "roles": ["MANAGER", "OWNER"] }
+        ]
+      },
+      {
+        "module": "commandes",
+        "label": "Commandes",
+        "icon": "local_shipping",
+        "screens": [
+          { "screen": "commande_fournisseur", "roles": ["OWNER"] }
+        ],
+        "badge": { "endpoint": "/api/v1/blandine/data/kpis/pending_deliveries" }
+      },
+      {
+        "module": "pertes",
+        "label": "Pertes",
+        "icon": "warning",
+        "screens": [
+          { "screen": "declaration_perte", "roles": ["MANAGER", "COMMERCIAL"] }
+        ]
+      },
+      {
+        "module": "rapports",
+        "label": "Rapports",
+        "icon": "bar_chart",
+        "screens": [
+          { "screen": "vue_rapports", "roles": ["OWNER"] }
+        ]
+      },
+      {
+        "module": "caisse",
+        "label": "Caisse",
+        "icon": "payments",
+        "screens": [
+          { "screen": "ouverture_caisse", "roles": ["COMMERCIAL"] },
+          { "screen": "cloture_caisse", "roles": ["COMMERCIAL", "OWNER"] }
+        ]
+      },
+      {
+        "module": "configuration",
+        "label": "Configuration",
+        "icon": "settings",
+        "screens": [
+          { "screen": "catalogue_produits", "roles": ["OWNER"] },
+          { "screen": "gestion_fournisseurs", "roles": ["OWNER"] }
+        ]
+      },
+      {
+        "module": "equipe",
+        "label": "Équipe",
+        "icon": "people",
+        "screens": [
+          { "screen": "gestion_equipe", "roles": ["OWNER"] }
+        ]
+      }
+    ]
+  },
+  "top_actions": [
+    { "icon": "search", "tooltip": "Recherche globale", "action": { "type": "local", "cmd": "global_search" } },
+    { "icon": "sync", "tooltip": "Synchronisation", "badge": "{pending_sync_count}", "action": { "type": "local", "cmd": "force_sync" }, "roles": ["OWNER", "MANAGER"] },
+    { "icon": "person", "tooltip": "Profil", "action": { "type": "navigate", "screen": "profile" } }
+  ],
+  "responsive": {
+    "desktop_breakpoint": 900,
+    "sidebar_width": 280,
+    "mobile_navigation": "drawer"
+  }
+}

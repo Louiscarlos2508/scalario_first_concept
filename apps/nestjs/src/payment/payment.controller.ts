@@ -22,7 +22,7 @@ import {
 import { PaymentAdapterRegistry } from './payment-adapter.registry';
 import { PaymentAdapterNotFoundError } from './payment.types';
 
-@Controller('api/v1/:tenant/payment')
+@Controller(':tenant/payment')
 @UseGuards(JwtAuthGuard)
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);

@@ -10,16 +10,15 @@ export interface ComponentConfig {
   visible_if?: VisibleIf;
 }
 
-export interface ZoneConfig {
-  kpis?: ComponentConfig[];
-  main?: ComponentConfig[];
-  aside?: ComponentConfig[];
-  actions?: ComponentConfig[];
-}
-
 export interface ScreenConfig {
   schema_version: string;
   screen: string;
-  zones: ZoneConfig;
+  layout: Record<string, unknown>;
+  zones: Record<string, unknown>;
+  data?: Record<string, unknown>;
+  rules?: unknown[];
+  states?: Record<string, unknown>;
+  i18n?: Record<string, unknown>;
+  capabilities?: Record<string, unknown>;
   [key: string]: unknown;
 }

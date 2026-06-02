@@ -4,15 +4,18 @@ import type { ScreenConfig, ComponentConfig } from '../interfaces';
 @Injectable()
 export class RbacComponentFilter {
   apply(config: ScreenConfig, roles: string[]): ScreenConfig {
-    return {
-      ...config,
-      zones: {
-        kpis: this.filterZone(config.zones?.kpis, roles),
-        main: this.filterZone(config.zones?.main, roles),
-        aside: this.filterZone(config.zones?.aside, roles),
-        actions: this.filterZone(config.zones?.actions, roles),
-      },
-    };
+    if (!config.zones) return config;
+
+    const filteredZones: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(config.zones)) {
+      if (Array.isArray(val)) {
+        filteredZones[key] = this.filterZone(val as ComponentConfig[], roles);
+      } else {
+        filteredZones[key] = val;
+      }
+    }
+
+    return { ...config, zones: filteredZones };
   }
 
   private filterZone(
@@ -25,13 +28,6 @@ export class RbacComponentFilter {
       .map((c) => this.recurseChildren(c, roles));
   }
 
-  /**
-   * AC-13: no visible_if → always visible (inclusive default).
-   * AC-10: operator "role" with value string[] → role intersection.
-   *      Fail-closed: if operator is "role" and value is not string[], the
-   *      component is REMOVED (never leak sensitive data).
-   * Other operators (AND/OR/>/</==) → visible by default (data-aware, client-side).
-   */
   private isVisibleForRoles(c: ComponentConfig, roles: string[]): boolean {
     if (!c.visible_if) return true;
     if (c.visible_if.operator === 'role') {
@@ -46,9 +42,6 @@ export class RbacComponentFilter {
     const children = (c.props?.children as ComponentConfig[] | undefined) ?? undefined;
     if (!children) return c;
     const filtered = this.filterZone(children, roles);
-    return {
-      ...c,
-      props: { ...c.props, children: filtered },
-    };
+    return { ...c, props: { ...c.props, children: filtered } };
   }
 }

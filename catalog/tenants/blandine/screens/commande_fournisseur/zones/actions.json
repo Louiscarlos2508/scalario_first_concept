@@ -1,0 +1,20 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Passer la commande",
+        "icon": "send",
+        "variant": "primary"
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost"
+      }
+    }
+  ]
+}

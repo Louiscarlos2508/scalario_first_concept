@@ -1,0 +1,16 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Ajouter un employé",
+        "icon": "person_add",
+        "variant": "primary",
+        "action": {
+          "type": "dialog",
+          "dialog": "employee_form"
+        }
+      }
+    }
+  ]
+}

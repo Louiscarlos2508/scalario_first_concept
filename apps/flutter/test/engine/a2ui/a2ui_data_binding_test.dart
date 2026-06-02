@@ -46,9 +46,9 @@ void main() {
   group('A2UIComponentTranslator', () {
     /// Helper: get the config from whichever zone it landed in.
     ComponentConfig? _firstConfig(ScreenConfig screen) {
-      return screen.zones.kpis?.first ??
-          screen.zones.main?.first ??
-          screen.zones.aside?.first;
+      return screen.zones['kpis']?.first ??
+          screen.zones['main']?.first ??
+          screen.zones['aside']?.first;
     }
 
     test('translates data binding {path: /kpi/ca_jour} into _a2ui_path marker', () {
@@ -229,7 +229,7 @@ void main() {
       });
 
       final screen = translator.translate(msg, 'dashboard', null);
-      final main = screen.zones.main;
+      final main = screen.zones['main'];
       expect(main, hasLength(1));
 
       // Main contains the root's direct children — here kpi_row

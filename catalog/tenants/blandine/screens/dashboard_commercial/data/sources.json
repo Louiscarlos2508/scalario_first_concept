@@ -1,0 +1,21 @@
+{
+  "kpis": {
+    "ca_day": { "endpoint": "/api/v1/blandine/data/kpis/ca_day", "method": "GET", "refresh_ms": 30000 },
+    "sales_count": { "endpoint": "/api/v1/blandine/data/kpis/sales_count", "method": "GET", "refresh_ms": 30000 },
+    "caisse_status": { "endpoint": "/api/v1/blandine/data/caisse/status", "method": "GET", "refresh_ms": 30000 }
+  },
+  "recent_sales": {
+    "endpoint": "/api/v1/blandine/data/sales/recent", "method": "GET", "cache_ttl_ms": 60000
+  },
+  "sync": {
+    "status": { "local": true, "path": "sync.status" }
+  },
+  "fixtures": {
+    "recent_sales": [
+      { "time": "09:15", "amount": 4500, "items": 3, "status": "completed" },
+      { "time": "09:42", "amount": 12000, "items": 5, "status": "completed" },
+      { "time": "10:05", "amount": 2300, "items": 1, "status": "completed" },
+      { "time": "10:30", "amount": 8500, "items": 4, "status": "completed" }
+    ]
+  }
+}

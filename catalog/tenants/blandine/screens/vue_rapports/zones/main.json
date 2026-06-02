@@ -1,0 +1,42 @@
+{
+  "components": [
+    {
+      "type": "PeriodSelector",
+      "props": {
+        "periods": [
+          "today",
+          "week",
+          "month",
+          "custom"
+        ]
+      }
+    },
+    {
+      "type": "ChartWidget",
+      "props": {
+        "chart_type": "line",
+        "title": "Évolution du CA"
+      }
+    },
+    {
+      "type": "RankingList",
+      "props": {
+        "title": "Top 5 produits"
+      }
+    },
+    {
+      "type": "Text",
+      "props": {
+        "text": "Rapport détaillé",
+        "style": "titleMedium"
+      }
+    },
+    {
+      "type": "TransactionList",
+      "props": {
+        "title": "",
+        "show_status": true
+      }
+    }
+  ]
+}

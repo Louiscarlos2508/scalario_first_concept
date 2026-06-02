@@ -1,0 +1,16 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Ajouter un fournisseur",
+        "icon": "add_business",
+        "variant": "primary",
+        "action": {
+          "type": "dialog",
+          "dialog": "supplier_form"
+        }
+      }
+    }
+  ]
+}

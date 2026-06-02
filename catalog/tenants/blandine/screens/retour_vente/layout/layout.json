@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "layout": "list",
+  "slots": {
+    "filters": {
+      "zone": "filters",
+      "position": "top",
+      "sticky": true
+    },
+    "list": {
+      "zone": "list",
+      "position": "main",
+      "scroll": true
+    },
+    "actions": {
+      "zone": "actions",
+      "position": "bottom",
+      "floating": true
+    }
+  }
+}

@@ -1,0 +1,4 @@
+[
+  { "type": "search_bar", "props": { "placeholder": "Rechercher un client…" } },
+  { "type": "data_table", "props": { "columns": ["Nom", "Téléphone", "Crédit en cours"], "data": "{clients}", "selectable": true, "on_select": { "type": "local", "cmd": "select_client" } } }
+]

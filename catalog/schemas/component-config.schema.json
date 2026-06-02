@@ -1,194 +1,172 @@
 {
-  "$id": "https://scalario.io/schemas/v1.1.0/component-config.schema.json",
+  "$id": "https://scalario.io/schemas/v2.0.0/component-config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ComponentConfig",
-  "description": "Decrit un composant BDUI rendu par le ComponentRegistry Flutter. Un ComponentConfig est l'unite atomique du rendu data-driven : il identifie le composant DS a instancier, ses props, sa visibilite conditionnelle, sa source de donnees, ses regles de validation, ses actions (pipelines), ses enfants (composition recursive), et sa variante d'affichage.",
+  "title": "ComponentConfig v2",
+  "description": "Composant BDUI v2 avec contrat strict — props typés, actions typées, slots explicites, validation bloquante.",
   "type": "object",
   "properties": {
-    "schema_version": {
-      "enum": ["1.0.0", "1.1.0"],
-      "description": "Version du schema BDUI. v1.0.0 = schema initial (compat). v1.1.0 = ajoute variant, actions[], children[]."
+    "id": {
+      "type": "string",
+      "description": "Identifiant unique du composant dans la zone."
     },
     "type": {
       "type": "string",
-      "description": "Identifiant du composant DS (ex: 'KPICard', 'DataTable', 'FormSection'). Correspond au nom enregistre dans le ComponentRegistry Flutter.",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Identifiant du composant DS (ex: 'KPICard', 'ActionButton', 'ProductGrid'). Correspond au ComponentBuilder enregistré dans Flutter."
     },
     "variant": {
       "type": "string",
-      "description": "Variante d'affichage du composant. 'default' = rendu standard. 'auto' = resolution auto par le Canvas selon taille ecran, role, nb elements. 'compact', 'hero', 'inline', etc = variantes nommees du catalogue DS.",
-      "minLength": 1,
-      "default": "default"
-    },
-    "id": {
-      "type": "string",
-      "description": "Identifiant optionnel du composant, utile pour les references dans les regles visible_if ou les tests E2E."
+      "default": "default",
+      "description": "Variante d'affichage (ex: 'compact', 'hero', 'default', 'out_of_stock'). Chaque variante a son propre schéma de props."
     },
     "props": {
       "type": "object",
-      "description": "Props passees au widget. Schema permissif — chaque composant DS definit son propre contrat de props. La validation fine est cote Flutter.",
-      "additionalProperties": true,
+      "description": "Props du composant. Validé par le schéma spécifique au type+variant. Rejeté si le schéma échoue.",
       "default": {}
     },
     "visible_if": {
-      "description": "Regle conditionnelle de visibilite. Si null, le composant est toujours visible.",
       "oneOf": [
         { "type": "null" },
         { "$ref": "#/$defs/Rule" }
-      ]
+      ],
+      "description": "Règle conditionnelle de visibilité. Si null, toujours visible."
     },
     "source": {
-      "description": "Source de donnees pour le composant. Si null, le composant utilise des donnees statiques via props.",
       "oneOf": [
         { "type": "null" },
         { "$ref": "#/$defs/DataSource" }
-      ]
-    },
-    "validation": {
-      "type": "array",
-      "description": "Regles de validation cote client. Appliquees avant toute soumission de formulaire.",
-      "items": { "$ref": "#/$defs/ValidationRule" },
-      "default": []
+      ],
+      "description": "Source de données dynamique. Si null, props statiques uniquement."
     },
     "actions": {
       "type": "array",
-      "description": "Actions (pipelines) declenchees sur evenements du composant (onTap, onSubmit, onChange…). Chaque action route vers un engine Scalario (canvas, form, calc, sense, vault, live).",
-      "items": { "$ref": "#/$defs/ActionStep" }
+      "description": "Actions déclenchées par le composant. Typées par type d'action.",
+      "items": { "$ref": "#/$defs/Action" }
     },
     "children": {
       "type": "array",
-      "description": "Composants enfants pour composition recursive (ex: Section > Row > [KPICard, DataTable]).",
+      "description": "Composants enfants (composition récursive).",
       "items": { "$ref": "#" }
     },
     "i18n_key": {
       "type": "string",
-      "description": "Cle i18n pour le label/titre du composant. Resolue par le service de traduction Flutter."
+      "description": "Clé i18n pour le label du composant."
     }
   },
-  "required": ["schema_version", "type", "props"],
+  "required": ["type", "props"],
   "additionalProperties": false,
   "$defs": {
-    "ActionStep": {
+    "Action": {
       "type": "object",
-      "description": "Action pipeline executable par le Scalario Flow. Chaque action pointe vers un engine (canvas, form, calc, sense, vault, live) et une fonction nommee dans son registre.",
+      "description": "Action typée BDUI v2. Le type détermine le comportement et les champs requis.",
       "properties": {
-        "registry": {
-          "enum": ["canvas", "form", "calc", "sense", "vault", "live"],
-          "description": "Engine cible de l'action. canvas = UI, form = saisie, calc = calcul, sense = hardware, vault = data, live = realtime."
-        },
-        "fn": {
+        "trigger": {
           "type": "string",
-          "minLength": 1,
-          "description": "Nom de la fonction dans le registre de l'engine cible (ex: 'navigate', 'kpi_refresh', 'barcode_scan')."
+          "default": "tap",
+          "description": "Événement qui déclenche l'action (tap, submit, change, scan_success, etc.)."
         },
-        "inputs": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Inputs libres passes a la fonction. Peut contenir des variables resolues au runtime ($user.id, $form.values.price)."
-        },
-        "output": {
-          "type": "string",
-          "description": "Nom de la variable de sortie stoquee dans le contexte du pipeline (ex: 'scan_result', 'form_data')."
-        },
-        "on_error": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "Comportement par type d'erreur. skip = ignorer, retry = reessayer, notify = notifier l'utilisateur, fail = arreter le pipeline.",
-          "properties": {
-            "network": { "enum": ["skip", "retry", "notify", "fail"] },
-            "timeout": { "enum": ["skip", "retry", "notify", "fail"] },
-            "validation": { "enum": ["skip", "retry", "notify", "fail"] },
-            "permission": { "enum": ["skip", "retry", "notify", "fail"] }
-          }
-        }
-      },
-      "required": ["registry", "fn"],
-      "additionalProperties": false
-    },
-    "Rule": {
-      "type": "object",
-      "description": "Regle conditionnelle recursive. Les operateurs logiques (AND, OR) ont des enfants ; les operateurs de comparaison comparent un champ a une valeur ; l'operateur 'role' teste l'appartenance de l'utilisateur a un role.",
-      "properties": {
-        "operator": {
-          "enum": ["AND", "OR", "role", ">", "<", "==", "!=", ">=", "<=", "in", "not_in"],
-          "description": "Operateur de la regle. AND/OR = logique binaire avec children ; role = test d'appartenance ; comparaisons = test de valeur."
-        },
-        "children": {
-          "type": "array",
-          "description": "Sous-regles pour les operateurs logiques AND/OR. Requis si operator in {AND, OR}.",
-          "items": { "$ref": "#/$defs/Rule" }
-        },
-        "field": {
-          "type": "string",
-          "description": "Champ evalue par l'operateur de comparaison. Chemin dot-note (ex: 'order.total', 'user.department_id')."
-        },
-        "value": {
-          "description": "Valeur de comparaison. Type libre (string, number, array) selon l'operateur. Pour 'role', c'est le nom du role ou un tableau de roles."
-        },
-        "negate": {
-          "type": "boolean",
-          "description": "Si true, inverse le resultat de la regle (equivalent a NOT).",
-          "default": false
-        }
-      },
-      "required": ["operator"],
-      "oneOf": [
-        {
-          "description": "Operateurs logiques : children requis.",
-          "properties": { "operator": { "enum": ["AND", "OR"] } },
-          "required": ["children"]
-        },
-        {
-          "description": "Operateur role : value requis (string ou array de roles).",
-          "properties": { "operator": { "enum": ["role"] } },
-          "required": ["value"]
-        },
-        {
-          "description": "Operateurs de comparaison : field et value requis.",
-          "properties": { "operator": { "enum": [">", "<", "==", "!=", ">=", "<=", "in", "not_in"] } },
-          "required": ["field", "value"]
-        }
-      ]
-    },
-    "DataSource": {
-      "type": "object",
-      "description": "Declaration d'une source de donnees pour un composant BDUI. Le moteur resout la source au runtime via DataSourceResolver.",
-      "properties": {
         "type": {
-          "enum": ["module_data", "kpi", "static", "computed"],
-          "description": "Type de source. module_data = donnees d'une entite du module ; kpi = agregat pre-calcule ; static = donnees en dur dans props ; computed = formule ou expression."
+          "enum": [
+            "navigate", "sheet", "dialog", "confirm",
+            "api_call", "local", "toast", "show_alert",
+            "add_to_cart", "remove_from_cart", "update_cart_item",
+            "toggle_credit_mode", "clear_cart", "retry"
+          ],
+          "description": "Type d'action. Navigate = aller vers un écran. Sheet = ouvrir un bottom sheet. Dialog = boîte de dialogue. Confirm = confirmation avant action. Api_call = requête HTTP. Local = action locale Flutter. Toast = notification temporaire. Show_alert = bannière d'alerte. Cart actions = spécifiques au POS."
         },
-        "module_id": {
+        "target": {
           "type": "string",
-          "description": "Identifiant du module source, requis si type in {module_data, kpi}."
+          "description": "Cible de l'action (ex: 'cart', 'product_grid', screen ID)."
         },
-        "query": {
+        "screen": {
+          "type": "string",
+          "description": "Écran de destination pour les actions navigate/sheet."
+        },
+        "dialog": {
+          "type": "string",
+          "description": "Identifiant du dialog à afficher."
+        },
+        "confirm_key": {
+          "type": "string",
+          "description": "Clé i18n pour le message de confirmation."
+        },
+        "then": {
+          "$ref": "#/$defs/Action",
+          "description": "Action à exécuter après confirmation (pour confirm)."
+        },
+        "message_key": {
+          "type": "string",
+          "description": "Clé i18n du message (pour toast/show_alert)."
+        },
+        "variant": {
+          "type": "string",
+          "description": "Variante d'alerte (error, success, info, warning)."
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Endpoint API pour api_call."
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "default": "GET"
+        },
+        "params": {
           "type": "object",
-          "description": "Parametres de requete. Structure permissive — chaque type de source definit ses propres parametres.",
-          "additionalProperties": true
+          "description": "Paramètres de la requête ou de l'action locale."
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Durée d'affichage en ms (pour toast)."
         }
       },
       "required": ["type"],
-      "additionalProperties": false
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["navigate", "sheet"] } } },
+          "then": { "required": ["screen"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "confirm" } } },
+          "then": { "required": ["confirm_key", "then"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "add_to_cart" } } },
+          "then": { "required": ["target"] }
+        }
+      ]
     },
-    "ValidationRule": {
+    "Rule": {
       "type": "object",
-      "description": "Regle de validation cote client pour un champ de formulaire.",
       "properties": {
-        "kind": {
-          "enum": ["required", "min", "max", "pattern", "min_length", "max_length"],
-          "description": "Type de validation. required = champ obligatoire ; min/max = valeurs numeriques ; pattern = regex ; min_length/max_length = longueur texte."
-        },
-        "value": {
-          "description": "Valeur seuil pour la validation. Type depend de kind : number pour min/max, string pour pattern, integer pour min_length/max_length. Ignore pour 'required'."
-        },
-        "message_i18n_key": {
-          "type": "string",
-          "description": "Cle i18n du message d'erreur affiche si la validation echoue."
+        "field": { "type": "string" },
+        "operator": { "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in", "AND", "OR"] },
+        "value": {},
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Rule" }
         }
       },
-      "required": ["kind"],
-      "additionalProperties": false
+      "required": ["field", "operator"]
+    },
+    "DataSource": {
+      "type": "object",
+      "properties": {
+        "$ref": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "method": { "type": "string", "default": "GET" },
+        "local": { "type": "boolean" },
+        "path": { "type": "string" },
+        "cache_ttl_ms": { "type": "integer" },
+        "refresh_ms": { "type": "integer" },
+        "params": { "type": "object" },
+        "fixtures": { "type": "array" }
+      },
+      "anyOf": [
+        { "required": ["$ref"] },
+        { "required": ["endpoint"] },
+        { "required": ["local"] }
+      ]
     }
   }
 }

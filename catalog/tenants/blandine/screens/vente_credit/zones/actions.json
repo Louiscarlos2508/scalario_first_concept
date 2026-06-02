@@ -1,0 +1,28 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Valider le crédit",
+        "icon": "credit_score",
+        "variant": "primary",
+        "action": {
+          "type": "dialog",
+          "dialog": "credit_confirm"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost",
+        "action": {
+          "type": "local",
+          "action": "clear_cart"
+        }
+      }
+    }
+  ]
+}

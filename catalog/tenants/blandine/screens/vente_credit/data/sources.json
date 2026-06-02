@@ -1,0 +1,22 @@
+{
+  "clients": {
+    "search": { "endpoint": "/api/v1/blandine/data/clients/search", "method": "GET", "params": { "q": "{query}" } }
+  },
+  "products": {
+    "active": { "endpoint": "/api/v1/blandine/data/products/active", "method": "GET", "cache_ttl_ms": 60000 }
+  },
+  "credit_sales": {
+    "active": { "endpoint": "/api/v1/blandine/data/credits/active", "method": "GET", "cache_ttl_ms": 60000 }
+  },
+  "fixtures": {
+    "clients": [
+      { "name": "Mariam Ouattara", "phone": "70 12 34 56", "total_credit": 25000 },
+      { "name": "Adama Traoré", "phone": "70 98 76 54", "total_credit": 15000 }
+    ],
+    "products": [
+      { "name": "Riz 5kg", "price": 3500, "stock": 20 },
+      { "name": "Huile 1L", "price": 1500, "stock": 12 },
+      { "name": "Tomates", "price": 500, "stock": 45, "input_type": "vrac" }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "stock": {
+    "all": { "endpoint": "/api/v1/blandine/data/stock", "method": "GET", "cache_ttl_ms": 60000 },
+    "by_category": { "endpoint": "/api/v1/blandine/data/stock/by_category/{category}", "method": "GET" }
+  },
+  "movements": {
+    "by_product": { "endpoint": "/api/v1/blandine/data/movements/{productId}", "method": "GET" }
+  },
+  "categories": {
+    "endpoint": "/api/v1/blandine/data/categories", "method": "GET", "cache_ttl_ms": 300000
+  },
+  "kpis": {
+    "stock_summary": { "endpoint": "/api/v1/blandine/data/kpis/stock_summary", "method": "GET", "refresh_ms": 60000 }
+  },
+  "fixtures": {
+    "stock": [
+      { "name": "Tomates", "qty": 45, "unit": "kg", "category": "Légumes", "status": "normal" },
+      { "name": "Bananes", "qty": 3, "unit": "kg", "category": "Fruits", "status": "critical" },
+      { "name": "Oignons", "qty": 25, "unit": "kg", "category": "Légumes", "status": "normal" },
+      { "name": "Riz 5kg", "qty": 20, "unit": "sac", "category": "Épicerie", "status": "normal" },
+      { "name": "Huile 1L", "qty": 2, "unit": "bouteille", "category": "Épicerie", "status": "critical" }
+    ]
+  }
+}

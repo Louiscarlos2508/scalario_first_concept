@@ -1,0 +1,33 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Confirmer la réception",
+        "icon": "check",
+        "variant": "primary",
+        "action": {
+          "type": "confirm",
+          "confirm_key": "delivery.confirm",
+          "then": {
+            "type": "api_call",
+            "endpoint": "/api/v1/blandine/delivery/confirm",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost",
+        "action": {
+          "type": "local",
+          "action": "go_back"
+        }
+      }
+    }
+  ]
+}

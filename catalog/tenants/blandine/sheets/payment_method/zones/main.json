@@ -1,0 +1,13 @@
+[
+  { "type": "text", "props": { "content": "Total : {total} FCFA", "variant": "title" } },
+  { "type": "chip_selector", "props": {
+    "options": ["Espèces", "Carte", "Orange Money", "Moov Money", "Wave"],
+    "selected": "Espèces",
+    "on_select": { "type": "local", "cmd": "select_payment" }
+  } },
+  { "type": "form_widget", "props": { "fields": [
+    { "label": "Montant reçu", "type": "number", "key": "amount_received", "placeholder": "0" },
+    { "label": "Montant versé", "type": "number", "key": "amount_paid", "placeholder": "0", "visible": "{mode == 'partial'}" },
+    { "label": "Échéance", "type": "date", "key": "due_date", "visible": "{mode == 'credit'}" }
+  ]} }
+]

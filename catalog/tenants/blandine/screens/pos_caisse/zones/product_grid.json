@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "id": "product_list",
+      "type": "ProductGrid",
+      "props": {
+        "page_size": 50,
+        "source": { "$ref": "../data/sources.json#/products/active" },
+        "item_component": { "$ref": "../components/product_card.json" },
+        "empty_state": { "$ref": "../states/empty.json" },
+        "loading_state": { "$ref": "../states/loading.json" }
+      }
+    }
+  ]
+}

@@ -1,25 +1,41 @@
 {
-  "id": "retail_fresh_produce",
-  "schema_version": "1.0.0",
-  "name": "Produits Frais Retail — Blandine",
+  "id": "blandine",
+  "schema_version": "2.0.0",
+  "name": "Blandine",
   "tenant_handle": "blandine-shop",
   "sector": "commerce_general",
   "currency": "XOF",
   "locale": "fr-BF",
   "timezone": "Africa/Ouagadougou",
-  "entities": ["entities/product.json", "entities/sale.json", "entities/loss.json", "entities/delivery.json"],
-  "screens": [
-    "screens/dashboard_owner.json", "screens/stock_list.json",
-    "screens/loss_form.json", "screens/delivery_validation.json",
-    "screens/daily_report.json", "screens/alert_detail.json",
-    "screens/inventory_count.json", "screens/pos_commercial.json"
+  "rbac_roles": ["OWNER", "MANAGER", "COMMERCIAL"],
+  "modules": [
+    { "id": "dashboard", "name": "Tableau de bord", "icon": "dashboard" },
+    { "id": "ventes", "name": "Ventes", "icon": "point_of_sale" },
+    { "id": "stock", "name": "Stock", "icon": "inventory_2" },
+    { "id": "commandes", "name": "Commandes", "icon": "local_shipping" },
+    { "id": "pertes", "name": "Pertes", "icon": "warning" },
+    { "id": "rapports", "name": "Rapports", "icon": "bar_chart" },
+    { "id": "caisse", "name": "Caisse", "icon": "payments" },
+    { "id": "configuration", "name": "Configuration", "icon": "settings" },
+    { "id": "equipe", "name": "Équipe", "icon": "people" }
   ],
-  "calc": ["calc/pricing.json", "calc/stock_alerts.json"],
-  "queries": ["queries/daily_kpis.sql", "queries/stock_alerts.sql"],
-  "workflows": ["workflows/validation_commande.json", "../modules/operations/cloture_caisse.json"],
-  "capabilities": ["capabilities/scan_print.json"],
-  "live": ["live/events.json"],
-  "permissions": "permissions.json",
-  "theme": "theme.json",
-  "rbac_roles": ["OWNER", "MANAGER", "COMMERCIAL"]
+  "screens": {
+    "dashboard_owner":      { "module": "dashboard", "title": "Boutique Kouamé", "roles": ["OWNER"], "layout": "dashboard", "order": 0 },
+    "dashboard_commercial": { "module": "dashboard", "title": "Ma journée", "roles": ["COMMERCIAL"], "layout": "dashboard", "order": 0 },
+    "dashboard_manager":    { "module": "dashboard", "title": "Opérations", "roles": ["MANAGER"], "layout": "dashboard", "order": 0 },
+    "pos_caisse":           { "module": "ventes", "title": "Point de vente", "roles": ["COMMERCIAL","MANAGER"], "layout": "pos", "order": 0 },
+    "retour_vente":         { "module": "ventes", "title": "Retour / Annulation", "roles": ["COMMERCIAL","MANAGER"], "layout": "list", "order": 1 },
+    "vente_credit":         { "module": "ventes", "title": "Vente à crédit", "roles": ["COMMERCIAL"], "layout": "pos", "order": 2 },
+    "reception_livraison":  { "module": "stock", "title": "Réception livraison", "roles": ["MANAGER","OWNER"], "layout": "form", "order": 0 },
+    "inventaire":           { "module": "stock", "title": "Inventaire", "roles": ["MANAGER"], "layout": "form", "order": 1 },
+    "historique_stock":     { "module": "stock", "title": "Stock", "roles": ["OWNER","MANAGER"], "layout": "list", "order": 2 },
+    "commande_fournisseur": { "module": "commandes", "title": "Commander", "roles": ["OWNER"], "layout": "form", "order": 0 },
+    "declaration_perte":    { "module": "pertes", "title": "Déclarer une perte", "roles": ["MANAGER","COMMERCIAL"], "layout": "form", "order": 0 },
+    "vue_rapports":         { "module": "rapports", "title": "Rapports", "roles": ["OWNER"], "layout": "dashboard", "order": 0 },
+    "ouverture_caisse":     { "module": "caisse", "title": "Ouvrir la caisse", "roles": ["COMMERCIAL"], "layout": "form", "order": 0 },
+    "cloture_caisse":       { "module": "caisse", "title": "Clôturer la caisse", "roles": ["COMMERCIAL","OWNER"], "layout": "form", "order": 1 },
+    "catalogue_produits":   { "module": "configuration", "title": "Produits", "roles": ["OWNER"], "layout": "list", "order": 0 },
+    "gestion_equipe":       { "module": "equipe", "title": "Équipe", "roles": ["OWNER"], "layout": "list", "order": 0 },
+    "gestion_fournisseurs": { "module": "configuration", "title": "Fournisseurs", "roles": ["OWNER"], "layout": "list", "order": 1 }
+  }
 }

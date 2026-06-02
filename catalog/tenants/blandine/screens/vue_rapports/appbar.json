@@ -1,0 +1,8 @@
+{
+  "title": "Rapports",
+  "show_back": true,
+  "actions": [
+    { "icon": "calendar_month", "action": { "type": "sheet", "sheet": "period_picker" } },
+    { "icon": "file_download", "action": { "type": "local", "cmd": "export_report" } }
+  ]
+}

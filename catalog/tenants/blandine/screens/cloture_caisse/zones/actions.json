@@ -1,0 +1,25 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Soumettre la clôture",
+        "icon": "lock",
+        "variant": "primary",
+        "action": {
+          "type": "api_call",
+          "endpoint": "/api/v1/blandine/caisse/close",
+          "method": "POST"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost"
+      }
+    }
+  ]
+}

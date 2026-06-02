@@ -1,0 +1,22 @@
+{
+  "components": [
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Livraisons en attente",
+        "value": "2",
+        "icon": "local_shipping",
+        "status": "warning"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Stock critique",
+        "value": "3",
+        "icon": "inventory_2",
+        "status": "critical"
+      }
+    }
+  ]
+}

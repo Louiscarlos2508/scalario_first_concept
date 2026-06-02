@@ -22,8 +22,8 @@ import '../engine/canvas/scalario_canvas.dart';
 import '../engine/canvas/data_source_resolver.dart';
 import '../engine/canvas/json_schema_validator.dart';
 import '../engine/canvas_registry/scalario_canvas_registry.dart';
-import '../engine/canvas_layout/scalario_canvas_layout.dart';
 import '../engine/canvas_rule/scalario_canvas_rule.dart';
+import '../engine/canvas_layout/screen_config.dart';
 import '../engine/a2ui/a2ui_canvas.dart';
 import 'sandbox_a2ui_loader.dart';
 import 'sandbox_action_dispatcher.dart';
@@ -53,7 +53,6 @@ class SandboxScreen extends StatefulWidget {
     this.userContext,
     this.console,
     this.componentRegistry,
-    this.layoutResolver,
     this.initialFixtureId,
   });
 
@@ -62,7 +61,6 @@ class SandboxScreen extends StatefulWidget {
   final SandboxUserContextProvider? userContext;
   final SandboxConsoleController? console;
   final ScalarioCanvasRegistry? componentRegistry;
-  final ScalarioCanvasLayout? layoutResolver;
   final String? initialFixtureId;
 
   @override
@@ -115,11 +113,8 @@ class _SandboxScreenState extends State<SandboxScreen> {
 
     _registry =
         widget.componentRegistry ?? GetIt.I<ScalarioCanvasRegistry>();
-    final ScalarioCanvasLayout resolver =
-        widget.layoutResolver ?? GetIt.I<ScalarioCanvasLayout>();
     _engine = _SandboxBDUIEngineFactory.build(
       registry: _registry,
-      layoutResolver: resolver,
       userContext: _userCtx,
     );
 
@@ -669,13 +664,11 @@ class _SandboxScreenState extends State<SandboxScreen> {
 abstract class _SandboxBDUIEngineFactory {
   static ScalarioCanvas build({
     required ScalarioCanvasRegistry registry,
-    required ScalarioCanvasLayout layoutResolver,
     required SandboxUserContextProvider userContext,
   }) {
     return ScalarioCanvas(
       registry: registry,
       evaluator: const ScalarioCanvasRule(),
-      layoutResolver: layoutResolver,
       dataResolver: _UnusedDataResolver(),
       userContextProvider: userContext,
       validator: const _PassthroughValidator(),

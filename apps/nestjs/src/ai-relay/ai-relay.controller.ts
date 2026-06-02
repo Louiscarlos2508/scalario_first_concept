@@ -36,7 +36,7 @@ type DevGenerateDto = z.infer<typeof DevGenerateSchema>;
 
 @ApiTags('AI Relay')
 @ApiBearerAuth()
-@Controller('api/v1/:tenant/ai-relay')
+@Controller(':tenant/ai-relay')
 export class AiRelayController {
   private readonly logger = new Logger(AiRelayController.name);
 

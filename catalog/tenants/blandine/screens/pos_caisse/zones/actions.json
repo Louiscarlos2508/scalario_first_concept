@@ -1,0 +1,37 @@
+{
+  "components": [
+    {
+      "id": "payment_button",
+      "type": "ActionButton",
+      "variant": "primary",
+      "props": {
+        "label_key": "payment.validate",
+        "icon": "payments",
+        "size": "large",
+        "action": { "type": "dialog", "dialog": "payment_confirm" }
+      },
+      "visible_if": { "field": "cart.has_items", "operator": "eq", "value": true }
+    },
+    {
+      "id": "mode_switcher",
+      "type": "ActionButton",
+      "variant": "secondary",
+      "props": {
+        "label_key": "cart.credit_mode",
+        "icon": "credit_score",
+        "action": { "type": "local", "action": "toggle_credit_mode" }
+      }
+    },
+    {
+      "id": "cancel_sale",
+      "type": "ActionButton",
+      "variant": "ghost",
+      "props": {
+        "label_key": "cart.cancel",
+        "icon": "close",
+        "action": { "type": "confirm", "confirm_key": "cart.cancel_confirm", "then": { "type": "local", "action": "clear_cart" } }
+      },
+      "visible_if": { "field": "cart.has_items", "operator": "eq", "value": true }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Inventaire",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "ChipSelector",
+      "props": {
+        "label_key": "inventory.scope",
+        "options": [
+          {
+            "label": "Complet",
+            "value": "full"
+          },
+          {
+            "label": "Par catégorie",
+            "value": "category"
+          }
+        ],
+        "multiple": false
+      }
+    },
+    {
+      "type": "ProgressBar",
+      "props": {
+        "value": 0,
+        "max": 100,
+        "show_label": true
+      }
+    }
+  ]
+}

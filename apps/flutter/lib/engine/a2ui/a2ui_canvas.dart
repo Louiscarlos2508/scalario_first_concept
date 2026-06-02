@@ -196,10 +196,10 @@ class _A2UICanvasState extends State<A2UICanvas> {
     final zones = config.zones;
     final dataModel = surface.dataModel;
 
-    final kpis = zones.kpis
+    final kpis = config.kpis
         ?.map((c) => registry.build(_resolveConfig(c, dataModel), context))
         .toList();
-    final main = zones.main
+    final mainContent = config.main
         ?.map((c) => registry.build(_resolveConfig(c, dataModel), context))
         .toList();
 
@@ -217,7 +217,7 @@ class _A2UICanvasState extends State<A2UICanvas> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Column(children: kpis.map((k) => Padding(padding: const EdgeInsets.only(bottom: 8), child: k)).toList()),
             ),
-          if (main != null && main.isNotEmpty) ...main,
+          if (mainContent != null && mainContent.isNotEmpty) ...mainContent,
         ],
       ),
     );

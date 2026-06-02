@@ -1,0 +1,25 @@
+{
+  "components": [
+    {
+      "type": "FilterChips",
+      "props": {
+        "label_key": "sales.filter_status",
+        "options": [
+          {
+            "label": "Toutes",
+            "value": ""
+          },
+          {
+            "label": "Aujourd'hui",
+            "value": "today"
+          },
+          {
+            "label": "Cette semaine",
+            "value": "week"
+          }
+        ],
+        "multiple": false
+      }
+    }
+  ]
+}

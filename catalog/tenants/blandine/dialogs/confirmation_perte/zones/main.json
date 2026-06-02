@@ -1,0 +1,6 @@
+[
+  { "type": "text", "props": { "content": "{product}", "variant": "subtitle" } },
+  { "type": "text", "props": { "content": "Quantité : {qty} {unit} — {nature}", "variant": "body" } },
+  { "type": "text", "props": { "content": "{note}", "variant": "caption", "color": "muted" } },
+  { "type": "kpi_card", "props": { "title": "Valeur perte estimée", "value": "{valeur} FCFA", "variant": "medium" } }
+]

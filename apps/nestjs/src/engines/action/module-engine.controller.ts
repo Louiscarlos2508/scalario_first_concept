@@ -25,7 +25,7 @@ import { AbacAction } from '../../core/security/abac/decorators/abac-action.deco
 import { MutationInProgressError } from './services/idempotency.service';
 import type { AuthenticatedUser } from '../../core/auth/interfaces/jwt-payload.interface';
 
-@Controller('api/v1/:tenant/:moduleId')
+@Controller(':tenant/:moduleId')
 @UseGuards(JwtAuthGuard)
 export class ModuleEngineController {
   private readonly logger = new Logger(ModuleEngineController.name);

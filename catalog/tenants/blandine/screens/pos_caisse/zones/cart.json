@@ -1,0 +1,29 @@
+{
+  "components": [
+    {
+      "id": "cart_items",
+      "type": "CartSummary",
+      "props": {
+        "title_key": "cart.title",
+        "item_component": { "$ref": "../components/cart_item.json" },
+        "totals": {
+          "subtotal": { "source": { "$ref": "../data/sources.json#/cart/subtotal" } },
+          "tax": { "source": { "$ref": "../data/sources.json#/cart/tax" } },
+          "total": { "source": { "$ref": "../data/sources.json#/cart/total" } }
+        },
+        "empty_state": { "$ref": "../states/empty.json" }
+      }
+    },
+    {
+      "id": "credit_info",
+      "type": "AlertPreview",
+      "visible_if": { "field": "cart.mode", "operator": "eq", "value": "credit" },
+      "props": {
+        "title_key": "credit.recap",
+        "amount_due": { "source": { "$ref": "../data/sources.json#/cart/balance_due" } },
+        "due_date": { "source": { "$ref": "../data/sources.json#/cart/due_date" } },
+        "client": { "source": { "$ref": "../data/sources.json#/cart/client" } }
+      }
+    }
+  ]
+}

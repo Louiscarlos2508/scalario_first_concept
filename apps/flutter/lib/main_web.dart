@@ -7,26 +7,38 @@ import 'package:get_it/get_it.dart';
 
 import 'l10n/s.dart';
 import 'core/theme/scalario_theme.dart';
+import 'engine/canvas/scalario_canvas_module.dart';
 import 'engine/canvas_registry/scalario_canvas_registry.dart';
 import 'engine/canvas_registry/registry_bootstrap.dart';
-import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'engine/error_boundary/global_error_handler.dart';
 import 'sandbox/sandbox_screen.dart';
+import 'app/app_shell.dart';
+
+const _appMode = String.fromEnvironment('APP_MODE', defaultValue: 'sandbox');
 
 void main() {
-  runZonedGuarded(
+  runZonedGuarded<void>(
     () async {
-      WidgetsFlutterBinding.ensureInitialized();
-      GlobalErrorHandler.install();
-      final registry = ScalarioCanvasRegistry();
-      GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
-      RegistryBootstrap.registerPhase1(registry);
-      RegistryBootstrap.registerAliases(registry);
-      GetIt.I.registerSingleton<ScalarioCanvasLayout>(ScalarioCanvasLayout(registry: registry));
-      ScalarioCanvasRegistry.instance = registry;
-      runApp(const ScalarioApp());
+      try {
+        WidgetsFlutterBinding.ensureInitialized();
+        GlobalErrorHandler.install();
+        final registry = ScalarioCanvasRegistry();
+        GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
+        RegistryBootstrap.registerPhase1(registry);
+        RegistryBootstrap.registerAliases(registry);
+        ScalarioCanvasRegistry.instance = registry;
+
+        if (_appMode == 'app') {
+          await ScalarioCanvasModule.register(GetIt.I);
+        }
+
+        runApp(const ScalarioApp());
+      } catch (e, s) {
+        print('FATAL INIT ERROR: $e');
+        print('STACK: $s');
+      }
     },
-    (e, s) => debugPrint('Zone error: $e'),
+    (e, s) => print('ZONE: $e'),
   );
 }
 
@@ -54,7 +66,7 @@ class _ScalarioAppState extends State<ScalarioApp> {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const SandboxScreen(),
+      home: _appMode == 'app' ? const AppShell() : const SandboxScreen(),
     );
   }
 }

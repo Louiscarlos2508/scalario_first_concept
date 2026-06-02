@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "platform": "mobile",
+  "timeout_ms": 10000,
+  "sound_enabled": true,
+  "actions": [
+    { "trigger": "scan_success", "type": "add_to_cart_from_barcode", "target": "cart" },
+    { "trigger": "scan_failure", "type": "show_alert", "variant": "error", "message_key": "barcode.not_found" }
+  ]
+}

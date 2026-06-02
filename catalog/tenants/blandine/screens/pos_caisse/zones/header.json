@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "id": "search_bar",
+      "type": "SearchBar",
+      "props": {
+        "placeholder_key": "products.search",
+        "debounce_ms": 300,
+        "source": { "$ref": "../data/sources.json#/products/search" }
+      }
+    },
+    {
+      "id": "category_filter",
+      "type": "FilterChips",
+      "props": {
+        "label_key": "products.category",
+        "source": { "$ref": "../data/sources.json#/categories" },
+        "multiple": false
+      }
+    },
+    {
+      "id": "quick_add",
+      "type": "ActionButton",
+      "variant": "ghost",
+      "props": {
+        "icon": "add",
+        "label_key": "products.quick_add",
+        "action": { "type": "sheet", "screen": "catalogue_produits" }
+      }
+    }
+  ]
+}

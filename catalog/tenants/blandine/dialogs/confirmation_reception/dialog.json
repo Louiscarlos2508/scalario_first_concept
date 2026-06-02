@@ -1,0 +1,14 @@
+{
+  "dialog": "confirmation_reception",
+  "version": "2.0.0",
+  "scenario": "05.3",
+  "title": "Confirmer la réception",
+  "size": "md",
+  "actions": [
+    { "label": "Retour", "variant": "secondary", "action": { "type": "local", "cmd": "close" } },
+    { "label": "Valider la réception", "variant": "primary", "action": { "type": "api_call", "endpoint": "orders.confirm_reception" } }
+  ],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

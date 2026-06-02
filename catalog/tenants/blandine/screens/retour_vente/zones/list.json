@@ -1,0 +1,11 @@
+{
+  "components": [
+    {
+      "type": "TransactionList",
+      "props": {
+        "title": "Historique des ventes",
+        "show_status": true
+      }
+    }
+  ]
+}

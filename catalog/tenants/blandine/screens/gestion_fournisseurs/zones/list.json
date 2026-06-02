@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Fournisseurs",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "SupplierList",
+      "props": {}
+    }
+  ]
+}

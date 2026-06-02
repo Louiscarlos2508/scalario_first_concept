@@ -1,0 +1,7 @@
+[
+  { "type": "chip_selector", "props": {
+    "options": ["Aujourd'hui", "Cette semaine", "Ce mois", "Personnalisé"],
+    "selected": "Aujourd'hui",
+    "on_select": { "type": "local", "cmd": "select_period" }
+  } }
+]

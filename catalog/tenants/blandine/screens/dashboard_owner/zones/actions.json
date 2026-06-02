@@ -1,0 +1,40 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Rapports",
+        "icon": "bar_chart",
+        "variant": "secondary",
+        "action": {
+          "type": "navigate",
+          "screen": "vue_rapports"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Stock",
+        "icon": "inventory_2",
+        "variant": "secondary",
+        "action": {
+          "type": "navigate",
+          "screen": "historique_stock"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Commander",
+        "icon": "local_shipping",
+        "variant": "primary",
+        "action": {
+          "type": "navigate",
+          "screen": "commande_fournisseur"
+        }
+      }
+    }
+  ]
+}

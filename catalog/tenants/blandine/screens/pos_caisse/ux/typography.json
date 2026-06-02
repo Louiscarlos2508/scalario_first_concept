@@ -1,0 +1,18 @@
+{
+  "font_family": "Poppins",
+  "scales": {
+    "headlineLarge": { "size": 28, "weight": "bold", "line_height": 1.2 },
+    "headlineMedium": { "size": 24, "weight": "semiBold", "line_height": 1.3 },
+    "titleLarge": { "size": 20, "weight": "semiBold", "line_height": 1.3 },
+    "titleMedium": { "size": 16, "weight": "medium", "line_height": 1.4 },
+    "bodyLarge": { "size": 16, "weight": "regular", "line_height": 1.5 },
+    "bodyMedium": { "size": 14, "weight": "regular", "line_height": 1.5 },
+    "bodySmall": { "size": 12, "weight": "regular", "line_height": 1.4 },
+    "labelLarge": { "size": 14, "weight": "medium", "line_height": 1.3 },
+    "labelSmall": { "size": 11, "weight": "medium", "line_height": 1.3 },
+    "kpi": { "size": 32, "weight": "bold", "line_height": 1.1 },
+    "kpiUnit": { "size": 14, "weight": "regular", "line_height": 1.1 },
+    "price": { "size": 16, "weight": "bold", "line_height": 1.3 },
+    "badge": { "size": 11, "weight": "medium", "line_height": 1.2 }
+  }
+}

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:scalario/engine/canvas_registry/scalario_canvas_registry.dart';
 import 'package:scalario/engine/canvas_registry/registry_bootstrap.dart';
-import 'package:scalario/engine/canvas_layout/scalario_canvas_layout.dart';
 import 'package:scalario/sandbox/sandbox_file_watcher.dart';
 import 'package:scalario/sandbox/sandbox_json_loader.dart';
 import 'package:scalario/sandbox/sandbox_screen.dart';
@@ -94,14 +93,13 @@ void main() {
     });
     final loader = SandboxJsonLoader(source: BundleJsonSource(bundle: bundle));
     final registry = _registry();
-    final resolver = ScalarioCanvasLayout(registry: registry);
 
     await tester.pumpWidget(MaterialApp(
       home: SandboxScreen(
         loader: loader,
         watcher: const NoopFileWatcher(),
         componentRegistry: registry,
-        layoutResolver: resolver,
+        
         initialFixtureId: 'empty_screen',
       ),
     ));
@@ -118,7 +116,6 @@ void main() {
     });
     final loader = SandboxJsonLoader(source: BundleJsonSource(bundle: bundle));
     final registry = _registry();
-    final resolver = ScalarioCanvasLayout(registry: registry);
     final userCtx = SandboxUserContextProvider();
 
     await tester.pumpWidget(MaterialApp(
@@ -127,7 +124,7 @@ void main() {
         watcher: const NoopFileWatcher(),
         userContext: userCtx,
         componentRegistry: registry,
-        layoutResolver: resolver,
+        
         initialFixtureId: 'empty_screen',
       ),
     ));
@@ -146,14 +143,13 @@ void main() {
     });
     final loader = SandboxJsonLoader(source: BundleJsonSource(bundle: bundle));
     final registry = _registry();
-    final resolver = ScalarioCanvasLayout(registry: registry);
 
     await tester.pumpWidget(MaterialApp(
       home: SandboxScreen(
         loader: loader,
         watcher: const NoopFileWatcher(),
         componentRegistry: registry,
-        layoutResolver: resolver,
+        
         initialFixtureId: 'empty_screen',
       ),
     ));
@@ -171,14 +167,13 @@ void main() {
     );
     final loader = SandboxJsonLoader(source: BundleJsonSource(bundle: bundle));
     final registry = _registry();
-    final resolver = ScalarioCanvasLayout(registry: registry);
 
     await tester.pumpWidget(MaterialApp(
       home: SandboxScreen(
         loader: loader,
         watcher: const NoopFileWatcher(),
         componentRegistry: registry,
-        layoutResolver: resolver,
+        
         initialFixtureId: 'empty_screen',
       ),
     ));

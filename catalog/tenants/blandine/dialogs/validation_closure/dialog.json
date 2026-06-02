@@ -1,0 +1,14 @@
+{
+  "dialog": "validation_closure",
+  "version": "2.0.0",
+  "scenario": "03.3",
+  "title": "Valider la clôture",
+  "size": "md",
+  "actions": [
+    { "label": "Signaler un problème", "variant": "secondary", "action": { "type": "local", "cmd": "report_issue" } },
+    { "label": "Valider la clôture", "variant": "primary", "action": { "type": "api_call", "endpoint": "caisse.validate" } }
+  ],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

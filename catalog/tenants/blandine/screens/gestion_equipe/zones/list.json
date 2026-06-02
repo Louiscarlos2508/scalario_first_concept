@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Mon équipe",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "EmployeeList",
+      "props": {}
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "sheet": "client_select",
+  "version": "2.0.0",
+  "scenario": "15.2",
+  "title": "Sélectionner le client",
+  "snap_points": [0.5, 0.9],
+  "search": { "placeholder": "Nom ou téléphone…", "debounce_ms": 300 },
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "suppliers": {
+    "all": { "endpoint": "/api/v1/blandine/data/suppliers", "method": "GET", "cache_ttl_ms": 300000 }
+  },
+  "products": {
+    "by_supplier": { "endpoint": "/api/v1/blandine/data/products/by_supplier/{supplierId}", "method": "GET" }
+  },
+  "orders": {
+    "create": { "endpoint": "/api/v1/blandine/data/orders", "method": "POST" },
+    "history": { "endpoint": "/api/v1/blandine/data/orders/history", "method": "GET" }
+  },
+  "fixtures": {
+    "suppliers": [
+      { "name": "Koutoubi S.", "phone": "70 11 22 33", "products_count": 5 },
+      { "name": "Faso Fruits", "phone": "70 44 55 66", "products_count": 3 }
+    ],
+    "products": [
+      { "name": "Tomates", "unit_price": 350, "unit": "kg", "supplier": "Koutoubi S." },
+      { "name": "Oignons", "unit_price": 250, "unit": "kg", "supplier": "Koutoubi S." },
+      { "name": "Bananes", "unit_price": 200, "unit": "kg", "supplier": "Faso Fruits" }
+    ]
+  }
+}

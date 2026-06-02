@@ -1,0 +1,12 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Démarrer l'inventaire",
+        "icon": "play_arrow",
+        "variant": "primary"
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "type": "FilterChips",
+      "props": {
+        "label_key": "stock.category",
+        "options": [
+          {
+            "label": "Tous",
+            "value": ""
+          },
+          {
+            "label": "Fruits",
+            "value": "fruits"
+          },
+          {
+            "label": "Légumes",
+            "value": "legumes"
+          }
+        ],
+        "multiple": false
+      }
+    },
+    {
+      "type": "StatusBadge",
+      "props": {
+        "label_key": "stock.critical",
+        "variant": "error"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "components": [
+    {
+      "type": "ProductGrid",
+      "props": {
+        "page_size": 50
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "id": "kpi_ca_jour",
+      "type": "KPICard",
+      "props": {
+        "label_key": "kpi.ca_day",
+        "unit": "XOF",
+        "source": { "$ref": "../data/sources.json#/kpis/ca_day" },
+        "status": "nominal"
+      }
+    },
+    {
+      "id": "kpi_nb_ventes",
+      "type": "KPICard",
+      "props": {
+        "label_key": "kpi.sales_count",
+        "unit": "",
+        "source": { "$ref": "../data/sources.json#/kpis/sales_count" }
+      }
+    },
+    {
+      "id": "kpi_clients",
+      "type": "KPICard",
+      "props": {
+        "label_key": "kpi.clients",
+        "unit": "",
+        "source": { "$ref": "../data/sources.json#/kpis/client_count" }
+      }
+    }
+  ]
+}

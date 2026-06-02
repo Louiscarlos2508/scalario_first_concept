@@ -1,0 +1,19 @@
+{
+  "caisse": {
+    "current_session": { "endpoint": "/api/v1/blandine/data/caisse/current_session", "method": "GET" },
+    "close": { "endpoint": "/api/v1/blandine/data/caisse/close", "method": "POST" }
+  },
+  "kpis": {
+    "ca_day": { "endpoint": "/api/v1/blandine/data/kpis/ca_day", "method": "GET", "refresh_ms": 30000 }
+  },
+  "fixtures": {
+    "current_session": {
+      "opening_amount": 10000,
+      "opening_date": "2026-06-02T07:30:00",
+      "cash_sales": 185000,
+      "card_sales": 45000,
+      "credit_sales": 12000,
+      "expected_total": 252000
+    }
+  }
+}

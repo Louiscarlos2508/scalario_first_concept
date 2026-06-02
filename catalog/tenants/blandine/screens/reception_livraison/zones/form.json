@@ -1,0 +1,43 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Réception livraison",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "FormWidget",
+      "props": {
+        "title": "Articles attendus",
+        "fields": [
+          {
+            "name": "article",
+            "type": "text",
+            "label": "Article"
+          },
+          {
+            "name": "quantite_commandee",
+            "type": "number",
+            "label": "Qté commandée"
+          },
+          {
+            "name": "quantite_recue",
+            "type": "number",
+            "label": "Qté reçue"
+          }
+        ]
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Écart total",
+        "value": "0",
+        "unit": "articles",
+        "status": "nominal"
+      }
+    }
+  ]
+}

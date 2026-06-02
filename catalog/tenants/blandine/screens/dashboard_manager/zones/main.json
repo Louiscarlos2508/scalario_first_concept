@@ -1,0 +1,47 @@
+{
+  "components": [
+    {
+      "type": "AlertBanner",
+      "props": {
+        "message": "2 livraisons en attente de réception",
+        "variant": "warning"
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Réceptionner livraison",
+        "icon": "download",
+        "variant": "primary",
+        "action": {
+          "type": "navigate",
+          "screen": "reception_livraison"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Déclarer une perte",
+        "icon": "warning",
+        "variant": "secondary",
+        "action": {
+          "type": "navigate",
+          "screen": "declaration_perte"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Inventaire",
+        "icon": "fact_check",
+        "variant": "secondary",
+        "action": {
+          "type": "navigate",
+          "screen": "inventaire"
+        }
+      }
+    }
+  ]
+}

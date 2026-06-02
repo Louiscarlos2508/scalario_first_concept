@@ -1,0 +1,5 @@
+[
+  { "type": "search_bar", "props": { "placeholder": "Rechercher ou scanner un produit…", "barcode": true } },
+  { "type": "filter_chips", "props": { "options": "{categories}", "multi": false } },
+  { "type": "product_grid", "props": { "products": "{products}", "on_add": { "type": "add_to_cart" } } }
+]

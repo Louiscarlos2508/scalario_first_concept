@@ -1,0 +1,21 @@
+{
+  "components": [
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Mes ventes",
+        "value": "124 500",
+        "unit": "FCFA",
+        "status": "nominal"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Clients",
+        "value": "18",
+        "unit": "auj."
+      }
+    }
+  ]
+}

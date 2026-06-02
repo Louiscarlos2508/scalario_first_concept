@@ -1,0 +1,34 @@
+{
+  "name": "product_card",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "required": ["name", "price", "input_type", "stock", "unit"],
+    "properties": {
+      "name": { "type": "string" },
+      "price": { "type": "number", "minimum": 0 },
+      "input_type": { "type": "string", "enum": ["vrac", "unit", "service", "mixed"] },
+      "stock": { "type": "number", "minimum": 0 },
+      "unit": { "type": "string" },
+      "category": { "type": "string" },
+      "image_url": { "type": "string", "format": "uri" },
+      "threshold": { "type": "number" }
+    }
+  },
+  "slots": {
+    "thumbnail": { "type": "image", "width": 64, "height": 64, "border_radius": 8 },
+    "info": { "direction": "column", "gap": 2 },
+    "price_badge": { "type": "badge", "color": "primary" },
+    "stock_indicator": { "type": "badge", "color_from": "status" },
+    "add_button": { "type": "icon_button", "icon": "add_shopping_cart", "size": "small" }
+  },
+  "actions": [
+    { "trigger": "tap_add", "type": "add_to_cart", "target": "cart" },
+    { "trigger": "tap_card", "type": "show_detail", "screen": "historique_stock" }
+  ],
+  "variants": {
+    "default": { "slots": { "thumbnail": "visible", "info": "flex", "price_badge": "visible", "add_button": "visible" } },
+    "compact": { "slots": { "thumbnail": "hidden", "info": "flex", "price_badge": "visible", "stock_indicator": "visible" } },
+    "out_of_stock": { "slots": { "thumbnail": "visible", "info": "flex", "stock_indicator": "visible", "add_button": "hidden" } }
+  }
+}

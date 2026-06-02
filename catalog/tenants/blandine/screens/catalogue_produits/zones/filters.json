@@ -1,0 +1,29 @@
+{
+  "components": [
+    {
+      "type": "FilterChips",
+      "props": {
+        "label_key": "products.category",
+        "options": [
+          {
+            "label": "Tous",
+            "value": ""
+          },
+          {
+            "label": "Fruits",
+            "value": "fruits"
+          },
+          {
+            "label": "Légumes",
+            "value": "legumes"
+          },
+          {
+            "label": "Épicerie",
+            "value": "epicerie"
+          }
+        ],
+        "multiple": false
+      }
+    }
+  ]
+}

@@ -1,149 +1,43 @@
 {
-  "$id": "https://scalario.io/schemas/v1.0.0/module-config.schema.json",
+  "$id": "https://scalario.io/schemas/v2.0.0/module-config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ModuleConfig",
-  "description": "Configuration d'un module ou tenant Scalario. Un module est une unité fonctionnelle (ventes, stock, pertes…). Un tenant est un déploiement complet qui référence des modules et ajoute des métadonnées de déploiement (devise, fuseau, thème…).",
+  "title": "ModuleConfig v2",
+  "description": "Configuration d'un module métier BDUI v2.",
   "type": "object",
   "properties": {
-    "id": {
-      "type": "string",
-      "description": "Identifiant unique du module. Format snake_case (ex: 'ventes', 'stock', 'retail_fresh_produce').",
-      "pattern": "^[a-z][a-z0-9_]*$"
-    },
-    "schema_version": {
-      "const": "1.0.0",
-      "description": "Version du schéma. Figé à '1.0.0'."
-    },
-    "name": {
-      "type": "string",
-      "description": "Nom affiché du module (ex: 'Ventes', 'Stock', 'Produits Frais Retail — Blandine')."
-    },
-    "i18n_key": {
-      "type": "string",
-      "description": "Clé i18n pour le nom du module."
-    },
-    "icon": {
-      "type": "string",
-      "description": "Icône du module (nom Material Icons ou identifiant DS)."
-    },
+    "id": { "type": "string", "minLength": 1 },
+    "schema_version": { "const": "2.0.0" },
+    "name": { "type": "string" },
+    "icon": { "type": "string" },
     "entities": {
       "type": "array",
-      "description": "Entités du module. Peut être une liste d'objets inline ou des chemins vers des fichiers JSON.",
-      "items": {
-        "oneOf": [
-          { "type": "string", "description": "Chemin relatif vers un fichier entité JSON (ex: 'entities/product.json')." },
-          {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
-              "display_name": { "type": "string" },
-              "fields": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": { "type": "string" },
-                    "type": { "type": "string", "enum": ["string", "number", "boolean", "date", "reference", "array", "object"] },
-                    "required": { "type": "boolean", "default": false }
-                  },
-                  "required": ["name", "type"],
-                  "additionalProperties": true
-                }
-              }
-            },
-            "required": ["name"],
-            "additionalProperties": true
-          }
-        ]
-      }
-    },
-    "screens": {
-      "type": "array",
-      "description": "Écrans du module. Peut être des objets ScreenConfig inline ou des chemins vers des fichiers JSON.",
-      "items": {
-        "oneOf": [
-          { "type": "string", "description": "Chemin relatif vers un fichier screen JSON." },
-          { "$ref": "https://scalario.io/schemas/v1.0.0/screen-config.schema.json" }
-        ]
-      }
-    },
-    "actions": {
-      "type": "object",
-      "description": "Map des actions du module.",
-      "additionalProperties": { "$ref": "#/$defs/ActionDefinition" }
-    },
-    "workflows": {
-      "type": "array",
-      "description": "Workflows du module. Peut être des objets inline ou des chemins vers des fichiers JSON.",
-      "items": {
-        "oneOf": [
-          { "type": "string" },
-          { "$ref": "https://scalario.io/schemas/v1.0.0/workflow.schema.json" }
-        ]
-      }
-    },
-    "rbac_roles": {
-      "type": "array",
-      "description": "Rôles déclarés (ex: 'OWNER', 'MANAGER', 'COMMERCIAL').",
-      "items": { "type": "string" },
-      "default": []
-    },
-    "abac_rules": {
-      "type": "array",
-      "description": "Règles ABAC.",
       "items": {
         "type": "object",
         "properties": {
-          "action": { "anyOf": [{ "type": "string", "enum": ["read", "create", "update", "delete", "manage"] }, { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$" }] },
-          "subject": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]{0,63}$" },
-          "roles": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          "name": { "type": "string" },
+          "display_name": { "type": "string" },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "required": { "type": "boolean" }
+              },
+              "required": ["name", "type"]
+            }
+          }
         },
-        "required": ["action", "subject", "roles"]
-      },
-      "default": []
+        "required": ["name", "display_name", "fields"]
+      }
     },
-    "conflict_strategy": {
-      "enum": ["server_wins", "client_wins", "manual"],
-      "default": "server_wins"
-    },
-
-    "tenant_handle": { "type": "string", "description": "Handle réseau du tenant (ex: 'blandine-shop'). Uniquement pour les configs tenant." },
-    "sector": { "type": "string", "description": "Secteur d'activité (ex: 'commerce_general', 'pharmacie'). Uniquement pour les configs tenant." },
-    "currency": { "type": "string", "description": "Devise du tenant (ex: 'XOF', 'EUR')." },
-    "locale": { "type": "string", "description": "Locale du tenant (ex: 'fr-BF', 'en-US')." },
-    "timezone": { "type": "string", "description": "Fuseau horaire (ex: 'Africa/Ouagadougou')." },
-    "calc": { "type": "array", "items": { "type": "string" }, "description": "Fichiers de formules de calcul." },
-    "queries": { "type": "array", "items": { "type": "string" }, "description": "Fichiers de requêtes SQL." },
-    "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Fichiers de capacités (scan, print, GPS…)." },
-    "live": { "type": "array", "items": { "type": "string" }, "description": "Fichiers d'événements live." },
-    "permissions": {
-      "description": "Permissions RBAC. Peut être un objet inline ou un chemin fichier.",
-      "oneOf": [
-        { "type": "string" },
-        { "type": "object", "additionalProperties": true }
-      ]
-    },
-    "theme": {
-      "description": "Thème du tenant. Peut être un objet inline ou un chemin fichier.",
-      "oneOf": [
-        { "type": "string" },
-        { "type": "object", "additionalProperties": true }
-      ]
+    "actions": { "type": "object" },
+    "rbac_roles": {
+      "type": "array",
+      "items": { "type": "string" }
     }
   },
-  "required": ["id", "schema_version", "name", "entities"],
-  "additionalProperties": false,
-  "$defs": {
-    "ActionDefinition": {
-      "type": "object",
-      "properties": {
-        "handler": { "type": "string", "pattern": "^[a-z]+\\.[a-z_]+$" },
-        "entity_type": { "type": "string" },
-        "label": { "type": "string" },
-        "i18n_key": { "type": "string" }
-      },
-      "required": ["handler"],
-      "additionalProperties": true
-    }
-  }
+  "required": ["id", "schema_version", "name"],
+  "additionalProperties": false
 }

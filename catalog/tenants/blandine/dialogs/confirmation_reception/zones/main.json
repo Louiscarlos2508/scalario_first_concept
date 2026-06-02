@@ -1,0 +1,4 @@
+[
+  { "type": "data_table", "props": { "columns": ["Article", "Attendu", "Reçu", "Écart"], "data": "{items}" } },
+  { "type": "kpi_card", "props": { "title": "Total ajouté au stock", "value": "{total_stock} FCFA", "variant": "medium" } }
+]

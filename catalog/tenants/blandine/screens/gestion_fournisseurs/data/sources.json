@@ -1,0 +1,18 @@
+{
+  "suppliers": {
+    "all": { "endpoint": "/api/v1/blandine/data/suppliers", "method": "GET", "cache_ttl_ms": 60000 },
+    "create": { "endpoint": "/api/v1/blandine/data/suppliers", "method": "POST" },
+    "update": { "endpoint": "/api/v1/blandine/data/suppliers/{supplierId}", "method": "PUT" },
+    "delete": { "endpoint": "/api/v1/blandine/data/suppliers/{supplierId}", "method": "DELETE" }
+  },
+  "products": {
+    "all": { "endpoint": "/api/v1/blandine/data/products", "method": "GET", "cache_ttl_ms": 60000 }
+  },
+  "fixtures": {
+    "suppliers": [
+      { "name": "Koutoubi S.", "phone": "70 11 22 33", "products_count": 5, "active": true },
+      { "name": "Faso Fruits", "phone": "70 44 55 66", "products_count": 3, "active": true },
+      { "name": "Épicerie du Centre", "phone": "70 77 88 99", "products_count": 8, "active": true }
+    ]
+  }
+}

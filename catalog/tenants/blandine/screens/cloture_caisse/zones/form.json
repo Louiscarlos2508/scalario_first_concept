@@ -1,0 +1,42 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Clôture de caisse",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "TransactionList",
+      "props": {
+        "title": "Ventes du jour",
+        "show_status": true
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Total système",
+        "value": "",
+        "unit": "FCFA"
+      }
+    },
+    {
+      "type": "NumberInput",
+      "props": {
+        "label": "Montant en caisse (FCFA)",
+        "min": 0
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Écart",
+        "value": "0",
+        "unit": "FCFA",
+        "status": "nominal"
+      }
+    }
+  ]
+}

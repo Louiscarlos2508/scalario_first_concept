@@ -1,0 +1,7 @@
+{
+  "title": "Inventaire",
+  "show_back": true,
+  "actions": [
+    { "icon": "edit_note", "action": { "type": "local", "cmd": "add_note" } }
+  ]
+}

@@ -18,7 +18,12 @@ export class BduiService {
     private readonly a2uiBridge: A2uiToScreenConfigService,
   ) {}
 
-  async getLayout(tenantId: string, screenId: string, roles: string[]): Promise<ScreenConfig> {
+  async getLayout(
+    tenantId: string,
+    screenId: string,
+    roles: string[],
+    tenantSlug?: string,
+  ): Promise<ScreenConfig> {
     const start = Date.now();
 
     const cached = await this.cache.get(tenantId, screenId, roles);
@@ -32,7 +37,7 @@ export class BduiService {
 
     const raw =
       (await this.screenConfigRepo.findByTenantAndScreen(tenantId, screenId)) ??
-      this.catalogueLoader.loadScreenConfig(tenantId, screenId);
+      this.catalogueLoader.loadScreenConfig(tenantSlug ?? tenantId, screenId);
 
     if (!raw) {
       const generated = await this.a2uiBridge.generateScreenConfig(tenantId, screenId);
@@ -67,34 +72,54 @@ export class BduiService {
     tenantId: string,
     screenIds: string[],
     roles: string[],
+    tenantSlug?: string,
   ): Promise<Record<string, ScreenConfig>> {
     const result: Record<string, ScreenConfig> = {};
     for (const screenId of screenIds) {
-      result[screenId] = await this.getLayout(tenantId, screenId, roles);
+      result[screenId] = await this.getLayout(tenantId, screenId, roles, tenantSlug);
     }
     return result;
   }
 
   private normalizeScreenConfig(raw: Record<string, unknown>, screenId: string): ScreenConfig {
+    const zones = raw.zones as Record<string, unknown> | undefined;
+
+    const normalizedZones: Record<string, unknown> = {};
+    if (zones) {
+      for (const [key, val] of Object.entries(zones)) {
+        if (Array.isArray(val)) {
+          normalizedZones[key] = val;
+        } else if (typeof val === 'object' && val !== null) {
+          const zoneObj = val as Record<string, unknown>;
+          if (Array.isArray(zoneObj.components)) {
+            normalizedZones[key] = zoneObj.components;
+          } else {
+            normalizedZones[key] = [];
+          }
+        } else {
+          normalizedZones[key] = [];
+        }
+      }
+    }
+
     return {
-      schema_version: (raw.schema_version as string) ?? '1.0.0',
+      schema_version: (raw.schema_version as string) ?? '2.0.0',
       screen: (raw.screen as string) ?? screenId,
-      zones: (raw.zones as ScreenConfig['zones']) ?? {
-        kpis: [],
-        main: [],
-        aside: [],
-        actions: [],
-      },
+      layout: (raw.layout as Record<string, unknown>) ?? {},
+      zones: normalizedZones,
+      data: raw.data as Record<string, unknown> | undefined,
+      rules: raw.rules as unknown[] | undefined,
+      states: raw.states as Record<string, unknown> | undefined,
+      i18n: raw.i18n as Record<string, unknown> | undefined,
     } as ScreenConfig;
   }
 
   private countComponents(config: ScreenConfig): number {
     let count = 0;
-    const zoneKeys = ['kpis', 'main', 'aside', 'actions'] as const;
-    for (const key of zoneKeys) {
-      const zone = config.zones?.[key];
-      if (Array.isArray(zone)) {
-        count += this.countInComponents(zone);
+    if (!config.zones) return 0;
+    for (const val of Object.values(config.zones)) {
+      if (Array.isArray(val)) {
+        count += this.countInComponents(val);
       }
     }
     return count;

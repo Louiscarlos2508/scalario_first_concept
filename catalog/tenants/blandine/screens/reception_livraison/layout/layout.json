@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "layout": "form",
+  "slots": {
+    "form": {
+      "zone": "form",
+      "position": "main",
+      "scroll": true
+    },
+    "actions": {
+      "zone": "actions",
+      "position": "bottom",
+      "sticky": true
+    }
+  }
+}

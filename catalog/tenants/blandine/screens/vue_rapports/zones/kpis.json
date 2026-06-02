@@ -1,0 +1,38 @@
+{
+  "components": [
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "CA total",
+        "value": "475 000",
+        "unit": "FCFA",
+        "status": "nominal"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Marge",
+        "value": "38%",
+        "status": "nominal"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Pertes",
+        "value": "12 500",
+        "unit": "FCFA",
+        "status": "warning"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Transactions",
+        "value": "43",
+        "unit": "ventes"
+      }
+    }
+  ]
+}

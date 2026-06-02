@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../components/feedback/alert_banner.dart';
 import '../../canvas_registry/scalario_canvas_registry.dart';
+import '../../canvas_registry/screen_layout.dart';
+import '../../canvas_layout/slot_layout.dart';
 import '../screen_config.dart';
-import 'dashboard_layout.dart';
 
-/// Fallback pour un `layoutType` non reconnu.
-///
-/// Rend : AlertBanner info en haut + DashboardLayout comme variante de secours.
-/// Le warning est loggué par [ScalarioCanvasLayout._unknown] avant d'instancier ce widget.
 class UnknownLayout extends StatelessWidget {
   const UnknownLayout({
     super.key,
@@ -31,7 +28,14 @@ class UnknownLayout extends StatelessWidget {
           message: "Layout '$layoutType' non reconnu, mode dashboard",
         ),
         Expanded(
-          child: DashboardLayout(config: config, registry: registry),
+          child: SlotLayout(
+            layout: ScreenLayout.fromJson({
+              'layout': 'dashboard',
+              'slots': {'main': {'zone': 'main', 'position': 'main', 'scroll': true}},
+            }),
+            zones: config.zones,
+            registry: registry,
+          ),
         ),
       ],
     );

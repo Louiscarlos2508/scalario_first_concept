@@ -1,0 +1,18 @@
+{
+  "loading": {
+    "product_grid": { "type": "SkeletonGrid", "props": { "rows": 3, "cols": 2, "item_height": 120 } },
+    "cart": { "type": "SkeletonList", "props": { "rows": 3, "item_height": 60 } }
+  },
+  "empty": {
+    "product_grid": { "type": "EmptyState", "props": { "icon": "inventory_2", "title_key": "products.none", "action": { "type": "sheet", "screen": "catalogue_produits" } } },
+    "cart": { "type": "EmptyState", "props": { "icon": "add_shopping_cart", "title_key": "cart.empty", "description_key": "cart.empty_hint" } }
+  },
+  "error": {
+    "general": { "type": "ErrorState", "props": { "icon": "error_outline", "title_key": "errors.general", "action": { "type": "local", "action": "retry" } } },
+    "network": { "type": "ErrorState", "props": { "icon": "wifi_off", "title_key": "errors.network", "description_key": "errors.network_hint", "action": { "type": "local", "action": "retry" } } }
+  },
+  "offline": {
+    "banner": { "type": "AlertBanner", "variant": "info", "props": { "message_key": "offline.banner" }, "duration_ms": 3000 },
+    "badge": { "type": "StatusBadge", "variant": "amber", "props": { "label_key": "offline.badge" } }
+  }
+}

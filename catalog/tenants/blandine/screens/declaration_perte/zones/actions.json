@@ -1,0 +1,29 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Déclarer la perte",
+        "icon": "warning",
+        "variant": "primary",
+        "action": {
+          "type": "confirm",
+          "confirm_key": "loss.confirm",
+          "then": {
+            "type": "api_call",
+            "endpoint": "/api/v1/blandine/losses",
+            "method": "POST"
+          }
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost"
+      }
+    }
+  ]
+}

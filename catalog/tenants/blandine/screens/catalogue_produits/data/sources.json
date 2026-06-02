@@ -1,0 +1,23 @@
+{
+  "products": {
+    "all": { "endpoint": "/api/v1/blandine/data/products", "method": "GET", "cache_ttl_ms": 60000 },
+    "create": { "endpoint": "/api/v1/blandine/data/products", "method": "POST" },
+    "update": { "endpoint": "/api/v1/blandine/data/products/{productId}", "method": "PUT" },
+    "delete": { "endpoint": "/api/v1/blandine/data/products/{productId}", "method": "DELETE" }
+  },
+  "categories": {
+    "endpoint": "/api/v1/blandine/data/categories", "method": "GET", "cache_ttl_ms": 300000
+  },
+  "fixtures": {
+    "products": [
+      { "name": "Tomates", "price": 500, "category": "Légumes", "unit": "kg", "input_type": "vrac", "active": true },
+      { "name": "Bananes", "price": 300, "category": "Fruits", "unit": "kg", "input_type": "vrac", "active": true },
+      { "name": "Riz 5kg", "price": 3500, "category": "Épicerie", "unit": "sac", "input_type": "unit", "active": true },
+      { "name": "Huile 1L", "price": 1500, "category": "Épicerie", "unit": "bouteille", "input_type": "unit", "active": true },
+      { "name": "Oignons", "price": 400, "category": "Légumes", "unit": "kg", "input_type": "vrac", "active": true }
+    ],
+    "categories": ["Légumes", "Fruits", "Épicerie", "Boissons", "Produits laitiers"],
+    "input_types": ["vrac", "unit"],
+    "pos_types": ["normal", "fractionable", "weighable"]
+  }
+}

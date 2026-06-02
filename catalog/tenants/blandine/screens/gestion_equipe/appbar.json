@@ -1,0 +1,7 @@
+{
+  "title": "Équipe",
+  "show_back": true,
+  "actions": [
+    { "icon": "person_add", "action": { "type": "local", "cmd": "add_employee" } }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "kpis": {
+    "ca_period": { "endpoint": "/api/v1/blandine/data/kpis/ca_period", "method": "GET", "params": { "from": "{from}", "to": "{to}" } },
+    "marge_period": { "endpoint": "/api/v1/blandine/data/kpis/marge_period", "method": "GET", "params": { "from": "{from}", "to": "{to}" } },
+    "losses_period": { "endpoint": "/api/v1/blandine/data/kpis/losses_period", "method": "GET", "params": { "from": "{from}", "to": "{to}" } }
+  },
+  "charts": {
+    "ca_trend": { "endpoint": "/api/v1/blandine/data/charts/ca_trend", "method": "GET", "params": { "from": "{from}", "to": "{to}" } }
+  },
+  "fixtures": {
+    "ca_period": 2450000,
+    "marge_period": { "amount": 735000, "pct": 30 },
+    "losses_period": 45000,
+    "ca_trend": [
+      { "day": "Lun", "amount": 285000 }, { "day": "Mar", "amount": 312000 },
+      { "day": "Mer", "amount": 298000 }, { "day": "Jeu", "amount": 345000 },
+      { "day": "Ven", "amount": 412000 }, { "day": "Sam", "amount": 389000 },
+      { "day": "Dim", "amount": 274000 }
+    ]
+  }
+}

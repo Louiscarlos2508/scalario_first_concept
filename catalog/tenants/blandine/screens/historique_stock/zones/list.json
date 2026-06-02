@@ -1,0 +1,27 @@
+{
+  "components": [
+    {
+      "type": "ProductList",
+      "props": {
+        "title": "Stock"
+      }
+    },
+    {
+      "type": "PeriodSelector",
+      "props": {
+        "periods": [
+          "today",
+          "week",
+          "month"
+        ]
+      }
+    },
+    {
+      "type": "TransactionList",
+      "props": {
+        "title": "Mouvements",
+        "show_status": true
+      }
+    }
+  ]
+}

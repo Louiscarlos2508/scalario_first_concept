@@ -191,12 +191,20 @@ class ScalarioCanvasRegistry {
   ///
   /// AC-06 : ne throw jamais.
   /// AC-09 : enveloppe le résultat dans [ErrorBoundary].
-  Widget build(ComponentConfig config, BuildContext ctx) {
+  Widget build(ComponentConfig config, BuildContext ctx, [String zone = '']) {
     final ComponentBuilder? builder = _builders[config.type];
     if (builder == null) {
       return UnknownComponent(config.type);
     }
-    return builder(config, ctx);
+
+    if (config.actions != null && config.actions!.isNotEmpty) {
+      final errors = validate(config, mode: SchemaValidationMode.strict);
+      if (errors.isNotEmpty) {
+        return UnknownComponent(config.type, message: errors.first.message);
+      }
+    }
+
+    return ErrorBoundary(componentType: config.type, child: builder(config, ctx));
   }
 }
 

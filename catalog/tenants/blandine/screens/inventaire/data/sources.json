@@ -1,0 +1,22 @@
+{
+  "categories": {
+    "endpoint": "/api/v1/blandine/data/categories", "method": "GET", "cache_ttl_ms": 300000
+  },
+  "products": {
+    "by_category": { "endpoint": "/api/v1/blandine/data/products/by_category/{category}", "method": "GET" }
+  },
+  "inventory": {
+    "sessions": { "endpoint": "/api/v1/blandine/data/inventory/sessions", "method": "GET" },
+    "start": { "endpoint": "/api/v1/blandine/data/inventory/start", "method": "POST" }
+  },
+  "fixtures": {
+    "categories": ["Fruits", "Légumes", "Épicerie", "Boissons", "Produits laitiers"],
+    "products": [
+      { "name": "Tomates", "expected_qty": 45, "unit": "kg", "category": "Légumes" },
+      { "name": "Bananes", "expected_qty": 30, "unit": "kg", "category": "Fruits" },
+      { "name": "Oignons", "expected_qty": 25, "unit": "kg", "category": "Légumes" },
+      { "name": "Riz 5kg", "expected_qty": 20, "unit": "sac", "category": "Épicerie" },
+      { "name": "Huile 1L", "expected_qty": 12, "unit": "bouteille", "category": "Épicerie" }
+    ]
+  }
+}

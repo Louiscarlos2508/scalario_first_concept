@@ -11,11 +11,13 @@ import '../../core/bdui/fallback_screen.dart';
 import '../canvas_registry/component_config.dart';
 import '../canvas_registry/component_schema.dart';
 import '../canvas_registry/scalario_canvas_registry.dart';
+import '../canvas_layout/screen_config.dart';
+import '../canvas_layout/slot_layout.dart';
+import '../canvas_registry/screen_layout.dart';
+import '../canvas_rule/scalario_canvas_rule.dart';
 import '../error_boundary/bdui_error_boundary.dart';
 import '../error_boundary/error_logger.dart';
 import '../error_boundary/error_payload.dart';
-import '../canvas_layout/scalario_canvas_layout.dart';
-import '../canvas_rule/scalario_canvas_rule.dart';
 import 'scalario_canvas_config.dart';
 import 'bdui_invalid_payload_exception.dart';
 import 'data_source_resolver.dart';
@@ -43,7 +45,6 @@ final class ScalarioCanvas {
   ScalarioCanvas({
     required this.registry,
     required this.evaluator,
-    required this.layoutResolver,
     required this.dataResolver,
     required this.userContextProvider,
     required this.validator,
@@ -53,7 +54,6 @@ final class ScalarioCanvas {
 
   final ScalarioCanvasRegistry registry;
   final ScalarioCanvasRule evaluator;
-  final ScalarioCanvasLayout layoutResolver;
   final DataSourceResolver dataResolver;
   final UserContextProvider userContextProvider;
   final JsonSchemaValidator validator;
@@ -155,10 +155,27 @@ final class ScalarioCanvas {
           'rules',
           () => _filterByVisibility(config, userContextProvider.current),
         );
-        final Widget tree = _metrics.timeSync(
-          'layout',
-          () => layoutResolver.resolve(filtered.layout, filtered, ctx),
-        );
+
+        final layoutObj = filtered.layoutObj;
+        Widget tree;
+        if (layoutObj != null) {
+          tree = SlotLayout(
+            layout: layoutObj,
+            zones: filtered.zones,
+            registry: registry,
+          );
+        } else {
+          final fallbackLayout = filtered.layout;
+          tree = SlotLayout(
+            layout: ScreenLayout.fromJson({
+              'layout': fallbackLayout,
+              'slots': {'main': {'zone': 'main', 'position': 'main', 'scroll': true}},
+            }),
+            zones: filtered.zones,
+            registry: registry,
+          );
+        }
+
         return BDUIErrorBoundary(
           screenId: config.screen,
           child: tree,
@@ -220,10 +237,9 @@ final class ScalarioCanvas {
       }
     }
 
-    walk(screen.zones.kpis);
-    walk(screen.zones.main);
-    walk(screen.zones.aside);
-    walk(screen.zones.actions);
+    for (final zoneComponents in screen.zones.values) {
+      walk(zoneComponents);
+    }
 
     registry.recordValidationErrors(screenId, errors);
 
@@ -240,24 +256,21 @@ final class ScalarioCanvas {
   }
 
   Future<ScreenConfig> _resolveData(ScreenConfig parsed) async {
-    final ScreenZones zones = parsed.zones;
-    final List<ComponentConfig>? kpis = await _resolveZoneData(zones.kpis);
-    final List<ComponentConfig>? main = await _resolveZoneData(zones.main);
-    final List<ComponentConfig>? aside = await _resolveZoneData(zones.aside);
-    final List<ComponentConfig>? actions =
-        await _resolveZoneData(zones.actions);
+    final Map<String, List<ComponentConfig>> resolvedZones = {};
+    for (final entry in parsed.zones.entries) {
+      final resolved = await _resolveZoneData(entry.value) ?? [];
+      resolvedZones[entry.key] = resolved;
+    }
     return ScreenConfig(
       screen: parsed.screen,
       schemaVersion: parsed.schemaVersion,
-      layout: parsed.layout,
+      layoutObj: parsed.layoutObj,
       title: parsed.title,
-      i18nKey: parsed.i18nKey,
-      zones: ScreenZones(
-        kpis: kpis,
-        main: main,
-        aside: aside,
-        actions: actions,
-      ),
+      zones: resolvedZones,
+      data: parsed.data,
+      rules: parsed.rules,
+      states: parsed.states,
+      i18n: parsed.i18n,
     );
   }
 
@@ -296,19 +309,23 @@ final class ScalarioCanvas {
   }
 
   ScreenConfig _filterByVisibility(ScreenConfig parsed, UserContext userCtx) {
-    final ScreenZones z = parsed.zones;
+    final Map<String, List<ComponentConfig>> filteredZones = {};
+    for (final entry in parsed.zones.entries) {
+      final filtered = _filterZone(entry.value, userCtx);
+      if (filtered != null) {
+        filteredZones[entry.key] = filtered;
+      }
+    }
     return ScreenConfig(
       screen: parsed.screen,
       schemaVersion: parsed.schemaVersion,
-      layout: parsed.layout,
+      layoutObj: parsed.layoutObj,
       title: parsed.title,
-      i18nKey: parsed.i18nKey,
-      zones: ScreenZones(
-        kpis: _filterZone(z.kpis, userCtx),
-        main: _filterZone(z.main, userCtx),
-        aside: _filterZone(z.aside, userCtx),
-        actions: _filterZone(z.actions, userCtx),
-      ),
+      zones: filteredZones,
+      data: parsed.data,
+      rules: parsed.rules,
+      states: parsed.states,
+      i18n: parsed.i18n,
     );
   }
 

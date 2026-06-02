@@ -1,0 +1,11 @@
+{
+  "components": [
+    {
+      "type": "SearchBar",
+      "props": {
+        "placeholder_key": "search.products",
+        "debounce_ms": 300
+      }
+    }
+  ]
+}

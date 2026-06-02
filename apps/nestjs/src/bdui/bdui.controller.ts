@@ -19,7 +19,7 @@ import type { AuthenticatedUser } from '../core/auth/interfaces/jwt-payload.inte
 
 @ApiTags('BDUI Layouts')
 @ApiBearerAuth()
-@Controller('api/v1/:tenant/layout')
+@Controller(':tenant/layout')
 export class BduiController {
   private readonly logger = new Logger(BduiController.name);
 
@@ -36,7 +36,7 @@ export class BduiController {
     @CurrentTenant() tenantId: string,
   ) {
     const resolvedId = await this.resolveTenantId(params.tenant, tenantId);
-    return this.bduiService.getLayout(resolvedId, params.screenId, user.roles);
+    return this.bduiService.getLayout(resolvedId, params.screenId, user.roles, params.tenant);
   }
 
   @Get()
@@ -58,7 +58,7 @@ export class BduiController {
       });
     }
 
-    return this.bduiService.getBulkLayouts(resolvedId, screens, user.roles);
+    return this.bduiService.getBulkLayouts(resolvedId, screens, user.roles, tenant);
   }
 
   private async resolveTenantId(slugOrId: string, jwtTenantId: string): Promise<string> {

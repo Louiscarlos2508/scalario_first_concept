@@ -1,0 +1,12 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Filtrer",
+        "icon": "filter_list",
+        "variant": "ghost"
+      }
+    }
+  ]
+}

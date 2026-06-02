@@ -1,79 +1,80 @@
 import '../canvas_registry/component_config.dart';
+import '../canvas_registry/screen_layout.dart';
 
-/// Zones d'un screen BDUI — contrat partagé (architecture ligne 977-984).
-///
-/// Zone mapping par layout :
-/// - dashboard : kpis (sub-grid), main, actions (FAB + inline)
-/// - list      : main (liste), aside (filtres), kpis ignoré
-/// - form      : main (sections), aside (aide desktop), actions (sticky bas)
-/// - detail    : kpis (header), main (body / tabs), aside (nav desktop), actions
-class ScreenZones {
-  const ScreenZones({
-    this.kpis,
-    this.main,
-    this.aside,
-    this.actions,
-  });
-
-  factory ScreenZones.fromJson(Map<String, dynamic> json) {
-    List<ComponentConfig>? parseZone(dynamic raw) {
-      if (raw == null) return null;
-      final list = raw as List<dynamic>;
-      if (list.isEmpty) return null;
-      return list
-          .map((e) => ComponentConfig.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-
-    return ScreenZones(
-      kpis: parseZone(json['kpis']),
-      main: parseZone(json['main']),
-      aside: parseZone(json['aside']),
-      actions: parseZone(json['actions']),
-    );
-  }
-
-  final List<ComponentConfig>? kpis;
-  final List<ComponentConfig>? main;
-  final List<ComponentConfig>? aside;
-  final List<ComponentConfig>? actions;
-}
-
-/// Config d'un screen BDUI — value object immutable.
-///
-/// Mappé sur `ScreenConfig` du JSON Schema partagé (STORY-023).
 class ScreenConfig {
   const ScreenConfig({
     required this.screen,
     required this.schemaVersion,
-    required this.layout,
+    this.layoutObj,
     this.title,
-    this.i18nKey,
-    this.zones = const ScreenZones(),
-    this.scaffoldConfig,
+    this.zones = const {},
+    this.data,
+    this.rules,
+    this.states,
+    this.i18n,
   });
 
   factory ScreenConfig.fromJson(Map<String, dynamic> json) {
+    Map<String, List<ComponentConfig>> parseZones(dynamic raw) {
+      if (raw == null || raw is! Map) return {};
+      final map = <String, List<ComponentConfig>>{};
+      for (final entry in (raw as Map<String, dynamic>).entries) {
+        final val = entry.value;
+        if (val is List) {
+          map[entry.key] = val
+              .map((e) => ComponentConfig.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return map;
+    }
+
+    final layoutRaw = json['layout'];
+    ScreenLayout? layoutObj;
+    if (layoutRaw is Map<String, dynamic>) {
+      layoutObj = ScreenLayout.fromJson(layoutRaw);
+    }
+
     return ScreenConfig(
       screen: json['screen'] as String? ?? '',
-      schemaVersion: json['schema_version'] as String? ?? '1.0.0',
-      layout: json['layout'] as String? ?? 'dashboard',
+      schemaVersion: json['schema_version'] as String? ?? '2.0.0',
+      layoutObj: layoutObj,
       title: json['title'] as String?,
-      i18nKey: json['i18n_key'] as String?,
-      zones: json['zones'] != null
-          ? ScreenZones.fromJson(json['zones'] as Map<String, dynamic>)
-          : const ScreenZones(),
+      zones: parseZones(json['zones']),
+      data: json['data'] as Map<String, dynamic>?,
+      rules: json['rules'] as List<dynamic>?,
+      states: json['states'] as Map<String, dynamic>?,
+      i18n: json['i18n'] as Map<String, dynamic>?,
     );
   }
 
   final String screen;
   final String schemaVersion;
-  final String layout;
+  final ScreenLayout? layoutObj;
   final String? title;
-  final String? i18nKey;
-  final ScreenZones zones;
+  final Map<String, List<ComponentConfig>> zones;
+  final Map<String, dynamic>? data;
+  final List<dynamic>? rules;
+  final Map<String, dynamic>? states;
+  final Map<String, dynamic>? i18n;
 
-  /// Configuration optionnelle du Scaffold (appBar, sidebar, drawer, bottomNav)
-  /// utilisée par A2UICanvas pour envelopper le contenu.
-  final Map<String, dynamic>? scaffoldConfig;
+  String get layout => layoutObj?.layout ?? 'dashboard';
+
+  List<ComponentConfig> zone(String name) => zones[name] ?? [];
+
+  List<ComponentConfig>? get kpis => zones['kpis'];
+  List<ComponentConfig>? get main => zones['main'];
+  List<ComponentConfig>? get aside => zones['aside'];
+  List<ComponentConfig>? get actions => zones['actions'];
+  List<ComponentConfig>? get header => zones['header'];
+  List<ComponentConfig>? get sidebar => zones['sidebar'];
+  List<ComponentConfig>? get form => zones['form'];
+  List<ComponentConfig>? get cart => zones['cart'];
+  List<ComponentConfig>? get productGrid => zones['product_grid'];
+  List<ComponentConfig>? get filters => zones['filters'];
+  List<ComponentConfig>? get list => zones['list'];
+  List<ComponentConfig>? get content => zones['content'];
+  List<ComponentConfig>? get sheet => zones['sheet'];
+
+  Map<String, dynamic>? get scaffoldConfig => null;
 }

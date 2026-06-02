@@ -1,0 +1,19 @@
+{
+  "sales_history": {
+    "endpoint": "/api/v1/blandine/data/sales/history", "method": "GET", "params": { "date": "{date}", "status": "{status}" }
+  },
+  "sale_detail": {
+    "endpoint": "/api/v1/blandine/data/sales/{saleId}", "method": "GET"
+  },
+  "categories": {
+    "endpoint": "/api/v1/blandine/data/categories", "method": "GET", "cache_ttl_ms": 300000
+  },
+  "fixtures": {
+    "sales": [
+      { "id": "S001", "time": "09:15", "amount": 4500, "items": 3, "status": "active", "payment": "cash" },
+      { "id": "S002", "time": "09:42", "amount": 12000, "items": 5, "status": "active", "payment": "cash" },
+      { "id": "S003", "time": "10:30", "amount": 8500, "items": 4, "status": "annulled", "payment": "card" },
+      { "id": "S004", "time": "11:00", "amount": 2300, "items": 1, "status": "active", "payment": "cash" }
+    ]
+  }
+}

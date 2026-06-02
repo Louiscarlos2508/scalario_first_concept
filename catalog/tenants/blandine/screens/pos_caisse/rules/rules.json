@@ -1,0 +1,5 @@
+[
+  { "field": "user.role", "operator": "in", "value": ["COMMERCIAL", "MANAGER"], "allow": true },
+  { "field": "device.platform", "operator": "eq", "value": "mobile", "capabilities": ["barcode"] },
+  { "field": "network.status", "operator": "eq", "value": "offline", "state": "offline_mode" }
+]

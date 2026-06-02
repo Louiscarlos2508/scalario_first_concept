@@ -1,0 +1,7 @@
+[
+  { "type": "text", "props": { "content": "{name}", "variant": "title" } },
+  { "type": "text", "props": { "content": "Catégorie : {category} — {input_type} — {unit}", "variant": "body" } },
+  { "type": "text", "props": { "content": "Prix : {price} FCFA", "variant": "subtitle" } },
+  { "type": "text", "props": { "content": "Seuil alerte : {threshold} — Taux perte : {loss_rate}%", "variant": "caption", "color": "muted" } },
+  { "type": "text", "props": { "content": "Dans le POS, ce produit apparaîtra comme : {pos_preview}", "variant": "caption", "color": "info" } }
+]

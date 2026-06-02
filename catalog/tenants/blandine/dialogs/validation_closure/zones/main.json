@@ -1,0 +1,5 @@
+[
+  { "type": "kpi_card", "props": { "title": "Montant saisi (Commercial)", "value": "{amount_saisi} FCFA", "variant": "large" } },
+  { "type": "kpi_card", "props": { "title": "Montant système", "value": "{amount_systeme} FCFA", "variant": "large" } },
+  { "type": "kpi_card", "props": { "title": "Écart", "value": "{ecart} FCFA", "variant": "large", "color": "{ecart_color}" } }
+]

@@ -24,7 +24,6 @@ import 'core/theme/scalario_theme.dart';
 import 'engine/canvas_registry/scalario_canvas_registry.dart';
 import 'engine/canvas_registry/registry_bootstrap.dart';
 import 'engine/canvas/scalario_canvas_module.dart';
-import 'engine/canvas_layout/scalario_canvas_layout.dart';
 import 'engine/error_boundary/global_error_handler.dart';
 import 'sandbox/sandbox_screen.dart';
 
@@ -50,7 +49,7 @@ Future<void> _setupDependencies() async {
   GetIt.I.registerSingleton<ScalarioCanvasRegistry>(registry);
   RegistryBootstrap.registerPhase1(registry);
   RegistryBootstrap.registerAliases(registry);
-  GetIt.I.registerSingleton<ScalarioCanvasLayout>(ScalarioCanvasLayout(registry: registry));
+  ScalarioCanvasRegistry.instance = registry;
 
   if (kIsWeb) {
     GetIt.I.registerSingleton<AuthStorage>(AuthStorage());

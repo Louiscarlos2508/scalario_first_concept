@@ -1,0 +1,7 @@
+{
+  "title": "Fournisseurs",
+  "show_back": true,
+  "actions": [
+    { "icon": "add_business", "action": { "type": "local", "cmd": "add_supplier" } }
+  ]
+}

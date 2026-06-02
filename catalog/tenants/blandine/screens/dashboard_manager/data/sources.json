@@ -1,0 +1,23 @@
+{
+  "kpis": {
+    "pending_deliveries": { "endpoint": "/api/v1/blandine/data/kpis/pending_deliveries", "method": "GET", "refresh_ms": 60000 },
+    "today_losses": { "endpoint": "/api/v1/blandine/data/kpis/today_losses", "method": "GET", "refresh_ms": 60000 },
+    "stock_alerts": { "endpoint": "/api/v1/blandine/data/kpis/stock_alerts", "method": "GET", "refresh_ms": 60000 }
+  },
+  "alerts": {
+    "active": { "endpoint": "/api/v1/blandine/data/alerts/active", "method": "GET", "refresh_ms": 60000 }
+  },
+  "recent_ops": {
+    "endpoint": "/api/v1/blandine/data/operations/recent", "method": "GET", "cache_ttl_ms": 120000
+  },
+  "sync": {
+    "status": { "local": true, "path": "sync.status" }
+  },
+  "fixtures": {
+    "recent_ops": [
+      { "type": "reception", "label": "Livraison Koutoubi S.", "time": "Hier 16h", "status": "completed" },
+      { "type": "perte", "label": "Tomates avariées", "time": "Hier 10h", "status": "pending_validation" },
+      { "type": "inventaire", "label": "Inventaire fruits", "time": "Avant-hier", "status": "completed" }
+    ]
+  }
+}

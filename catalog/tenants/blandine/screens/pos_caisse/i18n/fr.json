@@ -1,0 +1,50 @@
+{
+  "search_placeholder": "Rechercher un produit...",
+  "category_all": "Tous",
+  "cart": {
+    "title": "Panier",
+    "empty": "Votre panier est vide",
+    "empty_hint": "Appuyez sur un produit pour ajouter",
+    "cancel": "Annuler la vente",
+    "cancel_confirm": "Vider le panier ?",
+    "credit_mode": "Vente à crédit"
+  },
+  "products": {
+    "none": "Aucun produit trouvé",
+    "search": "Rechercher un produit",
+    "quick_add": "Nouveau produit",
+    "category": "Catégorie"
+  },
+  "payment": {
+    "validate": "Valider le paiement",
+    "confirm": "Confirmer le paiement",
+    "total": "Total",
+    "cash": "Espèces",
+    "mobile_money": "Mobile Money",
+    "credit": "Crédit"
+  },
+  "kpi": {
+    "ca_day": "CA du jour",
+    "sales_count": "Ventes",
+    "clients": "Clients"
+  },
+  "errors": {
+    "general": "Une erreur est survenue",
+    "network": "Pas de connexion réseau",
+    "network_hint": "Les données seront synchronisées automatiquement"
+  },
+  "offline": {
+    "banner": "Hors ligne — vos données sont sauvegardées",
+    "badge": "Hors ligne"
+  },
+  "credit": {
+    "recap": "Récapitulatif crédit",
+    "amount_paid": "Montant payé",
+    "balance_due": "Reste dû",
+    "due_date": "Date d'échéance",
+    "client": "Client"
+  },
+  "barcode": {
+    "not_found": "Produit non trouvé"
+  }
+}

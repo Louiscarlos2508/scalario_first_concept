@@ -1,0 +1,26 @@
+{
+  "capabilities": {
+    "search": {
+      "enabled": true,
+      "config": { "$ref": "capabilities/search.json" }
+    },
+    "barcode": {
+      "enabled": true,
+      "platform": "mobile",
+      "config": { "$ref": "capabilities/barcode.json" }
+    },
+    "payment": {
+      "enabled": true,
+      "config": { "$ref": "capabilities/payment.json" }
+    },
+    "credit": {
+      "enabled": true,
+      "roles": ["COMMERCIAL"],
+      "config": { "$ref": "../components/payment_method_selector.json" }
+    },
+    "offline": {
+      "enabled": true,
+      "config": { "strategy": "queue_then_sync" }
+    }
+  }
+}

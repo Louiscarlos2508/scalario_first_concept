@@ -2,7 +2,6 @@ import 'package:get_it/get_it.dart';
 
 import '../../core/bdui/validation/bdui_validator.dart' as bdui;
 import '../canvas_registry/scalario_canvas_registry.dart';
-import '../canvas_layout/scalario_canvas_layout.dart';
 import '../canvas_rule/scalario_canvas_rule.dart';
 import 'scalario_canvas.dart';
 import 'scalario_canvas_config.dart';
@@ -53,7 +52,6 @@ abstract final class ScalarioCanvasModule {
         ScalarioCanvas(
           registry: getIt<ScalarioCanvasRegistry>(),
           evaluator: const ScalarioCanvasRule(),
-          layoutResolver: getIt<ScalarioCanvasLayout>(),
           dataResolver: resolver,
           userContextProvider: userCtx,
           validator: schemaValidator,

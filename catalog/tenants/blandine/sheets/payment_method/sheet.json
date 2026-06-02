@@ -1,0 +1,10 @@
+{
+  "sheet": "payment_method",
+  "version": "2.0.0",
+  "scenario": "15.2",
+  "title": "Mode de paiement",
+  "snap_points": [0.5],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

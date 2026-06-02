@@ -1,0 +1,13 @@
+{
+  "caisse": {
+    "last_session": { "endpoint": "/api/v1/blandine/data/caisse/last_session", "method": "GET" },
+    "open": { "endpoint": "/api/v1/blandine/data/caisse/open", "method": "POST" }
+  },
+  "fixtures": {
+    "last_session": {
+      "closing_amount": 12500,
+      "closing_date": "2026-06-01T19:30:00",
+      "status": "closed"
+    }
+  }
+}

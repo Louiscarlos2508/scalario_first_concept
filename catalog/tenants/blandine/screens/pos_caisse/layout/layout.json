@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "layout": "pos",
+  "slots": {
+    "header": {
+      "zone": "header",
+      "position": "top",
+      "sticky": true
+    },
+    "kpis": {
+      "zone": "kpis",
+      "position": "top",
+      "visible_on": [
+        "desktop"
+      ]
+    },
+    "product_grid": {
+      "zone": "product_grid",
+      "position": "main",
+      "scroll": true
+    },
+    "cart": {
+      "zone": "cart",
+      "position": "sidebar",
+      "scroll": true
+    },
+    "actions": {
+      "zone": "actions",
+      "position": "bottom",
+      "sticky": true
+    }
+  }
+}

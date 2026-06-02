@@ -1,0 +1,16 @@
+{
+  "pending_orders": {
+    "endpoint": "/api/v1/blandine/data/orders/pending", "method": "GET", "refresh_ms": 30000
+  },
+  "suppliers": {
+    "endpoint": "/api/v1/blandine/data/suppliers", "method": "GET", "cache_ttl_ms": 300000
+  },
+  "products": {
+    "by_supplier": { "endpoint": "/api/v1/blandine/data/products/by_supplier/{supplierId}", "method": "GET" }
+  },
+  "fixtures": {
+    "pending_orders": [
+      { "id": "CMD001", "supplier": "Koutoubi S.", "date": "2026-06-01", "items_count": 5, "status": "in_transit" }
+    ]
+  }
+}

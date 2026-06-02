@@ -1,0 +1,33 @@
+{
+  "kpis": {
+    "ca_day": { "endpoint": "/api/v1/blandine/data/kpis/ca_day", "method": "GET", "refresh_ms": 30000 },
+    "marge_day": { "endpoint": "/api/v1/blandine/data/kpis/marge_day", "method": "GET", "refresh_ms": 30000 },
+    "transactions_day": { "endpoint": "/api/v1/blandine/data/kpis/transactions_day", "method": "GET", "refresh_ms": 30000 },
+    "stock_critical": { "endpoint": "/api/v1/blandine/data/kpis/stock_critical", "method": "GET", "refresh_ms": 60000 }
+  },
+  "chart": {
+    "ca_7days": { "endpoint": "/api/v1/blandine/data/charts/ca_7days", "method": "GET", "cache_ttl_ms": 300000 }
+  },
+  "ranking": {
+    "top_articles": { "endpoint": "/api/v1/blandine/data/ranking/top_articles", "method": "GET", "cache_ttl_ms": 120000 }
+  },
+  "alerts": {
+    "active": { "endpoint": "/api/v1/blandine/data/alerts/active", "method": "GET", "refresh_ms": 60000 }
+  },
+  "sync": {
+    "status": { "local": true, "path": "sync.status" }
+  },
+  "fixtures": {
+    "ca_7days": [
+      { "day": "Lun", "amount": 285000 }, { "day": "Mar", "amount": 312000 },
+      { "day": "Mer", "amount": 298000 }, { "day": "Jeu", "amount": 345000 },
+      { "day": "Ven", "amount": 412000 }, { "day": "Sam", "amount": 389000 },
+      { "day": "Dim", "amount": 274000 }
+    ],
+    "top_articles": [
+      { "name": "Tomates", "qty": 28, "amount": 14000 },
+      { "name": "Riz 5kg", "qty": 15, "amount": 52500 },
+      { "name": "Huile 1L", "qty": 12, "amount": 18000 }
+    ]
+  }
+}

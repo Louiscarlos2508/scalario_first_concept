@@ -3,7 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MindModule } from '../engines/mind/mind.module';
 import { TenantsModule } from '../tenants/tenants.module';
 import { BduiController } from './bdui.controller';
+import { BduiNavigationController } from './bdui-navigation.controller';
 import { BduiService } from './services/bdui.service';
+import { BduiNavigationService } from './services/bdui-navigation.service';
 import { CatalogueLoaderService } from './services/catalogue-loader.service';
 import { A2uiToScreenConfigService } from './services/a2ui-to-screen-config.service';
 import { BduiLayoutCacheService } from './cache/bdui-layout-cache.service';
@@ -14,9 +16,10 @@ import { ScreenConfigEntity } from './entities/screen-config.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ScreenConfigEntity]), MindModule, TenantsModule],
-  controllers: [BduiController],
+  controllers: [BduiController, BduiNavigationController],
   providers: [
     BduiService,
+    BduiNavigationService,
     CatalogueLoaderService,
     A2uiToScreenConfigService,
     BduiLayoutCacheService,

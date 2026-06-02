@@ -1,0 +1,7 @@
+{
+  "title": "Commander",
+  "show_back": true,
+  "actions": [
+    { "icon": "history", "action": { "type": "local", "cmd": "show_order_history" } }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "Retour / Annulation",
+  "show_back": true,
+  "actions": [
+    { "icon": "search", "action": { "type": "local", "cmd": "focus_search" } },
+    { "icon": "filter_list", "action": { "type": "sheet", "sheet": "category_filter" } }
+  ]
+}

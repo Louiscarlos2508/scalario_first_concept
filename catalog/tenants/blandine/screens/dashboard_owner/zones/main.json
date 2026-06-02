@@ -1,0 +1,44 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Évolution du CA",
+        "style": "titleMedium"
+      }
+    },
+    {
+      "type": "ChartWidget",
+      "props": {
+        "chart_type": "line",
+        "title": "CA 7 derniers jours"
+      }
+    },
+    {
+      "type": "RankingList",
+      "props": {
+        "title": "Top 5 produits",
+        "items": [
+          {
+            "rank": 1,
+            "name": "Tomates",
+            "qty": "45 kg",
+            "amount": "22 500 FCFA"
+          },
+          {
+            "rank": 2,
+            "name": "Bananes",
+            "qty": "30 kg",
+            "amount": "9 000 FCFA"
+          },
+          {
+            "rank": 3,
+            "name": "Riz 5kg",
+            "qty": "20 sacs",
+            "amount": "70 000 FCFA"
+          }
+        ]
+      }
+    }
+  ]
+}

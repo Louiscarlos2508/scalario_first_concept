@@ -1,0 +1,20 @@
+{
+  "employees": {
+    "all": { "endpoint": "/api/v1/blandine/data/employees", "method": "GET", "cache_ttl_ms": 60000 },
+    "create": { "endpoint": "/api/v1/blandine/data/employees", "method": "POST" },
+    "update": { "endpoint": "/api/v1/blandine/data/employees/{employeeId}", "method": "PUT" },
+    "deactivate": { "endpoint": "/api/v1/blandine/data/employees/{employeeId}/deactivate", "method": "POST" }
+  },
+  "roles": {
+    "endpoint": "/api/v1/blandine/data/roles", "method": "GET", "cache_ttl_ms": 3600000
+  },
+  "fixtures": {
+    "employees": [
+      { "name": "Aminata Diallo", "role": "COMMERCIAL", "active": true, "last_login": "2026-06-02T08:15" },
+      { "name": "Ibrahim Koné", "role": "MANAGER", "active": true, "last_login": "2026-06-02T07:00" },
+      { "name": "Fatima Ouédraogo", "role": "COMMERCIAL", "active": true, "last_login": "2026-06-01T09:30" },
+      { "name": "Moussa Diarra", "role": "COMMERCIAL", "active": false, "last_login": "2026-05-28T17:00" }
+    ],
+    "roles": ["OWNER", "MANAGER", "COMMERCIAL"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "dialog": "confirmation_perte",
+  "version": "2.0.0",
+  "scenario": "06.3",
+  "title": "Confirmer la déclaration",
+  "size": "sm",
+  "actions": [
+    { "label": "Annuler", "variant": "secondary", "action": { "type": "local", "cmd": "close" } },
+    { "label": "Confirmer", "variant": "primary", "action": { "type": "api_call", "endpoint": "loss.create" } }
+  ],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

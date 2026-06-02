@@ -1,0 +1,32 @@
+{
+  "name": "cart_item",
+  "version": "1.0.0",
+  "schema": {
+    "type": "object",
+    "required": ["product_name", "quantity", "unit", "line_total"],
+    "properties": {
+      "product_name": { "type": "string" },
+      "quantity": { "type": "number", "minimum": 0 },
+      "unit": { "type": "string" },
+      "unit_price": { "type": "number" },
+      "line_total": { "type": "number" },
+      "input_type": { "type": "string" },
+      "image_url": { "type": "string" }
+    }
+  },
+  "slots": {
+    "thumbnail": { "type": "image", "width": 40, "height": 40 },
+    "info": { "direction": "column", "gap": 2 },
+    "quantity_control": { "type": "QuantityControl", "min": 0.1, "step": { "source": "input_type" } },
+    "line_total": { "type": "text", "style": "bodyMedium", "weight": "bold" },
+    "remove_button": { "type": "icon_button", "icon": "remove_shopping_cart", "color": "error" }
+  },
+  "actions": [
+    { "trigger": "quantity_change", "type": "update_cart_item", "target": "cart" },
+    { "trigger": "tap_remove", "type": "remove_from_cart", "target": "cart", "confirm": true }
+  ],
+  "variants": {
+    "default": { "slots": { "thumbnail": "visible", "info": "flex", "quantity_control": "visible", "line_total": "visible", "remove_button": "visible" } },
+    "readonly": { "slots": { "thumbnail": "visible", "info": "flex", "quantity_control": "visible", "line_total": "visible", "remove_button": "hidden" } }
+  }
+}

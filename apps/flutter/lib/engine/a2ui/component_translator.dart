@@ -72,14 +72,16 @@ class A2UIComponentTranslator {
 
     final zones = _distributeZones(children);
 
-    return ScreenConfig(
+    final ScreenConfig config = ScreenConfig(
       screen: msg.surfaceId,
-      schemaVersion: '1.1.0',
-      layout: layout,
+      schemaVersion: '2.0.0',
       title: title,
-      zones: zones,
-      scaffoldConfig: scaffoldConfig,
+      zones: zones is Map<String, List<ComponentConfig>>
+          ? zones
+          : <String, List<ComponentConfig>>{},
+      data: scaffoldConfig,
     );
+    return config;
   }
 
   /// Extrait la config chrome d'un composant Scaffold A2UI.
@@ -261,7 +263,7 @@ class A2UIComponentTranslator {
   String _generateId() => '_inline_${_idCounter++}';
 
   /// Distribue les composants dans les zones Scalario.
-  ScreenZones _distributeZones(List<ComponentConfig> components) {
+  Map<String, List<ComponentConfig>> _distributeZones(List<ComponentConfig> components) {
     final kpis = <ComponentConfig>[];
     final main = <ComponentConfig>[];
     final aside = <ComponentConfig>[];
@@ -279,12 +281,12 @@ class A2UIComponentTranslator {
       }
     }
 
-    return ScreenZones(
-      kpis: kpis.isNotEmpty ? kpis : null,
-      main: main.isNotEmpty ? main : null,
-      aside: aside.isNotEmpty ? aside : null,
-      actions: actions.isNotEmpty ? actions : null,
-    );
+    return <String, List<ComponentConfig>>{
+      if (kpis.isNotEmpty) 'kpis': kpis,
+      if (main.isNotEmpty) 'main': main,
+      if (aside.isNotEmpty) 'aside': aside,
+      if (actions.isNotEmpty) 'actions': actions,
+    };
   }
 
   bool _isKPI(ComponentConfig c) =>

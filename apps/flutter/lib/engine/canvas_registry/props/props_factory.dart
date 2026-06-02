@@ -1,0 +1,48 @@
+import 'typed_props.dart';
+
+class PropsFactory {
+  static TypedProps resolve(String type, Map<String, dynamic> raw) {
+    return switch (type) {
+      'KPICard' => KPICardProps(raw),
+      'ActionButton' => ActionButtonProps(raw),
+      'ScalarioButton' => ActionButtonProps(raw),
+      'Button' => ActionButtonProps(raw),
+      'Text' => TextProps(raw),
+      'Heading' => TextProps(raw),
+      'DataTable' => DataTableProps(raw),
+      'FormWidget' => FormWidgetProps(raw),
+      'SearchBar' => SearchBarProps(raw),
+      'FilterChips' => ChipSelectorProps(raw),
+      'ChipSelector' => ChipSelectorProps(raw),
+      'QuantityControl' => QuantityControlProps(raw),
+      'NumberInput' => QuantityControlProps(raw),
+      'AlertBanner' => AlertBannerProps(raw),
+      'CartSummary' => CartSummaryProps(raw),
+      'ProductGrid' => ProductGridProps(raw),
+      'ProductSelector' => ProductGridProps(raw),
+      'ProductList' => ProductListProps(raw),
+      'ConfirmationDialog' => ConfirmationDialogProps(raw),
+      'ChartWidget' => ChartWidgetProps(raw),
+      'ChartBar' => ChartWidgetProps(raw),
+      'ChartPie' => ChartWidgetProps(raw),
+      'PeriodSelector' => PeriodSelectorProps(raw),
+      'EmptyState' => EmptyStateProps(raw),
+      'ErrorState' => ErrorStateProps(raw),
+      'StatusBadge' => StatusBadgeProps(raw),
+      'InfoCard' => InfoCardProps(raw),
+      'CredentialsCard' => CredentialsCardProps(raw),
+      'RankingList' => RankingListProps(raw),
+      'TransactionList' => TransactionListProps(raw),
+      'TransactionLine' => TransactionListProps(raw),
+      'PaymentConfirm' => PaymentConfirmProps(raw),
+      'BottomSheet' => BottomSheetProps(raw),
+      'ProgressBar' => ProgressBarProps(raw),
+      'EmployeeList' => ProductListProps(raw),
+      'SupplierList' => ProductListProps(raw),
+      'AlertConfigList' => ProductListProps(raw),
+      'AlertSummary' => ProductListProps(raw),
+      'AlertPreview' => ProductListProps(raw),
+      _ => TypedProps(raw),
+    };
+  }
+}

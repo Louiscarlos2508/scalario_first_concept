@@ -1,0 +1,10 @@
+{
+  "components": [
+    {
+      "type": "ProductList",
+      "props": {
+        "title": "Catalogue produits"
+      }
+    }
+  ]
+}

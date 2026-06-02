@@ -1,0 +1,77 @@
+{
+  "components": [
+    {
+      "type": "Text",
+      "props": {
+        "text": "Déclarer une perte",
+        "style": "headlineMedium"
+      }
+    },
+    {
+      "type": "FormWidget",
+      "props": {
+        "title": "Détails de la perte",
+        "fields": [
+          {
+            "name": "article",
+            "type": "text",
+            "label": "Article",
+            "required": true
+          },
+          {
+            "name": "quantite",
+            "type": "number",
+            "label": "Quantité",
+            "required": true
+          },
+          {
+            "name": "unite",
+            "type": "text",
+            "label": "Unité"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ChipSelector",
+      "props": {
+        "label_key": "loss.nature",
+        "options": [
+          {
+            "label": "Avarie",
+            "value": "avarie"
+          },
+          {
+            "label": "Casse",
+            "value": "casse"
+          },
+          {
+            "label": "Vol",
+            "value": "vol"
+          },
+          {
+            "label": "Autre",
+            "value": "autre"
+          }
+        ],
+        "multiple": false
+      }
+    },
+    {
+      "type": "TextInput",
+      "props": {
+        "label": "Note (obligatoire si vol)",
+        "placeholder": "..."
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Valeur estimée",
+        "value": "0",
+        "unit": "FCFA",
+        "status": "critical"
+      }
+    }
+  ]
+}

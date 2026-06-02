@@ -1,0 +1,51 @@
+{
+  "search": {
+    "products": {
+      "endpoint": "/api/v1/blandine/data/products/search",
+      "method": "GET",
+      "params": { "q": "{query}", "category": "{category}" },
+      "cache_ttl_ms": 60000,
+      "debounce_ms": 300
+    }
+  },
+  "categories": {
+    "endpoint": "/api/v1/blandine/data/categories",
+    "method": "GET",
+    "cache_ttl_ms": 300000
+  },
+  "products": {
+    "active": {
+      "endpoint": "/api/v1/blandine/data/products/active",
+      "method": "GET",
+      "cache_ttl_ms": 60000
+    },
+    "search": {
+      "endpoint": "/api/v1/blandine/data/products/search",
+      "method": "GET",
+      "params": { "q": "{query}" }
+    }
+  },
+  "kpis": {
+    "ca_day": { "endpoint": "/api/v1/blandine/data/kpis/ca_day", "method": "GET", "refresh_ms": 30000 },
+    "sales_count": { "endpoint": "/api/v1/blandine/data/kpis/sales_count", "method": "GET", "refresh_ms": 30000 },
+    "client_count": { "endpoint": "/api/v1/blandine/data/kpis/client_count", "method": "GET", "refresh_ms": 30000 }
+  },
+  "cart": {
+    "subtotal": { "local": true, "path": "cart.subtotal" },
+    "tax": { "local": true, "path": "cart.tax" },
+    "total": { "local": true, "path": "cart.total" },
+    "balance_due": { "local": true, "path": "cart.balance_due" },
+    "due_date": { "local": true, "path": "cart.due_date" },
+    "client": { "local": true, "path": "cart.client" }
+  },
+  "fixtures": {
+    "products": [
+      { "name": "Tomates", "price": 500, "input_type": "vrac", "stock": 45, "unit": "kg", "category": "Légumes" },
+      { "name": "Bananes", "price": 300, "input_type": "vrac", "stock": 30, "unit": "kg", "category": "Fruits" },
+      { "name": "Oignons", "price": 400, "input_type": "vrac", "stock": 25, "unit": "kg", "category": "Légumes" },
+      { "name": "Riz 5kg", "price": 3500, "input_type": "unit", "stock": 20, "unit": "sac", "category": "Épicerie" },
+      { "name": "Huile 1L", "price": 1500, "input_type": "unit", "stock": 12, "unit": "bouteille", "category": "Épicerie" }
+    ],
+    "categories": ["Fruits", "Légumes", "Épicerie", "Boissons", "Produits laitiers"]
+  }
+}

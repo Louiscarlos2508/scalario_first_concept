@@ -1,0 +1,14 @@
+{
+  "dialog": "confirmation_annulation",
+  "version": "2.0.0",
+  "scenario": "14.3",
+  "title": "Confirmer l'annulation",
+  "size": "sm",
+  "actions": [
+    { "label": "Retour", "variant": "secondary", "action": { "type": "local", "cmd": "close" } },
+    { "label": "Confirmer l'annulation", "variant": "destructive", "action": { "type": "api_call", "endpoint": "sales.annul" } }
+  ],
+  "zones": {
+    "main": { "$ref": "zones/main.json" }
+  }
+}

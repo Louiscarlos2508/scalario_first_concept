@@ -1,0 +1,5 @@
+[
+  { "type": "text", "props": { "content": "Vente #{saleId} — {amount} FCFA ({items} articles)", "variant": "body" } },
+  { "type": "text", "props": { "content": "Motif : {reason}", "variant": "body" } },
+  { "type": "text", "props": { "content": "L'annulation est définitive et tracée. Blandine sera notifiée.", "variant": "caption", "color": "muted" } }
+]

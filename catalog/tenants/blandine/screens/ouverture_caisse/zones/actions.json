@@ -1,0 +1,25 @@
+{
+  "components": [
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Ouvrir la caisse",
+        "icon": "lock_open",
+        "variant": "primary",
+        "action": {
+          "type": "api_call",
+          "endpoint": "/api/v1/blandine/caisse/open",
+          "method": "POST"
+        }
+      }
+    },
+    {
+      "type": "ActionButton",
+      "props": {
+        "label": "Annuler",
+        "icon": "close",
+        "variant": "ghost"
+      }
+    }
+  ]
+}

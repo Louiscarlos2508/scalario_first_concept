@@ -1,0 +1,19 @@
+{
+  "products": {
+    "active": { "endpoint": "/api/v1/blandine/data/products/active", "method": "GET", "cache_ttl_ms": 60000 }
+  },
+  "loss": {
+    "create": { "endpoint": "/api/v1/blandine/data/loss", "method": "POST" },
+    "recent": { "endpoint": "/api/v1/blandine/data/loss/recent", "method": "GET", "cache_ttl_ms": 120000 }
+  },
+  "fixtures": {
+    "products": [
+      { "name": "Tomates", "stock": 45, "unit": "kg" },
+      { "name": "Bananes", "stock": 30, "unit": "kg" },
+      { "name": "Laitues", "stock": 12, "unit": "pièce" }
+    ],
+    "recent_losses": [
+      { "product": "Tomates", "qty": 3, "unit": "kg", "reason": "Avarié", "date": "2026-06-01" }
+    ]
+  }
+}

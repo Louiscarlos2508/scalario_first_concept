@@ -25,7 +25,7 @@ import {
   SyncResultItem,
 } from './dto/sync-mutations.dto';
 
-@Controller('api/v1/:tenant/sync')
+@Controller(':tenant/sync')
 @UseGuards(AuthGuard('jwt'))
 export class SyncController {
   private readonly logger = new Logger(SyncController.name);

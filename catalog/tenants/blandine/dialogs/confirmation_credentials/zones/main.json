@@ -1,0 +1,6 @@
+[
+  { "type": "text", "props": { "content": "{name} — {role}", "variant": "subtitle" } },
+  { "type": "kpi_card", "props": { "title": "Identifiant", "value": "{username}", "variant": "medium", "copyable": true } },
+  { "type": "kpi_card", "props": { "title": "Mot de passe temporaire", "value": "{temp_password}", "variant": "medium", "copyable": true } },
+  { "type": "text", "props": { "content": "L'employé devra changer son mot de passe à la première connexion.", "variant": "caption", "color": "muted" } }
+]

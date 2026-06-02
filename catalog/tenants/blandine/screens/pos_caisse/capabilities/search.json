@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "debounce_ms": 300,
+  "min_chars": 2,
+  "placeholder_key": "search.products",
+  "source": { "$ref": "../data/sources.json#/products/search" }
+}

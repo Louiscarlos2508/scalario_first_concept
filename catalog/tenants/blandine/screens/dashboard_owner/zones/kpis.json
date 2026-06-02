@@ -1,0 +1,46 @@
+{
+  "components": [
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "CA du jour",
+        "value": "475 000",
+        "unit": "FCFA",
+        "delta": "+12%",
+        "status": "nominal",
+        "icon": "trending_up"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Marge",
+        "value": "38%",
+        "unit": "",
+        "delta": "+2pts",
+        "status": "nominal",
+        "icon": "percent"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Transactions",
+        "value": "43",
+        "unit": "ventes",
+        "status": "nominal",
+        "icon": "receipt"
+      }
+    },
+    {
+      "type": "KPICard",
+      "props": {
+        "label": "Stock critique",
+        "value": "3",
+        "unit": "articles",
+        "status": "critical",
+        "icon": "inventory_2"
+      }
+    }
+  ]
+}
