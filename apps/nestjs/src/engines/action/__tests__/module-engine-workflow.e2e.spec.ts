@@ -216,6 +216,7 @@ describe('Module Engine — Workflow E2E', () => {
       .compile();
 
     app = moduleRef.createNestApplication();
+    app.setGlobalPrefix('api/v1');
     await app.init();
     server = app.getHttpServer();
     jwtService = new JwtService({ secret: JWT_SECRET });

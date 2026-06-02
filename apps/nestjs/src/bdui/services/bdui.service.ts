@@ -107,6 +107,7 @@ export class BduiService {
       screen: (raw.screen as string) ?? screenId,
       layout: (raw.layout as Record<string, unknown>) ?? {},
       zones: normalizedZones,
+      appbar: raw.appbar as Record<string, unknown> | undefined,
       data: raw.data as Record<string, unknown> | undefined,
       rules: raw.rules as unknown[] | undefined,
       states: raw.states as Record<string, unknown> | undefined,

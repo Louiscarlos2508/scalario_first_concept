@@ -37,5 +37,8 @@
   },
   "data": {
     "$ref": "data/sources.json"
+  },
+  "appbar": {
+    "$ref": "appbar.json"
   }
 }
