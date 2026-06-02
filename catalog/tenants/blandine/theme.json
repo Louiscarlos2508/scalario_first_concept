@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "brand": {
+    "name": "Blandine Boutique",
+    "logo_url": null,
+    "favicon_url": null
+  },
+  "colors": {
+    "primary": "#FFCC00",
+    "on_primary": "#1A1A1A",
+    "secondary": "#1A1A1A",
+    "on_secondary": "#FFFFFF",
+    "accent": "#EA4335",
+    "background": "#F5F5F5",
+    "surface": "#FFFFFF",
+    "error": "#D32F2F",
+    "success": "#2E7D32",
+    "warning": "#F9A825"
+  },
+  "typography": {
+    "font_family": "Inter",
+    "mono_font": "Roboto Mono",
+    "scale": {
+      "title_large": 24,
+      "title_medium": 20,
+      "title_small": 16,
+      "body_large": 16,
+      "body_medium": 14,
+      "body_small": 12,
+      "mono_large": 20,
+      "mono_medium": 16,
+      "mono_small": 14
+    }
+  },
+  "currency": {
+    "code": "XOF",
+    "symbol": "FCFA",
+    "locale": "fr-BF",
+    "decimals": 0,
+    "format": "{amount} {symbol}"
+  },
+  "locale": {
+    "language": "fr",
+    "country": "BF",
+    "timezone": "Africa/Ouagadougou",
+    "date_format": "dd/MM/yyyy",
+    "time_format": "HH:mm",
+    "first_day_of_week": 1
+  }
+}

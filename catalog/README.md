@@ -19,8 +19,10 @@ catalog/
 │       └── components.json
 └── tenants/                           ← 1 dossier par tenant
     └── blandine/                      ← Tenant actif unique (Blandine Boutique)
-        ├── module.json                ← Manifest tenant (modules, screens, RBAC, currency…)
+        ├── module.json                ← Modules activés + mapping écran→module
         ├── navigation.json            ← Structure navigation (sidebar, top actions, responsive)
+        ├── rbac.json                  ← Rôles, permissions, accès écrans/actions
+        ├── theme.json                 ← Couleurs, typographie, monnaie, locale
         ├── modules/                   ← Modules métier du tenant
         │   ├── ventes/module.json
         │   ├── stock/module.json
@@ -220,11 +222,13 @@ sheets/<sheet_id>/
 ## Tenant Manifest
 
 `tenants/blandine/module.json` définit :
-
 - **`modules[]`** : liste des modules activés (id, name, icon)
-- **`screens{}`** : dictionnaire des écrans avec module, title, roles, layout, order
-- **`rbac_roles[]`** : rôles disponibles (OWNER, MANAGER, COMMERCIAL)
-- **`currency`, `locale`, `timezone`** : locale tenant
+- **`screens{}`** : dictionnaire des écrans avec module et title
+
+Les autres configs sont séparées :
+- **`rbac.json`** : rôles, permissions, accès écrans et actions
+- **`theme.json`** : couleurs, typographie, monnaie (XOF), locale (fr-BF)
+- **`navigation.json`** : structure de la sidebar, top actions, responsive
 
 ## Navigation
 
@@ -249,6 +253,7 @@ filtrée par rôle utilisateur.
 ## État actuel
 
 - **Tenant unique** : `blandine` (Boutique, Burkina Faso, XOF)
+- **Configs racine** : `module.json`, `navigation.json`, `rbac.json`, `theme.json`
 - **Modules** : 9
 - **Écrans** : 17
 - **Dialogs** : 6 (validation_closure, confirmation_reception, confirmation_perte, confirmation_produit, confirmation_credentials, confirmation_annulation)

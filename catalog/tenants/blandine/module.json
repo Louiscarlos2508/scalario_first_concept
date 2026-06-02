@@ -4,38 +4,121 @@
   "name": "Blandine",
   "tenant_handle": "blandine-shop",
   "sector": "commerce_general",
-  "currency": "XOF",
-  "locale": "fr-BF",
-  "timezone": "Africa/Ouagadougou",
-  "rbac_roles": ["OWNER", "MANAGER", "COMMERCIAL"],
   "modules": [
-    { "id": "dashboard", "name": "Tableau de bord", "icon": "dashboard" },
-    { "id": "ventes", "name": "Ventes", "icon": "point_of_sale" },
-    { "id": "stock", "name": "Stock", "icon": "inventory_2" },
-    { "id": "commandes", "name": "Commandes", "icon": "local_shipping" },
-    { "id": "pertes", "name": "Pertes", "icon": "warning" },
-    { "id": "rapports", "name": "Rapports", "icon": "bar_chart" },
-    { "id": "caisse", "name": "Caisse", "icon": "payments" },
-    { "id": "configuration", "name": "Configuration", "icon": "settings" },
-    { "id": "equipe", "name": "Équipe", "icon": "people" }
+    {
+      "id": "dashboard",
+      "name": "Tableau de bord",
+      "icon": "dashboard"
+    },
+    {
+      "id": "ventes",
+      "name": "Ventes",
+      "icon": "point_of_sale"
+    },
+    {
+      "id": "stock",
+      "name": "Stock",
+      "icon": "inventory_2"
+    },
+    {
+      "id": "commandes",
+      "name": "Commandes",
+      "icon": "local_shipping"
+    },
+    {
+      "id": "pertes",
+      "name": "Pertes",
+      "icon": "warning"
+    },
+    {
+      "id": "rapports",
+      "name": "Rapports",
+      "icon": "bar_chart"
+    },
+    {
+      "id": "caisse",
+      "name": "Caisse",
+      "icon": "payments"
+    },
+    {
+      "id": "configuration",
+      "name": "Configuration",
+      "icon": "settings"
+    },
+    {
+      "id": "equipe",
+      "name": "Équipe",
+      "icon": "people"
+    }
   ],
   "screens": {
-    "dashboard_owner":      { "module": "dashboard", "title": "Boutique Kouamé", "roles": ["OWNER"], "layout": "dashboard", "order": 0 },
-    "dashboard_commercial": { "module": "dashboard", "title": "Ma journée", "roles": ["COMMERCIAL"], "layout": "dashboard", "order": 0 },
-    "dashboard_manager":    { "module": "dashboard", "title": "Opérations", "roles": ["MANAGER"], "layout": "dashboard", "order": 0 },
-    "pos_caisse":           { "module": "ventes", "title": "Point de vente", "roles": ["COMMERCIAL","MANAGER"], "layout": "pos", "order": 0 },
-    "retour_vente":         { "module": "ventes", "title": "Retour / Annulation", "roles": ["COMMERCIAL","MANAGER"], "layout": "list", "order": 1 },
-    "vente_credit":         { "module": "ventes", "title": "Vente à crédit", "roles": ["COMMERCIAL"], "layout": "pos", "order": 2 },
-    "reception_livraison":  { "module": "stock", "title": "Réception livraison", "roles": ["MANAGER","OWNER"], "layout": "form", "order": 0 },
-    "inventaire":           { "module": "stock", "title": "Inventaire", "roles": ["MANAGER"], "layout": "form", "order": 1 },
-    "historique_stock":     { "module": "stock", "title": "Stock", "roles": ["OWNER","MANAGER"], "layout": "list", "order": 2 },
-    "commande_fournisseur": { "module": "commandes", "title": "Commander", "roles": ["OWNER"], "layout": "form", "order": 0 },
-    "declaration_perte":    { "module": "pertes", "title": "Déclarer une perte", "roles": ["MANAGER","COMMERCIAL"], "layout": "form", "order": 0 },
-    "vue_rapports":         { "module": "rapports", "title": "Rapports", "roles": ["OWNER"], "layout": "dashboard", "order": 0 },
-    "ouverture_caisse":     { "module": "caisse", "title": "Ouvrir la caisse", "roles": ["COMMERCIAL"], "layout": "form", "order": 0 },
-    "cloture_caisse":       { "module": "caisse", "title": "Clôturer la caisse", "roles": ["COMMERCIAL","OWNER"], "layout": "form", "order": 1 },
-    "catalogue_produits":   { "module": "configuration", "title": "Produits", "roles": ["OWNER"], "layout": "list", "order": 0 },
-    "gestion_equipe":       { "module": "equipe", "title": "Équipe", "roles": ["OWNER"], "layout": "list", "order": 0 },
-    "gestion_fournisseurs": { "module": "configuration", "title": "Fournisseurs", "roles": ["OWNER"], "layout": "list", "order": 1 }
+    "dashboard_owner": {
+      "module": "dashboard",
+      "title": "Boutique Kouamé"
+    },
+    "dashboard_commercial": {
+      "module": "dashboard",
+      "title": "Ma journée"
+    },
+    "dashboard_manager": {
+      "module": "dashboard",
+      "title": "Opérations"
+    },
+    "pos_caisse": {
+      "module": "ventes",
+      "title": "Point de vente"
+    },
+    "retour_vente": {
+      "module": "ventes",
+      "title": "Retour / Annulation"
+    },
+    "vente_credit": {
+      "module": "ventes",
+      "title": "Vente à crédit"
+    },
+    "reception_livraison": {
+      "module": "stock",
+      "title": "Réception livraison"
+    },
+    "inventaire": {
+      "module": "stock",
+      "title": "Inventaire"
+    },
+    "historique_stock": {
+      "module": "stock",
+      "title": "Stock"
+    },
+    "commande_fournisseur": {
+      "module": "commandes",
+      "title": "Commander"
+    },
+    "declaration_perte": {
+      "module": "pertes",
+      "title": "Déclarer une perte"
+    },
+    "vue_rapports": {
+      "module": "rapports",
+      "title": "Rapports"
+    },
+    "ouverture_caisse": {
+      "module": "caisse",
+      "title": "Ouvrir la caisse"
+    },
+    "cloture_caisse": {
+      "module": "caisse",
+      "title": "Clôturer la caisse"
+    },
+    "catalogue_produits": {
+      "module": "configuration",
+      "title": "Produits"
+    },
+    "gestion_equipe": {
+      "module": "equipe",
+      "title": "Équipe"
+    },
+    "gestion_fournisseurs": {
+      "module": "configuration",
+      "title": "Fournisseurs"
+    }
   }
 }

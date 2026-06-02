@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "roles": {
+    "OWNER": {
+      "label": "Propriétaire",
+      "priority": 0,
+      "permissions": ["read", "write", "delete", "admin", "configure", "validate"],
+      "max_screens": null
+    },
+    "MANAGER": {
+      "label": "Gérant",
+      "priority": 1,
+      "permissions": ["read", "write", "validate"],
+      "max_screens": null
+    },
+    "COMMERCIAL": {
+      "label": "Commercial",
+      "priority": 2,
+      "permissions": ["read", "write"],
+      "max_screens": null
+    }
+  },
+  "screen_access": {
+    "dashboard_owner": { "roles": ["OWNER"] },
+    "dashboard_commercial": { "roles": ["COMMERCIAL"] },
+    "dashboard_manager": { "roles": ["MANAGER"] },
+    "pos_caisse": { "roles": ["COMMERCIAL", "MANAGER"] },
+    "retour_vente": { "roles": ["COMMERCIAL", "MANAGER"] },
+    "vente_credit": { "roles": ["COMMERCIAL"] },
+    "reception_livraison": { "roles": ["MANAGER", "OWNER"] },
+    "inventaire": { "roles": ["MANAGER"] },
+    "historique_stock": { "roles": ["OWNER", "MANAGER"] },
+    "commande_fournisseur": { "roles": ["OWNER"] },
+    "declaration_perte": { "roles": ["MANAGER", "COMMERCIAL"] },
+    "vue_rapports": { "roles": ["OWNER"] },
+    "ouverture_caisse": { "roles": ["COMMERCIAL"] },
+    "cloture_caisse": { "roles": ["COMMERCIAL", "OWNER"] },
+    "catalogue_produits": { "roles": ["OWNER"] },
+    "gestion_equipe": { "roles": ["OWNER"] },
+    "gestion_fournisseurs": { "roles": ["OWNER"] }
+  },
+  "action_permissions": {
+    "validate_cloture": { "roles": ["OWNER"] },
+    "annuler_vente": { "roles": ["COMMERCIAL", "MANAGER"] },
+    "declarer_perte": { "roles": ["MANAGER"] },
+    "valider_inventaire": { "roles": ["MANAGER"] },
+    "valider_reception": { "roles": ["MANAGER"] },
+    "commander_fournisseur": { "roles": ["OWNER"] },
+    "gerer_produits": { "roles": ["OWNER"] },
+    "gerer_employes": { "roles": ["OWNER"] },
+    "gerer_fournisseurs": { "roles": ["OWNER"] },
+    "ouvrir_caisse": { "roles": ["COMMERCIAL"] },
+    "cloturer_caisse": { "roles": ["COMMERCIAL", "OWNER"] },
+    "forcer_sync": { "roles": ["OWNER", "MANAGER"] }
+  }
+}
