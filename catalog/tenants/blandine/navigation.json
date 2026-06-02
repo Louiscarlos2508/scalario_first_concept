@@ -7,9 +7,9 @@
         "label": "Tableau de bord",
         "icon": "dashboard",
         "screens": [
-          { "screen": "dashboard_owner", "roles": ["OWNER"] },
-          { "screen": "dashboard_commercial", "roles": ["COMMERCIAL"] },
-          { "screen": "dashboard_manager", "roles": ["MANAGER"] }
+          { "screen": "dashboard_owner", "label": "Accueil", "roles": ["OWNER"] },
+          { "screen": "dashboard_commercial", "label": "Ma journée", "roles": ["COMMERCIAL"] },
+          { "screen": "dashboard_manager", "label": "Opérations", "roles": ["MANAGER"] }
         ]
       },
       {
@@ -17,9 +17,9 @@
         "label": "Ventes",
         "icon": "point_of_sale",
         "screens": [
-          { "screen": "pos_caisse", "roles": ["COMMERCIAL", "MANAGER"] },
-          { "screen": "retour_vente", "roles": ["COMMERCIAL", "MANAGER"] },
-          { "screen": "vente_credit", "roles": ["COMMERCIAL"] }
+          { "screen": "pos_caisse", "label": "Point de vente", "roles": ["COMMERCIAL", "MANAGER"] },
+          { "screen": "retour_vente", "label": "Retour / Annulation", "roles": ["COMMERCIAL", "MANAGER"] },
+          { "screen": "vente_credit", "label": "Vente à crédit", "roles": ["COMMERCIAL"] }
         ]
       },
       {
@@ -27,9 +27,9 @@
         "label": "Stock",
         "icon": "inventory_2",
         "screens": [
-          { "screen": "historique_stock", "roles": ["OWNER", "MANAGER"] },
-          { "screen": "inventaire", "roles": ["MANAGER"] },
-          { "screen": "reception_livraison", "roles": ["MANAGER", "OWNER"] }
+          { "screen": "historique_stock", "label": "Historique", "roles": ["OWNER", "MANAGER"] },
+          { "screen": "inventaire", "label": "Inventaire", "roles": ["MANAGER"] },
+          { "screen": "reception_livraison", "label": "Réception livraison", "roles": ["MANAGER", "OWNER"] }
         ]
       },
       {
@@ -37,7 +37,7 @@
         "label": "Commandes",
         "icon": "local_shipping",
         "screens": [
-          { "screen": "commande_fournisseur", "roles": ["OWNER"] }
+          { "screen": "commande_fournisseur", "label": "Commande fournisseur", "roles": ["OWNER"] }
         ],
         "badge": { "endpoint": "/api/v1/blandine/data/kpis/pending_deliveries" }
       },
@@ -46,7 +46,7 @@
         "label": "Pertes",
         "icon": "warning",
         "screens": [
-          { "screen": "declaration_perte", "roles": ["MANAGER", "COMMERCIAL"] }
+          { "screen": "declaration_perte", "label": "Déclaration de perte", "roles": ["MANAGER", "COMMERCIAL"] }
         ]
       },
       {
@@ -54,7 +54,7 @@
         "label": "Rapports",
         "icon": "bar_chart",
         "screens": [
-          { "screen": "vue_rapports", "roles": ["OWNER"] }
+          { "screen": "vue_rapports", "label": "Vue d'ensemble", "roles": ["OWNER"] }
         ]
       },
       {
@@ -62,8 +62,8 @@
         "label": "Caisse",
         "icon": "payments",
         "screens": [
-          { "screen": "ouverture_caisse", "roles": ["COMMERCIAL"] },
-          { "screen": "cloture_caisse", "roles": ["COMMERCIAL", "OWNER"] }
+          { "screen": "ouverture_caisse", "label": "Ouverture", "roles": ["COMMERCIAL"] },
+          { "screen": "cloture_caisse", "label": "Clôture", "roles": ["COMMERCIAL", "OWNER"] }
         ]
       },
       {
@@ -71,8 +71,8 @@
         "label": "Configuration",
         "icon": "settings",
         "screens": [
-          { "screen": "catalogue_produits", "roles": ["OWNER"] },
-          { "screen": "gestion_fournisseurs", "roles": ["OWNER"] }
+          { "screen": "catalogue_produits", "label": "Catalogue produits", "roles": ["OWNER"] },
+          { "screen": "gestion_fournisseurs", "label": "Fournisseurs", "roles": ["OWNER"] }
         ]
       },
       {
@@ -80,7 +80,7 @@
         "label": "Équipe",
         "icon": "people",
         "screens": [
-          { "screen": "gestion_equipe", "roles": ["OWNER"] }
+          { "screen": "gestion_equipe", "label": "Gestion équipe", "roles": ["OWNER"] }
         ]
       }
     ]

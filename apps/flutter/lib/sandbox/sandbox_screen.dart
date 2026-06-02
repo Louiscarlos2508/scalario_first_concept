@@ -14,6 +14,7 @@ import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it/get_it.dart';
 
 import '../components/actions/scalario_button.dart';
@@ -297,9 +298,19 @@ class _SandboxScreenState extends State<SandboxScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Scalario', style: const TextStyle(fontWeight: FontWeight.bold)),
+            SvgPicture.asset(
+              'assets/images/scalario-wordmark-light.svg',
+              height: 28,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
+            ),
             if (_mode == _SandboxMode.a2ui)
-              const Text(' A2UI'),
+              const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Text('A2UI', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
             Container(
               margin: const EdgeInsets.only(left: 8),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

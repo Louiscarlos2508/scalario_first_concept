@@ -11,24 +11,33 @@ export class BduiNavigationService {
     this.baseDir = process.env.CATALOG_DIR ?? resolve(process.cwd(), '..', '..', 'catalog');
   }
 
-  getNavigation(tenantSlug: string): Record<string, unknown> {
+  getNavigation(tenantSlug: string, userRoles?: string[]): Record<string, unknown> {
     const nav = this.loadNavigationConfig(tenantSlug);
     if (!nav) {
       return { modules: [], sidebar: { groups: [] }, top_actions: [] };
     }
 
-    const sidebar = (nav as Record<string, unknown>).sidebar as Record<string, unknown> | undefined;
+    const navMap = nav as Record<string, unknown>;
+    const sidebar = navMap.sidebar as Record<string, unknown> | undefined;
     if (sidebar && typeof sidebar.groups === 'object' && sidebar.groups != null) {
-      sidebar.groups = (sidebar.groups as unknown[]).filter(
-        (g) => {
-          const group = g as Record<string, unknown>;
-          const screens = group.screens as unknown[] | undefined;
-          return screens && screens.length > 0;
-        },
-      );
+      const filtered = (sidebar.groups as Record<string, unknown>[]).map((g) => {
+        const screens = (g.screens as Record<string, unknown>[] | undefined) ?? [];
+        const filteredScreens = userRoles != null
+          ? screens.filter((s) => {
+              const screenRoles = s.roles as string[] | undefined;
+              if (screenRoles == null || screenRoles.length === 0) return true;
+              return screenRoles.some((r: string) => userRoles.includes(r));
+            })
+          : screens;
+        return { ...g, screens: filteredScreens };
+      }).filter((g) => {
+        const screens = g.screens as unknown[] | undefined;
+        return screens && screens.length > 0;
+      });
+      sidebar.groups = filtered;
     }
 
-    return nav as Record<string, unknown>;
+    return navMap;
   }
 
   private loadNavigationConfig(tenantSlug: string): Record<string, unknown> | null {
