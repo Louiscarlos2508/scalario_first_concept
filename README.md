@@ -1,7 +1,5 @@
 # Scalario
 
-![CI](https://github.com/your-org/scalario/actions/workflows/ci.yml/badge.svg)
-
 **Instant Business OS** — BDUI Engine + Templates JSON. Lance un ERP/CRM/Catalogue complet en moins d'une heure pour un commerce africain via configuration JSON, sans regénération native.
 
 Monorepo : Flutter (apps/flutter), NestJS (apps/nestjs), PostgreSQL + pgvector, Redis.
@@ -41,68 +39,154 @@ Prérequis : Node 20+, pnpm 9+, Docker + Docker Compose v2.
 
 ---
 
-## Architecture v14 — BDUI Zones
+## Architecture — BDUI v2
 
 ```
 scalario/
 ├── apps/
-│   ├── flutter/              # BDUI runtime (web/desktop)
-│   │   ├── lib/sandbox/      # Sandbox dev — 19 fixtures BDUI
-│   │   └── assets/sandbox/   # Fixtures JSON (8 Blandine + 11 modules)
-│   └── nestjs/               # NestJS API (port 3000)
-│       ├── migrations/       # 11 migrations TypeORM
-│       └── seed/             # Seed scripts
-├── catalog/                  # Catalogue — source de vérité métier
-│   ├── modules/              # 8 modules (ventes, stock, pertes…)
-│   │   └── */screens/        # Écrans BDUI par module
-│   ├── tenants/              # Screens spécifiques par tenant
-│   │   └── blandine/screens/ # 8 écrans Blandine (zones format)
-│   └── domains/              # Legacy v13 — backward compat tests
+│   ├── flutter/                # BDUI runtime (web/desktop)
+│   │   ├── lib/sandbox/        # Sandbox dev — fixtures BDUI
+│   │   └── assets/             # Images, icons, fixtures JSON
+│   └── nestjs/                 # NestJS API (port 3000)
+│       ├── migrations/
+│       └── seed/
+├── catalog/                    # Catalogue — source de vérité métier
+│   └── tenants/
+│       └── blandine/
+│           ├── module.json     # Modules activés + mapping écran→module
+│           ├── navigation.json # Sidebar (groupes, icônes, rôles)
+│           ├── rbac.json       # Rôles, permissions, accès écrans + actions
+│           ├── theme.json      # Couleurs, typo, devise, locale
+│           ├── dialogs/        # Modaux (validation, confirmation…)
+│           │   └── {dialogId}/dialog.json + zones/main.json
+│           ├── sheets/         # Panneaux latéraux (client_select, product_picker…)
+│           │   └── {sheetId}/sheet.json + zones/main.json
+│           └── screens/        # 17 écrans BDUI
+│               └── {screenId}/
+│                   ├── screen.json       # Manifest (layout, zones, $ref)
+│                   ├── appbar.json       # Titre, bouton retour, actions
+│                   ├── layout/layout.json
+│                   ├── rules/rules.json  # RBAC par rôle
+│                   ├── data/sources.json # Endpoints API + fixtures
+│                   ├── ux/metadata.json  # Layout hints
+│                   ├── components/
+│                   ├── zones/
+│                   ├── capabilities/
+│                   ├── states/
+│                   └── i18n/
 ├── docker-compose.yml
 └── docker-compose.dev.yml
 ```
 
-### BDUI Zones Format
+### Structure d'un écran (BDUI v2)
 
-Chaque écran est un JSON qui décrit sa structure via `layout` + `zones` :
+Chaque écran est un dossier avec `screen.json` qui référence ses sous-fichiers via `$ref` :
 
 ```json
 {
   "screen": "dashboard_owner",
-  "schema_version": "1.0.0",
-  "layout": "dashboard",
+  "schema_version": "2.0.0",
+  "layout": { "$ref": "layout/layout.json" },
+  "appbar": { "$ref": "appbar.json" },
   "zones": {
     "kpis": [{ "type": "KPICard", "props": { "label": "CA du jour", "value": "342 500" } }],
     "main": [{ "type": "DataTable", "props": { "columns": [...], "rows": [...] } }],
     "aside": [{ "type": "ChartBar", "props": { ... } }],
     "actions": [{ "type": "ActionButton", "props": { "label": "Nouvelle vente" } }]
-  }
+  },
+  "rules": { "$ref": "rules/rules.json" }
 }
 ```
 
-Pas de champ `root` — le Flutter canvas ignore `root` et ne lit que `zones`.
+Le `CatalogueLoaderService` résout les `$ref` récursivement.
 
 ---
 
-## Catalogue — Modules disponibles (8)
+## API
 
-| Module | ID | Entités | Écrans |
-|--------|----|---------|--------|
-| Ventes | `ventes` | Sale, SaleItem | pos, sale_list |
-| Stock | `stock` | Product, StockMovement | stock_list, product_history, inventory_count, delivery_form |
-| Pertes | `pertes` | Loss | loss_form, loss_list |
-| Caisse | `caisse` | CashSession | sessions |
-| Commandes | `commandes` | Supplier, PurchaseOrder | — |
-| Équipe | `equipe` | Employee | — |
-| Rapports | `rapports` | — | daily_report |
-| Alertes | `alertes` | AlertRule | alert_detail |
+### Authentification
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@blandine.bf","password":"owner123","tenant_slug":"blandine"}'
+```
+
+### Navigation (filtrée par rôle JWT)
+
+```bash
+TOKEN="<access_token>"
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/navigation
+```
+
+Retourne `sidebar.groups[]` avec `label`, `icon`, `screens[].label` — filtré par le rôle de l'utilisateur.
+
+### Layout d'un écran
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/layout/dashboard_owner
+```
+
+Retourne le `screen.json` assemblé avec tous les `$ref` résolus, incluant `appbar`, `layout`, `zones`, `rules`.
+
+### Catalogue
+
+```bash
+# Thème (couleurs, typo, devise, locale)
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/catalogue/theme
+
+# RBAC (rôles, permissions, accès)
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/catalogue/rbac
+
+# Dialog
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/catalogue/dialogs/validation_closure
+
+# Sheet
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:3000/api/v1/blandine/catalogue/sheets/product_picker
+```
+
+### Modules (actions + data)
+
+```bash
+# Données d'un module
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:3000/api/v1/blandine/caisse/data?entity=Caisse&page=1&limit=50"
+
+# Action / Workflow
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -H "x-client-mutation-id: uuid" \
+  -d '{"action_type":"start_workflow","workflow_id":"workflow_cloture_caisse","entity_id":"..."}' \
+  http://localhost:3000/api/v1/blandine/caisse/action
+```
+
+---
+
+## Écrans Blandine (17)
+
+| Module | Écrans | Rôles |
+|--------|--------|-------|
+| Tableau de bord | Accueil (owner), Ma journée (commercial), Opérations (manager) | OWNER / COMMERCIAL / MANAGER |
+| Ventes | Point de vente, Retour/Annulation, Vente à crédit | COMMERCIAL, MANAGER |
+| Stock | Historique, Inventaire, Réception livraison | OWNER, MANAGER |
+| Commandes | Commande fournisseur | OWNER |
+| Pertes | Déclaration de perte | MANAGER, COMMERCIAL |
+| Rapports | Vue d'ensemble | OWNER |
+| Caisse | Ouverture, Clôture | COMMERCIAL / OWNER |
+| Configuration | Catalogue produits, Fournisseurs | OWNER |
+| Équipe | Gestion équipe | OWNER |
 
 ---
 
 ## Tests
 
 ```bash
-# NestJS — 753 tests, 30s
+# NestJS — 569 tests, 30s
 cd apps/nestjs && pnpm test
 
 # Flutter analyze
@@ -111,37 +195,25 @@ cd apps/flutter && flutter analyze
 
 ---
 
-## Sandbox Flutter — Tester les écrans sans backend
+## Sandbox Flutter
 
 ```bash
-cd apps/flutter && flutter run -d web-server --web-port 8082 -t lib/main_web.dart
+cd apps/flutter && flutter build web --no-tree-shake-icons \
+  -t lib/main_web.dart --release --dart-define=APP_MODE=sandbox
+cd build/web && python3 -m http.server 8085
 ```
 
-Ouvre http://localhost:8082 — dropdown pour sélectionner parmi 19 fixtures BDUI, changement de rôle (OWNER/MANAGER/COMMERCIAL), breakpoints responsive.
+Sandbox (APP_MODE=sandbox) : dropdown de fixtures, changement de rôle, breakpoints.
 
----
-
-## API — Login + Layout
-
-```bash
-# Login
-curl -X POST http://localhost:3000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"owner@blandine.bf","password":"owner123","tenant_slug":"blandine"}'
-
-# Récupérer un écran BDUI (authentifié)
-TOKEN="<access_token>"
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:3000/api/v1/api/v1/blandine/layout/dashboard_owner"
-```
+Production (APP_MODE=app) : login → sidebar dynamique → rendu BDUI.
 
 ---
 
 ## CI/CD
 
 `.github/workflows/ci.yml` — push/PR sur `main` :
-1. **NestJS** : PostgreSQL + Redis services → `pnpm test` (753 tests)
-2. **Flutter** : `flutter analyze` (dépend du job NestJS)
+1. **NestJS** : PostgreSQL + Redis services → `pnpm test` (569 tests)
+2. **Flutter** : `flutter analyze`
 
 ---
 
@@ -151,8 +223,6 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 **`.env`** : `cp apps/nestjs/.env.example apps/nestjs/.env` — renseigner `JWT_SECRET` (32 chars), `SCALARIO_APP_DB_PASSWORD` (12 chars).
 
-**Flutter web splash bloqué** : attendre 8s (fallback auto-hide) ou rafraîchir la page.
+**Flutter web : ne pas utiliser `flutter run -d web-server`** (DDC hang). Build + Python HTTP server : `flutter build web --release && cd build/web && python3 -m http.server 8085`.
 
-**753 tests → 1 fail** : vérifier que `ScreenConfigZod` accepte `schema_version` optionnel sur les composants.
-
----
+**CanvasKit + SwiftShader (Playwright)** : `MakeGrContext()` échoue sans GPU hardware. Ouvrir dans un vrai navigateur.
