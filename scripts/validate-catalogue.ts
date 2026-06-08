@@ -2,12 +2,12 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
 
-import { ModuleConfigZod } from '../apps/nestjs/src/catalogue/validators/module-config.zod';
-import { ScreenConfigZod } from '../apps/nestjs/src/catalogue/validators/screen-config.zod';
-import { WorkflowDefinitionZod } from '../apps/nestjs/src/catalogue/validators/workflow.zod';
-import { ComponentConfigZod } from '../apps/nestjs/src/catalogue/validators/component-config.zod';
-import { ValidationErrorFormatter } from '../apps/nestjs/src/catalogue/errors/validation-error.formatter';
-import { WorkflowValidatorService } from '../apps/nestjs/src/workflow/validator/workflow-validator.service';
+import { ModuleConfigZod } from '../apps/nestjs/src/catalog-loader/validators/module-config.zod';
+import { ScreenConfigZod } from '../apps/nestjs/src/catalog-loader/validators/screen-config.zod';
+import { WorkflowDefinitionZod } from '../apps/nestjs/src/catalog-loader/validators/workflow.zod';
+import { ComponentConfigZod } from '../apps/nestjs/src/catalog-loader/validators/component-config.zod';
+import { ValidationErrorFormatter, ValidationError } from '../apps/nestjs/src/catalog-loader/errors/validation-error.formatter';
+import { WorkflowValidatorService } from '../apps/nestjs/src/engines/workflow/validator/workflow-validator.service';
 import type { ZodTypeAny } from 'zod';
 
 const ROOT = resolve(__dirname, '..');
@@ -114,7 +114,7 @@ function validateFile(filePath: string, type: CatalogueType): void {
     for (const e of errors) {
       console.error(`     └─ ${e.path}: ${e.message}`);
     }
-    failures.push({ file: filePath, errors: errors.map((e) => `${e.path}: ${e.message}`) });
+    failures.push({ file: filePath, errors: errors.map((e: ValidationError) => `${e.path}: ${e.message}`) });
     return;
   }
 

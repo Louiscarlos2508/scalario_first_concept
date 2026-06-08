@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get_it/get_it.dart';
 
+import '../core/design_system/tokens/colors.dart';
 import '../engine/canvas/scalario_canvas.dart';
 import '../engine/canvas_layout/screen_config.dart';
+import '../engine/canvas_registry/appbar_renderer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ScreenConfig? _screenConfig;
   String? _screenError;
   String? _currentScreenId;
+  String _currentScreenTitle = '';
 
   @override
   void initState() {
@@ -105,6 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String get _screenTitle {
+    if (_currentScreenTitle.isNotEmpty) return _currentScreenTitle;
+    if (_currentScreenId == null) return 'Scalario';
+    return _currentScreenId!;
+  }
+
   Future<void> _selectScreen(String screenId) async {
     setState(() {
       _currentScreenId = screenId;
@@ -117,10 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
         '/api/v1/${widget.tenantSlug}/layout/$screenId',
         options: Options(headers: {'Authorization': 'Bearer ${widget.token}'}),
       );
-      final config = ScreenConfig.fromJson(resp.data!);
+      final data = resp.data!;
+      final config = ScreenConfig.fromJson(data);
+      final title = config.appbar?.title ?? screenId;
       if (!mounted) return;
       setState(() {
         _screenConfig = config;
+        _currentScreenTitle = title;
         _loadingScreen = false;
       });
     } catch (e) {
@@ -139,25 +151,70 @@ class _HomeScreenState extends State<HomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
-        return Scaffold(
-          appBar: wide
-              ? null
-              : AppBar(
-                  title: SvgPicture.asset(
-                    'assets/images/scalario-wordmark-light.svg',
-                    height: 28,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+        if (wide) {
+          return Scaffold(
+            body: Row(
+              children: [
+                _buildSidebar(theme),
+                Expanded(
+                  child: Column(
+                    children: [
+                      PlatformAppbar(appbar: _screenConfig?.appbar),
+                      Expanded(
+                        child: _screenConfig != null
+                            ? Column(
+                                children: [
+                                  _buildPageHeader(),
+                                  Expanded(child: _buildBody(engine)),
+                                ],
+                              )
+                            : _buildBody(engine),
+                      ),
+                    ],
                   ),
                 ),
-          drawer: wide ? null : Drawer(child: _buildNavContent(theme, onClose: Navigator.of(context).pop)),
-          body: Row(
-            children: [
-              if (wide) _buildSidebar(theme),
-              Expanded(child: _buildBody(engine)),
-            ],
+              ],
+            ),
+          );
+        }
+        return Scaffold(
+          appBar: AppBar(
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+            title: null,
+            backgroundColor: ScalarioColors.white,
+            elevation: 0,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1.0),
+              child: Container(color: ScalarioColors.neutral200, height: 1.0),
+            ),
+            actions: [AppbarRenderer(appbar: _screenConfig?.appbar)],
           ),
+          drawer: Drawer(child: _buildNavContent(theme, onClose: Navigator.of(context).pop)),
+          body: _screenConfig != null
+              ? Column(
+                  children: [
+                    _buildPageHeader(),
+                    Expanded(child: _buildBody(engine)),
+                  ],
+                )
+              : _buildBody(engine),
         );
       },
+    );
+  }
+
+  Widget _buildPageHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      child: Text(
+        _screenTitle,
+        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -182,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SvgPicture.asset(
             'assets/images/scalario-wordmark-light.svg',
             height: 32,
-            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            colorFilter: const ColorFilter.mode(ScalarioColors.white, BlendMode.srcIn),
           ),
         ),
         if (_groups != null)
@@ -231,11 +288,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSidebar(ThemeData theme) {
-    return SizedBox(
-      width: 280,
-      child: Material(
-        elevation: 2,
-        shadowColor: Colors.black26,
+    return Material(
+      color: ScalarioColors.bgPage,
+      elevation: 0,
+      shape: const Border(right: BorderSide(color: ScalarioColors.neutral200)),
+      child: SizedBox(
+        width: 280,
         child: _buildNavContent(theme),
       ),
     );

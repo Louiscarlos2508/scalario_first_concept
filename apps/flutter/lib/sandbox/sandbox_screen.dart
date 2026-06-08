@@ -19,6 +19,7 @@ import 'package:get_it/get_it.dart';
 
 import '../components/actions/scalario_button.dart';
 import '../core/ai_relay/ai_relay_client.dart';
+import '../core/design_system/tokens/colors.dart';
 import '../engine/canvas/scalario_canvas.dart';
 import '../engine/canvas/data_source_resolver.dart';
 import '../engine/canvas/json_schema_validator.dart';
@@ -223,7 +224,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
       baseUrl: 'http://localhost:3000',
       headers: {'Authorization': 'Bearer $_token'},
     ));
-    final resp = await dio.get('/api/v1/api/v1/blandine/layout/$screenId');
+    final resp = await dio.get('/api/v1/blandine/layout/$screenId');
     _console.log(SandboxLogLevel.info, 'API', 'loaded $screenId (${resp.statusCode})');
     return ScreenConfig.fromJson(resp.data as Map<String, dynamic>);
   }
@@ -302,7 +303,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
               'assets/images/scalario-wordmark-light.svg',
               height: 28,
               colorFilter: const ColorFilter.mode(
-                Colors.white,
+                ScalarioColors.white,
                 BlendMode.srcIn,
               ),
             ),
@@ -315,7 +316,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
               margin: const EdgeInsets.only(left: 8),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: ScalarioColors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -407,13 +408,13 @@ class _SandboxScreenState extends State<SandboxScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: _mode == _SandboxMode.a2ui
-            ? Colors.blue.shade50
-            : Colors.grey.shade100,
+            ? ScalarioColors.info50
+            : ScalarioColors.neutral100,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _mode == _SandboxMode.a2ui
-              ? Colors.blue.shade300
-              : Colors.grey.shade300,
+              ? ScalarioColors.info300
+              : ScalarioColors.neutral300,
         ),
       ),
       child: Text(
@@ -421,7 +422,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: _mode == _SandboxMode.a2ui ? Colors.blue.shade700 : null,
+          color: _mode == _SandboxMode.a2ui ? ScalarioColors.info900 : null,
         ),
       ),
     );
@@ -447,7 +448,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
     return Container(
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: ScalarioColors.neutral300),
         borderRadius: BorderRadius.circular(6),
       ),
       child: _token.isEmpty
@@ -475,11 +476,11 @@ class _SandboxScreenState extends State<SandboxScreen> {
               if (_loginError != null)
                 Padding(
                   padding: const EdgeInsets.only(left: 6),
-                  child: Text(_loginError!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+                  child: Text(_loginError!, style: const TextStyle(color: ScalarioColors.danger500, fontSize: 11)),
                 ),
             ])
           : Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.check_circle, size: 14, color: Colors.green.shade600),
+              const Icon(Icons.check_circle, size: 14, color: ScalarioColors.success500),
               const SizedBox(width: 4),
               Text('JWT ${_token.substring(0, 12)}...', style: const TextStyle(fontSize: 11)),
               const SizedBox(width: 6),
@@ -504,9 +505,9 @@ class _SandboxScreenState extends State<SandboxScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (id.startsWith('a2ui_'))
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: Icon(Icons.auto_awesome, size: 16, color: Colors.blue.shade400),
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Icon(Icons.auto_awesome, size: 16, color: ScalarioColors.info500),
                   ),
                 Text(id),
               ],
@@ -593,7 +594,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const Icon(Icons.error_outline, size: 48, color: ScalarioColors.danger500),
             const SizedBox(height: 12),
             Text('MindEngine error', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
@@ -621,7 +622,7 @@ class _SandboxScreenState extends State<SandboxScreen> {
       scaffoldMessenger: ScaffoldMessenger.of(context),
     );
 
-    ScalarioButton.onAction = dispatcher.dispatch;
+    ScalarioButton.onAction = dispatcher.dispatchBdui;
 
     final liveStream = _createSimulatedLiveStream();
 

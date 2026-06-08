@@ -1,4 +1,5 @@
 import '../canvas_registry/component_config.dart';
+import '../canvas_registry/screen_appbar.dart';
 import '../canvas_registry/screen_layout.dart';
 
 class ScreenConfig {
@@ -7,6 +8,8 @@ class ScreenConfig {
     required this.schemaVersion,
     this.layoutObj,
     this.title,
+    this.appbar,
+    this.templates = const {},
     this.zones = const {},
     this.data,
     this.rules,
@@ -15,6 +18,37 @@ class ScreenConfig {
   });
 
   factory ScreenConfig.fromJson(Map<String, dynamic> json) {
+    // 1. Parse templates
+    final templates = <String, ComponentConfig>{};
+    if (json['templates'] is Map<String, dynamic>) {
+      for (final entry in (json['templates'] as Map<String, dynamic>).entries) {
+        templates[entry.key] = ComponentConfig.fromJson(entry.value as Map<String, dynamic>);
+      }
+    }
+
+    // Fonction de résolution locale qui intercepte le type 'template'
+    ComponentConfig parseComponent(Map<String, dynamic> e) {
+      if (e['type'] == 'template' && e['template_id'] != null) {
+        final templateId = e['template_id'] as String;
+        final template = templates[templateId];
+        if (template != null) {
+          // Merge template props with instance props
+          final mergedProps = Map<String, dynamic>.from(template.props);
+          if (e['props'] is Map) {
+            mergedProps.addAll((e['props'] as Map).cast<String, dynamic>());
+          }
+          
+          return template.copyWith(
+            id: e['id'] as String?,
+            props: mergedProps,
+            visibleIf: e['visible_if'] != null ? (e['visible_if'] as Map).cast<String, dynamic>() : null,
+            // You can also merge other overrides if needed
+          );
+        }
+      }
+      return ComponentConfig.fromJson(e, templates);
+    }
+
     Map<String, List<ComponentConfig>> parseZones(dynamic raw) {
       if (raw == null || raw is! Map) return {};
       final map = <String, List<ComponentConfig>>{};
@@ -22,7 +56,7 @@ class ScreenConfig {
         final val = entry.value;
         if (val is List) {
           map[entry.key] = val
-              .map((e) => ComponentConfig.fromJson(e as Map<String, dynamic>))
+              .map((e) => parseComponent(e as Map<String, dynamic>))
               .toList();
         }
       }
@@ -40,6 +74,8 @@ class ScreenConfig {
       schemaVersion: json['schema_version'] as String? ?? '2.0.0',
       layoutObj: layoutObj,
       title: json['title'] as String?,
+      appbar: AppbarConfig.maybeFromJson(json['appbar'] as Map<String, dynamic>?),
+      templates: templates,
       zones: parseZones(json['zones']),
       data: json['data'] as Map<String, dynamic>?,
       rules: json['rules'] as List<dynamic>?,
@@ -52,6 +88,8 @@ class ScreenConfig {
   final String schemaVersion;
   final ScreenLayout? layoutObj;
   final String? title;
+  final AppbarConfig? appbar;
+  final Map<String, ComponentConfig> templates;
   final Map<String, List<ComponentConfig>> zones;
   final Map<String, dynamic>? data;
   final List<dynamic>? rules;

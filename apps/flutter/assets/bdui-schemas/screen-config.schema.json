@@ -26,6 +26,13 @@
       "type": "string",
       "description": "Clé i18n pour le titre de l'écran. Si défini, le titre affiché est la traduction de cette clé."
     },
+    "templates": {
+      "type": "object",
+      "description": "Dictionnaire de templates locaux. Permet de définir des composants réutilisables (ex: product_card) pour réduire la taille du JSON.",
+      "additionalProperties": {
+        "$ref": "https://scalario.io/schemas/v1.0.0/component-config.schema.json"
+      }
+    },
     "zones": {
       "type": "object",
       "description": "Zones de l'écran. Chaque zone contient une liste de ComponentConfig. Un screen doit avoir au moins la zone 'main'.",

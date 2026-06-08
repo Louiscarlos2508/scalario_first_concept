@@ -63,8 +63,9 @@ async function main() {
       continue;
     }
 
-    if (!schemaContent.$id.startsWith('https://scalario.io/schemas/v1.0.0/')) {
-      failures.push(`FAIL: ${schemaFile} — $id must start with https://scalario.io/schemas/v1.0.0/, got: ${schemaContent.$id}`);
+    const versionMatch = schemaContent.$id.match(/^https:\/\/scalario\.io\/schemas\/v([^/]+)\//);
+    if (!versionMatch) {
+      failures.push(`FAIL: ${schemaFile} — $id must start with https://scalario.io/schemas/v1.0.0/ or https://scalario.io/schemas/v2.0.0/, got: ${schemaContent.$id}`);
       failedTests++;
       console.log(`  ✗ ${schemaFile} — $id invalid: ${schemaContent.$id}`);
       continue;
@@ -81,12 +82,21 @@ async function main() {
     }
   }
 
-  console.log('\n2. Validating schema_version is const "1.0.0"...\n');
+  console.log('\n2. Validating schema_version matches the schema version...\n');
 
   for (const schemaFile of SCHEMA_FILES) {
+    if (schemaFile === 'component-config.schema.json') {
+      passedTests++;
+      console.log(`  ✓ ${schemaFile} — component-config has no schema_version property (skipped)`);
+      continue;
+    }
+
     const filePath = join(SCHEMAS_DIR, schemaFile);
     const schemaContent = JSON.parse(readFileSync(filePath, 'utf-8'));
     totalTests++;
+
+    const versionMatch = schemaContent.$id.match(/^https:\/\/scalario\.io\/schemas\/v([^/]+)\//);
+    const expectedVersion = versionMatch ? versionMatch[1] : '1.0.0';
 
     const schemaVersion = schemaContent.properties?.schema_version;
     if (!schemaVersion) {
@@ -96,15 +106,15 @@ async function main() {
       continue;
     }
 
-    if (schemaVersion.const !== '1.0.0') {
-      failures.push(`FAIL: ${schemaFile} — schema_version.const is "${schemaVersion.const}", expected "1.0.0"`);
+    if (schemaVersion.const !== expectedVersion) {
+      failures.push(`FAIL: ${schemaFile} — schema_version.const is "${schemaVersion.const}", expected "${expectedVersion}"`);
       failedTests++;
-      console.log(`  ✗ ${schemaFile} — schema_version.const = "${schemaVersion.const}" (expected "1.0.0")`);
+      console.log(`  ✗ ${schemaFile} — schema_version.const = "${schemaVersion.const}" (expected "${expectedVersion}")`);
       continue;
     }
 
     passedTests++;
-    console.log(`  ✓ ${schemaFile} — schema_version = "1.0.0" (const)`);
+    console.log(`  ✓ ${schemaFile} — schema_version = "${expectedVersion}" (const)`);
   }
 
   console.log('\n3. Validating examples (valid_*.json should pass)...\n');

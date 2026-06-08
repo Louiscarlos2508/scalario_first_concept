@@ -1,5 +1,5 @@
 {
-  "title": "Boutique Kouamé",
+  "title": "Accueil",
   "show_back": false,
   "actions": [
     { "icon": "notifications", "badge": "{alerts_count}", "action": { "type": "local", "cmd": "show_alerts" } }

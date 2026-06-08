@@ -224,7 +224,8 @@ class KPICard extends StatelessWidget {
             ? Border(
                 left: BorderSide(color: palette.borderLeft!, width: 3),
               )
-            : null,
+            : Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,6 +304,8 @@ class KPICard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ScalarioColors.bgCard,
         borderRadius: BorderRadius.circular(ScalarioRadius.md),
+        border: Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,6 +336,8 @@ class KPICard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ScalarioColors.neutral50,
         borderRadius: BorderRadius.circular(ScalarioRadius.md),
+        border: Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,6 +512,8 @@ class _WithChartKPICard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ScalarioColors.bgCard,
         borderRadius: BorderRadius.circular(ScalarioRadius.md),
+        border: Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: ScalarioTypography.fontKpiLabel),
@@ -545,6 +552,7 @@ class _HeroKPICard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ScalarioColors.primary500,
         borderRadius: BorderRadius.circular(ScalarioRadius.lg),
+        boxShadow: ScalarioElevation.e2,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: ScalarioTypography.bodyMedium.copyWith(color: ScalarioColors.white)),

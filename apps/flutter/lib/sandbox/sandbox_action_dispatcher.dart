@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../engine/canvas_registry/bdui_action.dart';
 import 'sandbox_console.dart';
 
 class SandboxActionDispatcher {
@@ -36,4 +37,26 @@ class SandboxActionDispatcher {
       ),
     );
   }
+
+  Future<void> dispatchBdui(BuildContext context, List<BduiAction> actions) async {
+    for (final action in actions) {
+      console.log(
+        SandboxLogLevel.action,
+        'Action (BDUI)',
+        'type=${action.runtimeType} trigger=${action.trigger}',
+      );
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Sandbox Action: ${action.runtimeType}'),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      // Simulate network latency to test the new loading state on buttons
+      await Future.delayed(const Duration(milliseconds: 600));
+    }
+  }
 }
+

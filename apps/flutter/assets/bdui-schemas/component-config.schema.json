@@ -11,8 +11,12 @@
     },
     "type": {
       "type": "string",
-      "description": "Identifiant du composant DS (ex: 'KPICard', 'DataTable', 'FormSection'). Correspond au nom enregistre dans le ComponentRegistry Flutter.",
+      "description": "Identifiant du composant DS (ex: 'ScaDataGrid', 'ScaKanbanBoard', 'ScaRecordSplitView', 'ScaFilterBuilder', 'FormSection'). Correspond au nom enregistre dans le ComponentRegistry Flutter. Peut aussi valoir 'template'.",
       "minLength": 1
+    },
+    "template_id": {
+      "type": "string",
+      "description": "Identifiant du template a utiliser si type = 'template'."
     },
     "variant": {
       "type": "string",

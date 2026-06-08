@@ -23,6 +23,11 @@ src/
 │   ├── cache/             (intra-bdui — pas le core/cache !)
 │   └── ...
 │
+├── dynamic-objects/       Metadata API & Dynamic JSONB Schemas (ERP Entities)
+│   ├── entities/          DynamicObjectSchema, DynamicObjectRecord
+│   ├── bdui-generator.service.ts # Auto-génère l'UI BDUI à partir des schémas JSONB
+│   └── ...
+│
 ├── catalog-loader/        Chargeur du catalogue (modules + queries + ux_profiles)
 │
 ├── config-agent/          Scalario Forge backend (Phase 2 — V14-019)
@@ -50,6 +55,7 @@ src/
 
 - **`core/`** : tout ce qui est chargé une fois et utilisé partout (security, audit, auth, cache).
 - **`engines/`** : logique métier dynamique pilotée par le catalogue ou par requête (action, workflow, et futur algo/datasource en Phase 2).
+- **`dynamic-objects/`** : Metadata API de l'ERP. Définit les schémas dynamiques (JSONB) et leurs enregistrements, et auto-génère l'UI BDUI correspondante.
 - **`bdui/`** : reste séparé — c'est le pont entre le catalogue et le JSON envoyé à Scalario Canvas (Flutter).
 - **`catalog-loader/`** : ex-`catalogue/`. Renommé pour clarifier qu'il **charge** le catalogue (lit `catalog/*.json` au boot) sans l'éditer.
 - **Phase 2 placeholders** : `config-agent/`, `ai/`, `modules/` sont créés vides avec un README pour pré-réserver leur emplacement et documenter leur futur contenu.

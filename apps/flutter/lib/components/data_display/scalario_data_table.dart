@@ -56,6 +56,7 @@ class DataColumnConfig<T> {
 class ScalarioDataTable<T> extends StatefulWidget {
   const ScalarioDataTable({
     super.key,
+    this.title,
     required this.columns,
     required this.rows,
     this.onRowTap,
@@ -67,6 +68,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
         _onRetry = null;
 
   const ScalarioDataTable._empty({
+    this.title,
     required this.columns,
     required String message,
   })  : rows = const <Never>[],
@@ -78,7 +80,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
         _errorMessage = null,
         _onRetry = null;
 
-  const ScalarioDataTable._loading({required this.columns})
+  const ScalarioDataTable._loading({this.title, required this.columns})
       : rows = const <Never>[],
         onRowTap = null,
         defaultSortKey = null,
@@ -89,6 +91,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
         _onRetry = null;
 
   const ScalarioDataTable._error({
+    this.title,
     required this.columns,
     required String message,
     VoidCallback? onRetry,
@@ -159,6 +162,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
 
     if (columns.isEmpty) {
       return ScalarioDataTable<Map<String, dynamic>>.empty(
+        title: props['title'] as String?,
         columns: const <DataColumnConfig<Map<String, dynamic>>>[],
         message: 'Aucune colonne configurée',
       );
@@ -169,6 +173,7 @@ class ScalarioDataTable<T> extends StatefulWidget {
         .toList();
 
     return ScalarioDataTable<Map<String, dynamic>>(
+      title: props['title'] as String?,
       columns: columns,
       rows: rows,
       defaultSortKey: props['default_sort_key'] as String?,
@@ -178,29 +183,34 @@ class ScalarioDataTable<T> extends StatefulWidget {
 
   /// Variante "vide" — illustration `inbox` + message centré.
   factory ScalarioDataTable.empty({
+    String? title,
     required List<DataColumnConfig<T>> columns,
     required String message,
   }) =>
-      ScalarioDataTable<T>._empty(columns: columns, message: message);
+      ScalarioDataTable<T>._empty(title: title, columns: columns, message: message);
 
   /// Variante "loading" — 5 lignes shimmer.
   factory ScalarioDataTable.loading({
+    String? title,
     required List<DataColumnConfig<T>> columns,
   }) =>
-      ScalarioDataTable<T>._loading(columns: columns);
+      ScalarioDataTable<T>._loading(title: title, columns: columns);
 
   /// Variante "erreur" — icône + message + CTA "Réessayer".
   factory ScalarioDataTable.error({
+    String? title,
     required List<DataColumnConfig<T>> columns,
     required String message,
     VoidCallback? onRetry,
   }) =>
       ScalarioDataTable<T>._error(
+        title: title,
         columns: columns,
         message: message,
         onRetry: onRetry,
       );
 
+  final String? title;
   final List<DataColumnConfig<T>> columns;
   final List<T> rows;
   final ValueChanged<T>? onRowTap;
@@ -250,7 +260,7 @@ class _ScalarioDataTableState<T> extends State<ScalarioDataTable<T>> {
   Widget _buildTable(BuildContext context) {
     final List<T> sorted = _sortedRows();
 
-    return LayoutBuilder(
+    final Widget tableWidget = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -318,6 +328,27 @@ class _ScalarioDataTableState<T> extends State<ScalarioDataTable<T>> {
           ),
         );
       },
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space6),
+      decoration: BoxDecoration(
+        color: ScalarioColors.bgCard,
+        borderRadius: BorderRadius.circular(ScalarioRadius.md),
+        border: Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.title != null && widget.title!.isNotEmpty) ...[
+            Text(widget.title!, style: ScalarioTypography.fontSectionTitle),
+            const SizedBox(height: ScalarioSpacing.space4),
+          ],
+          tableWidget,
+        ],
+      ),
     );
   }
 

@@ -6,10 +6,23 @@ import '../../components/data_display/document_preview.dart';
 import '../../components/data_display/kpi_card.dart';
 import '../../components/data_display/scalario_data_table.dart';
 import '../../components/data_display/stat_card.dart';
+import '../../components/data_display/ranking_list.dart';
 import '../../components/feedback/alert_banner.dart';
 import '../../components/inputs/form_section.dart';
 import '../../components/lists/scalario_list_tile.dart';
 import '../../features/sync/sync_status_bar.dart';
+import '../../components/views/sca_data_grid.dart';
+import '../../components/views/sca_kanban_board.dart';
+import '../../components/views/sca_record_split_view.dart';
+import '../../components/views/sca_filter_builder.dart';
+import '../../components/views/sca_page_header.dart';
+import '../../components/views/sca_page_body.dart';
+import '../../components/views/sca_right_drawer.dart';
+import '../../components/views/sca_top_bar.dart';
+import '../../components/data_display/sca_typography.dart';
+import '../../components/data_display/sca_avatar.dart';
+import '../../components/data_display/sca_chip.dart';
+import '../../components/data_display/sca_progress_bar.dart';
 import '../canvas/layouts/canvas_grid.dart';
 import '../canvas/layouts/canvas_row.dart';
 import '../canvas/layouts/canvas_column.dart';
@@ -75,6 +88,7 @@ abstract final class RegistryBootstrap {
     r.register('ChartBar', (c, ctx) => ChartBar.fromConfig(c, ctx), schema: ComponentSchemas.chartBar);
     r.register('ChartPie', (c, ctx) => ChartPie.fromConfig(c, ctx), schema: ComponentSchemas.chartPie);
     r.register('StatCard', (c, ctx) => StatCard.fromConfig(c, ctx), schema: ComponentSchemas.statCard);
+    r.register('RankingList', (c, ctx) => RankingList.fromConfig(c, ctx));
     r.register('Gauge', (c, ctx) => CanvasGauge.fromConfig(c, ctx), schema: ComponentSchemas.gauge);
     r.register('Heading', (c, ctx) => CanvasHeading.fromConfig(c, ctx), schema: ComponentSchemas.heading);
     r.register('Media', (c, ctx) => CanvasMedia.fromConfig(c, ctx), schema: ComponentSchemas.media);
@@ -107,6 +121,24 @@ abstract final class RegistryBootstrap {
     r.register('MouvementItem', (c, ctx) => ScalarioListTile.fromConfig(c, ctx));
     r.register('TicketPreview', (c, ctx) => ScalarioListTile.fromConfig(c, ctx));
     r.register('DocumentPreview', (c, ctx) => DocumentPreview.fromConfig(c, ctx), schema: ComponentSchemas.documentPreview);
+
+    // Phase 5: UX Engine (Views dynamiques inspirées des standards modernes)
+    r.register('ScaDataGrid', (c, ctx) => ScaDataGrid(config: c));
+    r.register('ScaKanbanBoard', (c, ctx) => ScaKanbanBoard(config: c));
+    r.register('ScaRecordSplitView', (c, ctx) => ScaRecordSplitView(config: c));
+    r.register('ScaFilterBuilder', (c, ctx) => ScaFilterBuilder(config: c));
+
+    // Phase 6: Granularité & Layouts stricts (Inspiration Twenty)
+    r.register('ScaTypography', (c, ctx) => ScaTypography(config: c));
+    r.register('ScaAvatar', (c, ctx) => ScaAvatar(config: c));
+    r.register('ScaChip', (c, ctx) => ScaChip(config: c));
+    r.register('ScaProgressBar', (c, ctx) => ScaProgressBar(config: c));
+    r.register('ScaPageHeader', (c, ctx) => ScaPageHeader(config: c));
+    r.register('ScaPageBody', (c, ctx) => ScaPageBody(config: c));
+    r.register('ScaRightDrawer', (c, ctx) => ScaRightDrawer(config: c));
+
+    // Phase 7: Comportements, États & Interactions (Fidélité Totale Twenty)
+    r.register('ScaTopBar', (c, ctx) => ScaTopBar(config: c));
   }
 
   /// Enregistre les alias A2UI pour la compatibilité ascendante.

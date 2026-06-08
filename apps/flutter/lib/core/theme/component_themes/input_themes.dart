@@ -17,17 +17,20 @@ InputDecorationTheme buildInputDecorationTheme(ColorScheme colors) {
 
   return InputDecorationTheme(
     filled: true,
-    fillColor: colors.surface,
+    fillColor: ScalarioColors.white,
     contentPadding: const EdgeInsets.symmetric(
       horizontal: ScalarioSpacing.space3,
       vertical: ScalarioSpacing.space3,
     ),
     border: base,
-    enabledBorder: base,
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(ScalarioRadius.sm),
+      borderSide: const BorderSide(color: ScalarioColors.neutral300),
+    ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(ScalarioRadius.sm),
       borderSide: const BorderSide(
-        color: ScalarioColors.borderFocus,
+        color: ScalarioColors.interactivePrimary,
         width: 2,
       ),
     ),

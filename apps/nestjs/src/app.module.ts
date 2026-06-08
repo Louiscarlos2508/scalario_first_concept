@@ -26,6 +26,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { IdempotencyModule } from './core/idempotency/idempotency.module';
 import { IdempotencyInterceptor } from './core/idempotency/idempotency.interceptor';
 import { PaymentModule } from './payment/payment.module';
+import { DynamicObjectsModule } from './dynamic-objects/dynamic-objects.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { PaymentModule } from './payment/payment.module';
     RealtimeModule,
     IdempotencyModule,
     PaymentModule,
+    DynamicObjectsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

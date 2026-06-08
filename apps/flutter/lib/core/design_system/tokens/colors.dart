@@ -53,17 +53,17 @@ abstract final class ScalarioColors {
   // ---------------------------------------------------------------------------
   // Neutres
   // ---------------------------------------------------------------------------
-  static const Color neutral50 = Color(0xFFF8F8FC);
-  static const Color neutral100 = Color(0xFFF0F0F8);
-  static const Color neutral200 = Color(0xFFE0E0F0);
-  static const Color neutral300 = Color(0xFFC8C8E0);
-  static const Color neutral500 = Color(0xFF7A7A9A);
-  static const Color neutral600 = Color(0xFF5A5A7A);
-  static const Color neutral700 = Color(0xFF4A4A6A);
-  static const Color neutral750 = Color(0xFF3A3A5A);
-  static const Color neutral800 = Color(0xFF2A2A44);
-  static const Color neutral850 = Color(0xFF22223A);
-  static const Color neutral900 = Color(0xFF1A1A2E);
+  static const Color neutral50 = Color(0xFFF8FAFC);
+  static const Color neutral100 = Color(0xFFF1F5F9);
+  static const Color neutral200 = Color(0xFFE2E8F0);
+  static const Color neutral300 = Color(0xFFCBD5E1);
+  static const Color neutral500 = Color(0xFF64748B);
+  static const Color neutral600 = Color(0xFF475569);
+  static const Color neutral700 = Color(0xFF334155);
+  static const Color neutral750 = Color(0xFF1E293B);
+  static const Color neutral800 = Color(0xFF1E293B);
+  static const Color neutral850 = Color(0xFF0F172A);
+  static const Color neutral900 = Color(0xFF020617);
   static const Color white = Color(0xFFFFFFFF);
 
   // ---------------------------------------------------------------------------

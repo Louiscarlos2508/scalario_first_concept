@@ -39,15 +39,29 @@ Prérequis : Node 20+, pnpm 9+, Docker + Docker Compose v2.
 
 ---
 
-## Architecture — BDUI v2
+## Architecture — BDUI v3 (Business OS)
 
 ```
 scalario/
 ├── apps/
-│   ├── flutter/                # BDUI runtime (web/desktop)
+│   ├── flutter/                # BDUI runtime engine (web/desktop)
 │   │   ├── lib/sandbox/        # Sandbox dev — fixtures BDUI
-│   │   └── assets/             # Images, icons, fixtures JSON
+│   │   ├── lib/engine/
+│   │   │   ├── canvas_layout/  # SlotLayout (responsive zones, margins, constraints)
+│   │   │   ├── canvas_registry/# ScalarioCanvasRegistry, appbar_renderer
+│   │   │   └── actions/        # ScalarioActionEngine (asynchronous flow execution)
+│   │   ├── lib/components/
+│   │   │   ├── data_display/   # KPICard, ChartBar, RankingList, ScalarioDataTable
+│   │   │   └── views/          # Macro-components: ScaDataGrid, ScaKanbanBoard, ScaRecordSplitView, ScaFilterBuilder
+│   │   └── assets/             # Images, icons, schemas, fixtures JSON
 │   └── nestjs/                 # NestJS API (port 3000)
+│       ├── src/
+│       │   ├── dynamic-objects/# Metadata API & JSONB schemas (DynamicObjectSchema / DynamicObjectRecord)
+│       │   │   ├── bdui-generator.service.ts # Auto-generation of BDUI views from JSONB schemas
+│       │   │   └── ...
+│       │   ├── core/           # Security, auth, audit, cache
+│       │   ├── engines/        # Flow Action dispatchers, Workflows FSM
+│       │   └── ...
 │       ├── migrations/
 │       └── seed/
 ├── catalog/                    # Catalogue — source de vérité métier
@@ -78,20 +92,23 @@ scalario/
 └── docker-compose.dev.yml
 ```
 
-### Structure d'un écran (BDUI v2)
+### Structure d'un écran (BDUI v3)
 
-Chaque écran est un dossier avec `screen.json` qui référence ses sous-fichiers via `$ref` :
+Chaque écran est modulaire, gérant ses éléments via `$ref` résolus au chargement par le backend :
 
 ```json
 {
   "screen": "dashboard_owner",
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "layout": { "$ref": "layout/layout.json" },
   "appbar": { "$ref": "appbar.json" },
   "zones": {
     "kpis": [{ "type": "KPICard", "props": { "label": "CA du jour", "value": "342 500" } }],
-    "main": [{ "type": "DataTable", "props": { "columns": [...], "rows": [...] } }],
-    "aside": [{ "type": "ChartBar", "props": { ... } }],
+    "main": [
+      { "type": "RankingList", "props": { "title": "Top 5 produits", "items": [] } },
+      { "type": "DataTable", "props": { "columns": [], "rows": [] } }
+    ],
+    "aside": [{ "type": "ChartBar", "props": {} }],
     "actions": [{ "type": "ActionButton", "props": { "label": "Nouvelle vente" } }]
   },
   "rules": { "$ref": "rules/rules.json" }
@@ -102,9 +119,33 @@ Le `CatalogueLoaderService` résout les `$ref` récursivement.
 
 ---
 
-## API
+## Appbar — piloté par l'API
 
-### Authentification
+L'appbar n'affiche **pas** de titre de page. Elle contient des **actions globales** :
+
+- `icon: "search"` → `TextField` de recherche
+- `icon: "notifications"` → `IconButton` avec badge
+- `icon: "calendar_month"` → `IconButton` (ouvre un sheet)
+- etc.
+
+Chaque écran définit ses actions dans `appbar.json`. Le rendu est assuré par `AppbarRenderer` (mobile) et `PlatformAppbar` (desktop) qui lisent `ScreenConfig.appbar`.
+
+```json
+{
+  "title": "Point de vente",
+  "show_back": true,
+  "actions": [
+    { "icon": "search", "action": { "type": "local", "cmd": "focus_search" } },
+    { "icon": "receipt_long", "action": { "type": "local", "cmd": "show_recent_sales" } }
+  ]
+}
+```
+
+Les titres de page sont affichés **dans** la page, pas dans l'appbar — via `_buildPageHeader()` dans `HomeScreen`.
+
+### API
+
+#### Authentification
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/login \

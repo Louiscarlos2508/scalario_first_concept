@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "screen": "modern_crm_view",
+  "layout": "blank",
+  "title": "Vue Moderne (Twenty Style)",
+  "zones": {
+    "main": [
+      {
+        "type": "ScaPageHeader",
+        "props": {
+          "title": "Opportunités commerciales",
+          "breadcrumbs": ["Accueil", "Ventes"]
+        },
+        "children": [
+          {
+            "type": "ScaButton",
+            "props": {
+              "label": "Nouveau",
+              "variant": "solid"
+            }
+          }
+        ]
+      },
+      {
+        "type": "ScaPageBody",
+        "props": {},
+        "children": [
+          {
+            "type": "ScaKanbanBoard",
+            "props": {
+              "group_by": "status"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

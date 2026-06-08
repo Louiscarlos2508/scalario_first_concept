@@ -172,23 +172,32 @@ class _ChartBarState extends State<ChartBar> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (widget.title != null && widget.title!.isNotEmpty) ...<Widget>[
-          Text(widget.title!, style: ScalarioTypography.fontSectionTitle),
+    return Container(
+      padding: const EdgeInsets.all(ScalarioSpacing.space6),
+      decoration: BoxDecoration(
+        color: ScalarioColors.bgCard,
+        borderRadius: BorderRadius.circular(ScalarioRadius.md),
+        border: Border.all(color: ScalarioColors.borderDefault),
+        boxShadow: ScalarioElevation.e1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (widget.title != null && widget.title!.isNotEmpty) ...<Widget>[
+            Text(widget.title!, style: ScalarioTypography.fontSectionTitle),
+          ],
+          if (widget.period != null) ...<Widget>[
+            const SizedBox(height: ScalarioSpacing.space1),
+            Text(widget.period!, style: ScalarioTypography.caption),
+          ],
+          const SizedBox(height: ScalarioSpacing.space3),
+          SizedBox(
+            height: widget.height,
+            child: _buildBody(context),
+          ),
         ],
-        if (widget.period != null) ...<Widget>[
-          const SizedBox(height: ScalarioSpacing.space1),
-          Text(widget.period!, style: ScalarioTypography.caption),
-        ],
-        const SizedBox(height: ScalarioSpacing.space3),
-        SizedBox(
-          height: widget.height,
-          child: _buildBody(context),
-        ),
-      ],
+      ),
     );
   }
 

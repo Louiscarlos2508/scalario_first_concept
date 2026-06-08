@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../canvas_registry/screen_layout.dart';
 import '../canvas_registry/component_config.dart';
 import '../canvas_registry/scalario_canvas_registry.dart';
-import '../canvas/screen_cache.dart';
 
 class SlotLayout extends StatelessWidget {
   final ScreenLayout layout;
@@ -29,7 +28,7 @@ class SlotLayout extends StatelessWidget {
           final components = zones[slot.zone] ?? [];
           if (components.isEmpty) return null;
 
-          Widget content = _buildZone(context, components, slot);
+          Widget content = _buildZone(context, components, slot, wide);
 
           if (slot.sticky && slot.position != 'bottom') {
             content = Column(
@@ -66,11 +65,11 @@ class SlotLayout extends StatelessWidget {
         children: [
           Expanded(
             flex: 2,
-            child: _buildScrollView(main.toList()),
+            child: _buildScrollView(main.toList(), wide),
           ),
           SizedBox(
             width: 320,
-            child: _buildScrollView(side.toList()),
+            child: _buildScrollView(side.toList(), wide, isSidebar: true),
           ),
         ],
       );
@@ -86,7 +85,7 @@ class SlotLayout extends StatelessWidget {
     if (stickyBottom.isNotEmpty) {
       return Column(
         children: [
-          Expanded(child: _buildScrollView(scrollable)),
+          Expanded(child: _buildScrollView(scrollable, wide)),
           SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -97,22 +96,108 @@ class SlotLayout extends StatelessWidget {
       );
     }
 
-    return _buildScrollView(zoneWidgets);
+    return _buildScrollView(zoneWidgets, wide);
   }
 
-  Widget _buildScrollView(List<MapEntry<String, Widget>> entries) {
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: entries.map((e) => e.value).toList(),
+  Widget _buildScrollView(List<MapEntry<String, Widget>> entries, bool wide, {bool isSidebar = false}) {
+    Widget content = ListView(
+      padding: isSidebar
+          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+          : (wide
+              ? const EdgeInsets.symmetric(horizontal: 24, vertical: 20)
+              : const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
+      children: entries.map((e) => Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: e.value,
+      )).toList(),
     );
+
+    if (wide && !isSidebar) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: content,
+        ),
+      );
+    }
+    return content;
   }
 
-  Widget _buildZone(BuildContext context, List<ComponentConfig> components, covariant dynamic slot) {
+  Widget _buildZone(BuildContext context, List<ComponentConfig> components, SlotDefinition slot, bool wide) {
+    final children = components
+        .map((c) => registry.build(c, context, slot.zone))
+        .toList();
+
+    if (children.isEmpty) return const SizedBox.shrink();
+
+    if (slot.zone == 'kpis') {
+      if (wide) {
+        final List<Widget> rowChildren = children
+            .map<Widget>((w) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: w,
+                  ),
+                ))
+            .toList();
+        if (rowChildren.isNotEmpty) {
+          rowChildren[rowChildren.length - 1] = Expanded(child: children.last);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: rowChildren,
+        );
+      } else {
+        final List<Widget> colChildren = children
+            .map<Widget>((w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: w,
+                ))
+            .toList();
+        if (colChildren.isNotEmpty) {
+          colChildren[colChildren.length - 1] = children.last;
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: colChildren,
+        );
+      }
+    }
+
+    if (slot.zone == 'actions') {
+      if (wide) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: children
+              .map((w) => Padding(
+                    padding: const EdgeInsets.only(left: 12.0),
+                    child: w,
+                  ))
+              .toList(),
+        );
+      } else {
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          alignment: WrapAlignment.spaceEvenly,
+          children: children,
+        );
+      }
+    }
+
+    final List<Widget> defaultChildren = children
+        .map<Widget>((w) => Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: w,
+            ))
+        .toList();
+    if (defaultChildren.isNotEmpty) {
+      defaultChildren[defaultChildren.length - 1] = children.last;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: components
-          .map((c) => registry.build(c, context, slot is SlotDefinition ? slot.zone : ''))
-          .toList(),
+      children: defaultChildren,
     );
   }
 }

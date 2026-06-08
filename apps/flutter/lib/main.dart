@@ -26,6 +26,7 @@ import 'engine/canvas_registry/registry_bootstrap.dart';
 import 'engine/canvas/scalario_canvas_module.dart';
 import 'engine/error_boundary/global_error_handler.dart';
 import 'sandbox/sandbox_screen.dart';
+import 'app/app_shell.dart';
 
 const kSandboxRouteName = '/dev/sandbox';
 final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
@@ -52,8 +53,17 @@ Future<void> _setupDependencies() async {
   ScalarioCanvasRegistry.instance = registry;
 
   if (kIsWeb) {
-    GetIt.I.registerSingleton<AuthStorage>(AuthStorage());
+    final authStorage = AuthStorage();
+    GetIt.I.registerSingleton<AuthStorage>(authStorage);
     GetIt.I.registerSingleton<ConnectivityListener>(ConnectivityListener());
+
+    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000');
+    GetIt.I.registerSingleton(SyncApiClient(
+      baseUrl: baseUrl,
+      tokenProvider: () => authStorage.readAccessToken(),
+    ));
+    GetIt.I.registerSingleton(AiRelayClient(baseUrl: baseUrl));
+    await ScalarioCanvasModule.register(GetIt.I);
     return;
   }
 
@@ -117,7 +127,7 @@ class _ScalarioAppState extends State<ScalarioApp> {
       ],
       supportedLocales: const [Locale('fr', 'BF'), Locale('en', 'US')],
       locale: const Locale('fr', 'BF'),
-      home: const SandboxScreen(),
+      home: const AppShell(),
       routes: { if (kDebugMode) kSandboxRouteName: (_) => const SandboxScreen() },
     );
   }

@@ -4,33 +4,42 @@
   "layout": "dashboard",
   "title": "Tableau de bord",
   "i18n_key": "screen.retail_dashboard.title",
+  "templates": {
+    "kpi_template": {
+      "type": "KPICard",
+      "props": {
+        "delta_positive": true,
+        "status": "nominal"
+      }
+    }
+  },
   "zones": {
     "kpis": [
       {
-        "type": "KPICard",
+        "type": "template",
+        "template_id": "kpi_template",
         "id": "kpi_ventes_jour",
         "props": {
           "label": "Ventes du jour",
           "value": "342 500",
           "unit": "FCFA",
-          "delta": "+12%",
-          "delta_positive": true,
-          "status": "nominal"
+          "delta": "+12%"
         }
       },
       {
-        "type": "KPICard",
+        "type": "template",
+        "template_id": "kpi_template",
         "id": "kpi_panier_moyen",
         "props": {
           "label": "Panier moyen",
           "value": "8 250",
           "unit": "FCFA",
-          "delta": "+3%",
-          "delta_positive": true
+          "delta": "+3%"
         }
       },
       {
-        "type": "KPICard",
+        "type": "template",
+        "template_id": "kpi_template",
         "id": "kpi_marge_owner_only",
         "props": {
           "label": "Marge brute",
@@ -44,7 +53,8 @@
         }
       },
       {
-        "type": "KPICard",
+        "type": "template",
+        "template_id": "kpi_template",
         "id": "kpi_pertes",
         "props": {
           "label": "Pertes",

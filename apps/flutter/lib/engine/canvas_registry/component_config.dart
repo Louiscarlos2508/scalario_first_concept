@@ -16,7 +16,24 @@ class ComponentConfig {
     this.i18nKey,
   });
 
-  factory ComponentConfig.fromJson(Map<String, dynamic> json) {
+  factory ComponentConfig.fromJson(Map<String, dynamic> json, [Map<String, ComponentConfig>? templates]) {
+    // Résolution de template s'il s'agit d'un type 'template'
+    if (json['type'] == 'template' && json['template_id'] != null && templates != null) {
+      final templateId = json['template_id'] as String;
+      final template = templates[templateId];
+      if (template != null) {
+        final mergedProps = Map<String, dynamic>.from(template.props);
+        if (json['props'] is Map) {
+          mergedProps.addAll((json['props'] as Map).cast<String, dynamic>());
+        }
+        return template.copyWith(
+          id: json['id'] as String?,
+          props: mergedProps,
+          visibleIf: json['visible_if'] != null ? (json['visible_if'] as Map).cast<String, dynamic>() : null,
+        );
+      }
+    }
+
     Map<String, dynamic> toStringMap(dynamic raw) {
       if (raw == null) return <String, dynamic>{};
       if (raw is Map<String, dynamic>) return raw;
@@ -34,12 +51,13 @@ class ComponentConfig {
     List<ComponentConfig>? toChildrenList(dynamic raw) {
       if (raw == null) return null;
       return (raw as List<dynamic>).map((e) {
+        Map<String, dynamic> childJson;
         if (e is Map<String, dynamic>) {
-          return ComponentConfig.fromJson(e);
+          childJson = e;
+        } else {
+          childJson = (e as Map<dynamic, dynamic>).cast<String, dynamic>();
         }
-        return ComponentConfig.fromJson(
-          (e as Map<dynamic, dynamic>).cast<String, dynamic>(),
-        );
+        return ComponentConfig.fromJson(childJson, templates);
       }).toList();
     }
 
