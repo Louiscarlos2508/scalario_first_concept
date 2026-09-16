@@ -1,15 +1,19 @@
 # Scalario
 
-**Instant Business OS** — BDUI Engine + Templates JSON. Lance un ERP/CRM/Catalogue complet en moins d'une heure pour un commerce africain via configuration JSON, sans regénération native.
+**Instant Business OS** — public experimental foundation for metadata-driven business software: BDUI Engine + JSON templates, modular ERP workflows, RBAC, dynamic business objects and configurable interfaces.
+
+The project explores how ERP/CRM/business applications can be assembled from declarative configuration rather than hard-coded screens, with a strong focus on African business contexts and infrastructure constraints.
 
 Monorepo : Flutter (apps/flutter), NestJS (apps/nestjs), PostgreSQL + pgvector, Redis.
+
+> **Project status:** experimental open-source foundation. The broader Scalario product continues to evolve beyond this public repository.
 
 ---
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/scalario/scalario.git && cd scalario
+git clone https://github.com/Louiscarlos2508/scalario_first_concept.git && cd scalario_first_concept
 cp apps/nestjs/.env.example apps/nestjs/.env
 pnpm install
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
@@ -267,3 +271,16 @@ Production (APP_MODE=app) : login → sidebar dynamique → rendu BDUI.
 **Flutter web : ne pas utiliser `flutter run -d web-server`** (DDC hang). Build + Python HTTP server : `flutter build web --release && cd build/web && python3 -m http.server 8085`.
 
 **CanvasKit + SwiftShader (Playwright)** : `MakeGrContext()` échoue sans GPU hardware. Ouvrir dans un vrai navigateur.
+
+
+---
+
+## Open Source
+
+Scalario First Concept is maintained as the public experimental foundation of the broader Scalario project.
+
+- **License:** Apache License 2.0 — see [LICENSE](LICENSE).
+- **Contributions:** see [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Issues:** bug reports, reproducible problems and focused proposals are welcome through GitHub Issues.
+
+The public repository is intended for experimentation, learning, collaboration and reusable infrastructure work around metadata-driven business systems.
